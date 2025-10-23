@@ -40,7 +40,10 @@ export class GameScene extends Phaser.Scene {
         
         // Fade in
         this.cameras.main.fadeIn(500);
-        
+
+        // Show welcome instructions
+        this.showWelcomeMessage();
+
         // Ambient game timer
         this.time.addEvent({
             delay: 1000,
@@ -70,24 +73,27 @@ export class GameScene extends Phaser.Scene {
     update(time, delta) {
         // Update sonar display
         this.sonarDisplay.update();
-        
+
         // Handle input
         this.handleInput();
-        
+
         // Update lure
         this.lure.update();
-        
+
+        // Continuously update lure info in UI
+        this.updateSpeedDisplay();
+
         // Update all fish
         this.fishes.forEach((fish, index) => {
             fish.update(this.lure);
-            
+
             // Remove fish that are no longer visible or caught
             if (!fish.visible) {
                 fish.destroy();
                 this.fishes.splice(index, 1);
             }
         });
-        
+
         // Spawn fish based on chance
         if (Math.random() < GameConfig.FISH_SPAWN_CHANCE) {
             this.trySpawnFish();
@@ -265,7 +271,78 @@ export class GameScene extends Phaser.Scene {
         this.events.emit('updateTime', this.gameTime);
         this.events.emit('updateWaterTemp', this.waterTemp);
     }
-    
+
+    showWelcomeMessage() {
+        // Create welcome instruction panel
+        const centerX = 400;
+        const centerY = 300;
+
+        // Semi-transparent background
+        const bg = this.add.graphics();
+        bg.fillStyle(0x000000, 0.85);
+        bg.fillRoundedRect(150, 200, 500, 200, 10);
+        bg.lineStyle(3, 0x00ff00, 1);
+        bg.strokeRoundedRect(150, 200, 500, 200, 10);
+
+        // Title
+        const title = this.add.text(centerX, 230, 'WELCOME TO THE ICE!', {
+            fontSize: '24px',
+            fontFamily: 'Courier New',
+            color: '#ffff00',
+            fontStyle: 'bold'
+        }).setOrigin(0.5, 0.5);
+
+        // Instructions
+        const instructions = this.add.text(centerX, 290,
+            'Press SPACE or DOWN arrow to drop your lure\n' +
+            'Hold UP arrow to retrieve\n' +
+            'LEFT/RIGHT arrows adjust retrieve speed\n\n' +
+            'Watch your depth! Lake trout prefer 60-100 feet',
+            {
+                fontSize: '14px',
+                fontFamily: 'Courier New',
+                color: '#00ff00',
+                align: 'center',
+                lineSpacing: 5
+            }
+        ).setOrigin(0.5, 0.5);
+
+        // "Press any key" prompt
+        const prompt = this.add.text(centerX, 375, 'Press any key to start fishing...', {
+            fontSize: '12px',
+            fontFamily: 'Courier New',
+            color: '#88ff88',
+            fontStyle: 'italic'
+        }).setOrigin(0.5, 0.5);
+
+        // Blinking effect for prompt
+        this.tweens.add({
+            targets: prompt,
+            alpha: { from: 1, to: 0.3 },
+            duration: 600,
+            yoyo: true,
+            repeat: -1
+        });
+
+        // Dismiss on any key press
+        const dismissHandler = () => {
+            this.tweens.add({
+                targets: [bg, title, instructions, prompt],
+                alpha: 0,
+                duration: 300,
+                onComplete: () => {
+                    bg.destroy();
+                    title.destroy();
+                    instructions.destroy();
+                    prompt.destroy();
+                }
+            });
+        };
+
+        this.input.keyboard.once('keydown', dismissHandler);
+        this.input.once('pointerdown', dismissHandler);
+    }
+
     shutdown() {
         // Clean up
         this.fishes.forEach(fish => fish.destroy());
