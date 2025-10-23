@@ -12,6 +12,8 @@ export class GameScene extends Phaser.Scene {
         this.fishCaught = 0;
         this.gameTime = 0;
         this.waterTemp = 40; // Typical Lake Champlain winter temp
+        this.debugMode = false; // Dev tools debug mode
+        this.debugGraphics = null;
     }
     
     create() {
@@ -97,6 +99,13 @@ export class GameScene extends Phaser.Scene {
         // Spawn fish based on chance
         if (Math.random() < GameConfig.FISH_SPAWN_CHANCE) {
             this.trySpawnFish();
+        }
+
+        // Debug visualization
+        if (this.debugMode) {
+            this.renderDebugInfo();
+        } else if (this.debugGraphics) {
+            this.debugGraphics.clear();
         }
     }
     
@@ -272,6 +281,54 @@ export class GameScene extends Phaser.Scene {
         this.events.emit('updateWaterTemp', this.waterTemp);
     }
 
+    renderDebugInfo() {
+        // Create debug graphics if needed
+        if (!this.debugGraphics) {
+            this.debugGraphics = this.add.graphics();
+            this.debugGraphics.setDepth(1000);
+        }
+
+        this.debugGraphics.clear();
+
+        // Draw detection range around lure
+        this.debugGraphics.lineStyle(2, 0xffff00, 0.3);
+        this.debugGraphics.strokeCircle(this.lure.x, this.lure.y, GameConfig.DETECTION_RANGE);
+
+        // Draw strike distance around lure
+        this.debugGraphics.lineStyle(2, 0xff0000, 0.5);
+        this.debugGraphics.strokeCircle(this.lure.x, this.lure.y, GameConfig.STRIKE_DISTANCE);
+
+        // Draw fish info
+        this.fishes.forEach(fish => {
+            // Draw line from fish to lure
+            const dist = Math.sqrt(
+                Math.pow(fish.x - this.lure.x, 2) +
+                Math.pow(fish.y - this.lure.y, 2)
+            );
+
+            if (dist < GameConfig.DETECTION_RANGE * 2) {
+                this.debugGraphics.lineStyle(1, 0x00ffff, 0.3);
+                this.debugGraphics.lineBetween(fish.x, fish.y, this.lure.x, this.lure.y);
+            }
+
+            // Draw fish state
+            const stateColors = {
+                'IDLE': 0x888888,
+                'INTERESTED': 0xffff00,
+                'CHASING': 0xff8800,
+                'STRIKING': 0xff0000,
+                'FLEEING': 0x8888ff
+            };
+            const color = stateColors[fish.ai.state] || 0xffffff;
+            this.debugGraphics.fillStyle(color, 0.3);
+            this.debugGraphics.fillCircle(fish.x, fish.y, 15);
+
+            // Draw fish detection circle
+            this.debugGraphics.lineStyle(1, color, 0.2);
+            this.debugGraphics.strokeCircle(fish.x, fish.y, GameConfig.DETECTION_RANGE);
+        });
+    }
+
     showWelcomeMessage() {
         // Create welcome instruction panel
         const centerX = 400;
@@ -350,6 +407,9 @@ export class GameScene extends Phaser.Scene {
         this.fishes.forEach(fish => fish.destroy());
         this.lure.destroy();
         this.sonarDisplay.destroy();
+        if (this.debugGraphics) {
+            this.debugGraphics.destroy();
+        }
     }
 }
 

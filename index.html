@@ -65,6 +65,49 @@
             font-weight: bold;
             margin-right: 10px;
         }
+
+        .dev-tools {
+            background: rgba(20, 20, 50, 0.9);
+            border-color: #ffaa00;
+        }
+
+        .dev-tools h3 {
+            color: #ffaa00;
+        }
+
+        .dev-btn {
+            background: #00ff00;
+            color: #000;
+            border: none;
+            padding: 8px 12px;
+            margin: 2px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            font-size: 11px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .dev-btn:hover {
+            background: #ffff00;
+            transform: scale(1.05);
+        }
+
+        .dev-btn:active {
+            background: #ffaa00;
+            transform: scale(0.95);
+        }
+
+        #fish-count {
+            color: #ffaa00;
+            font-weight: bold;
+        }
+
+        #dev-score {
+            color: #00ff00;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
@@ -72,28 +115,49 @@
     <div class="subtitle">Ice Fishing Simulator • Lake Trout • 45°N, Between the Greens and Adirondacks</div>
     
     <div id="game-container"></div>
-    
-    <div class="controls">
-        <h3>BAITCASTING CONTROLS</h3>
-        <div class="control-item">
-            <span><span class="key">SPACE</span> or <span class="key">↓</span></span>
-            <span>Release Spool (Drop)</span>
+
+    <div style="display: flex; gap: 20px; margin-top: 20px; align-items: flex-start;">
+        <div class="controls">
+            <h3>BAITCASTING CONTROLS</h3>
+            <div class="control-item">
+                <span><span class="key">SPACE</span> or <span class="key">↓</span></span>
+                <span>Release Spool (Drop)</span>
+            </div>
+            <div class="control-item">
+                <span><span class="key">↑</span></span>
+                <span>Engage Clutch & Retrieve</span>
+            </div>
+            <div class="control-item">
+                <span>Release <span class="key">↑</span></span>
+                <span>Hold Position (Clutch On)</span>
+            </div>
+            <div class="control-item">
+                <span><span class="key">←</span> <span class="key">→</span></span>
+                <span>Adjust Retrieve Speed</span>
+            </div>
+            <div class="control-item">
+                <span><span class="key">R</span></span>
+                <span>Reset to Surface</span>
+            </div>
         </div>
-        <div class="control-item">
-            <span><span class="key">↑</span></span>
-            <span>Engage Clutch & Retrieve</span>
-        </div>
-        <div class="control-item">
-            <span>Release <span class="key">↑</span></span>
-            <span>Hold Position (Clutch On)</span>
-        </div>
-        <div class="control-item">
-            <span><span class="key">←</span> <span class="key">→</span></span>
-            <span>Adjust Retrieve Speed</span>
-        </div>
-        <div class="control-item">
-            <span><span class="key">R</span></span>
-            <span>Reset to Surface</span>
+
+        <div class="controls dev-tools">
+            <h3>🔧 DEV TOOLS</h3>
+            <div style="margin: 10px 0;">
+                <button id="spawn-fish-btn" class="dev-btn">Spawn Fish</button>
+                <button id="spawn-5-fish-btn" class="dev-btn">Spawn 5 Fish</button>
+            </div>
+            <div style="margin: 10px 0;">
+                <button id="reset-game-btn" class="dev-btn">Reset Game</button>
+                <button id="toggle-debug-btn" class="dev-btn">Toggle Debug Info</button>
+            </div>
+            <div style="margin-top: 10px; font-size: 11px; line-height: 1.6;">
+                <div>Fish Count: <span id="fish-count">0</span></div>
+                <div>Score: <span id="dev-score">0</span></div>
+                <div>Lure Depth: <span id="dev-depth">0</span> ft</div>
+                <div>Lure State: <span id="dev-lure-state">SURFACE</span></div>
+                <div>Game Time: <span id="dev-time">0:00</span></div>
+            </div>
         </div>
     </div>
 

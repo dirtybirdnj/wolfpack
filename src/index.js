@@ -67,7 +67,76 @@ window.addEventListener('load', () => {
     if (typeof window !== 'undefined') {
         window.game = game;
     }
+
+    // Dev Tools Integration
+    setupDevTools(game);
 });
+
+function setupDevTools(game) {
+    // Update dev stats every 100ms
+    setInterval(() => {
+        const gameScene = game.scene.getScene('GameScene');
+        if (gameScene && gameScene.scene.isActive()) {
+            document.getElementById('fish-count').textContent = gameScene.fishes ? gameScene.fishes.length : 0;
+            document.getElementById('dev-score').textContent = gameScene.score || 0;
+
+            if (gameScene.lure) {
+                const lureInfo = gameScene.lure.getInfo();
+                document.getElementById('dev-depth').textContent = lureInfo.depth;
+                document.getElementById('dev-lure-state').textContent = lureInfo.state;
+            }
+
+            const minutes = Math.floor(gameScene.gameTime / 60);
+            const secs = gameScene.gameTime % 60;
+            document.getElementById('dev-time').textContent = `${minutes}:${secs.toString().padStart(2, '0')}`;
+        }
+    }, 100);
+
+    // Spawn Fish Button
+    document.getElementById('spawn-fish-btn').addEventListener('click', () => {
+        const gameScene = game.scene.getScene('GameScene');
+        if (gameScene && gameScene.scene.isActive()) {
+            gameScene.trySpawnFish();
+            console.log('Spawned 1 fish');
+        }
+    });
+
+    // Spawn 5 Fish Button
+    document.getElementById('spawn-5-fish-btn').addEventListener('click', () => {
+        const gameScene = game.scene.getScene('GameScene');
+        if (gameScene && gameScene.scene.isActive()) {
+            for (let i = 0; i < 5; i++) {
+                gameScene.trySpawnFish();
+            }
+            console.log('Spawned 5 fish');
+        }
+    });
+
+    // Reset Game Button
+    document.getElementById('reset-game-btn').addEventListener('click', () => {
+        const gameScene = game.scene.getScene('GameScene');
+        if (gameScene && gameScene.scene.isActive()) {
+            gameScene.scene.restart();
+            console.log('Game reset');
+        }
+    });
+
+    // Toggle Debug Info Button
+    let debugMode = false;
+    document.getElementById('toggle-debug-btn').addEventListener('click', () => {
+        const gameScene = game.scene.getScene('GameScene');
+        if (gameScene && gameScene.scene.isActive()) {
+            debugMode = !debugMode;
+            gameScene.debugMode = debugMode;
+            console.log('Debug mode:', debugMode ? 'ON' : 'OFF');
+
+            // Visual feedback
+            const btn = document.getElementById('toggle-debug-btn');
+            btn.textContent = debugMode ? 'Debug: ON' : 'Toggle Debug Info';
+            btn.style.background = debugMode ? '#ffaa00' : '#00ff00';
+        }
+    });
+}
 
 // Export for module usage
 export default config;
