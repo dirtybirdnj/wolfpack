@@ -130,11 +130,21 @@ export class SonarDisplay {
     }
     
     drawBackgroundGradient() {
-        // Subtle gradient to show depth
-        for (let y = 0; y < GameConfig.CANVAS_HEIGHT; y += 20) {
-            const alpha = y / GameConfig.CANVAS_HEIGHT * 0.3;
-            this.graphics.fillStyle(0x001100, alpha);
-            this.graphics.fillRect(0, y, GameConfig.CANVAS_WIDTH, 20);
+        // Realistic olive/army green water gradient - lighter at surface, darker at depth
+        // Based on Lake Champlain ice hole reference photos
+        for (let y = 0; y < GameConfig.CANVAS_HEIGHT; y += 10) {
+            const depthRatio = y / GameConfig.CANVAS_HEIGHT;
+
+            // Interpolate between surface (army green) and deep (olive green)
+            // Surface: #5a6f4a (90, 111, 74)
+            // Deep: #3a4f3a (58, 79, 58)
+            const r = Math.floor(90 - (90 - 58) * depthRatio);
+            const g = Math.floor(111 - (111 - 79) * depthRatio);
+            const b = Math.floor(74 - (74 - 58) * depthRatio);
+
+            const color = (r << 16) | (g << 8) | b;
+            this.graphics.fillStyle(color, 1.0);
+            this.graphics.fillRect(0, y, GameConfig.CANVAS_WIDTH, 10);
         }
     }
 

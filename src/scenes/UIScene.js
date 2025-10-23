@@ -78,21 +78,7 @@ export class UIScene extends Phaser.Scene {
         );
 
         this.updateRetrieveIndicator(2.0);
-        
-        // Tips display
-        const tipsY = 350;
-        this.add.text(GameConfig.CANVAS_WIDTH - 145, tipsY, 'TIPS:', headerStyle);
-        this.tipText = this.add.text(
-            GameConfig.CANVAS_WIDTH - 145, tipsY + 20,
-            'Lake trout\nprefer depths\nof 60-100ft\nin winter',
-            {
-                fontSize: '11px',
-                fontFamily: 'Courier New',
-                color: '#88ff88',
-                wordWrap: { width: 135 }
-            }
-        );
-        
+
         // Listen for events from GameScene
         const gameScene = this.scene.get('GameScene');
         if (gameScene) {
@@ -107,14 +93,6 @@ export class UIScene extends Phaser.Scene {
         this.time.addEvent({
             delay: 100,
             callback: this.updateDynamicInfo,
-            callbackScope: this,
-            loop: true
-        });
-        
-        // Rotate tips
-        this.time.addEvent({
-            delay: 10000,
-            callback: this.rotateTip,
             callbackScope: this,
             loop: true
         });
@@ -249,35 +227,6 @@ export class UIScene extends Phaser.Scene {
         }
     }
     
-    rotateTip() {
-        const tips = [
-            'Lake trout\nprefer depths\nof 60-100ft\nin winter',
-            'Vary retrieve\nspeed to\ntrigger strikes',
-            'Fish are most\nactive during\nlow light',
-            'Lake Champlain\nmax depth:\n400 feet',
-            'Optimal lure\nspeed: 2.0\nfor lakers',
-            'Trophy fish\noften found\nnear bottom',
-            'Watch for\nthermoclines\nat 25-45ft',
-            'Burlington Bay\navg depth:\n65 feet'
-        ];
-        
-        const randomTip = tips[Math.floor(Math.random() * tips.length)];
-        
-        // Fade transition
-        this.tweens.add({
-            targets: this.tipText,
-            alpha: 0,
-            duration: 300,
-            onComplete: () => {
-                this.tipText.setText(randomTip);
-                this.tweens.add({
-                    targets: this.tipText,
-                    alpha: 1,
-                    duration: 300
-                });
-            }
-        });
-    }
 }
 
 export default UIScene;

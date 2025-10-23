@@ -1,29 +1,29 @@
 // Game configuration and constants
 export const GameConfig = {
-    // Canvas settings
-    CANVAS_WIDTH: 800,
-    CANVAS_HEIGHT: 600,
-    
+    // Canvas settings - increased for widescreen layout
+    CANVAS_WIDTH: 1000,
+    CANVAS_HEIGHT: 700,
+
     // Sonar display settings
     SONAR_SCROLL_SPEED: 1.5, // pixels per frame
     GRID_SIZE: 25, // pixels between grid lines
     MAX_DEPTH: 150, // feet
     DEPTH_SCALE: 4, // pixels per foot
-    
+
     // Lure physics
     LURE_GRAVITY: 0.15, // acceleration when dropping
     LURE_MAX_FALL_SPEED: 3.5,
     LURE_MIN_RETRIEVE_SPEED: 0.5,
     LURE_MAX_RETRIEVE_SPEED: 5.0,
     LURE_SPEED_INCREMENT: 0.5,
-    
+
     // Fish spawning
     FISH_SPAWN_CHANCE: 0.008, // per frame
     MIN_FISH_DEPTH: 20,
     MAX_FISH_DEPTH: 140,
     FISH_SPEED_MIN: 0.3,
     FISH_SPEED_MAX: 1.2,
-    
+
     // Fish AI
     DETECTION_RANGE: 80, // pixels (horizontal)
     VERTICAL_DETECTION_RANGE: 280, // pixels (40-70 feet = 160-280 pixels at 4px/ft)
@@ -41,23 +41,30 @@ export const GameConfig = {
     FISH_PULL_BASE: 5, // base tension from fish fighting
     FISH_TIRE_RATE: 0.5, // how fast fish gets tired
     REEL_DISTANCE_PER_TAP: 2, // pixels reeled per tap
-    
-    // Colors (sonar style)
-    COLOR_BACKGROUND: 0x0a0a0a,
-    COLOR_GRID: 0x003300,
+
+    // Colors - realistic lake trout and water colors based on reference photos
+    COLOR_BACKGROUND: 0x3a4f3a, // Olive green water (deeper)
+    COLOR_BACKGROUND_SURFACE: 0x5a6f4a, // Army/olive green (surface)
+    COLOR_GRID: 0x4a5a3a,
     COLOR_TEXT: 0x00ff00,
-    COLOR_LURE: 0xffff00,
-    COLOR_FISH_WEAK: 0x336633,
-    COLOR_FISH_MEDIUM: 0x66aa66,
-    COLOR_FISH_STRONG: 0xffaa00,
-    COLOR_SURFACE: 0x0066cc,
-    
+    COLOR_LURE: 0xff6600, // Orange lure
+    // Lake trout colors from reference photos
+    COLOR_FISH_BODY: 0x8b9178, // Grayish-olive body
+    COLOR_FISH_BELLY: 0xc9b896, // Cream/pinkish belly
+    COLOR_FISH_FINS: 0xd9c8a6, // Pale cream fins
+    COLOR_FISH_SPOTS: 0xa8b898, // Light spots
+    // Legacy color categories for behavior
+    COLOR_FISH_WEAK: 0x8b9178,
+    COLOR_FISH_MEDIUM: 0x8b9178,
+    COLOR_FISH_STRONG: 0x8b9178,
+    COLOR_SURFACE: 0x5a6f4a, // Army green surface
+
     // Game settings
     WATER_TEMP_MIN: 38,
     WATER_TEMP_MAX: 45,
     LAKE_TROUT_PREFERRED_DEPTH_MIN: 40,
     LAKE_TROUT_PREFERRED_DEPTH_MAX: 100,
-    
+
     // UI settings
     UI_FONT_SIZE: 14,
     UI_PADDING: 10,

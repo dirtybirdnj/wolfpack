@@ -202,23 +202,27 @@ export class Fish {
         this.graphics.lineStyle(1, color, 0.1);
         this.graphics.strokeEllipse(this.x, this.y, GameConfig.DETECTION_RANGE, GameConfig.VERTICAL_DETECTION_RANGE);
 
-        // Draw main fish body (sonar return) - slender almond shape
+        // Draw realistic lake trout based on reference photos
         const bodySize = Math.max(8, this.weight / 2); // Larger, more visible
 
         // Get movement direction to orient the fish
         const movement = this.ai.getMovementVector();
         const isMovingRight = movement.x >= 0;
 
-        // Draw slender almond-shaped body
-        this.graphics.fillStyle(color, 1.0); // Full opacity
-        this.graphics.fillEllipse(this.x, this.y, bodySize * 2.5, bodySize * 0.8); // More slender
+        // Main body - grayish-olive color (top/back)
+        this.graphics.fillStyle(GameConfig.COLOR_FISH_BODY, 1.0);
+        this.graphics.fillEllipse(this.x, this.y, bodySize * 2.5, bodySize * 0.8);
 
-        // Draw triangle tail pointing opposite to movement direction
+        // Belly - cream/pinkish lighter color (bottom half)
+        this.graphics.fillStyle(GameConfig.COLOR_FISH_BELLY, 0.8);
+        this.graphics.fillEllipse(this.x, this.y + bodySize * 0.2, bodySize * 2.2, bodySize * 0.5);
+
+        // Tail fin - pale cream color
         const tailSize = bodySize * 0.7;
         const tailX = isMovingRight ? this.x - bodySize * 1.25 : this.x + bodySize * 1.25;
         const tailY = this.y;
 
-        this.graphics.fillStyle(color, 0.9);
+        this.graphics.fillStyle(GameConfig.COLOR_FISH_FINS, 0.9);
         this.graphics.beginPath();
 
         if (isMovingRight) {
@@ -236,13 +240,29 @@ export class Fish {
         this.graphics.closePath();
         this.graphics.fillPath();
 
-        // Add some texture/noise to make it look more like sonar
-        const numDots = Math.floor(this.weight / 8) + 2;
-        for (let i = 0; i < numDots; i++) {
-            const offsetX = (Math.random() - 0.5) * bodySize * 1.5;
-            const offsetY = (Math.random() - 0.5) * bodySize * 0.4;
-            this.graphics.fillStyle(color, Math.random() * 0.5 + 0.3);
-            this.graphics.fillCircle(this.x + offsetX, this.y + offsetY, 1);
+        // Dorsal and pectoral fins - pale cream
+        this.graphics.fillStyle(GameConfig.COLOR_FISH_FINS, 0.7);
+        // Dorsal fin (top)
+        this.graphics.fillTriangle(
+            this.x, this.y - bodySize * 0.5,
+            this.x - bodySize * 0.3, this.y - bodySize * 1.2,
+            this.x + bodySize * 0.3, this.y - bodySize * 1.2
+        );
+        // Pectoral fins (sides)
+        const finX = isMovingRight ? this.x - bodySize * 0.3 : this.x + bodySize * 0.3;
+        this.graphics.fillTriangle(
+            finX, this.y,
+            finX + (isMovingRight ? -1 : 1) * bodySize * 0.4, this.y - bodySize * 0.3,
+            finX + (isMovingRight ? -1 : 1) * bodySize * 0.4, this.y + bodySize * 0.3
+        );
+
+        // Light spots pattern - characteristic of lake trout
+        const numSpots = Math.floor(this.weight / 5) + 3;
+        for (let i = 0; i < numSpots; i++) {
+            const offsetX = (Math.random() - 0.5) * bodySize * 1.8;
+            const offsetY = (Math.random() - 0.5) * bodySize * 0.5;
+            this.graphics.fillStyle(GameConfig.COLOR_FISH_SPOTS, 0.6);
+            this.graphics.fillCircle(this.x + offsetX, this.y + offsetY, 1.5);
         }
         
         // Frenzy indicator - bright orange glow when in feeding frenzy
