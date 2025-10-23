@@ -62,6 +62,18 @@ export class UIScene extends Phaser.Scene {
         
         // Retrieve speed indicator
         this.retrieveIndicator = this.add.graphics();
+
+        // Create retrieve speed text once
+        this.retrieveSpeedText = this.add.text(
+            GameConfig.CANVAS_WIDTH - 140, 163,
+            'Retrieve: 2.0',
+            {
+                fontSize: '12px',
+                fontFamily: 'Courier New',
+                color: '#ffffff'
+            }
+        );
+
         this.updateRetrieveIndicator(2.0);
         
         // Tips display
@@ -132,20 +144,20 @@ export class UIScene extends Phaser.Scene {
     
     updateRetrieveIndicator(speed) {
         this.retrieveIndicator.clear();
-        
+
         const x = GameConfig.CANVAS_WIDTH - 145;
         const y = 160;
         const maxWidth = 135;
-        
+
         // Background bar
         this.retrieveIndicator.fillStyle(0x003300, 0.5);
         this.retrieveIndicator.fillRect(x, y, maxWidth, 20);
-        
+
         // Speed bar
-        const speedPercent = (speed - GameConfig.LURE_MIN_RETRIEVE_SPEED) / 
+        const speedPercent = (speed - GameConfig.LURE_MIN_RETRIEVE_SPEED) /
                            (GameConfig.LURE_MAX_RETRIEVE_SPEED - GameConfig.LURE_MIN_RETRIEVE_SPEED);
         const barWidth = speedPercent * maxWidth;
-        
+
         // Color based on optimal speed
         let color = 0x00ff00;
         const optimalDiff = Math.abs(speed - GameConfig.OPTIMAL_LURE_SPEED);
@@ -154,19 +166,15 @@ export class UIScene extends Phaser.Scene {
         } else if (optimalDiff > 1.5) {
             color = 0xff6600; // Too fast/slow
         }
-        
+
         this.retrieveIndicator.fillStyle(color, 0.8);
         this.retrieveIndicator.fillRect(x, y, barWidth, 20);
-        
-        // Speed text
-        const speedText = this.add.text(x + 5, y + 3, `Retrieve: ${speed.toFixed(1)}`, {
-            fontSize: '12px',
-            fontFamily: 'Courier New',
-            color: '#ffffff'
-        });
-        
+
+        // Update speed text (reuse existing text object)
+        this.retrieveSpeedText.setText(`Retrieve: ${speed.toFixed(1)}`);
+
         // Optimal marker
-        const optimalX = x + ((GameConfig.OPTIMAL_LURE_SPEED - GameConfig.LURE_MIN_RETRIEVE_SPEED) / 
+        const optimalX = x + ((GameConfig.OPTIMAL_LURE_SPEED - GameConfig.LURE_MIN_RETRIEVE_SPEED) /
                               (GameConfig.LURE_MAX_RETRIEVE_SPEED - GameConfig.LURE_MIN_RETRIEVE_SPEED)) * maxWidth;
         this.retrieveIndicator.lineStyle(2, 0xffffff, 0.8);
         this.retrieveIndicator.lineBetween(optimalX, y - 2, optimalX, y + 22);

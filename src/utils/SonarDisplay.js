@@ -6,20 +6,24 @@ export class SonarDisplay {
         this.graphics = scene.add.graphics();
         this.gridOffset = 0;
         this.scanLineX = 0;
-        
+
         // Noise and interference patterns
         this.noiseParticles = [];
         this.initNoiseParticles();
-        
+
         // Bottom structure (Lake Champlain lakebed)
         this.bottomProfile = this.generateBottomProfile();
-        
+
         // Temperature gradient display
         this.thermoclines = [
             { depth: 25, strength: 0.3 },
             { depth: 45, strength: 0.5 },
             { depth: 85, strength: 0.2 }
         ];
+
+        // Create depth marker texts once
+        this.depthTexts = [];
+        this.createDepthMarkers();
     }
     
     initNoiseParticles() {
@@ -219,15 +223,13 @@ export class SonarDisplay {
     }
     
     drawScanLine() {
-        // Vertical scanning effect
-        const gradient = this.scene.add.graphics();
-        gradient.lineStyle(3, GameConfig.COLOR_TEXT, 0.1);
-        gradient.lineBetween(this.scanLineX, 0, this.scanLineX, GameConfig.CANVAS_HEIGHT);
-        gradient.lineStyle(2, GameConfig.COLOR_TEXT, 0.2);
-        gradient.lineBetween(this.scanLineX - 10, 0, this.scanLineX - 10, GameConfig.CANVAS_HEIGHT);
-        gradient.lineStyle(1, GameConfig.COLOR_TEXT, 0.1);
-        gradient.lineBetween(this.scanLineX - 20, 0, this.scanLineX - 20, GameConfig.CANVAS_HEIGHT);
-        gradient.destroy();
+        // Vertical scanning effect - use main graphics object
+        this.graphics.lineStyle(3, GameConfig.COLOR_TEXT, 0.1);
+        this.graphics.lineBetween(this.scanLineX, 0, this.scanLineX, GameConfig.CANVAS_HEIGHT);
+        this.graphics.lineStyle(2, GameConfig.COLOR_TEXT, 0.2);
+        this.graphics.lineBetween(this.scanLineX - 10, 0, this.scanLineX - 10, GameConfig.CANVAS_HEIGHT);
+        this.graphics.lineStyle(1, GameConfig.COLOR_TEXT, 0.1);
+        this.graphics.lineBetween(this.scanLineX - 20, 0, this.scanLineX - 20, GameConfig.CANVAS_HEIGHT);
     }
     
     drawNoise() {
@@ -239,21 +241,28 @@ export class SonarDisplay {
         });
     }
     
-    drawDepthMarkers() {
-        // Draw depth text on the left side
+    createDepthMarkers() {
+        // Create depth text objects once during initialization
         const textStyle = {
             fontSize: '12px',
             fontFamily: 'Courier New',
             color: '#00ff00'
         };
-        
+
         for (let depth = 0; depth <= GameConfig.MAX_DEPTH; depth += 25) {
             const y = depth * GameConfig.DEPTH_SCALE;
             if (y <= GameConfig.CANVAS_HEIGHT - 20) {
                 const text = this.scene.add.text(5, y - 6, depth + 'ft', textStyle);
                 text.setAlpha(0.7);
+                text.setDepth(100); // Ensure depth markers are visible
+                this.depthTexts.push(text);
             }
         }
+    }
+
+    drawDepthMarkers() {
+        // Depth markers are already created and visible - nothing to do here
+        // They persist across frames
     }
     
     drawSurfaceLine() {
@@ -273,6 +282,9 @@ export class SonarDisplay {
     
     destroy() {
         this.graphics.destroy();
+        // Clean up depth marker texts
+        this.depthTexts.forEach(text => text.destroy());
+        this.depthTexts = [];
     }
 }
 
