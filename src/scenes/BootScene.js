@@ -129,15 +129,6 @@ export class BootScene extends Phaser.Scene {
             lineSpacing: 5
         }).setOrigin(0.5, 0.5);
         
-        // Blinking effect for "Press Space"
-        this.tweens.add({
-            targets: instructText,
-            alpha: { from: 1, to: 0.3 },
-            duration: 500,
-            yoyo: true,
-            repeat: -1
-        });
-        
         // Start game on spacebar
         this.input.keyboard.once('keydown-SPACE', () => {
             this.startGame();

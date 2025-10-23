@@ -113,21 +113,15 @@ export class Fish {
         for (let i = 0; i < this.sonarTrail.length; i++) {
             const point = this.sonarTrail[i];
             const alpha = 1 - (point.age / this.maxTrailLength);
-            
+
             // Create arc-like sonar return
-            this.graphics.lineStyle(2, color, alpha * 0.3);
             const arcSize = this.weight / 5 + 3;
-            
-            // Draw a curved line to simulate sonar arc
+
+            // Draw a simple line to simulate sonar trail
             if (i > 0) {
                 const prevPoint = this.sonarTrail[i - 1];
-                this.graphics.beginPath();
-                this.graphics.moveTo(prevPoint.x, prevPoint.y - arcSize/2);
-                this.graphics.quadraticCurveTo(
-                    point.x - 5, point.y,
-                    point.x, point.y + arcSize/2
-                );
-                this.graphics.strokePath();
+                this.graphics.lineStyle(2, color, alpha * 0.3);
+                this.graphics.lineBetween(prevPoint.x, prevPoint.y, point.x, point.y);
             }
         }
         
