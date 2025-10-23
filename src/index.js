@@ -139,6 +139,15 @@ function setupDevTools(game) {
             btn.style.background = debugMode ? '#ffaa00' : '#00ff00';
         }
     });
+
+    // Test Controller Button
+    document.getElementById('test-controller-btn').addEventListener('click', () => {
+        const gameScene = game.scene.getScene('GameScene');
+        if (gameScene && gameScene.scene.isActive()) {
+            gameScene.showControllerTest();
+            console.log('Controller test opened');
+        }
+    });
 }
 
 function updateFishStatus(gameScene) {

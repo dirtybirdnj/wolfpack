@@ -96,13 +96,13 @@ export class BootScene extends Phaser.Scene {
             align: 'center',
             lineSpacing: 10
         }).setOrigin(0.5, 0.5);
-        
+
         this.add.text(400, 250, 'Lake Trout Simulator', {
             fontSize: '18px',
             fontFamily: 'Courier New',
             color: '#88ff88'
         }).setOrigin(0.5, 0.5);
-        
+
         // Location text
         this.add.text(400, 320, '45°00\'N 73°15\'W\nBurlington, Vermont', {
             fontSize: '14px',
@@ -110,7 +110,21 @@ export class BootScene extends Phaser.Scene {
             color: '#66aa66',
             align: 'center'
         }).setOrigin(0.5, 0.5);
-        
+
+        // Check for gamepad
+        this.gamepadDetected = false;
+        this.input.gamepad.once('connected', (pad) => {
+            this.gamepadDetected = true;
+            this.gamepad = pad;
+            console.log('Gamepad detected on boot screen');
+
+            // Update instructions to include controller option
+            if (instructText) {
+                instructText.setText(instructions.replace('PRESS SPACE', 'PRESS SPACE OR X'));
+                instructText.setColor('#00ffff'); // Highlight change
+            }
+        });
+
         // Instructions
         const instructions = [
             'PRESS SPACE TO BEGIN',
@@ -120,7 +134,7 @@ export class BootScene extends Phaser.Scene {
             'Depth Range: 40-100 feet',
             'Water Temp: 38-42°F'
         ].join('\n');
-        
+
         const instructText = this.add.text(400, 450, instructions, {
             fontSize: '14px',
             fontFamily: 'Courier New',
@@ -128,16 +142,29 @@ export class BootScene extends Phaser.Scene {
             align: 'center',
             lineSpacing: 5
         }).setOrigin(0.5, 0.5);
-        
+
         // Start game on spacebar
         this.input.keyboard.once('keydown-SPACE', () => {
             this.startGame();
         });
-        
+
         // Also allow click/tap to start
         this.input.once('pointerdown', () => {
             this.startGame();
         });
+
+        // Gamepad X button to start
+        this.checkGamepadStart = true;
+    }
+
+    update() {
+        // Check for gamepad X button press
+        if (this.checkGamepadStart && this.gamepad && this.gamepad.connected) {
+            if (this.gamepad.X) {
+                this.checkGamepadStart = false;
+                this.startGame();
+            }
+        }
     }
     
     startGame() {

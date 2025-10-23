@@ -17,6 +17,8 @@ export class GameScene extends Phaser.Scene {
         this.debugMode = false; // Dev tools debug mode
         this.debugGraphics = null;
         this.currentFight = null; // Active fish fight
+        this.controllerTestMode = false; // Controller test window active
+        this.controllerTestUI = null; // Test UI elements
     }
     
     create() {
@@ -84,6 +86,24 @@ export class GameScene extends Phaser.Scene {
             console.log('Gamepad connected:', pad.id);
             this.gamepad = pad;
 
+            // Update HTML controller status
+            const statusEl = document.getElementById('controller-status');
+            const nameEl = document.getElementById('controller-name');
+            const testBtn = document.getElementById('test-controller-btn');
+
+            if (statusEl) {
+                statusEl.textContent = 'Connected';
+                statusEl.style.color = '#00ff00';
+            }
+            if (nameEl) {
+                nameEl.textContent = pad.id || 'Unknown Controller';
+                nameEl.style.color = '#00ff00';
+            }
+            if (testBtn) {
+                testBtn.disabled = false;
+                testBtn.style.cursor = 'pointer';
+            }
+
             // Show notification
             const text = this.add.text(400, 50, 'Gamepad Connected!', {
                 fontSize: '16px',
@@ -118,6 +138,12 @@ export class GameScene extends Phaser.Scene {
     }
     
     update(time, delta) {
+        // Controller test mode - update test UI and block game inputs
+        if (this.controllerTestMode && this.controllerTestUpdate) {
+            this.controllerTestUpdate();
+            return; // Block all game logic
+        }
+
         // If fighting a fish, handle that instead of normal gameplay
         if (this.currentFight && this.currentFight.active) {
             const spacePressed = Phaser.Input.Keyboard.JustDown(this.spaceKey);
@@ -325,6 +351,173 @@ export class GameScene extends Phaser.Scene {
         } catch (error) {
             console.warn('Gamepad vibration not supported:', error);
         }
+    }
+
+    showControllerTest() {
+        if (!this.gamepad || this.controllerTestMode) return;
+
+        this.controllerTestMode = true;
+
+        // Create dark overlay
+        const overlay = this.add.graphics();
+        overlay.fillStyle(0x000000, 0.85);
+        overlay.fillRect(0, 0, GameConfig.CANVAS_WIDTH, GameConfig.CANVAS_HEIGHT);
+        overlay.setDepth(2000);
+
+        // Create test window
+        const windowBg = this.add.graphics();
+        windowBg.fillStyle(0x1a1a2e, 0.95);
+        windowBg.fillRoundedRect(100, 50, 600, 500, 10);
+        windowBg.lineStyle(2, 0x00aaff, 1);
+        windowBg.strokeRoundedRect(100, 50, 600, 500, 10);
+        windowBg.setDepth(2001);
+
+        // Title
+        const title = this.add.text(400, 80, 'CONTROLLER TEST', {
+            fontSize: '24px',
+            fontFamily: 'Courier New',
+            color: '#00aaff',
+            fontStyle: 'bold'
+        });
+        title.setOrigin(0.5, 0);
+        title.setDepth(2002);
+
+        // Instructions
+        const instructions = this.add.text(400, 120, 'Press buttons on your controller to test', {
+            fontSize: '14px',
+            fontFamily: 'Courier New',
+            color: '#888888'
+        });
+        instructions.setOrigin(0.5, 0);
+        instructions.setDepth(2002);
+
+        // Input status text
+        const statusTexts = {
+            dpadUp: this.createTestText(150, 170, 'D-Pad UP'),
+            dpadDown: this.createTestText(150, 200, 'D-Pad DOWN'),
+            dpadLeft: this.createTestText(150, 230, 'D-Pad LEFT'),
+            dpadRight: this.createTestText(150, 260, 'D-Pad RIGHT'),
+            buttonA: this.createTestText(450, 170, 'A Button'),
+            buttonB: this.createTestText(450, 200, 'B Button'),
+            buttonX: this.createTestText(450, 230, 'X Button'),
+            buttonY: this.createTestText(450, 260, 'Y Button'),
+            l1: this.createTestText(150, 310, 'L1/LB'),
+            r1: this.createTestText(450, 310, 'R1/RB'),
+            l2: this.createTestText(150, 340, 'L2/LT'),
+            r2: this.createTestText(450, 340, 'R2/RT'),
+            leftStick: this.createTestText(150, 390, 'Left Stick'),
+            rightStick: this.createTestText(450, 390, 'Right Stick')
+        };
+
+        // OK Button
+        const okButton = this.add.graphics();
+        okButton.fillStyle(0x00aaff, 1);
+        okButton.fillRoundedRect(300, 470, 200, 50, 5);
+        okButton.setDepth(2002);
+        okButton.setInteractive(new Phaser.Geom.Rectangle(300, 470, 200, 50), Phaser.Geom.Rectangle.Contains);
+
+        const okText = this.add.text(400, 495, 'OK', {
+            fontSize: '20px',
+            fontFamily: 'Courier New',
+            color: '#ffffff',
+            fontStyle: 'bold'
+        });
+        okText.setOrigin(0.5, 0.5);
+        okText.setDepth(2003);
+
+        okButton.on('pointerdown', () => {
+            this.closeControllerTest();
+        });
+
+        okButton.on('pointerover', () => {
+            okButton.clear();
+            okButton.fillStyle(0x00ddff, 1);
+            okButton.fillRoundedRect(300, 470, 200, 50, 5);
+        });
+
+        okButton.on('pointerout', () => {
+            okButton.clear();
+            okButton.fillStyle(0x00aaff, 1);
+            okButton.fillRoundedRect(300, 470, 200, 50, 5);
+        });
+
+        // Store UI elements
+        this.controllerTestUI = {
+            overlay,
+            windowBg,
+            title,
+            instructions,
+            statusTexts,
+            okButton,
+            okText
+        };
+
+        // Update loop for controller test
+        this.controllerTestUpdate = () => {
+            if (!this.controllerTestMode || !this.gamepad) return;
+
+            const pad = this.gamepad;
+            const DEAD_ZONE = 0.2;
+
+            // Update button states
+            this.updateTestButton(statusTexts.dpadUp, pad.up);
+            this.updateTestButton(statusTexts.dpadDown, pad.down);
+            this.updateTestButton(statusTexts.dpadLeft, pad.left);
+            this.updateTestButton(statusTexts.dpadRight, pad.right);
+            this.updateTestButton(statusTexts.buttonA, pad.A);
+            this.updateTestButton(statusTexts.buttonB, pad.B);
+            this.updateTestButton(statusTexts.buttonX, pad.X);
+            this.updateTestButton(statusTexts.buttonY, pad.Y);
+            this.updateTestButton(statusTexts.l1, pad.L1);
+            this.updateTestButton(statusTexts.r1, pad.R1);
+            this.updateTestButton(statusTexts.l2, pad.L2 > 0.5);
+            this.updateTestButton(statusTexts.r2, pad.R2 > 0.5);
+
+            // Update analog sticks
+            const leftStickActive = Math.abs(pad.leftStick.x) > DEAD_ZONE || Math.abs(pad.leftStick.y) > DEAD_ZONE;
+            const rightStickActive = Math.abs(pad.rightStick.x) > DEAD_ZONE || Math.abs(pad.rightStick.y) > DEAD_ZONE;
+            this.updateTestButton(statusTexts.leftStick, leftStickActive);
+            this.updateTestButton(statusTexts.rightStick, rightStickActive);
+        };
+    }
+
+    createTestText(x, y, label) {
+        const text = this.add.text(x, y, `${label}: ⬜`, {
+            fontSize: '14px',
+            fontFamily: 'Courier New',
+            color: '#ffffff'
+        });
+        text.setDepth(2002);
+        return text;
+    }
+
+    updateTestButton(textObj, isPressed) {
+        if (isPressed) {
+            textObj.setColor('#00ff00');
+            textObj.setText(textObj.text.replace('⬜', '✅'));
+        } else {
+            textObj.setColor('#ffffff');
+            textObj.setText(textObj.text.replace('✅', '⬜'));
+        }
+    }
+
+    closeControllerTest() {
+        if (!this.controllerTestUI) return;
+
+        // Destroy all UI elements
+        const ui = this.controllerTestUI;
+        ui.overlay.destroy();
+        ui.windowBg.destroy();
+        ui.title.destroy();
+        ui.instructions.destroy();
+        ui.okButton.destroy();
+        ui.okText.destroy();
+
+        Object.values(ui.statusTexts).forEach(text => text.destroy());
+
+        this.controllerTestUI = null;
+        this.controllerTestMode = false;
+        this.controllerTestUpdate = null;
     }
 
     trySpawnFish() {
