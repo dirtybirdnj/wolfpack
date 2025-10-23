@@ -1,0 +1,25 @@
+{
+  "name": "lake-trout-sonar-game",
+  "version": "1.0.0",
+  "description": "Lake Champlain ice fishing sonar simulator game built with Phaser",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "http-server . -p 8080 -c-1",
+    "dev": "http-server . -p 8080 -c-1"
+  },
+  "keywords": [
+    "phaser",
+    "game",
+    "fishing",
+    "lake-trout",
+    "vermont"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "http-server": "^14.1.1"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

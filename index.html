@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lake Champlain Ice Fishing - Sonar Simulator</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: linear-gradient(135deg, #1a2332 0%, #0d1117 100%);
+            font-family: 'Courier New', monospace;
+            color: #00ff00;
+        }
+        
+        h1 {
+            color: #00ff00;
+            text-shadow: 0 0 10px #00ff00;
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            color: #88ff88;
+            font-size: 14px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        #game-container {
+            border: 2px solid #00ff00;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
+            position: relative;
+        }
+        
+        .controls {
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.7);
+            border: 1px solid #00ff00;
+            border-radius: 5px;
+            font-size: 12px;
+            line-height: 1.6;
+        }
+        
+        .controls h3 {
+            margin: 0 0 10px 0;
+            color: #ffff00;
+        }
+        
+        .control-item {
+            display: flex;
+            justify-content: space-between;
+            margin: 5px 0;
+        }
+        
+        .key {
+            background: #00ff00;
+            color: #000;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎣 LAKE CHAMPLAIN SONAR 🎣</h1>
+    <div class="subtitle">Ice Fishing Simulator • Lake Trout • 45°N, Between the Greens and Adirondacks</div>
+    
+    <div id="game-container"></div>
+    
+    <div class="controls">
+        <h3>CONTROLS</h3>
+        <div class="control-item">
+            <span><span class="key">SPACE</span> or <span class="key">↓</span></span>
+            <span>Drop Lure</span>
+        </div>
+        <div class="control-item">
+            <span><span class="key">↑</span></span>
+            <span>Retrieve (Hold)</span>
+        </div>
+        <div class="control-item">
+            <span><span class="key">←</span> <span class="key">→</span></span>
+            <span>Adjust Speed</span>
+        </div>
+        <div class="control-item">
+            <span><span class="key">R</span></span>
+            <span>Reset Lure</span>
+        </div>
+    </div>
+
+    <!-- Load Phaser from CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js"></script>
+    
+    <!-- Load game modules -->
+    <script type="module" src="src/index.js"></script>
+</body>
+</html>

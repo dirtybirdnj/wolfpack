@@ -1,0 +1,277 @@
+import GameConfig from '../config/GameConfig.js';
+import { Constants, Utils } from '../utils/Constants.js';
+import SonarDisplay from '../utils/SonarDisplay.js';
+import Lure from '../entities/Lure.js';
+import Fish from '../entities/Fish.js';
+
+export class GameScene extends Phaser.Scene {
+    constructor() {
+        super({ key: 'GameScene' });
+        this.fishes = [];
+        this.score = 0;
+        this.fishCaught = 0;
+        this.gameTime = 0;
+        this.waterTemp = 40; // Typical Lake Champlain winter temp
+    }
+    
+    create() {
+        // Set up the sonar display
+        this.sonarDisplay = new SonarDisplay(this);
+        
+        // Create the player's lure
+        this.lure = new Lure(this, 600, 0);
+        
+        // Set up input handlers
+        this.setupInput();
+        
+        // Set water temperature (affects fish behavior)
+        this.waterTemp = Utils.randomBetween(GameConfig.WATER_TEMP_MIN, GameConfig.WATER_TEMP_MAX);
+        
+        // Event listeners
+        this.events.on('fishCaught', this.handleFishCaught, this);
+        
+        // Start spawning fish
+        this.time.addEvent({
+            delay: 1000,
+            callback: this.trySpawnFish,
+            callbackScope: this,
+            loop: true
+        });
+        
+        // Fade in
+        this.cameras.main.fadeIn(500);
+        
+        // Ambient game timer
+        this.time.addEvent({
+            delay: 1000,
+            callback: () => {
+                this.gameTime++;
+                this.updateGameStats();
+            },
+            callbackScope: this,
+            loop: true
+        });
+    }
+    
+    setupInput() {
+        // Keyboard controls
+        this.cursors = this.input.keyboard.createCursorKeys();
+        this.spaceKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+        this.rKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.R);
+        
+        // Mouse/touch controls (optional enhancement)
+        this.input.on('pointerdown', (pointer) => {
+            if (pointer.y > 100) {
+                this.lure.drop();
+            }
+        });
+    }
+    
+    update(time, delta) {
+        // Update sonar display
+        this.sonarDisplay.update();
+        
+        // Handle input
+        this.handleInput();
+        
+        // Update lure
+        this.lure.update();
+        
+        // Update all fish
+        this.fishes.forEach((fish, index) => {
+            fish.update(this.lure);
+            
+            // Remove fish that are no longer visible or caught
+            if (!fish.visible) {
+                fish.destroy();
+                this.fishes.splice(index, 1);
+            }
+        });
+        
+        // Spawn fish based on chance
+        if (Math.random() < GameConfig.FISH_SPAWN_CHANCE) {
+            this.trySpawnFish();
+        }
+    }
+    
+    handleInput() {
+        // Drop lure with space or down arrow
+        if (this.spaceKey.isDown || this.cursors.down.isDown) {
+            this.lure.drop();
+        }
+        
+        // Retrieve lure with up arrow
+        if (this.cursors.up.isDown) {
+            this.lure.retrieve();
+        } else {
+            this.lure.stopRetrieve();
+        }
+        
+        // Adjust retrieve speed with left/right arrows
+        if (Phaser.Input.Keyboard.JustDown(this.cursors.left)) {
+            this.lure.adjustSpeed(-1);
+            this.updateSpeedDisplay();
+        }
+        if (Phaser.Input.Keyboard.JustDown(this.cursors.right)) {
+            this.lure.adjustSpeed(1);
+            this.updateSpeedDisplay();
+        }
+        
+        // Reset lure with R key
+        if (Phaser.Input.Keyboard.JustDown(this.rKey)) {
+            this.lure.reset();
+        }
+    }
+    
+    trySpawnFish() {
+        // Don't spawn too many fish at once
+        if (this.fishes.length >= 10) {
+            return;
+        }
+        
+        // Determine fish spawn depth based on realistic lake trout behavior
+        let depth;
+        const tempFactor = (this.waterTemp - 38) / 7; // 0 to 1 based on temp range
+        
+        // Lake trout prefer different depths based on temperature
+        if (tempFactor < 0.3) {
+            // Cold water - fish can be shallower
+            depth = Utils.randomBetween(30, 80);
+        } else {
+            // Warmer water - fish go deeper
+            depth = Utils.randomBetween(60, 120);
+        }
+        
+        // Determine fish size
+        const sizeRoll = Math.random();
+        let size;
+        if (sizeRoll < 0.5) {
+            size = 'SMALL';
+        } else if (sizeRoll < 0.8) {
+            size = 'MEDIUM';
+        } else if (sizeRoll < 0.95) {
+            size = 'LARGE';
+        } else {
+            size = 'TROPHY';
+        }
+        
+        // Spawn from left or right edge
+        const fromLeft = Math.random() < 0.5;
+        const x = fromLeft ? -30 : GameConfig.CANVAS_WIDTH + 30;
+        const y = depth * GameConfig.DEPTH_SCALE;
+        
+        // Create the fish
+        const fish = new Fish(this, x, y, size);
+        
+        // Set initial movement direction
+        fish.speed = Utils.randomBetween(GameConfig.FISH_SPEED_MIN, GameConfig.FISH_SPEED_MAX);
+        if (!fromLeft) {
+            fish.speed *= -1;
+        }
+        
+        this.fishes.push(fish);
+    }
+    
+    handleFishCaught(fish) {
+        // Update score
+        this.score += fish.points;
+        this.fishCaught++;
+        
+        // Show catch notification
+        this.showCatchNotification(fish);
+        
+        // Update UI
+        this.events.emit('updateScore', { score: this.score, caught: this.fishCaught });
+        
+        // Achievement check
+        this.checkAchievements();
+    }
+    
+    showCatchNotification(fish) {
+        const info = fish.getInfo();
+        const text = this.add.text(400, 300, 
+            `FISH ON!\n${info.weight}\n+${fish.points} points`, 
+            {
+                fontSize: '24px',
+                fontFamily: 'Courier New',
+                color: '#ffff00',
+                align: 'center',
+                stroke: '#000000',
+                strokeThickness: 4
+            }
+        );
+        text.setOrigin(0.5, 0.5);
+        
+        // Animate and remove
+        this.tweens.add({
+            targets: text,
+            y: 250,
+            alpha: 0,
+            duration: 2000,
+            ease: 'Power2',
+            onComplete: () => {
+                text.destroy();
+            }
+        });
+    }
+    
+    checkAchievements() {
+        // Check for various achievements
+        if (this.fishCaught === 1) {
+            this.showAchievement('First Catch!', 'Welcome to Lake Champlain');
+        } else if (this.fishCaught === 5) {
+            this.showAchievement('Getting the Hang of It', '5 Lake Trout Caught');
+        } else if (this.fishCaught === 10) {
+            this.showAchievement('Experienced Angler', '10 Lake Trout Caught');
+        } else if (this.score >= 500) {
+            this.showAchievement('High Scorer', '500 Points Earned');
+        }
+    }
+    
+    showAchievement(title, description) {
+        const achievementText = this.add.text(400, 100,
+            `🏆 ${title} 🏆\n${description}`,
+            {
+                fontSize: '18px',
+                fontFamily: 'Courier New',
+                color: '#00ff00',
+                align: 'center',
+                stroke: '#000000',
+                strokeThickness: 3
+            }
+        );
+        achievementText.setOrigin(0.5, 0.5);
+        achievementText.setAlpha(0);
+        
+        this.tweens.add({
+            targets: achievementText,
+            alpha: 1,
+            duration: 500,
+            yoyo: true,
+            hold: 2000,
+            onComplete: () => {
+                achievementText.destroy();
+            }
+        });
+    }
+    
+    updateSpeedDisplay() {
+        const lureInfo = this.lure.getInfo();
+        this.events.emit('updateLureInfo', lureInfo);
+    }
+    
+    updateGameStats() {
+        // Send game stats to UI
+        this.events.emit('updateTime', this.gameTime);
+        this.events.emit('updateWaterTemp', this.waterTemp);
+    }
+    
+    shutdown() {
+        // Clean up
+        this.fishes.forEach(fish => fish.destroy());
+        this.lure.destroy();
+        this.sonarDisplay.destroy();
+    }
+}
+
+export default GameScene;
