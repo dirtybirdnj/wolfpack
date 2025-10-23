@@ -32,42 +32,108 @@ export class FishAI {
         const maxDepth = GameConfig.LAKE_TROUT_PREFERRED_DEPTH_MAX;
         return Utils.randomBetween(minDepth, maxDepth);
     }
-    
-    update(lure, currentTime) {
+
+    detectFrenzy(lure, allFish) {
+        // Lake trout get excited when they see others chasing
+        // Count other fish that are interested/chasing/striking
+        const excitedFish = allFish.filter(otherFish => {
+            if (otherFish === this.fish) return false; // Don't count self
+
+            const isExcited = otherFish.ai.state === Constants.FISH_STATE.INTERESTED ||
+                            otherFish.ai.state === Constants.FISH_STATE.CHASING ||
+                            otherFish.ai.state === Constants.FISH_STATE.STRIKING;
+
+            // Only count fish within visual range
+            const dist = Utils.calculateDistance(this.fish.x, this.fish.y, otherFish.x, otherFish.y);
+            return isExcited && dist < GameConfig.DETECTION_RANGE * 2;
+        });
+
+        // If other fish are excited, 50% chance to join frenzy
+        if (excitedFish.length > 0 && this.state === Constants.FISH_STATE.IDLE) {
+            if (Math.random() < 0.5) {
+                // Enter frenzy state!
+                this.fish.inFrenzy = true;
+
+                // Duration scales with number of frenzied fish (base 300 frames = 5 sec)
+                const baseDuration = 300;
+                const scaledDuration = baseDuration * (1 + excitedFish.length * 0.3);
+                this.fish.frenzyTimer = Math.floor(scaledDuration);
+
+                // Intensity based on number of excited fish
+                this.fish.frenzyIntensity = Math.min(1.0, excitedFish.length * 0.25);
+
+                // Immediately become interested in the lure
+                this.state = Constants.FISH_STATE.INTERESTED;
+                this.decisionCooldown = 100; // Quick response during frenzy
+            }
+        }
+
+        // Mid-column and bottom fish: 30% chance to streak upward when lure is above
+        if ((this.fish.depthZone.name === 'Mid-Column' || this.fish.depthZone.name === 'Bottom') &&
+            this.state === Constants.FISH_STATE.IDLE) {
+
+            const verticalDist = lure.y - this.fish.y; // Negative = lure is above
+            const horizontalDist = Math.abs(this.fish.x - lure.x);
+
+            // If lure is above and within horizontal range
+            if (verticalDist < -20 && // At least 5 feet above (20px = 5ft)
+                horizontalDist < GameConfig.DETECTION_RANGE &&
+                Math.abs(verticalDist) < GameConfig.VERTICAL_DETECTION_RANGE) {
+
+                if (Math.random() < 0.3) {
+                    // Streak upward!
+                    this.state = Constants.FISH_STATE.CHASING;
+                    this.targetX = lure.x;
+                    this.targetY = lure.y;
+                    this.decisionCooldown = 200;
+
+                    // Enter frenzy due to vertical strike instinct
+                    this.fish.inFrenzy = true;
+                    this.fish.frenzyTimer = 400; // Longer duration for vertical strikes
+                    this.fish.frenzyIntensity = 0.8; // High intensity
+                }
+            }
+        }
+    }
+
+    update(lure, currentTime, allFish = []) {
         // Make decisions at intervals, not every frame
         if (currentTime - this.lastDecisionTime < this.decisionCooldown) {
             return;
         }
-        
+
         this.lastDecisionTime = currentTime;
-        
+
         // Calculate distance and relationship to lure
         const distance = Utils.calculateDistance(
             this.fish.x, this.fish.y,
             lure.x, lure.y
         );
-        
+
         const depthDifference = Math.abs(this.fish.depth - lure.depth);
         const lureSpeed = Math.abs(lure.velocity);
-        
+
+        // Detect frenzy feeding - other fish chasing excites this one
+        this.detectFrenzy(lure, allFish);
+
         // State machine for fish behavior
         switch (this.state) {
             case Constants.FISH_STATE.IDLE:
                 this.idleBehavior(distance, lure, lureSpeed, depthDifference);
                 break;
-                
+
             case Constants.FISH_STATE.INTERESTED:
                 this.interestedBehavior(distance, lure, lureSpeed);
                 break;
-                
+
             case Constants.FISH_STATE.CHASING:
                 this.chasingBehavior(distance, lure, lureSpeed);
                 break;
-                
+
             case Constants.FISH_STATE.STRIKING:
                 this.strikingBehavior(distance, lure);
                 break;
-                
+
             case Constants.FISH_STATE.FLEEING:
                 this.fleeingBehavior(distance);
                 break;
@@ -114,6 +180,11 @@ export class FishAI {
         
         // Apply personality modifiers
         interestScore *= this.aggressiveness;
+
+        // Frenzy bonus - fish in frenzy are much more aggressive
+        if (this.fish.inFrenzy) {
+            interestScore += 30 * this.fish.frenzyIntensity;
+        }
 
         // Decision threshold (varies by depth zone)
         const threshold = this.fish.depthZone.interestThreshold;

@@ -97,7 +97,7 @@ export class GameScene extends Phaser.Scene {
 
         // Update all fish
         this.fishes.forEach((fish, index) => {
-            fish.update(this.lure);
+            fish.update(this.lure, this.fishes);
 
             // Remove fish that are no longer visible or caught
             if (!fish.visible) {

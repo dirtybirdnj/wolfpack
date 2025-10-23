@@ -38,6 +38,11 @@ export class Fish {
         this.hunger = Utils.randomBetween(20, 80); // 0-100, higher = more hungry
         this.health = Utils.randomBetween(60, 100); // 0-100, higher = healthier
         this.lastFed = 0; // Game time when last fed
+
+        // Frenzy behavior - lake trout get excited when they see others chasing
+        this.inFrenzy = false;
+        this.frenzyTimer = 0; // Time remaining in frenzy state
+        this.frenzyIntensity = 0; // 0-1, increases with more frenzied fish nearby
     }
     
     calculateSonarStrength() {
@@ -66,6 +71,15 @@ export class Fish {
             }
         }
 
+        // Frenzy timer decay
+        if (this.frenzyTimer > 0) {
+            this.frenzyTimer--;
+            if (this.frenzyTimer <= 0) {
+                this.inFrenzy = false;
+                this.frenzyIntensity = 0;
+            }
+        }
+
         // Clamp values
         this.hunger = Math.max(0, Math.min(100, this.hunger));
         this.health = Math.max(0, Math.min(100, this.health));
@@ -83,7 +97,7 @@ export class Fish {
         }
     }
     
-    update(lure) {
+    update(lure, allFish = []) {
         if (this.caught) {
             this.handleCaught();
             return;
@@ -99,8 +113,8 @@ export class Fish {
         this.depthZone = this.getDepthZone();
         this.speed = this.baseSpeed * this.depthZone.speedMultiplier;
 
-        // Update AI
-        this.ai.update(lure, this.scene.time.now);
+        // Update AI with info about other fish for frenzy detection
+        this.ai.update(lure, this.scene.time.now, allFish);
 
         // Get movement from AI
         const movement = this.ai.getMovementVector();
@@ -222,6 +236,13 @@ export class Fish {
             this.graphics.fillCircle(this.x + offsetX, this.y + offsetY, 1);
         }
         
+        // Frenzy indicator - bright orange glow when in feeding frenzy
+        if (this.inFrenzy) {
+            const glowSize = bodySize * 2.5 + (Math.sin(this.age * 0.2) * 3);
+            this.graphics.lineStyle(2, 0xff6600, 0.6 + (this.frenzyIntensity * 0.4));
+            this.graphics.strokeCircle(this.x, this.y, glowSize);
+        }
+
         // State indicator (for debugging/gameplay feedback)
         if (this.ai.state === Constants.FISH_STATE.INTERESTED) {
             // Show a "?" when interested
@@ -255,7 +276,9 @@ export class Fish {
             state: this.ai.state,
             points: this.points,
             hunger: Math.floor(this.hunger) + '%',
-            health: Math.floor(this.health) + '%'
+            health: Math.floor(this.health) + '%',
+            inFrenzy: this.inFrenzy,
+            frenzyIntensity: this.frenzyIntensity.toFixed(2)
         };
     }
     

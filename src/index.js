@@ -163,6 +163,10 @@ function updateFishStatus(gameScene) {
         const healthColor = fish.health < 30 ? '#ff6666' :
                            fish.health < 60 ? '#ffaa00' : '#00ff00';
 
+        // Color code frenzy (not in frenzy = gray, in frenzy = bright orange)
+        const frenzyColor = fish.inFrenzy ? '#ff6600' : '#666666';
+        const frenzyText = fish.inFrenzy ? `YES (${info.frenzyIntensity})` : 'NO';
+
         html += `
             <div style="border-bottom: 1px solid #333; padding: 5px 0; margin-bottom: 5px;">
                 <div style="font-weight: bold; color: ${zoneColor};">Fish #${index + 1} (${info.weight})</div>
@@ -171,6 +175,7 @@ function updateFishStatus(gameScene) {
                 <div>Speed: <span style="color: #ffaa00;">${fish.speed.toFixed(2)}</span></div>
                 <div>Aggro: <span style="color: #ff6666;">${fish.ai.aggressiveness.toFixed(2)}</span></div>
                 <div>State: <span style="color: #00ffff;">${fish.ai.state}</span></div>
+                <div>Frenzy: <span style="color: ${frenzyColor}; font-weight: bold;">${frenzyText}</span></div>
                 <div>Hunger: <span style="color: ${hungerColor};">${info.hunger}</span></div>
                 <div>Health: <span style="color: ${healthColor};">${info.health}</span></div>
                 <div>Position: (${Math.floor(fish.x)}, ${Math.floor(fish.y)})</div>
