@@ -11,6 +11,7 @@ export class FishFight {
         this.lineTension = 20; // Start with some tension
         this.fishTiredness = 0; // 0 = fresh, 100 = exhausted
         this.fishDistance = Math.abs(this.fish.y - 0); // Distance to surface
+        this.initialDepth = this.fish.y; // Starting depth for visual tracking
 
         // Reel tracking
         this.lastReelTime = 0;
@@ -20,9 +21,16 @@ export class FishFight {
         this.fishStrength = this.fish.weight / 5; // Bigger fish = stronger
         this.fightTime = 0;
 
+        // Thrashing animation
+        this.thrashAmount = 0;
+        this.thrashSpeed = 0.15; // Speed of thrashing oscillation
+
         // Visual
         this.tensionBar = scene.add.graphics();
         this.tensionBar.setDepth(500);
+
+        // Attach fish to lure visually
+        this.attachFishToLure();
 
         console.log(`Fish fight started! Fish: ${this.fish.weight.toFixed(1)} lbs, Distance: ${this.fishDistance.toFixed(0)}px`);
     }
@@ -91,10 +99,34 @@ export class FishFight {
         this.lineTension = Math.min(GameConfig.MAX_LINE_TENSION, this.lineTension);
     }
 
+    attachFishToLure() {
+        // Position fish at lure initially
+        this.fish.x = this.lure.x;
+        this.fish.y = this.lure.y;
+        this.fish.depth = this.fish.y / GameConfig.DEPTH_SCALE;
+    }
+
     updateFishPosition() {
-        // Move fish toward surface based on reel progress
-        const targetY = Math.max(0, this.lure.y + this.fishDistance);
-        this.fish.y = targetY;
+        // Calculate how much the fish has been reeled in
+        const reelProgress = 1 - (this.fishDistance / this.initialDepth);
+
+        // Move both lure and fish upward as fish is reeled in
+        const targetY = this.initialDepth - (this.initialDepth * reelProgress);
+
+        // Update lure position (rises with fish)
+        this.lure.y = targetY;
+        this.lure.depth = this.lure.y / GameConfig.DEPTH_SCALE;
+
+        // Fish thrashing animation - left/right oscillation
+        this.thrashAmount = Math.sin(this.fightTime * this.thrashSpeed) * 15;
+
+        // Tired fish thrash less
+        const tirednessMultiplier = 1 - (this.fishTiredness / 100);
+        const actualThrash = this.thrashAmount * tirednessMultiplier;
+
+        // Position fish at lure with thrashing offset
+        this.fish.x = this.lure.x + actualThrash;
+        this.fish.y = this.lure.y;
         this.fish.depth = this.fish.y / GameConfig.DEPTH_SCALE;
     }
 
@@ -203,10 +235,24 @@ export class FishFight {
         this.scene.fishLost++;
         this.scene.events.emit('updateFishLost', this.scene.fishLost);
 
-        // Clean up
+        // Release fish from lure - fish swims away fast!
+        this.fish.caught = false;
+        this.fish.ai.state = 'FLEEING';
+
+        // Set fast escape velocity
+        const escapeDirection = this.fish.x < 400 ? -1 : 1; // Swim away from center
+        this.fish.ai.targetX = escapeDirection < 0 ? -200 : 1000;
+        this.fish.ai.targetY = this.fish.y + 50; // Dive down a bit
+        this.fish.ai.decisionCooldown = 5000; // Long cooldown so it doesn't come back
+
+        // Reset lure position
+        this.lure.reset();
+
+        // Clean up fight
         this.endFight();
-        this.fish.visible = false;
-        this.fish.destroy();
+
+        // Don't destroy fish immediately - let it swim away
+        // It will be removed when it goes off screen
     }
 
     landFish() {

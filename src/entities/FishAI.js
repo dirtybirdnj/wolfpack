@@ -15,6 +15,10 @@ export class FishAI {
         // Idle swimming direction
         this.idleDirection = Math.random() < 0.5 ? 1 : -1; // 1 = right, -1 = left
 
+        // Strike attempts - frenzying fish get multiple swipes
+        this.strikeAttempts = 0;
+        this.maxStrikeAttempts = 1; // Default is 1 attempt
+
         // Behavior modifiers based on conditions
         this.depthPreference = this.calculateDepthPreference();
         this.speedPreference = Utils.randomBetween(1.5, 3.5);
@@ -62,6 +66,10 @@ export class FishAI {
                 // Intensity based on number of excited fish
                 this.fish.frenzyIntensity = Math.min(1.0, excitedFish.length * 0.25);
 
+                // Frenzying fish get multiple strike attempts (2-3 swipes)
+                this.maxStrikeAttempts = Math.floor(Math.random() * 2) + 2; // 2 or 3 attempts
+                this.strikeAttempts = 0;
+
                 // Immediately become interested in the lure
                 this.state = Constants.FISH_STATE.INTERESTED;
                 this.decisionCooldown = 100; // Quick response during frenzy
@@ -91,6 +99,10 @@ export class FishAI {
                     this.fish.inFrenzy = true;
                     this.fish.frenzyTimer = 400; // Longer duration for vertical strikes
                     this.fish.frenzyIntensity = 0.8; // High intensity
+
+                    // Vertical strikers also get multiple attempts
+                    this.maxStrikeAttempts = 2;
+                    this.strikeAttempts = 0;
                 }
             }
         }
@@ -240,20 +252,36 @@ export class FishAI {
         // Fish has committed to striking
         this.targetX = lure.x;
         this.targetY = lure.y;
-        
+
         if (distance < 5) {
             // Fish has caught the lure!
             this.fish.caught = true;
             this.state = Constants.FISH_STATE.FLEEING;
-            
+
             // Trigger catch event in the fish
             if (this.fish.scene) {
                 this.fish.scene.events.emit('fishCaught', this.fish);
             }
         } else if (distance > GameConfig.STRIKE_DISTANCE * 2) {
-            // Missed the strike, flee
-            this.state = Constants.FISH_STATE.FLEEING;
-            this.decisionCooldown = 3000;
+            // Missed the strike!
+            this.strikeAttempts++;
+
+            // If in frenzy and has attempts remaining, try again
+            if (this.fish.inFrenzy && this.strikeAttempts < this.maxStrikeAttempts) {
+                console.log(`Fish missed! Attempt ${this.strikeAttempts}/${this.maxStrikeAttempts} - trying again!`);
+
+                // Turn around and chase again
+                this.state = Constants.FISH_STATE.CHASING;
+                this.targetX = lure.x;
+                this.targetY = lure.y;
+                this.decisionCooldown = 300; // Brief pause before next swipe
+            } else {
+                // No more attempts or not in frenzy - flee
+                console.log(`Fish giving up after ${this.strikeAttempts} attempts`);
+                this.state = Constants.FISH_STATE.FLEEING;
+                this.decisionCooldown = 3000;
+                this.strikeAttempts = 0; // Reset for next time
+            }
         }
     }
     
