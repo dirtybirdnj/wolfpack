@@ -33,6 +33,11 @@ export class Fish {
         this.caught = false;
         this.visible = true;
         this.age = 0;
+
+        // Biological properties
+        this.hunger = Utils.randomBetween(20, 80); // 0-100, higher = more hungry
+        this.health = Utils.randomBetween(60, 100); // 0-100, higher = healthier
+        this.lastFed = 0; // Game time when last fed
     }
     
     calculateSonarStrength() {
@@ -40,6 +45,30 @@ export class Fish {
         if (this.weight > 25) return 'strong';
         if (this.weight > 10) return 'medium';
         return 'weak';
+    }
+
+    updateBiology() {
+        // Hunger increases slowly over time (every ~5 seconds at 60fps)
+        if (this.age % 300 === 0) {
+            this.hunger = Math.min(100, this.hunger + 1);
+        }
+
+        // Health is affected by hunger levels
+        if (this.hunger > 85) {
+            // Very hungry - health decreases
+            if (this.age % 600 === 0) {
+                this.health = Math.max(0, this.health - 0.5);
+            }
+        } else if (this.hunger < 30) {
+            // Well fed - health increases slowly
+            if (this.age % 600 === 0) {
+                this.health = Math.min(100, this.health + 0.5);
+            }
+        }
+
+        // Clamp values
+        this.hunger = Math.max(0, Math.min(100, this.hunger));
+        this.health = Math.max(0, Math.min(100, this.health));
     }
 
     getDepthZone() {
@@ -61,6 +90,9 @@ export class Fish {
         }
 
         this.age++;
+
+        // Update biological state
+        this.updateBiology();
 
         // Update depth zone (fish may change zones as they move)
         this.depth = this.y / GameConfig.DEPTH_SCALE;
@@ -147,18 +179,45 @@ export class Fish {
             }
         }
         
-        // Draw main fish body (sonar return)
+        // Draw main fish body (sonar return) - slender almond shape
         const bodySize = Math.max(8, this.weight / 2); // Larger, more visible
 
-        // Sonar "blob" effect - brighter and more prominent
+        // Get movement direction to orient the fish
+        const movement = this.ai.getMovementVector();
+        const isMovingRight = movement.x >= 0;
+
+        // Draw slender almond-shaped body
         this.graphics.fillStyle(color, 1.0); // Full opacity
-        this.graphics.fillEllipse(this.x, this.y, bodySize * 2, bodySize * 1.2);
-        
+        this.graphics.fillEllipse(this.x, this.y, bodySize * 2.5, bodySize * 0.8); // More slender
+
+        // Draw triangle tail pointing opposite to movement direction
+        const tailSize = bodySize * 0.7;
+        const tailX = isMovingRight ? this.x - bodySize * 1.25 : this.x + bodySize * 1.25;
+        const tailY = this.y;
+
+        this.graphics.fillStyle(color, 0.9);
+        this.graphics.beginPath();
+
+        if (isMovingRight) {
+            // Tail points left when moving right
+            this.graphics.moveTo(tailX, tailY);
+            this.graphics.lineTo(tailX - tailSize, tailY - tailSize * 0.6);
+            this.graphics.lineTo(tailX - tailSize, tailY + tailSize * 0.6);
+        } else {
+            // Tail points right when moving left
+            this.graphics.moveTo(tailX, tailY);
+            this.graphics.lineTo(tailX + tailSize, tailY - tailSize * 0.6);
+            this.graphics.lineTo(tailX + tailSize, tailY + tailSize * 0.6);
+        }
+
+        this.graphics.closePath();
+        this.graphics.fillPath();
+
         // Add some texture/noise to make it look more like sonar
         const numDots = Math.floor(this.weight / 8) + 2;
         for (let i = 0; i < numDots; i++) {
-            const offsetX = (Math.random() - 0.5) * bodySize;
-            const offsetY = (Math.random() - 0.5) * bodySize * 0.5;
+            const offsetX = (Math.random() - 0.5) * bodySize * 1.5;
+            const offsetY = (Math.random() - 0.5) * bodySize * 0.4;
             this.graphics.fillStyle(color, Math.random() * 0.5 + 0.3);
             this.graphics.fillCircle(this.x + offsetX, this.y + offsetY, 1);
         }
@@ -194,7 +253,9 @@ export class Fish {
             weight: this.weight.toFixed(1) + ' lbs',
             depth: Math.floor(this.depth) + ' ft',
             state: this.ai.state,
-            points: this.points
+            points: this.points,
+            hunger: Math.floor(this.hunger) + '%',
+            health: Math.floor(this.health) + '%'
         };
     }
     

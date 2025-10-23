@@ -155,6 +155,14 @@ function updateFishStatus(gameScene) {
         const zoneColor = fish.depthZone.name === 'Surface' ? '#ffff00' :
                          fish.depthZone.name === 'Mid-Column' ? '#00ff00' : '#888888';
 
+        // Color code hunger (high hunger = red, low = green)
+        const hungerColor = fish.hunger > 70 ? '#ff6666' :
+                           fish.hunger > 40 ? '#ffaa00' : '#00ff00';
+
+        // Color code health (low health = red, high = green)
+        const healthColor = fish.health < 30 ? '#ff6666' :
+                           fish.health < 60 ? '#ffaa00' : '#00ff00';
+
         html += `
             <div style="border-bottom: 1px solid #333; padding: 5px 0; margin-bottom: 5px;">
                 <div style="font-weight: bold; color: ${zoneColor};">Fish #${index + 1} (${info.weight})</div>
@@ -163,6 +171,8 @@ function updateFishStatus(gameScene) {
                 <div>Speed: <span style="color: #ffaa00;">${fish.speed.toFixed(2)}</span></div>
                 <div>Aggro: <span style="color: #ff6666;">${fish.ai.aggressiveness.toFixed(2)}</span></div>
                 <div>State: <span style="color: #00ffff;">${fish.ai.state}</span></div>
+                <div>Hunger: <span style="color: ${hungerColor};">${info.hunger}</span></div>
+                <div>Health: <span style="color: ${healthColor};">${info.health}</span></div>
                 <div>Position: (${Math.floor(fish.x)}, ${Math.floor(fish.y)})</div>
             </div>
         `;

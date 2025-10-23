@@ -150,7 +150,7 @@ export class GameScene extends Phaser.Scene {
     
     trySpawnFish() {
         // Don't spawn too many fish at once
-        if (this.fishes.length >= 10) {
+        if (this.fishes.length >= 4) {
             return;
         }
         
