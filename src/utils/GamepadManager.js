@@ -140,15 +140,19 @@ class GamepadManager {
 
         if (statusEl) {
             statusEl.textContent = connected ? 'Connected' : 'Not Connected';
-            statusEl.style.color = connected ? '#00ff00' : '#ff6666';
+            statusEl.className = connected ? 'status-value status-connected' : 'status-value status-disconnected';
         }
         if (nameEl) {
             nameEl.textContent = name;
-            nameEl.style.color = connected ? '#00ff00' : '#888';
+            nameEl.style.color = connected ? 'var(--text-primary)' : 'var(--text-muted)';
         }
         if (helpEl) {
-            // Hide help text when connected
-            helpEl.style.display = connected ? 'none' : 'block';
+            // Hide help text when connected using CSS class for better control
+            if (connected) {
+                helpEl.classList.add('hidden');
+            } else {
+                helpEl.classList.remove('hidden');
+            }
         }
         if (testBtn) {
             testBtn.disabled = !connected;
