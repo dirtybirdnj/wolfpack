@@ -158,39 +158,89 @@ function updateFishStatus(gameScene) {
         return;
     }
 
-    let html = '';
+    // Group fish by depth zone
+    const surfaceFish = [];
+    const midColumnFish = [];
+    const bottomFish = [];
+
     gameScene.fishes.forEach((fish, index) => {
+        const fishData = { fish, index };
+        if (fish.depthZone.name === 'Surface') {
+            surfaceFish.push(fishData);
+        } else if (fish.depthZone.name === 'Mid-Column') {
+            midColumnFish.push(fishData);
+        } else {
+            bottomFish.push(fishData);
+        }
+    });
+
+    // Helper function to render fish card
+    const renderFish = ({ fish, index }) => {
         const info = fish.getInfo();
         const zoneColor = fish.depthZone.name === 'Surface' ? '#ffff00' :
                          fish.depthZone.name === 'Mid-Column' ? '#00ff00' : '#888888';
-
-        // Color code hunger (high hunger = red, low = green)
         const hungerColor = fish.hunger > 70 ? '#ff6666' :
                            fish.hunger > 40 ? '#ffaa00' : '#00ff00';
-
-        // Color code health (low health = red, high = green)
         const healthColor = fish.health < 30 ? '#ff6666' :
                            fish.health < 60 ? '#ffaa00' : '#00ff00';
-
-        // Color code frenzy (not in frenzy = gray, in frenzy = bright orange)
         const frenzyColor = fish.inFrenzy ? '#ff6600' : '#666666';
-        const frenzyText = fish.inFrenzy ? `YES (${info.frenzyIntensity})` : 'NO';
+        const frenzyText = fish.inFrenzy ? `🔥${info.frenzyIntensity}` : '---';
 
-        html += `
-            <div style="border-bottom: 1px solid #333; padding: 5px 0; margin-bottom: 5px;">
-                <div style="font-weight: bold; color: ${zoneColor};">Fish #${index + 1} (${info.weight})</div>
-                <div>Depth: <span style="color: #00ff00;">${Math.floor(fish.depth)} ft</span></div>
-                <div>Zone: <span style="color: ${zoneColor};">${fish.depthZone.name}</span></div>
-                <div>Speed: <span style="color: #ffaa00;">${fish.speed.toFixed(2)}</span></div>
-                <div>Aggro: <span style="color: #ff6666;">${fish.ai.aggressiveness.toFixed(2)}</span></div>
-                <div>State: <span style="color: #00ffff;">${fish.ai.state}</span></div>
-                <div>Frenzy: <span style="color: ${frenzyColor}; font-weight: bold;">${frenzyText}</span></div>
-                <div>Hunger: <span style="color: ${hungerColor};">${info.hunger}</span></div>
-                <div>Health: <span style="color: ${healthColor};">${info.health}</span></div>
-                <div>Position: (${Math.floor(fish.x)}, ${Math.floor(fish.y)})</div>
+        return `
+            <div style="border: 1px solid ${zoneColor}30; background: ${zoneColor}10; padding: 4px; margin: 3px 0; border-radius: 3px; font-size: 10px;">
+                <div style="font-weight: bold; color: ${zoneColor};">🐟 #${index + 1} - ${info.weight}</div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span style="color: #aaa;">Depth:</span>
+                    <span style="color: #00ff00;">${Math.floor(fish.depth)}ft</span>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span style="color: #aaa;">State:</span>
+                    <span style="color: #00ffff; font-size: 9px;">${fish.ai.state.substring(0, 8)}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span style="color: #aaa;">Frenzy:</span>
+                    <span style="color: ${frenzyColor};">${frenzyText}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span style="color: #aaa;">H/H:</span>
+                    <span style="color: ${hungerColor};">${fish.hunger.toFixed(0)}</span>/<span style="color: ${healthColor};">${fish.health.toFixed(0)}</span>
+                </div>
             </div>
         `;
-    });
+    };
+
+    // Render zones top to bottom (Surface -> Mid -> Bottom)
+    let html = '';
+
+    // Surface Zone (0-40ft)
+    html += `
+        <div style="margin-bottom: 8px;">
+            <div style="background: #ffff0020; border: 2px solid #ffff00; padding: 4px; font-weight: bold; font-size: 11px; color: #ffff00;">
+                ☀️ SURFACE (0-40ft) [${surfaceFish.length}]
+            </div>
+            ${surfaceFish.length > 0 ? surfaceFish.map(renderFish).join('') : '<div style="color: #666; font-size: 9px; padding: 4px; font-style: italic;">No fish</div>'}
+        </div>
+    `;
+
+    // Mid-Column Zone (40-100ft) - Prime lake trout zone
+    html += `
+        <div style="margin-bottom: 8px;">
+            <div style="background: #00ff0020; border: 2px solid #00ff00; padding: 4px; font-weight: bold; font-size: 11px; color: #00ff00;">
+                🎯 MID-COLUMN (40-100ft) [${midColumnFish.length}]
+            </div>
+            ${midColumnFish.length > 0 ? midColumnFish.map(renderFish).join('') : '<div style="color: #666; font-size: 9px; padding: 4px; font-style: italic;">No fish</div>'}
+        </div>
+    `;
+
+    // Bottom Zone (100-150ft)
+    html += `
+        <div style="margin-bottom: 8px;">
+            <div style="background: #88888820; border: 2px solid #888888; padding: 4px; font-weight: bold; font-size: 11px; color: #888888;">
+                ⚓ BOTTOM (100-150ft) [${bottomFish.length}]
+            </div>
+            ${bottomFish.length > 0 ? bottomFish.map(renderFish).join('') : '<div style="color: #666; font-size: 9px; padding: 4px; font-style: italic;">No fish</div>'}
+        </div>
+    `;
 
     container.innerHTML = html;
 }

@@ -162,6 +162,11 @@ export class GameScene extends Phaser.Scene {
             // Pass either keyboard or gamepad input to fish fight
             this.currentFight.update(time, spacePressed || r2Pressed);
 
+            // Check if fight is still active after update (fish might have been landed/lost)
+            if (!this.currentFight || !this.currentFight.active) {
+                return; // Fight ended, continue to normal gameplay
+            }
+
             // Add periodic rumble during fish fight based on line tension
             if (window.gamepadManager && window.gamepadManager.isConnected()) {
                 const tension = this.currentFight.lineTension / 100; // 0-1 value
