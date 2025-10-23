@@ -66,16 +66,7 @@ export class SonarDisplay {
         if (this.gridOffset <= -GameConfig.GRID_SIZE) {
             this.gridOffset += GameConfig.GRID_SIZE;
         }
-        
-        // Update scan line
-        this.scanLineX += 2;
-        if (this.scanLineX > GameConfig.CANVAS_WIDTH) {
-            this.scanLineX = 0;
-        }
-        
-        // Update noise particles
-        this.updateNoiseParticles();
-        
+
         // Scroll bottom profile
         this.bottomProfile.forEach(point => {
             point.x -= GameConfig.SONAR_SCROLL_SPEED;
@@ -130,12 +121,6 @@ export class SonarDisplay {
 
         // Draw bottom profile
         this.drawBottomProfile();
-
-        // Draw scan line effect
-        this.drawScanLine();
-
-        // Draw noise/interference
-        this.drawNoise();
 
         // Draw depth markers
         this.drawDepthMarkers();

@@ -192,7 +192,16 @@ export class Fish {
                 this.graphics.lineBetween(prevPoint.x, prevPoint.y, point.x, point.y);
             }
         }
-        
+
+        // Draw detection range circle - shows fish awareness zone
+        // Horizontal detection range
+        this.graphics.lineStyle(1, color, 0.15);
+        this.graphics.strokeCircle(this.x, this.y, GameConfig.DETECTION_RANGE);
+
+        // Vertical detection range - ellipse showing tall vertical awareness
+        this.graphics.lineStyle(1, color, 0.1);
+        this.graphics.strokeEllipse(this.x, this.y, GameConfig.DETECTION_RANGE, GameConfig.VERTICAL_DETECTION_RANGE);
+
         // Draw main fish body (sonar return) - slender almond shape
         const bodySize = Math.max(8, this.weight / 2); // Larger, more visible
 
