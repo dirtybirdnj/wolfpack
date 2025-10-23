@@ -126,13 +126,15 @@ class GamepadManager {
     }
 
     /**
-     * Update the HTML controller status display
+     * Update the HTML controller status display and switch controls display
      */
     updateControllerStatus(connected, name) {
         const statusEl = document.getElementById('controller-status');
         const nameEl = document.getElementById('controller-name');
         const helpEl = document.getElementById('controller-help');
         const testBtn = document.getElementById('test-controller-btn');
+        const keyboardControls = document.getElementById('keyboard-controls');
+        const gamepadControls = document.getElementById('gamepad-controls');
 
         console.log('🎮 GamepadManager: Updating UI - connected:', connected, 'name:', name);
 
@@ -152,6 +154,21 @@ class GamepadManager {
             testBtn.disabled = !connected;
             testBtn.style.cursor = connected ? 'pointer' : 'not-allowed';
             testBtn.style.opacity = connected ? '1' : '0.5';
+        }
+
+        // Switch between keyboard and gamepad controls display
+        if (keyboardControls && gamepadControls) {
+            if (connected) {
+                // Show gamepad controls, hide keyboard controls
+                keyboardControls.style.display = 'none';
+                gamepadControls.style.display = 'block';
+                console.log('🎮 GamepadManager: Switched to gamepad controls display');
+            } else {
+                // Show keyboard controls, hide gamepad controls
+                keyboardControls.style.display = 'block';
+                gamepadControls.style.display = 'none';
+                console.log('🎮 GamepadManager: Switched to keyboard controls display');
+            }
         }
     }
 
