@@ -3,6 +3,7 @@ import { Constants, Utils } from '../utils/Constants.js';
 import SonarDisplay from '../utils/SonarDisplay.js';
 import Lure from '../entities/Lure.js';
 import Fish from '../entities/Fish.js';
+import FishFight from '../entities/FishFight.js';
 
 export class GameScene extends Phaser.Scene {
     constructor() {
@@ -10,10 +11,12 @@ export class GameScene extends Phaser.Scene {
         this.fishes = [];
         this.score = 0;
         this.fishCaught = 0;
+        this.fishLost = 0; // Track fish that broke the line
         this.gameTime = 0;
         this.waterTemp = 40; // Typical Lake Champlain winter temp
         this.debugMode = false; // Dev tools debug mode
         this.debugGraphics = null;
+        this.currentFight = null; // Active fish fight
     }
     
     create() {
@@ -73,6 +76,13 @@ export class GameScene extends Phaser.Scene {
     }
     
     update(time, delta) {
+        // If fighting a fish, handle that instead of normal gameplay
+        if (this.currentFight && this.currentFight.active) {
+            const spacePressed = Phaser.Input.Keyboard.JustDown(this.spaceKey);
+            this.currentFight.update(time, spacePressed);
+            return;
+        }
+
         // Update sonar display
         this.sonarDisplay.update();
 
@@ -189,18 +199,33 @@ export class GameScene extends Phaser.Scene {
     }
     
     handleFishCaught(fish) {
-        // Update score
-        this.score += fish.points;
-        this.fishCaught++;
-        
-        // Show catch notification
-        this.showCatchNotification(fish);
-        
-        // Update UI
-        this.events.emit('updateScore', { score: this.score, caught: this.fishCaught });
-        
-        // Achievement check
-        this.checkAchievements();
+        // Start fish fight!
+        console.log('Fish hooked! Starting fight...');
+
+        // Show hook notification
+        const text = this.add.text(400, 200,
+            'FISH ON!\nTAP SPACEBAR TO REEL!',
+            {
+                fontSize: '28px',
+                fontFamily: 'Courier New',
+                color: '#ffff00',
+                align: 'center',
+                stroke: '#000000',
+                strokeThickness: 4
+            }
+        );
+        text.setOrigin(0.5, 0.5);
+        text.setDepth(1000);
+
+        this.tweens.add({
+            targets: text,
+            alpha: 0,
+            duration: 2000,
+            onComplete: () => text.destroy()
+        });
+
+        // Start the fight
+        this.currentFight = new FishFight(this, fish, this.lure);
     }
     
     showCatchNotification(fish) {

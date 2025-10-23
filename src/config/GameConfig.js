@@ -25,11 +25,22 @@ export const GameConfig = {
     FISH_SPEED_MAX: 1.2,
     
     // Fish AI
-    DETECTION_RANGE: 40, // pixels
+    DETECTION_RANGE: 80, // pixels (horizontal)
+    VERTICAL_DETECTION_RANGE: 280, // pixels (40-70 feet = 160-280 pixels at 4px/ft)
     OPTIMAL_LURE_SPEED: 2.0,
     SPEED_TOLERANCE: 1.5,
     CHASE_SPEED_MULTIPLIER: 1.8,
     STRIKE_DISTANCE: 15,
+
+    // Fish fight mechanics
+    MAX_LINE_TENSION: 100,
+    TENSION_BREAK_THRESHOLD: 95,
+    TENSION_DECAY_RATE: 2.0, // per frame
+    TENSION_PER_REEL: 15, // tension added per spacebar press
+    MIN_REEL_INTERVAL: 100, // milliseconds between valid reels
+    FISH_PULL_BASE: 5, // base tension from fish fighting
+    FISH_TIRE_RATE: 0.5, // how fast fish gets tired
+    REEL_DISTANCE_PER_TAP: 2, // pixels reeled per tap
     
     // Colors (sonar style)
     COLOR_BACKGROUND: 0x0a0a0a,

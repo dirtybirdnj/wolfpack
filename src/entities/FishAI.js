@@ -75,16 +75,23 @@ export class FishAI {
     }
     
     idleBehavior(distance, lure, lureSpeed, depthDifference) {
-        // Check if lure is in detection range
-        if (distance > GameConfig.DETECTION_RANGE) {
+        // Lake trout can see 40-70 feet above and below
+        const horizontalDist = Math.abs(this.fish.x - lure.x);
+        const verticalDist = Math.abs(this.fish.y - lure.y);
+
+        // Check if lure is in detection range (wide vertical range)
+        if (horizontalDist > GameConfig.DETECTION_RANGE) {
             return;
         }
-        
+        if (verticalDist > GameConfig.VERTICAL_DETECTION_RANGE) {
+            return;
+        }
+
         // Factors that influence interest
         let interestScore = 0;
-        
-        // Distance factor (closer is more interesting)
-        interestScore += (1 - distance / GameConfig.DETECTION_RANGE) * 30;
+
+        // Distance factor (closer is more interesting) - use vertical distance
+        interestScore += (1 - verticalDist / GameConfig.VERTICAL_DETECTION_RANGE) * 30;
         
         // Speed factor (optimal speed is most attractive)
         const speedDiff = Math.abs(lureSpeed - this.speedPreference);

@@ -5,6 +5,7 @@ export class UIScene extends Phaser.Scene {
         super({ key: 'UIScene' });
         this.score = 0;
         this.fishCaught = 0;
+        this.fishLost = 0;
         this.gameTime = 0;
         this.waterTemp = 40;
     }
@@ -33,7 +34,9 @@ export class UIScene extends Phaser.Scene {
         
         // Score display
         this.scoreText = this.add.text(10, 25, 'Score: 0', textStyle);
-        this.fishCaughtText = this.add.text(10, 45, 'Fish: 0', textStyle);
+        this.fishCaughtText = this.add.text(10, 45, 'Caught: 0', textStyle);
+        this.fishLostText = this.add.text(10, 60, 'Lost: 0', textStyle);
+        this.fishLostText.setColor('#ff6666'); // Red for lost fish
         
         // Lure info
         this.depthText = this.add.text(150, 25, 'Depth: 0 ft', textStyle);
@@ -97,6 +100,7 @@ export class UIScene extends Phaser.Scene {
             gameScene.events.on('updateLureInfo', this.updateLureInfo, this);
             gameScene.events.on('updateTime', this.updateTime, this);
             gameScene.events.on('updateWaterTemp', this.updateWaterTemp, this);
+            gameScene.events.on('updateFishLost', this.updateFishLost, this);
         }
         
         // Update loop for dynamic info
@@ -201,7 +205,12 @@ export class UIScene extends Phaser.Scene {
         this.waterTemp = temp;
         this.waterTempText.setText(`Water: ${Math.floor(temp)}°F`);
     }
-    
+
+    updateFishLost(count) {
+        this.fishLost = count;
+        this.fishLostText.setText(`Lost: ${count}`);
+    }
+
     updateDynamicInfo() {
         // Check for fish in range of lure
         const gameScene = this.scene.get('GameScene');
