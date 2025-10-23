@@ -48,9 +48,6 @@ export class GameScene extends Phaser.Scene {
         // Fade in
         this.cameras.main.fadeIn(500);
 
-        // Show welcome instructions
-        this.showWelcomeMessage();
-
         // Ambient game timer
         this.time.addEvent({
             delay: 1000,
@@ -751,79 +748,6 @@ export class GameScene extends Phaser.Scene {
             this.debugGraphics.lineStyle(1, color, 0.2);
             this.debugGraphics.strokeCircle(fish.x, fish.y, GameConfig.DETECTION_RANGE);
         });
-    }
-
-    showWelcomeMessage() {
-        // Create welcome instruction panel
-        const centerX = 400;
-        const centerY = 300;
-
-        // Semi-transparent background
-        const bg = this.add.graphics();
-        bg.fillStyle(0x000000, 0.85);
-        bg.fillRoundedRect(150, 200, 500, 200, 10);
-        bg.lineStyle(3, 0x00ff00, 1);
-        bg.strokeRoundedRect(150, 200, 500, 200, 10);
-
-        // Title
-        const title = this.add.text(centerX, 230, 'WELCOME TO THE ICE!', {
-            fontSize: '24px',
-            fontFamily: 'Courier New',
-            color: '#ffff00',
-            fontStyle: 'bold'
-        }).setOrigin(0.5, 0.5);
-
-        // Instructions
-        const instructions = this.add.text(centerX, 290,
-            'SPACE/DOWN - Release spool (lure drops)\n' +
-            'UP arrow - Engage clutch & retrieve\n' +
-            'Release UP - Hold position (clutch engaged)\n' +
-            'LEFT/RIGHT - Adjust retrieve speed\n\n' +
-            'Heavier lure drops faster!\n' +
-            'Lake trout prefer 60-100 feet deep',
-            {
-                fontSize: '13px',
-                fontFamily: 'Courier New',
-                color: '#00ff00',
-                align: 'center',
-                lineSpacing: 5
-            }
-        ).setOrigin(0.5, 0.5);
-
-        // "Press any key" prompt
-        const prompt = this.add.text(centerX, 375, 'Press any key to start fishing...', {
-            fontSize: '12px',
-            fontFamily: 'Courier New',
-            color: '#88ff88',
-            fontStyle: 'italic'
-        }).setOrigin(0.5, 0.5);
-
-        // Blinking effect for prompt
-        this.tweens.add({
-            targets: prompt,
-            alpha: { from: 1, to: 0.3 },
-            duration: 600,
-            yoyo: true,
-            repeat: -1
-        });
-
-        // Dismiss on any key press
-        const dismissHandler = () => {
-            this.tweens.add({
-                targets: [bg, title, instructions, prompt],
-                alpha: 0,
-                duration: 300,
-                onComplete: () => {
-                    bg.destroy();
-                    title.destroy();
-                    instructions.destroy();
-                    prompt.destroy();
-                }
-            });
-        };
-
-        this.input.keyboard.once('keydown', dismissHandler);
-        this.input.once('pointerdown', dismissHandler);
     }
 
     shutdown() {
