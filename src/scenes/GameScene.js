@@ -294,12 +294,14 @@ export class GameScene extends Phaser.Scene {
 
         // Instructions
         const instructions = this.add.text(centerX, 290,
-            'Press SPACE or DOWN arrow to drop your lure\n' +
-            'Hold UP arrow to retrieve\n' +
-            'LEFT/RIGHT arrows adjust retrieve speed\n\n' +
-            'Watch your depth! Lake trout prefer 60-100 feet',
+            'SPACE/DOWN - Release spool (lure drops)\n' +
+            'UP arrow - Engage clutch & retrieve\n' +
+            'Release UP - Hold position (clutch engaged)\n' +
+            'LEFT/RIGHT - Adjust retrieve speed\n\n' +
+            'Heavier lure drops faster!\n' +
+            'Lake trout prefer 60-100 feet deep',
             {
-                fontSize: '14px',
+                fontSize: '13px',
                 fontFamily: 'Courier New',
                 color: '#00ff00',
                 align: 'center',

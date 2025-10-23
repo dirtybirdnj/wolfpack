@@ -10,12 +10,16 @@ export class Lure {
         this.velocity = 0;
         this.state = Constants.LURE_STATE.SURFACE;
         this.retrieveSpeed = GameConfig.LURE_MIN_RETRIEVE_SPEED;
-        
+
+        // Baitcasting reel mechanics
+        this.weight = 0.5; // Lure weight in ounces (affects drop speed)
+        this.spoolReleased = false; // Is the spool currently free-spinning?
+
         // Visual representation
         this.graphics = scene.add.graphics();
         this.trail = [];
         this.maxTrailLength = 20;
-        
+
         // Stats
         this.maxDepthReached = 0;
         this.timeInWater = 0;
@@ -26,22 +30,26 @@ export class Lure {
         if (this.state !== Constants.LURE_STATE.SURFACE) {
             this.timeInWater++;
         }
-        
+
         // Apply physics based on state
         switch (this.state) {
             case Constants.LURE_STATE.DROPPING:
-                this.velocity += GameConfig.LURE_GRAVITY;
-                if (this.velocity > GameConfig.LURE_MAX_FALL_SPEED) {
-                    this.velocity = GameConfig.LURE_MAX_FALL_SPEED;
+                // Baitcasting mechanics: heavier lure drops faster
+                const weightMultiplier = this.weight * 1.5; // Convert oz to speed factor
+                this.velocity += GameConfig.LURE_GRAVITY * weightMultiplier;
+                const maxFallSpeed = GameConfig.LURE_MAX_FALL_SPEED * weightMultiplier;
+                if (this.velocity > maxFallSpeed) {
+                    this.velocity = maxFallSpeed;
                 }
                 break;
-                
+
             case Constants.LURE_STATE.RETRIEVING:
                 this.velocity = -this.retrieveSpeed;
                 break;
-                
+
             case Constants.LURE_STATE.IDLE:
-                this.velocity *= 0.95; // Slight drift
+                // Clutch engaged - no drift, lure stays in place
+                this.velocity = 0;
                 break;
         }
         
@@ -111,20 +119,27 @@ export class Lure {
     }
     
     drop() {
+        // Release spool - lure starts dropping
         if (this.state === Constants.LURE_STATE.SURFACE) {
             this.timeInWater = 0;
         }
+        this.spoolReleased = true;
         this.state = Constants.LURE_STATE.DROPPING;
     }
-    
+
     retrieve() {
+        // Re-engage clutch - immediately stops falling
         if (this.state !== Constants.LURE_STATE.SURFACE) {
+            this.velocity = 0; // Immediate stop, no recoil
+            this.spoolReleased = false;
             this.state = Constants.LURE_STATE.RETRIEVING;
         }
     }
-    
+
     stopRetrieve() {
+        // Stop reeling - clutch stays engaged, lure holds position
         if (this.state === Constants.LURE_STATE.RETRIEVING) {
+            this.velocity = 0; // Hold position, no drift
             this.state = Constants.LURE_STATE.IDLE;
         }
     }
