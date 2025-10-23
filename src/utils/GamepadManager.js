@@ -1,0 +1,169 @@
+/**
+ * Native HTML Gamepad API Manager
+ * Uses the browser's Gamepad API directly for better compatibility with Bluetooth controllers
+ */
+
+class GamepadManager {
+    constructor() {
+        this.gamepads = [];
+        this.connectedGamepad = null;
+        this.listeners = {
+            connected: [],
+            disconnected: []
+        };
+
+        this.setupNativeListeners();
+        this.pollGamepads(); // Start polling
+    }
+
+    setupNativeListeners() {
+        // Listen for gamepad connection using native browser API
+        window.addEventListener('gamepadconnected', (e) => {
+            console.log('Gamepad connected (native):', e.gamepad.id);
+            this.connectedGamepad = e.gamepad;
+            this.updateGamepads();
+            this.notifyListeners('connected', e.gamepad);
+            this.updateControllerStatus(true, e.gamepad.id);
+        });
+
+        window.addEventListener('gamepaddisconnected', (e) => {
+            console.log('Gamepad disconnected (native):', e.gamepad.id);
+            if (this.connectedGamepad && this.connectedGamepad.index === e.gamepad.index) {
+                this.connectedGamepad = null;
+            }
+            this.updateGamepads();
+            this.notifyListeners('disconnected', e.gamepad);
+            this.updateControllerStatus(false, 'No controller detected');
+        });
+    }
+
+    /**
+     * Poll gamepads - required by the Gamepad API specification
+     * The gamepad state only updates when you call navigator.getGamepads()
+     */
+    pollGamepads() {
+        this.updateGamepads();
+        requestAnimationFrame(() => this.pollGamepads());
+    }
+
+    updateGamepads() {
+        // Get current gamepad states (this is required to update button states)
+        const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+        this.gamepads = Array.from(gamepads).filter(pad => pad !== null);
+
+        // Update connected gamepad reference
+        if (this.gamepads.length > 0 && !this.connectedGamepad) {
+            this.connectedGamepad = this.gamepads[0];
+            this.updateControllerStatus(true, this.connectedGamepad.id);
+        }
+    }
+
+    /**
+     * Get the primary connected gamepad
+     */
+    getGamepad() {
+        this.updateGamepads(); // Ensure we have latest state
+        return this.connectedGamepad;
+    }
+
+    /**
+     * Check if any gamepad is connected
+     */
+    isConnected() {
+        this.updateGamepads();
+        return this.connectedGamepad !== null && this.connectedGamepad.connected;
+    }
+
+    /**
+     * Register a listener for gamepad events
+     */
+    on(event, callback) {
+        if (this.listeners[event]) {
+            this.listeners[event].push(callback);
+        }
+    }
+
+    /**
+     * Notify all listeners of an event
+     */
+    notifyListeners(event, data) {
+        if (this.listeners[event]) {
+            this.listeners[event].forEach(callback => callback(data));
+        }
+    }
+
+    /**
+     * Update the HTML controller status display
+     */
+    updateControllerStatus(connected, name) {
+        const statusEl = document.getElementById('controller-status');
+        const nameEl = document.getElementById('controller-name');
+        const testBtn = document.getElementById('test-controller-btn');
+
+        if (statusEl) {
+            statusEl.textContent = connected ? 'Connected' : 'Not Connected';
+            statusEl.style.color = connected ? '#00ff00' : '#ff6666';
+        }
+        if (nameEl) {
+            nameEl.textContent = name;
+            nameEl.style.color = connected ? '#00ff00' : '#888';
+        }
+        if (testBtn) {
+            testBtn.disabled = !connected;
+            testBtn.style.cursor = connected ? 'pointer' : 'not-allowed';
+            testBtn.style.opacity = connected ? '1' : '0.5';
+        }
+    }
+
+    /**
+     * Get button state by name (PS4/Xbox compatible)
+     */
+    getButton(buttonName) {
+        const gamepad = this.getGamepad();
+        if (!gamepad) return { pressed: false, value: 0 };
+
+        // Button mapping for standard gamepads
+        const buttonMap = {
+            'X': 0,        // A button (Xbox) / X button (PS4) - bottom face button
+            'Circle': 1,   // B button (Xbox) / Circle button (PS4) - right face button
+            'Square': 2,   // X button (Xbox) / Square button (PS4) - left face button
+            'Triangle': 3, // Y button (Xbox) / Triangle button (PS4) - top face button
+            'L1': 4,       // Left shoulder button
+            'R1': 5,       // Right shoulder button
+            'L2': 6,       // Left trigger
+            'R2': 7,       // Right trigger
+            'Select': 8,   // Select/Share button
+            'Start': 9,    // Start/Options button
+            'L3': 10,      // Left stick press
+            'R3': 11,      // Right stick press
+            'DpadUp': 12,
+            'DpadDown': 13,
+            'DpadLeft': 14,
+            'DpadRight': 15
+        };
+
+        const buttonIndex = buttonMap[buttonName];
+        if (buttonIndex !== undefined && gamepad.buttons[buttonIndex]) {
+            const button = gamepad.buttons[buttonIndex];
+            return {
+                pressed: button.pressed,
+                value: button.value
+            };
+        }
+
+        return { pressed: false, value: 0 };
+    }
+
+    /**
+     * Get axis value (for analog sticks)
+     */
+    getAxis(axisIndex) {
+        const gamepad = this.getGamepad();
+        if (!gamepad || !gamepad.axes[axisIndex]) return 0;
+        return gamepad.axes[axisIndex];
+    }
+}
+
+// Create and export a singleton instance
+const gamepadManager = new GamepadManager();
+export default gamepadManager;

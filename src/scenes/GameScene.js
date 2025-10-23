@@ -81,52 +81,23 @@ export class GameScene extends Phaser.Scene {
     }
 
     setupGamepad() {
-        // Enable gamepad input (if available)
-        if (!this.input.gamepad) {
-            console.warn('Gamepad plugin not available');
+        // Use native gamepad manager
+        if (!window.gamepadManager) {
+            console.warn('Native gamepad manager not available');
             return;
         }
 
-        this.input.gamepad.once('connected', (pad) => {
-            console.log('Gamepad connected:', pad.id);
-            this.gamepad = pad;
+        // Check if already connected
+        if (window.gamepadManager.isConnected()) {
+            const gamepad = window.gamepadManager.getGamepad();
+            console.log('Gamepad already connected in game:', gamepad.id);
+            this.showGamepadConnectedNotification(gamepad.id);
+        }
 
-            // Update HTML controller status
-            const statusEl = document.getElementById('controller-status');
-            const nameEl = document.getElementById('controller-name');
-            const testBtn = document.getElementById('test-controller-btn');
-
-            if (statusEl) {
-                statusEl.textContent = 'Connected';
-                statusEl.style.color = '#00ff00';
-            }
-            if (nameEl) {
-                nameEl.textContent = pad.id || 'Unknown Controller';
-                nameEl.style.color = '#00ff00';
-            }
-            if (testBtn) {
-                testBtn.disabled = false;
-                testBtn.style.cursor = 'pointer';
-            }
-
-            // Show notification
-            const text = this.add.text(400, 50, 'Gamepad Connected!', {
-                fontSize: '16px',
-                fontFamily: 'Courier New',
-                color: '#00ff00',
-                stroke: '#000000',
-                strokeThickness: 2
-            });
-            text.setOrigin(0.5, 0.5);
-            text.setDepth(1000);
-
-            this.tweens.add({
-                targets: text,
-                alpha: 0,
-                duration: 2000,
-                delay: 1000,
-                onComplete: () => text.destroy()
-            });
+        // Listen for new connections during gameplay
+        window.gamepadManager.on('connected', (gamepad) => {
+            console.log('Gamepad connected in game:', gamepad.id);
+            this.showGamepadConnectedNotification(gamepad.id);
         });
 
         // Gamepad state tracking
@@ -137,9 +108,34 @@ export class GameScene extends Phaser.Scene {
             speedAdjustDelay: 150, // Delay between speed adjustments
             lastDpadUp: false,
             lastDpadDown: false,
+            lastDpadLeft: false,
+            lastDpadRight: false,
             lastL1: false,
-            lastR1: false
+            lastR1: false,
+            lastA: false,
+            lastB: false,
+            lastX: false
         };
+    }
+
+    showGamepadConnectedNotification(gamepadId) {
+        const text = this.add.text(400, 50, 'Gamepad Connected!', {
+            fontSize: '16px',
+            fontFamily: 'Courier New',
+            color: '#00ff00',
+            stroke: '#000000',
+            strokeThickness: 2
+        });
+        text.setOrigin(0.5, 0.5);
+        text.setDepth(1000);
+
+        this.tweens.add({
+            targets: text,
+            alpha: 0,
+            duration: 2000,
+            delay: 1000,
+            onComplete: () => text.destroy()
+        });
     }
     
     update(time, delta) {
@@ -153,14 +149,14 @@ export class GameScene extends Phaser.Scene {
         if (this.currentFight && this.currentFight.active) {
             const spacePressed = Phaser.Input.Keyboard.JustDown(this.spaceKey);
 
-            // Check R2 trigger for gamepad (rapid tapping)
+            // Check R2 trigger for gamepad (rapid tapping) using native API
             let r2Pressed = false;
-            if (this.gamepad && this.gamepad.connected) {
-                const r2Value = this.gamepad.R2; // Right trigger
+            if (window.gamepadManager && window.gamepadManager.isConnected()) {
+                const r2Button = window.gamepadManager.getButton('R2');
                 const currentTime = this.time.now;
 
                 // Trigger pressed (value > 0.5 threshold) and enough time has passed
-                if (r2Value > 0.5 && currentTime - this.gamepadState.lastR2Press >= this.gamepadState.r2MinInterval) {
+                if (r2Button.value > 0.5 && currentTime - this.gamepadState.lastR2Press >= this.gamepadState.r2MinInterval) {
                     r2Pressed = true;
                     this.gamepadState.lastR2Press = currentTime;
                 }
@@ -170,7 +166,7 @@ export class GameScene extends Phaser.Scene {
             this.currentFight.update(time, spacePressed || r2Pressed);
 
             // Add periodic rumble during fish fight based on line tension
-            if (this.gamepad && this.gamepad.connected) {
+            if (window.gamepadManager && window.gamepadManager.isConnected()) {
                 const tension = this.currentFight.lineTension / 100; // 0-1 value
 
                 // Rumble intensity increases with tension
@@ -256,19 +252,33 @@ export class GameScene extends Phaser.Scene {
     }
 
     handleGamepadInput() {
-        // Exit if no gamepad connected
-        if (!this.gamepad || !this.gamepad.connected) {
+        // Exit if no gamepad connected using native API
+        if (!window.gamepadManager || !window.gamepadManager.isConnected()) {
             return;
         }
 
-        const pad = this.gamepad;
         const currentTime = this.time.now;
 
         // Dead zone for analog inputs
         const DEAD_ZONE = 0.2;
 
-        // D-pad UP: Retrieve line
-        const dpadUp = pad.up || (pad.leftStick.y < -DEAD_ZONE);
+        // Get button states using native API
+        const dpadUpBtn = window.gamepadManager.getButton('DpadUp');
+        const dpadDownBtn = window.gamepadManager.getButton('DpadDown');
+        const dpadLeftBtn = window.gamepadManager.getButton('DpadLeft');
+        const dpadRightBtn = window.gamepadManager.getButton('DpadRight');
+        const l1Btn = window.gamepadManager.getButton('L1');
+        const r1Btn = window.gamepadManager.getButton('R1');
+        const aBtn = window.gamepadManager.getButton('X'); // X button on PS4 = A on Xbox
+        const bBtn = window.gamepadManager.getButton('Circle'); // Circle on PS4 = B on Xbox
+        const xBtn = window.gamepadManager.getButton('Square'); // Square on PS4 = X on Xbox
+
+        // Get analog stick axes
+        const leftStickX = window.gamepadManager.getAxis(0); // Left stick X
+        const leftStickY = window.gamepadManager.getAxis(1); // Left stick Y
+
+        // D-pad UP or Left Stick UP: Retrieve line
+        const dpadUp = dpadUpBtn.pressed || (leftStickY < -DEAD_ZONE);
         if (dpadUp) {
             this.lure.retrieve();
         } else {
@@ -278,8 +288,8 @@ export class GameScene extends Phaser.Scene {
             }
         }
 
-        // D-pad DOWN: Drop line
-        const dpadDown = pad.down || (pad.leftStick.y > DEAD_ZONE);
+        // D-pad DOWN or Left Stick DOWN: Drop line
+        const dpadDown = dpadDownBtn.pressed || (leftStickY > DEAD_ZONE);
         if (dpadDown) {
             this.lure.drop();
         }
@@ -288,9 +298,9 @@ export class GameScene extends Phaser.Scene {
         const canAdjustSpeed = currentTime - this.gamepadState.lastSpeedAdjust >= this.gamepadState.speedAdjustDelay;
 
         if (canAdjustSpeed) {
-            // D-pad LEFT or L1: Decrease speed
-            const dpadLeft = pad.left || (pad.leftStick.x < -DEAD_ZONE);
-            const l1Pressed = pad.L1;
+            // D-pad LEFT or L1 or Left Stick LEFT: Decrease speed
+            const dpadLeft = dpadLeftBtn.pressed || (leftStickX < -DEAD_ZONE);
+            const l1Pressed = l1Btn.pressed;
 
             if ((dpadLeft && !this.gamepadState.lastDpadLeft) || (l1Pressed && !this.gamepadState.lastL1)) {
                 this.lure.adjustSpeed(-1);
@@ -298,9 +308,9 @@ export class GameScene extends Phaser.Scene {
                 this.gamepadState.lastSpeedAdjust = currentTime;
             }
 
-            // D-pad RIGHT or R1: Increase speed
-            const dpadRight = pad.right || (pad.leftStick.x > DEAD_ZONE);
-            const r1Pressed = pad.R1;
+            // D-pad RIGHT or R1 or Left Stick RIGHT: Increase speed
+            const dpadRight = dpadRightBtn.pressed || (leftStickX > DEAD_ZONE);
+            const r1Pressed = r1Btn.pressed;
 
             if ((dpadRight && !this.gamepadState.lastDpadRight) || (r1Pressed && !this.gamepadState.lastR1)) {
                 this.lure.adjustSpeed(1);
@@ -316,38 +326,43 @@ export class GameScene extends Phaser.Scene {
         }
 
         // Face buttons for secondary actions
-        // A button (button 0): Quick drop/retrieve toggle
-        if (pad.A && !this.gamepadState.lastA) {
+        // A button (X on PS4): Quick drop/retrieve toggle
+        if (aBtn.pressed && !this.gamepadState.lastA) {
             if (this.lure.state === 'RETRIEVING') {
                 this.lure.stopRetrieve();
             } else {
                 this.lure.drop();
             }
         }
-        this.gamepadState.lastA = pad.A;
+        this.gamepadState.lastA = aBtn.pressed;
 
-        // B button (button 1): Reset lure
-        if (pad.B && !this.gamepadState.lastB) {
+        // B button (Circle on PS4): Reset lure
+        if (bBtn.pressed && !this.gamepadState.lastB) {
             this.lure.reset();
         }
-        this.gamepadState.lastB = pad.B;
+        this.gamepadState.lastB = bBtn.pressed;
 
-        // X button (button 2): Toggle debug mode
-        if (pad.X && !this.gamepadState.lastX) {
+        // X button (Square on PS4): Toggle debug mode
+        if (xBtn.pressed && !this.gamepadState.lastX) {
             this.debugMode = !this.debugMode;
         }
-        this.gamepadState.lastX = pad.X;
+        this.gamepadState.lastX = xBtn.pressed;
     }
 
     rumbleGamepad(duration = 200, strongMagnitude = 0.5, weakMagnitude = 0.5) {
-        // Trigger gamepad vibration if supported
-        if (!this.gamepad || !this.gamepad.connected || !this.gamepad.vibration) {
+        // Trigger gamepad vibration using native API
+        if (!window.gamepadManager || !window.gamepadManager.isConnected()) {
+            return;
+        }
+
+        const gamepad = window.gamepadManager.getGamepad();
+        if (!gamepad || !gamepad.vibrationActuator) {
             return; // Vibration not supported
         }
 
-        // Use the Gamepad Vibration API
+        // Use the native Gamepad Vibration API
         try {
-            this.gamepad.vibration.playEffect('dual-rumble', {
+            gamepad.vibrationActuator.playEffect('dual-rumble', {
                 startDelay: 0,
                 duration: duration,
                 weakMagnitude: weakMagnitude,   // 0.0 to 1.0
@@ -359,7 +374,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     showControllerTest() {
-        if (!this.gamepad || this.controllerTestMode) return;
+        if (!window.gamepadManager || !window.gamepadManager.isConnected() || this.controllerTestMode) return;
 
         this.controllerTestMode = true;
 
@@ -457,30 +472,33 @@ export class GameScene extends Phaser.Scene {
             okText
         };
 
-        // Update loop for controller test
+        // Update loop for controller test using native API
         this.controllerTestUpdate = () => {
-            if (!this.controllerTestMode || !this.gamepad) return;
+            if (!this.controllerTestMode || !window.gamepadManager || !window.gamepadManager.isConnected()) return;
 
-            const pad = this.gamepad;
             const DEAD_ZONE = 0.2;
 
-            // Update button states
-            this.updateTestButton(statusTexts.dpadUp, pad.up);
-            this.updateTestButton(statusTexts.dpadDown, pad.down);
-            this.updateTestButton(statusTexts.dpadLeft, pad.left);
-            this.updateTestButton(statusTexts.dpadRight, pad.right);
-            this.updateTestButton(statusTexts.buttonA, pad.A);
-            this.updateTestButton(statusTexts.buttonB, pad.B);
-            this.updateTestButton(statusTexts.buttonX, pad.X);
-            this.updateTestButton(statusTexts.buttonY, pad.Y);
-            this.updateTestButton(statusTexts.l1, pad.L1);
-            this.updateTestButton(statusTexts.r1, pad.R1);
-            this.updateTestButton(statusTexts.l2, pad.L2 > 0.5);
-            this.updateTestButton(statusTexts.r2, pad.R2 > 0.5);
+            // Get button states using native API
+            this.updateTestButton(statusTexts.dpadUp, window.gamepadManager.getButton('DpadUp').pressed);
+            this.updateTestButton(statusTexts.dpadDown, window.gamepadManager.getButton('DpadDown').pressed);
+            this.updateTestButton(statusTexts.dpadLeft, window.gamepadManager.getButton('DpadLeft').pressed);
+            this.updateTestButton(statusTexts.dpadRight, window.gamepadManager.getButton('DpadRight').pressed);
+            this.updateTestButton(statusTexts.buttonA, window.gamepadManager.getButton('X').pressed); // X on PS4 = A
+            this.updateTestButton(statusTexts.buttonB, window.gamepadManager.getButton('Circle').pressed); // Circle = B
+            this.updateTestButton(statusTexts.buttonX, window.gamepadManager.getButton('Square').pressed); // Square = X
+            this.updateTestButton(statusTexts.buttonY, window.gamepadManager.getButton('Triangle').pressed); // Triangle = Y
+            this.updateTestButton(statusTexts.l1, window.gamepadManager.getButton('L1').pressed);
+            this.updateTestButton(statusTexts.r1, window.gamepadManager.getButton('R1').pressed);
+            this.updateTestButton(statusTexts.l2, window.gamepadManager.getButton('L2').value > 0.5);
+            this.updateTestButton(statusTexts.r2, window.gamepadManager.getButton('R2').value > 0.5);
 
             // Update analog sticks
-            const leftStickActive = Math.abs(pad.leftStick.x) > DEAD_ZONE || Math.abs(pad.leftStick.y) > DEAD_ZONE;
-            const rightStickActive = Math.abs(pad.rightStick.x) > DEAD_ZONE || Math.abs(pad.rightStick.y) > DEAD_ZONE;
+            const leftStickX = window.gamepadManager.getAxis(0);
+            const leftStickY = window.gamepadManager.getAxis(1);
+            const rightStickX = window.gamepadManager.getAxis(2);
+            const rightStickY = window.gamepadManager.getAxis(3);
+            const leftStickActive = Math.abs(leftStickX) > DEAD_ZONE || Math.abs(leftStickY) > DEAD_ZONE;
+            const rightStickActive = Math.abs(rightStickX) > DEAD_ZONE || Math.abs(rightStickY) > DEAD_ZONE;
             this.updateTestButton(statusTexts.leftStick, leftStickActive);
             this.updateTestButton(statusTexts.rightStick, rightStickActive);
         };
