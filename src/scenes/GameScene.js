@@ -66,28 +66,104 @@ export class GameScene extends Phaser.Scene {
         this.cursors = this.input.keyboard.createCursorKeys();
         this.spaceKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
         this.rKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.R);
-        
+
         // Mouse/touch controls (optional enhancement)
         this.input.on('pointerdown', (pointer) => {
             if (pointer.y > 100) {
                 this.lure.drop();
             }
         });
+
+        // Gamepad support setup
+        this.setupGamepad();
+    }
+
+    setupGamepad() {
+        // Enable gamepad input
+        this.input.gamepad.once('connected', (pad) => {
+            console.log('Gamepad connected:', pad.id);
+            this.gamepad = pad;
+
+            // Show notification
+            const text = this.add.text(400, 50, 'Gamepad Connected!', {
+                fontSize: '16px',
+                fontFamily: 'Courier New',
+                color: '#00ff00',
+                stroke: '#000000',
+                strokeThickness: 2
+            });
+            text.setOrigin(0.5, 0.5);
+            text.setDepth(1000);
+
+            this.tweens.add({
+                targets: text,
+                alpha: 0,
+                duration: 2000,
+                delay: 1000,
+                onComplete: () => text.destroy()
+            });
+        });
+
+        // Gamepad state tracking
+        this.gamepadState = {
+            lastR2Press: 0,
+            r2MinInterval: 50, // Minimum milliseconds between R2 taps
+            lastSpeedAdjust: 0,
+            speedAdjustDelay: 150, // Delay between speed adjustments
+            lastDpadUp: false,
+            lastDpadDown: false,
+            lastL1: false,
+            lastR1: false
+        };
     }
     
     update(time, delta) {
         // If fighting a fish, handle that instead of normal gameplay
         if (this.currentFight && this.currentFight.active) {
             const spacePressed = Phaser.Input.Keyboard.JustDown(this.spaceKey);
-            this.currentFight.update(time, spacePressed);
+
+            // Check R2 trigger for gamepad (rapid tapping)
+            let r2Pressed = false;
+            if (this.gamepad && this.gamepad.connected) {
+                const r2Value = this.gamepad.R2; // Right trigger
+                const currentTime = this.time.now;
+
+                // Trigger pressed (value > 0.5 threshold) and enough time has passed
+                if (r2Value > 0.5 && currentTime - this.gamepadState.lastR2Press >= this.gamepadState.r2MinInterval) {
+                    r2Pressed = true;
+                    this.gamepadState.lastR2Press = currentTime;
+                }
+            }
+
+            // Pass either keyboard or gamepad input to fish fight
+            this.currentFight.update(time, spacePressed || r2Pressed);
+
+            // Add periodic rumble during fish fight based on line tension
+            if (this.gamepad && this.gamepad.connected) {
+                const tension = this.currentFight.lineTension / 100; // 0-1 value
+
+                // Rumble intensity increases with tension
+                if (tension > 0.9 && time % 500 < 50) {
+                    // Critical tension - strong rumble
+                    this.rumbleGamepad(100, 0.8, 0.4);
+                } else if (tension > 0.7 && time % 800 < 50) {
+                    // High tension - medium rumble
+                    this.rumbleGamepad(80, 0.5, 0.3);
+                } else if (r2Pressed) {
+                    // Light rumble on each reel
+                    this.rumbleGamepad(50, 0.2, 0.1);
+                }
+            }
+
             return;
         }
 
         // Update sonar display
         this.sonarDisplay.update();
 
-        // Handle input
+        // Handle input (keyboard + gamepad)
         this.handleInput();
+        this.handleGamepadInput();
 
         // Update lure
         this.lure.update();
@@ -124,14 +200,14 @@ export class GameScene extends Phaser.Scene {
         if (this.spaceKey.isDown || this.cursors.down.isDown) {
             this.lure.drop();
         }
-        
+
         // Retrieve lure with up arrow
         if (this.cursors.up.isDown) {
             this.lure.retrieve();
         } else {
             this.lure.stopRetrieve();
         }
-        
+
         // Adjust retrieve speed with left/right arrows
         if (Phaser.Input.Keyboard.JustDown(this.cursors.left)) {
             this.lure.adjustSpeed(-1);
@@ -141,13 +217,116 @@ export class GameScene extends Phaser.Scene {
             this.lure.adjustSpeed(1);
             this.updateSpeedDisplay();
         }
-        
+
         // Reset lure with R key
         if (Phaser.Input.Keyboard.JustDown(this.rKey)) {
             this.lure.reset();
         }
     }
-    
+
+    handleGamepadInput() {
+        // Exit if no gamepad connected
+        if (!this.gamepad || !this.gamepad.connected) {
+            return;
+        }
+
+        const pad = this.gamepad;
+        const currentTime = this.time.now;
+
+        // Dead zone for analog inputs
+        const DEAD_ZONE = 0.2;
+
+        // D-pad UP: Retrieve line
+        const dpadUp = pad.up || (pad.leftStick.y < -DEAD_ZONE);
+        if (dpadUp) {
+            this.lure.retrieve();
+        } else {
+            // Only stop retrieve if keyboard also isn't retrieving
+            if (!this.cursors.up.isDown) {
+                this.lure.stopRetrieve();
+            }
+        }
+
+        // D-pad DOWN: Drop line
+        const dpadDown = pad.down || (pad.leftStick.y > DEAD_ZONE);
+        if (dpadDown) {
+            this.lure.drop();
+        }
+
+        // Speed adjustments with debouncing
+        const canAdjustSpeed = currentTime - this.gamepadState.lastSpeedAdjust >= this.gamepadState.speedAdjustDelay;
+
+        if (canAdjustSpeed) {
+            // D-pad LEFT or L1: Decrease speed
+            const dpadLeft = pad.left || (pad.leftStick.x < -DEAD_ZONE);
+            const l1Pressed = pad.L1;
+
+            if ((dpadLeft && !this.gamepadState.lastDpadLeft) || (l1Pressed && !this.gamepadState.lastL1)) {
+                this.lure.adjustSpeed(-1);
+                this.updateSpeedDisplay();
+                this.gamepadState.lastSpeedAdjust = currentTime;
+            }
+
+            // D-pad RIGHT or R1: Increase speed
+            const dpadRight = pad.right || (pad.leftStick.x > DEAD_ZONE);
+            const r1Pressed = pad.R1;
+
+            if ((dpadRight && !this.gamepadState.lastDpadRight) || (r1Pressed && !this.gamepadState.lastR1)) {
+                this.lure.adjustSpeed(1);
+                this.updateSpeedDisplay();
+                this.gamepadState.lastSpeedAdjust = currentTime;
+            }
+
+            // Update state tracking
+            this.gamepadState.lastDpadLeft = dpadLeft;
+            this.gamepadState.lastDpadRight = dpadRight;
+            this.gamepadState.lastL1 = l1Pressed;
+            this.gamepadState.lastR1 = r1Pressed;
+        }
+
+        // Face buttons for secondary actions
+        // A button (button 0): Quick drop/retrieve toggle
+        if (pad.A && !this.gamepadState.lastA) {
+            if (this.lure.state === 'RETRIEVING') {
+                this.lure.stopRetrieve();
+            } else {
+                this.lure.drop();
+            }
+        }
+        this.gamepadState.lastA = pad.A;
+
+        // B button (button 1): Reset lure
+        if (pad.B && !this.gamepadState.lastB) {
+            this.lure.reset();
+        }
+        this.gamepadState.lastB = pad.B;
+
+        // X button (button 2): Toggle debug mode
+        if (pad.X && !this.gamepadState.lastX) {
+            this.debugMode = !this.debugMode;
+        }
+        this.gamepadState.lastX = pad.X;
+    }
+
+    rumbleGamepad(duration = 200, strongMagnitude = 0.5, weakMagnitude = 0.5) {
+        // Trigger gamepad vibration if supported
+        if (!this.gamepad || !this.gamepad.connected || !this.gamepad.vibration) {
+            return; // Vibration not supported
+        }
+
+        // Use the Gamepad Vibration API
+        try {
+            this.gamepad.vibration.playEffect('dual-rumble', {
+                startDelay: 0,
+                duration: duration,
+                weakMagnitude: weakMagnitude,   // 0.0 to 1.0
+                strongMagnitude: strongMagnitude // 0.0 to 1.0
+            });
+        } catch (error) {
+            console.warn('Gamepad vibration not supported:', error);
+        }
+    }
+
     trySpawnFish() {
         // Don't spawn too many fish at once
         if (this.fishes.length >= 4) {
@@ -202,9 +381,12 @@ export class GameScene extends Phaser.Scene {
         // Start fish fight!
         console.log('Fish hooked! Starting fight...');
 
+        // Rumble on fish bite!
+        this.rumbleGamepad(300, 0.6, 0.3); // 300ms, strong motor 60%, weak motor 30%
+
         // Show hook notification
         const text = this.add.text(400, 200,
-            'FISH ON!\nTAP SPACEBAR TO REEL!',
+            'FISH ON!\nTAP SPACEBAR OR R2 TO REEL!',
             {
                 fontSize: '28px',
                 fontFamily: 'Courier New',
