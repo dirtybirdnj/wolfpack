@@ -89,6 +89,9 @@ function setupDevTools(game) {
             const minutes = Math.floor(gameScene.gameTime / 60);
             const secs = gameScene.gameTime % 60;
             document.getElementById('dev-time').textContent = `${minutes}:${secs.toString().padStart(2, '0')}`;
+
+            // Update fish status panel
+            updateFishStatus(gameScene);
         }
     }, 100);
 
@@ -136,6 +139,36 @@ function setupDevTools(game) {
             btn.style.background = debugMode ? '#ffaa00' : '#00ff00';
         }
     });
+}
+
+function updateFishStatus(gameScene) {
+    const container = document.getElementById('fish-status-container');
+
+    if (!gameScene || !gameScene.fishes || gameScene.fishes.length === 0) {
+        container.innerHTML = '<div style="color: #888; font-style: italic;">No fish spawned</div>';
+        return;
+    }
+
+    let html = '';
+    gameScene.fishes.forEach((fish, index) => {
+        const info = fish.getInfo();
+        const zoneColor = fish.depthZone.name === 'Surface' ? '#ffff00' :
+                         fish.depthZone.name === 'Mid-Column' ? '#00ff00' : '#888888';
+
+        html += `
+            <div style="border-bottom: 1px solid #333; padding: 5px 0; margin-bottom: 5px;">
+                <div style="font-weight: bold; color: ${zoneColor};">Fish #${index + 1} (${info.weight})</div>
+                <div>Depth: <span style="color: #00ff00;">${Math.floor(fish.depth)} ft</span></div>
+                <div>Zone: <span style="color: ${zoneColor};">${fish.depthZone.name}</span></div>
+                <div>Speed: <span style="color: #ffaa00;">${fish.speed.toFixed(2)}</span></div>
+                <div>Aggro: <span style="color: #ff6666;">${fish.ai.aggressiveness.toFixed(2)}</span></div>
+                <div>State: <span style="color: #00ffff;">${fish.ai.state}</span></div>
+                <div>Position: (${Math.floor(fish.x)}, ${Math.floor(fish.y)})</div>
+            </div>
+        `;
+    });
+
+    container.innerHTML = html;
 }
 
 // Export for module usage

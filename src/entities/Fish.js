@@ -27,7 +27,8 @@ export class Fish {
         this.maxTrailLength = 30;
         this.sonarStrength = this.calculateSonarStrength();
         this.graphics = scene.add.graphics();
-        
+        this.graphics.setDepth(10); // Render above sonar background but below UI
+
         // State
         this.caught = false;
         this.visible = true;
@@ -147,11 +148,11 @@ export class Fish {
         }
         
         // Draw main fish body (sonar return)
-        const bodySize = Math.max(3, this.weight / 3);
-        
-        // Sonar "blob" effect
-        this.graphics.fillStyle(color, 0.8);
-        this.graphics.fillEllipse(this.x, this.y, bodySize * 1.5, bodySize);
+        const bodySize = Math.max(8, this.weight / 2); // Larger, more visible
+
+        // Sonar "blob" effect - brighter and more prominent
+        this.graphics.fillStyle(color, 1.0); // Full opacity
+        this.graphics.fillEllipse(this.x, this.y, bodySize * 2, bodySize * 1.2);
         
         // Add some texture/noise to make it look more like sonar
         const numDots = Math.floor(this.weight / 8) + 2;

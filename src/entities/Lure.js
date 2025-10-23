@@ -19,6 +19,7 @@ export class Lure {
 
         // Visual representation
         this.graphics = scene.add.graphics();
+        this.graphics.setDepth(15); // Render on top of fish
         this.trail = [];
         this.maxTrailLength = 20;
 

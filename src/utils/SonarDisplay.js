@@ -4,6 +4,7 @@ export class SonarDisplay {
     constructor(scene) {
         this.scene = scene;
         this.graphics = scene.add.graphics();
+        this.graphics.setDepth(0); // Render as background
         this.gridOffset = 0;
         this.scanLineX = 0;
 
