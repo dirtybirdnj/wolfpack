@@ -12,6 +12,9 @@ export class FishAI {
         this.lastDecisionTime = 0;
         this.decisionCooldown = 500; // milliseconds
 
+        // Idle swimming direction
+        this.idleDirection = Math.random() < 0.5 ? 1 : -1; // 1 = right, -1 = left
+
         // Behavior modifiers based on conditions
         this.depthPreference = this.calculateDepthPreference();
         this.speedPreference = Utils.randomBetween(1.5, 3.5);
@@ -191,18 +194,22 @@ export class FishAI {
     }
     
     getMovementVector() {
-        if (!this.targetX || !this.targetY) {
-            return { x: 0, y: 0 };
+        // IDLE fish cruise horizontally without a specific target
+        if (this.state === Constants.FISH_STATE.IDLE || !this.targetX || !this.targetY) {
+            return {
+                x: this.fish.speed * this.idleDirection,
+                y: 0 // Stay at current depth while idle
+            };
         }
-        
+
         const dx = this.targetX - this.fish.x;
         const dy = this.targetY - this.fish.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
-        
+
         if (distance < 1) {
             return { x: 0, y: 0 };
         }
-        
+
         // Speed multiplier based on state
         let speedMultiplier = 1;
         switch (this.state) {
@@ -219,7 +226,7 @@ export class FishAI {
                 speedMultiplier = 0.5;
                 break;
         }
-        
+
         return {
             x: (dx / distance) * this.fish.speed * speedMultiplier,
             y: (dy / distance) * this.fish.speed * speedMultiplier * 0.5 // Fish move slower vertically

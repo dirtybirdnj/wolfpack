@@ -177,13 +177,14 @@ export class GameScene extends Phaser.Scene {
         
         // Create the fish
         const fish = new Fish(this, x, y, size);
-        
-        // Set initial movement direction
-        fish.speed = Utils.randomBetween(GameConfig.FISH_SPEED_MIN, GameConfig.FISH_SPEED_MAX);
-        if (!fromLeft) {
-            fish.speed *= -1;
+
+        // Set initial movement direction based on spawn side
+        if (fromLeft) {
+            fish.ai.idleDirection = 1; // Swim right
+        } else {
+            fish.ai.idleDirection = -1; // Swim left
         }
-        
+
         this.fishes.push(fish);
     }
     
