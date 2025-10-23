@@ -5,6 +5,9 @@
 
 class GamepadManager {
     constructor() {
+        console.log('🎮 GamepadManager: Initializing...');
+        console.log('🎮 GamepadManager: navigator.getGamepads available?', !!navigator.getGamepads);
+
         this.gamepads = [];
         this.connectedGamepad = null;
         this.listeners = {
@@ -12,14 +15,42 @@ class GamepadManager {
             disconnected: []
         };
 
+        // Check if Gamepad API is supported
+        if (!navigator.getGamepads) {
+            console.error('❌ Gamepad API not supported in this browser!');
+            return;
+        }
+
         this.setupNativeListeners();
         this.pollGamepads(); // Start polling
+
+        // Check for already connected gamepads
+        this.checkExistingGamepads();
+    }
+
+    checkExistingGamepads() {
+        console.log('🎮 GamepadManager: Checking for existing gamepads...');
+        const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+        console.log('🎮 GamepadManager: navigator.getGamepads() returned:', gamepads);
+
+        for (let i = 0; i < gamepads.length; i++) {
+            const gamepad = gamepads[i];
+            if (gamepad) {
+                console.log('🎮 GamepadManager: Found existing gamepad!', gamepad.id, 'at index', i);
+                this.connectedGamepad = gamepad;
+                this.updateControllerStatus(true, gamepad.id);
+                this.notifyListeners('connected', gamepad);
+            }
+        }
     }
 
     setupNativeListeners() {
+        console.log('🎮 GamepadManager: Setting up native event listeners...');
+
         // Listen for gamepad connection using native browser API
         window.addEventListener('gamepadconnected', (e) => {
-            console.log('Gamepad connected (native):', e.gamepad.id);
+            console.log('✅ Gamepad connected (native event):', e.gamepad.id);
+            console.log('✅ Gamepad object:', e.gamepad);
             this.connectedGamepad = e.gamepad;
             this.updateGamepads();
             this.notifyListeners('connected', e.gamepad);
@@ -27,7 +58,7 @@ class GamepadManager {
         });
 
         window.addEventListener('gamepaddisconnected', (e) => {
-            console.log('Gamepad disconnected (native):', e.gamepad.id);
+            console.log('❌ Gamepad disconnected (native event):', e.gamepad.id);
             if (this.connectedGamepad && this.connectedGamepad.index === e.gamepad.index) {
                 this.connectedGamepad = null;
             }
@@ -35,6 +66,8 @@ class GamepadManager {
             this.notifyListeners('disconnected', e.gamepad);
             this.updateControllerStatus(false, 'No controller detected');
         });
+
+        console.log('🎮 GamepadManager: Event listeners attached');
     }
 
     /**
@@ -98,7 +131,10 @@ class GamepadManager {
     updateControllerStatus(connected, name) {
         const statusEl = document.getElementById('controller-status');
         const nameEl = document.getElementById('controller-name');
+        const helpEl = document.getElementById('controller-help');
         const testBtn = document.getElementById('test-controller-btn');
+
+        console.log('🎮 GamepadManager: Updating UI - connected:', connected, 'name:', name);
 
         if (statusEl) {
             statusEl.textContent = connected ? 'Connected' : 'Not Connected';
@@ -107,6 +143,10 @@ class GamepadManager {
         if (nameEl) {
             nameEl.textContent = name;
             nameEl.style.color = connected ? '#00ff00' : '#888';
+        }
+        if (helpEl) {
+            // Hide help text when connected
+            helpEl.style.display = connected ? 'none' : 'block';
         }
         if (testBtn) {
             testBtn.disabled = !connected;

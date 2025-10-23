@@ -141,9 +141,13 @@
             <div style="margin: 10px 0; font-size: 12px; line-height: 1.6;">
                 <div>Status: <span id="controller-status" style="color: #ff6666; font-weight: bold;">Not Connected</span></div>
                 <div id="controller-name" style="color: #888; font-size: 10px; margin-top: 5px;">No controller detected</div>
+                <div id="controller-help" style="color: #ffaa00; font-size: 10px; margin-top: 8px; font-style: italic;">
+                    ⚠️ Press any button on your controller to connect
+                </div>
             </div>
             <div style="margin: 10px 0;">
                 <button id="test-controller-btn" class="dev-btn" style="background: #00aaff;" disabled>Test Controller</button>
+                <button id="check-gamepads-btn" class="dev-btn" style="background: #ffaa00; margin-top: 5px;">Check Gamepads</button>
             </div>
         </div>
 
@@ -334,9 +338,55 @@
             document.addEventListener('keydown', escHandler);
         });
 
+        // Check Gamepads button - manual diagnostic
+        document.getElementById('check-gamepads-btn').addEventListener('click', () => {
+            console.log('🔍 Manual gamepad check requested...');
+            console.log('🔍 Gamepad API supported?', !!navigator.getGamepads);
+
+            if (!navigator.getGamepads) {
+                alert('❌ Gamepad API not supported in this browser!');
+                return;
+            }
+
+            const gamepads = navigator.getGamepads();
+            console.log('🔍 Raw navigator.getGamepads():', gamepads);
+
+            let foundCount = 0;
+            let message = 'Gamepad Check Results:\n\n';
+
+            for (let i = 0; i < gamepads.length; i++) {
+                if (gamepads[i]) {
+                    foundCount++;
+                    const pad = gamepads[i];
+                    message += `✅ Gamepad ${i}: ${pad.id}\n`;
+                    message += `   Connected: ${pad.connected}\n`;
+                    message += `   Buttons: ${pad.buttons.length}\n`;
+                    message += `   Axes: ${pad.axes.length}\n\n`;
+                    console.log('🔍 Found gamepad:', pad);
+                } else {
+                    console.log(`🔍 Gamepad slot ${i}: null`);
+                }
+            }
+
+            if (foundCount === 0) {
+                message += '❌ No gamepads detected.\n\n';
+                message += 'IMPORTANT: You must press a button on your\n';
+                message += 'controller before the browser can detect it.\n\n';
+                message += 'Steps:\n';
+                message += '1. Make sure controller is ON and connected\n';
+                message += '2. Press ANY button on the controller\n';
+                message += '3. Click "Check Gamepads" again\n';
+            } else {
+                message += `✅ Found ${foundCount} gamepad(s)!`;
+            }
+
+            alert(message);
+        });
+
         // Log initial state
-        console.log('Gamepad Manager initialized. Waiting for controller connection...');
-        console.log('Press any button on your controller to connect it.');
+        console.log('🎮 Gamepad Manager initialized. Waiting for controller connection...');
+        console.log('🎮 Press any button on your controller to connect it.');
+        console.log('🎮 You can also click "Check Gamepads" to manually check for controllers.');
     </script>
 </body>
 </html>
