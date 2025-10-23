@@ -6,9 +6,11 @@ export class Lure {
         this.scene = scene;
         this.x = x;
         this.y = y;
-        this.depth = 0;
+        this.startX = x; // Remember starting position
+        this.startY = y;
+        this.depth = y / GameConfig.DEPTH_SCALE; // Calculate initial depth
         this.velocity = 0;
-        this.state = Constants.LURE_STATE.SURFACE;
+        this.state = y === 0 ? Constants.LURE_STATE.SURFACE : Constants.LURE_STATE.IDLE;
         this.retrieveSpeed = GameConfig.LURE_MIN_RETRIEVE_SPEED;
 
         // Baitcasting reel mechanics
@@ -21,7 +23,7 @@ export class Lure {
         this.maxTrailLength = 20;
 
         // Stats
-        this.maxDepthReached = 0;
+        this.maxDepthReached = this.depth;
         this.timeInWater = 0;
     }
     
@@ -151,10 +153,10 @@ export class Lure {
     }
     
     reset() {
-        this.y = 0;
-        this.depth = 0;
+        this.y = this.startY;
+        this.depth = this.startY / GameConfig.DEPTH_SCALE;
         this.velocity = 0;
-        this.state = Constants.LURE_STATE.SURFACE;
+        this.state = this.startY === 0 ? Constants.LURE_STATE.SURFACE : Constants.LURE_STATE.IDLE;
         this.trail = [];
         this.timeInWater = 0;
     }

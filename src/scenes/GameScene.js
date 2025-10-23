@@ -20,8 +20,8 @@ export class GameScene extends Phaser.Scene {
         // Set up the sonar display
         this.sonarDisplay = new SonarDisplay(this);
         
-        // Create the player's lure
-        this.lure = new Lure(this, 600, 0);
+        // Create the player's lure - start at better viewing depth
+        this.lure = new Lure(this, 400, 100); // Centered horizontally, 25ft deep
         
         // Set up input handlers
         this.setupInput();
@@ -151,10 +151,10 @@ export class GameScene extends Phaser.Scene {
         // Lake trout prefer different depths based on temperature
         if (tempFactor < 0.3) {
             // Cold water - fish can be shallower
-            depth = Utils.randomBetween(30, 80);
+            depth = Utils.randomBetween(15, 80);
         } else {
             // Warmer water - fish go deeper
-            depth = Utils.randomBetween(60, 120);
+            depth = Utils.randomBetween(30, 120);
         }
         
         // Determine fish size
