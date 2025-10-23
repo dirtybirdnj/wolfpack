@@ -35,7 +35,7 @@ const config = {
         keyboard: true,
         mouse: true,
         touch: true,
-        gamepad: false
+        gamepad: true  // Enable gamepad support for PS4/Xbox/8BitDo controllers
     },
     audio: {
         disableWebAudio: false

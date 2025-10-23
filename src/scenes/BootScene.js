@@ -111,19 +111,23 @@ export class BootScene extends Phaser.Scene {
             align: 'center'
         }).setOrigin(0.5, 0.5);
 
-        // Check for gamepad
+        // Check for gamepad (if available)
         this.gamepadDetected = false;
-        this.input.gamepad.once('connected', (pad) => {
-            this.gamepadDetected = true;
-            this.gamepad = pad;
-            console.log('Gamepad detected on boot screen');
+        if (this.input.gamepad) {
+            this.input.gamepad.once('connected', (pad) => {
+                this.gamepadDetected = true;
+                this.gamepad = pad;
+                console.log('Gamepad detected on boot screen:', pad.id);
 
-            // Update instructions to include controller option
-            if (instructText) {
-                instructText.setText(instructions.replace('PRESS SPACE', 'PRESS SPACE OR X'));
-                instructText.setColor('#00ffff'); // Highlight change
-            }
-        });
+                // Update instructions to include controller option
+                if (instructText) {
+                    instructText.setText(instructions.replace('PRESS SPACE', 'PRESS SPACE OR X'));
+                    instructText.setColor('#00ffff'); // Highlight change
+                }
+            });
+        } else {
+            console.warn('Gamepad plugin not available');
+        }
 
         // Instructions
         const instructions = [

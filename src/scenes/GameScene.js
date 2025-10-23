@@ -81,7 +81,12 @@ export class GameScene extends Phaser.Scene {
     }
 
     setupGamepad() {
-        // Enable gamepad input
+        // Enable gamepad input (if available)
+        if (!this.input.gamepad) {
+            console.warn('Gamepad plugin not available');
+            return;
+        }
+
         this.input.gamepad.once('connected', (pad) => {
             console.log('Gamepad connected:', pad.id);
             this.gamepad = pad;
