@@ -27,8 +27,7 @@ const config = {
         transparent: false
     },
     scale: {
-        mode: Phaser.Scale.FIT,
-        autoCenter: Phaser.Scale.CENTER_BOTH,
+        mode: Phaser.Scale.NONE,
         width: GameConfig.CANVAS_WIDTH,
         height: GameConfig.CANVAS_HEIGHT
     },
@@ -57,12 +56,7 @@ window.addEventListener('load', () => {
     console.log('%cBuilt with Phaser 3', 'color: #88ff88; font-size: 14px;');
     console.log('%cTarget Species: Salvelinus namaycush (Lake Trout)', 'color: #88ff88; font-size: 12px;');
     console.log('%cLocation: 45°00\'N 73°15\'W - Burlington, Vermont', 'color: #88ff88; font-size: 12px;');
-    
-    // Handle window resize
-    window.addEventListener('resize', () => {
-        game.scale.refresh();
-    });
-    
+
     // Prevent right-click context menu on game canvas
     game.canvas.addEventListener('contextmenu', (e) => {
         e.preventDefault();
