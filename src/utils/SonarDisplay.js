@@ -114,28 +114,31 @@ export class SonarDisplay {
     
     render() {
         this.graphics.clear();
-        
+
         // Draw background gradient
         this.drawBackgroundGradient();
-        
+
+        // Draw depth zones (visual indicators)
+        this.drawDepthZones();
+
         // Draw depth grid
         this.drawDepthGrid();
-        
+
         // Draw thermoclines
         this.drawThermoclines();
-        
+
         // Draw bottom profile
         this.drawBottomProfile();
-        
+
         // Draw scan line effect
         this.drawScanLine();
-        
+
         // Draw noise/interference
         this.drawNoise();
-        
+
         // Draw depth markers
         this.drawDepthMarkers();
-        
+
         // Draw surface line
         this.drawSurfaceLine();
     }
@@ -147,6 +150,35 @@ export class SonarDisplay {
             this.graphics.fillStyle(0x001100, alpha);
             this.graphics.fillRect(0, y, GameConfig.CANVAS_WIDTH, 20);
         }
+    }
+
+    drawDepthZones() {
+        // Draw subtle visual indicators for depth behavior zones
+        const zones = GameConfig.DEPTH_ZONES;
+
+        // Surface zone - slight yellow tint
+        const surfaceY = zones.SURFACE.max * GameConfig.DEPTH_SCALE;
+        this.graphics.fillStyle(0xffff00, 0.02);
+        this.graphics.fillRect(0, 0, GameConfig.CANVAS_WIDTH, surfaceY);
+
+        // Mid-column zone - slight green tint
+        const midY = zones.MID_COLUMN.min * GameConfig.DEPTH_SCALE;
+        const midHeight = (zones.MID_COLUMN.max - zones.MID_COLUMN.min) * GameConfig.DEPTH_SCALE;
+        this.graphics.fillStyle(0x00ff00, 0.02);
+        this.graphics.fillRect(0, midY, GameConfig.CANVAS_WIDTH, midHeight);
+
+        // Bottom zone - slight gray tint
+        const bottomY = zones.BOTTOM.min * GameConfig.DEPTH_SCALE;
+        const bottomHeight = GameConfig.CANVAS_HEIGHT - bottomY;
+        this.graphics.fillStyle(0x888888, 0.02);
+        this.graphics.fillRect(0, bottomY, GameConfig.CANVAS_WIDTH, bottomHeight);
+
+        // Draw zone boundary lines
+        this.graphics.lineStyle(1, 0xffff00, 0.15);
+        this.graphics.lineBetween(0, surfaceY, GameConfig.CANVAS_WIDTH, surfaceY);
+
+        this.graphics.lineStyle(1, 0x888888, 0.15);
+        this.graphics.lineBetween(0, bottomY, GameConfig.CANVAS_WIDTH, bottomY);
     }
     
     drawDepthGrid() {

@@ -129,14 +129,24 @@ export class UIScene extends Phaser.Scene {
         this.depthText.setText(`Depth: ${info.depth} ft`);
         this.lureSpeedText.setText(`Speed: ${info.speed}`);
         
-        // Update zone based on depth
+        // Update zone based on depth using depth zones from config
+        const zones = GameConfig.DEPTH_ZONES;
         let zone = 'Surface';
-        if (info.depth > 120) zone = 'Bottom';
-        else if (info.depth > 80) zone = 'Deep';
-        else if (info.depth > 35) zone = 'Mid-Water';
-        else if (info.depth > 15) zone = 'Thermocline';
-        
+        let zoneColor = '#00ff00';
+
+        if (info.depth >= zones.BOTTOM.min) {
+            zone = zones.BOTTOM.name;
+            zoneColor = '#888888'; // Gray for bottom
+        } else if (info.depth >= zones.MID_COLUMN.min) {
+            zone = zones.MID_COLUMN.name;
+            zoneColor = '#00ff00'; // Green for mid-column
+        } else {
+            zone = zones.SURFACE.name;
+            zoneColor = '#ffff00'; // Yellow for surface
+        }
+
         this.zoneText.setText(`Zone: ${zone}`);
+        this.zoneText.setColor(zoneColor);
         
         // Update retrieve speed indicator
         this.updateRetrieveIndicator(parseFloat(info.retrieveSpeed));

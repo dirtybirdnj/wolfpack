@@ -50,6 +50,37 @@ export const GameConfig = {
     // UI settings
     UI_FONT_SIZE: 14,
     UI_PADDING: 10,
+
+    // Depth-based behavior zones
+    DEPTH_ZONES: {
+        SURFACE: {
+            min: 0,
+            max: 40,
+            name: 'Surface',
+            speedMultiplier: 1.3,      // Fast, active feeding
+            aggressivenessBonus: 0.3,  // More aggressive
+            interestThreshold: 30,      // Easier to interest
+            description: 'Active feeding zone - fast and aggressive'
+        },
+        MID_COLUMN: {
+            min: 40,
+            max: 100,
+            name: 'Mid-Column',
+            speedMultiplier: 1.0,      // Normal activity
+            aggressivenessBonus: 0.0,  // Normal aggression
+            interestThreshold: 40,      // Standard interest
+            description: 'Prime lake trout zone - balanced behavior'
+        },
+        BOTTOM: {
+            min: 100,
+            max: 150,
+            name: 'Bottom',
+            speedMultiplier: 0.6,      // Slow cruising
+            aggressivenessBonus: -0.2, // Less aggressive
+            interestThreshold: 50,      // Harder to interest
+            description: 'Bottom feeding - slow and cautious'
+        }
+    }
 };
 
 // Lake Champlain flavor text

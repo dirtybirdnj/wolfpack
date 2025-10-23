@@ -8,13 +8,19 @@ export class FishAI {
         this.targetX = null;
         this.targetY = null;
         this.alertness = Math.random() * 0.5 + 0.5; // 0.5 to 1.0
-        this.aggressiveness = Math.random() * 0.7 + 0.3; // 0.3 to 1.0
+        this.baseAggressiveness = Math.random() * 0.7 + 0.3; // 0.3 to 1.0
         this.lastDecisionTime = 0;
         this.decisionCooldown = 500; // milliseconds
-        
+
         // Behavior modifiers based on conditions
         this.depthPreference = this.calculateDepthPreference();
         this.speedPreference = Utils.randomBetween(1.5, 3.5);
+    }
+
+    get aggressiveness() {
+        // Apply depth zone bonus to base aggressiveness
+        const zoneBonus = this.fish.depthZone.aggressivenessBonus;
+        return Math.max(0.1, Math.min(1.0, this.baseAggressiveness + zoneBonus));
     }
     
     calculateDepthPreference() {
@@ -98,9 +104,10 @@ export class FishAI {
         
         // Apply personality modifiers
         interestScore *= this.aggressiveness;
-        
-        // Decision threshold
-        if (interestScore > 40) {
+
+        // Decision threshold (varies by depth zone)
+        const threshold = this.fish.depthZone.interestThreshold;
+        if (interestScore > threshold) {
             this.state = Constants.FISH_STATE.INTERESTED;
             this.decisionCooldown = 300;
         }

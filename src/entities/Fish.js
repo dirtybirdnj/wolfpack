@@ -12,9 +12,13 @@ export class Fish {
         // Fish properties
         this.size = Constants.FISH_SIZE[size];
         this.weight = Utils.randomBetween(this.size.min, this.size.max);
-        this.speed = Utils.randomBetween(GameConfig.FISH_SPEED_MIN, GameConfig.FISH_SPEED_MAX);
+        this.baseSpeed = Utils.randomBetween(GameConfig.FISH_SPEED_MIN, GameConfig.FISH_SPEED_MAX);
         this.points = this.size.points;
-        
+
+        // Depth zone behavior
+        this.depthZone = this.getDepthZone();
+        this.speed = this.baseSpeed * this.depthZone.speedMultiplier;
+
         // AI controller
         this.ai = new FishAI(this);
         
@@ -36,26 +40,43 @@ export class Fish {
         if (this.weight > 10) return 'medium';
         return 'weak';
     }
+
+    getDepthZone() {
+        // Determine which depth zone the fish is in
+        const zones = GameConfig.DEPTH_ZONES;
+        if (this.depth >= zones.BOTTOM.min && this.depth <= zones.BOTTOM.max) {
+            return zones.BOTTOM;
+        } else if (this.depth >= zones.MID_COLUMN.min && this.depth < zones.MID_COLUMN.max) {
+            return zones.MID_COLUMN;
+        } else {
+            return zones.SURFACE;
+        }
+    }
     
     update(lure) {
         if (this.caught) {
             this.handleCaught();
             return;
         }
-        
+
         this.age++;
-        
+
+        // Update depth zone (fish may change zones as they move)
+        this.depth = this.y / GameConfig.DEPTH_SCALE;
+        this.depthZone = this.getDepthZone();
+        this.speed = this.baseSpeed * this.depthZone.speedMultiplier;
+
         // Update AI
         this.ai.update(lure, this.scene.time.now);
-        
+
         // Get movement from AI
         const movement = this.ai.getMovementVector();
-        
+
         // Apply movement
         this.x += movement.x;
         this.y += movement.y;
         this.depth = this.y / GameConfig.DEPTH_SCALE;
-        
+
         // Keep fish in bounds
         this.y = Math.max(10, Math.min(GameConfig.MAX_DEPTH * GameConfig.DEPTH_SCALE - 10, this.y));
         
