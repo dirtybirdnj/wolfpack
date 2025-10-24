@@ -1,0 +1,298 @@
+import GameConfig from '../config/GameConfig.js';
+
+/**
+ * Manages ice fishing holes and player position on the ice
+ */
+export class IceHoleManager {
+    constructor(scene) {
+        this.scene = scene;
+
+        // Hole tracking
+        this.holes = [];
+        this.currentHoleIndex = 0;
+
+        // Player position on ice (horizontal, in game units)
+        this.playerX = 500; // Start at center
+
+        // Drill battery
+        this.maxDrillCharges = 4; // Can drill 4 new holes (5 total)
+        this.drillChargesRemaining = 4;
+
+        // Movement mode
+        this.movementMode = false; // false = fishing, true = moving on ice
+
+        // Graphics
+        this.iceGraphics = scene.add.graphics();
+        this.iceGraphics.setDepth(1000); // On top of most things
+
+        // Ice surface height (in pixels from top)
+        this.iceHeight = 60;
+
+        // Lake bed depth variation (for different hole locations)
+        this.lakeBedProfile = this.generateLakeBedProfile();
+
+        // Create initial hole at starting position
+        this.drillHole(this.playerX);
+
+        console.log('🧊 Ice Hole Manager initialized - Starting at hole #1');
+    }
+
+    generateLakeBedProfile() {
+        // Generate varying lake bottom depths across the horizontal distance
+        // This gives different depths at different hole positions
+        const profile = [];
+        for (let x = 0; x < 10000; x += 50) {
+            // Use Perlin-like noise for natural variation
+            const depth = GameConfig.MAX_DEPTH - 20 +
+                         Math.sin(x * 0.003) * 15 +
+                         Math.sin(x * 0.01) * 8 +
+                         Math.cos(x * 0.007) * 10;
+            profile.push({ x, depth: Math.max(120, Math.min(150, depth)) });
+        }
+        return profile;
+    }
+
+    getDepthAtPosition(x) {
+        // Get lake bottom depth at specific X position
+        const closest = this.lakeBedProfile.reduce((prev, curr) =>
+            Math.abs(curr.x - x) < Math.abs(prev.x - x) ? curr : prev
+        );
+        return closest.depth;
+    }
+
+    drillHole(x) {
+        const depth = this.getDepthAtPosition(x);
+        const hole = {
+            x: x,
+            depth: depth,
+            drilled: true,
+            timestamp: this.scene.time.now
+        };
+
+        this.holes.push(hole);
+        console.log(`⛏️ Drilled hole #${this.holes.length} at X=${x}, depth=${depth.toFixed(1)}ft`);
+
+        // Play drill sound effect (if you add audio later)
+        // this.scene.sound.play('drill');
+
+        return hole;
+    }
+
+    canDrillHole() {
+        // Check if there's enough battery and not already at a hole
+        if (this.drillChargesRemaining <= 0) {
+            return { can: false, reason: 'No drill charges remaining!' };
+        }
+
+        // Check if too close to existing hole (minimum 100 units apart)
+        const tooClose = this.holes.some(hole => Math.abs(hole.x - this.playerX) < 100);
+        if (tooClose) {
+            return { can: false, reason: 'Too close to existing hole!' };
+        }
+
+        return { can: true };
+    }
+
+    drillNewHole() {
+        const canDrill = this.canDrillHole();
+        if (!canDrill.can) {
+            console.warn('Cannot drill:', canDrill.reason);
+            this.scene.showAchievement('Cannot Drill', canDrill.reason);
+            return false;
+        }
+
+        this.drillChargesRemaining--;
+        const hole = this.drillHole(this.playerX);
+        this.currentHoleIndex = this.holes.length - 1;
+
+        // Update UI
+        this.scene.events.emit('updateDrillCharges', this.drillChargesRemaining);
+        this.scene.showAchievement('New Hole Drilled!', `Battery: ${this.drillChargesRemaining} left`);
+
+        return true;
+    }
+
+    enterMovementMode() {
+        if (this.movementMode) return;
+
+        this.movementMode = true;
+        console.log('🚶 Entering movement mode - walking on ice');
+
+        // Retract lure
+        this.scene.lure.reset();
+
+        this.scene.showAchievement('Movement Mode', 'Walk on ice - L/R to move, drill with Triangle');
+    }
+
+    exitMovementMode() {
+        if (!this.movementMode) return;
+
+        // Check if at an existing hole
+        const nearestHole = this.findNearestHole();
+        if (nearestHole && Math.abs(nearestHole.x - this.playerX) < 20) {
+            // At a hole - enter fishing mode
+            this.movementMode = false;
+            this.currentHoleIndex = this.holes.indexOf(nearestHole);
+            console.log(`🎣 Entering fishing mode at hole #${this.currentHoleIndex + 1}`);
+            this.scene.showAchievement('Fishing Mode', `At hole #${this.currentHoleIndex + 1}`);
+        } else {
+            console.warn('Not at a hole! Move to a hole or drill one.');
+            this.scene.showAchievement('No Hole Here', 'Move to existing hole or drill new one');
+        }
+    }
+
+    findNearestHole() {
+        if (this.holes.length === 0) return null;
+
+        return this.holes.reduce((nearest, hole) => {
+            const distToCurrent = Math.abs(hole.x - this.playerX);
+            const distToNearest = Math.abs(nearest.x - this.playerX);
+            return distToCurrent < distToNearest ? hole : nearest;
+        });
+    }
+
+    movePlayer(deltaX) {
+        if (!this.movementMode) return;
+
+        this.playerX += deltaX;
+        this.playerX = Math.max(100, Math.min(9900, this.playerX)); // Keep in bounds
+    }
+
+    getCurrentHole() {
+        return this.holes[this.currentHoleIndex];
+    }
+
+    update() {
+        this.render();
+    }
+
+    render() {
+        this.iceGraphics.clear();
+
+        // Draw ice surface
+        this.drawIceSurface();
+
+        // Draw all holes
+        this.holes.forEach((hole, index) => {
+            this.drawHole(hole, index);
+        });
+
+        // Draw player position
+        if (this.movementMode) {
+            this.drawPlayerOnIce();
+        }
+    }
+
+    drawIceSurface() {
+        // Ice surface background
+        const iceColor = 0xe8f4f8; // Light blue-white ice
+        const shadowColor = 0xb8d4e8; // Slightly darker for depth
+
+        // Main ice layer
+        this.iceGraphics.fillStyle(iceColor, 1.0);
+        this.iceGraphics.fillRect(0, 0, GameConfig.CANVAS_WIDTH, this.iceHeight);
+
+        // Ice texture - horizontal lines for cracks
+        this.iceGraphics.lineStyle(1, shadowColor, 0.5);
+        for (let y = 10; y < this.iceHeight; y += 15) {
+            const offset = Math.sin(y * 0.1) * 20;
+            this.iceGraphics.lineBetween(offset, y, GameConfig.CANVAS_WIDTH + offset, y);
+        }
+
+        // Bottom edge shadow
+        this.iceGraphics.fillStyle(shadowColor, 0.6);
+        this.iceGraphics.fillRect(0, this.iceHeight - 5, GameConfig.CANVAS_WIDTH, 5);
+
+        // Water line just below ice
+        this.iceGraphics.lineStyle(2, 0x4a6f5a, 0.8);
+        this.iceGraphics.lineBetween(0, this.iceHeight, GameConfig.CANVAS_WIDTH, this.iceHeight);
+    }
+
+    drawHole(hole, index) {
+        // Calculate screen X position based on hole position and player position
+        // When fishing, player is centered, holes are offset from player
+        const screenX = this.movementMode ?
+            this.calculateScreenX(hole.x) :
+            GameConfig.CANVAS_WIDTH / 2;
+
+        if (screenX < -50 || screenX > GameConfig.CANVAS_WIDTH + 50) return; // Off screen
+
+        const isCurrent = index === this.currentHoleIndex && !this.movementMode;
+
+        // Hole opening (dark circle)
+        this.iceGraphics.fillStyle(0x1a3a4a, 1.0);
+        this.iceGraphics.fillCircle(screenX, this.iceHeight / 2, 20);
+
+        // Hole rim (lighter)
+        this.iceGraphics.lineStyle(2, 0xffffff, 0.8);
+        this.iceGraphics.strokeCircle(screenX, this.iceHeight / 2, 20);
+
+        // Current hole indicator
+        if (isCurrent) {
+            this.iceGraphics.lineStyle(3, 0x00ff00, 1.0);
+            this.iceGraphics.strokeCircle(screenX, this.iceHeight / 2, 25);
+        }
+
+        // Hole number
+        const textColor = isCurrent ? '#00ff00' : '#ffffff';
+        const text = this.scene.add.text(screenX, this.iceHeight / 2, `${index + 1}`, {
+            fontSize: '12px',
+            fontFamily: 'Courier New',
+            color: textColor,
+            fontStyle: 'bold'
+        });
+        text.setOrigin(0.5, 0.5);
+        text.setDepth(1001);
+
+        // Clean up text after next frame (since graphics clear each frame)
+        this.scene.time.delayedCall(50, () => text.destroy());
+    }
+
+    drawPlayerOnIce() {
+        const screenX = GameConfig.CANVAS_WIDTH / 2; // Player always centered when moving
+
+        // Player figure (simple person icon)
+        // Head
+        this.iceGraphics.fillStyle(0xff6600, 1.0);
+        this.iceGraphics.fillCircle(screenX, this.iceHeight / 2 - 10, 5);
+
+        // Body
+        this.iceGraphics.lineStyle(3, 0xff6600, 1.0);
+        this.iceGraphics.lineBetween(screenX, this.iceHeight / 2 - 5, screenX, this.iceHeight / 2 + 5);
+
+        // Legs
+        this.iceGraphics.lineBetween(screenX, this.iceHeight / 2 + 5, screenX - 4, this.iceHeight / 2 + 12);
+        this.iceGraphics.lineBetween(screenX, this.iceHeight / 2 + 5, screenX + 4, this.iceHeight / 2 + 12);
+
+        // Arms (holding drill)
+        this.iceGraphics.lineBetween(screenX, this.iceHeight / 2, screenX - 6, this.iceHeight / 2 + 3);
+        this.iceGraphics.lineBetween(screenX, this.iceHeight / 2, screenX + 6, this.iceHeight / 2 - 2);
+
+        // Position indicator below
+        const depthHere = this.getDepthAtPosition(this.playerX);
+        const text = this.scene.add.text(screenX, this.iceHeight + 15, `Depth: ${depthHere.toFixed(0)}ft`, {
+            fontSize: '10px',
+            fontFamily: 'Courier New',
+            color: '#ffff00',
+            backgroundColor: '#000000',
+            padding: { x: 4, y: 2 }
+        });
+        text.setOrigin(0.5, 0);
+        text.setDepth(1001);
+
+        this.scene.time.delayedCall(50, () => text.destroy());
+    }
+
+    calculateScreenX(worldX) {
+        // Convert world X position to screen X when in movement mode
+        // Player is centered, so offset everything by player position
+        const offset = worldX - this.playerX;
+        return (GameConfig.CANVAS_WIDTH / 2) + offset;
+    }
+
+    destroy() {
+        this.iceGraphics.destroy();
+    }
+}
+
+export default IceHoleManager;
