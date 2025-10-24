@@ -4,6 +4,7 @@ import SonarDisplay from '../utils/SonarDisplay.js';
 import Lure from '../entities/Lure.js';
 import Fish from '../entities/Fish.js';
 import FishFight from '../entities/FishFight.js';
+import IceHoleManager from '../managers/IceHoleManager.js';
 
 export class GameScene extends Phaser.Scene {
     constructor() {
@@ -22,12 +23,15 @@ export class GameScene extends Phaser.Scene {
     }
     
     create() {
+        // Set up ice hole manager (must be first!)
+        this.iceHoleManager = new IceHoleManager(this);
+
         // Set up the sonar display
         this.sonarDisplay = new SonarDisplay(this);
-        
+
         // Create the player's lure - start at better viewing depth
-        this.lure = new Lure(this, 400, 100); // Centered horizontally, 25ft deep
-        
+        this.lure = new Lure(this, GameConfig.CANVAS_WIDTH / 2, 100); // Centered, 25ft deep
+
         // Set up input handlers
         this.setupInput();
         
