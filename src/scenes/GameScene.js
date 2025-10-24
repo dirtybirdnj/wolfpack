@@ -714,24 +714,25 @@ export class GameScene extends Phaser.Scene {
     }
 
     trySpawnBaitfishCloud() {
-        // Don't spawn too many clouds at once
-        if (this.baitfishClouds.length >= 3) {
+        // Don't spawn too many clouds at once - increased to sustain hungry lakers
+        if (this.baitfishClouds.length >= 5) {
             return;
         }
 
         // Determine cloud size using weighted distribution for more variety
-        // 60% small (3-8), 30% medium (9-15), 10% large (16-24)
+        // Increased sizes to sustain aggressive lake trout feeding behavior
+        // 60% small (5-15), 30% medium (16-30), 10% large (31-50)
         let cloudSize;
         const sizeRoll = Math.random();
         if (sizeRoll < 0.6) {
-            // Small clouds (most common)
-            cloudSize = Math.floor(Utils.randomBetween(3, 8));
+            // Small clouds (most common) - increased from 3-8 to 5-15
+            cloudSize = Math.floor(Utils.randomBetween(5, 15));
         } else if (sizeRoll < 0.9) {
-            // Medium clouds (less common)
-            cloudSize = Math.floor(Utils.randomBetween(9, 15));
+            // Medium clouds (less common) - increased from 9-15 to 16-30
+            cloudSize = Math.floor(Utils.randomBetween(16, 30));
         } else {
-            // Large clouds (rare - creates exciting feeding opportunities)
-            cloudSize = Math.floor(Utils.randomBetween(16, 24));
+            // Large clouds (rare - massive feeding frenzies!) - increased from 16-24 to 31-50
+            cloudSize = Math.floor(Utils.randomBetween(31, 50));
         }
 
         // Baitfish prefer certain depth zones (typically shallower than lake trout)

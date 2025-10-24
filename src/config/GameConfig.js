@@ -69,10 +69,10 @@ export const GameConfig = {
     UI_FONT_SIZE: 14,
     UI_PADDING: 10,
 
-    // Baitfish settings - Reduced spawn rate to give lures more attention
-    BAITFISH_CLOUD_SPAWN_CHANCE: 0.0015, // Reduced from 0.003 for less competition
-    BAITFISH_CLOUD_MIN_COUNT: 3, // Minimum cloud size
-    BAITFISH_CLOUD_MAX_COUNT: 24, // Doubled from 12 - allows for very large clouds
+    // Baitfish settings - Increased to sustain aggressive lake trout feeding
+    BAITFISH_CLOUD_SPAWN_CHANCE: 0.004, // Increased to keep up with hungry lakers
+    BAITFISH_CLOUD_MIN_COUNT: 5, // Minimum cloud size
+    BAITFISH_CLOUD_MAX_COUNT: 50, // Allows for massive schools
     BAITFISH_CLOUD_RADIUS: 40, // pixels - how close to be "in the cloud"
     COLOR_BAITFISH: 0x88ccff, // Light blue/silver for alewives
     COLOR_BAITFISH_PANIC: 0xccddff, // Brighter when panicking
