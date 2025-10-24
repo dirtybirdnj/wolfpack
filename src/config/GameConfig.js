@@ -77,11 +77,11 @@ export const GameConfig = {
     COLOR_BAITFISH: 0x88ccff, // Light blue/silver for alewives
     COLOR_BAITFISH_PANIC: 0xccddff, // Brighter when panicking
 
-    // Baitfish pursuit mechanics (works with 0-100 hunger scale)
+    // Baitfish pursuit mechanics (works with 0-100 hunger scale) - More aggressive pursuit
     BAITFISH_DETECTION_RANGE: 140, // Reduced from 150 to balance with lure detection
-    BAITFISH_PURSUIT_SPEED: 2.2, // Multiplier when chasing baitfish
-    BAITFISH_VERTICAL_PURSUIT_RANGE: 200, // Base vertical range in pixels
-    HUNGER_VERTICAL_SCALING: 0.01, // How hunger affects vertical range (0-100 scale)
+    BAITFISH_PURSUIT_SPEED: 2.8, // Increased from 2.2 for more aggressive hunting
+    BAITFISH_VERTICAL_PURSUIT_RANGE: 250, // Increased from 200 for better vertical pursuit
+    HUNGER_VERTICAL_SCALING: 0.015, // Increased from 0.01 for more aggressive vertical pursuit
     BAITFISH_CONSUMPTION_HUNGER_REDUCTION: 15, // Hunger reduced when eating baitfish
 
     // Depth-based behavior zones - Improved thresholds for better gameplay
