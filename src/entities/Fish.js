@@ -31,6 +31,8 @@ export class Fish {
         // Fish properties
         this.size = Constants.FISH_SIZE[size];
         this.weight = Utils.randomBetween(this.size.min, this.size.max);
+        // Calculate length based on weight (lake trout: length in inches ≈ 10.5 * weight^0.31)
+        this.length = Math.round(10.5 * Math.pow(this.weight, 0.31));
         this.baseSpeed = Utils.randomBetween(GameConfig.FISH_SPEED_MIN, GameConfig.FISH_SPEED_MAX);
         this.points = this.size.points;
 
@@ -73,6 +75,20 @@ export class Fish {
         // Visual feedback for player actions triggering fish interest
         this.interestFlash = 0; // 0-1, fades over time to show interest level
         this.interestFlashDecay = 0.02; // How fast the flash fades per frame
+
+        // Movement angle for realistic rotation
+        this.angle = 0; // Rotation angle in radians based on movement direction
+        this.targetAngle = 0; // Target angle to smoothly interpolate to
+
+        // Chase mechanics
+        this.speedPreference = Utils.randomBetween(1.0, 4.0); // Preferred lure speed
+        this.swipeChances = 0; // Number of strike attempts remaining (set when engaged)
+        this.maxSwipeChances = 0; // Maximum swipes for this engagement
+        this.isEngaged = false; // Currently engaged in chase
+        this.engagementState = 'waiting'; // attacking, waiting, loitering
+        this.lastStateChange = 0; // Time of last state change
+        this.isFastFleeing = false; // Fleeing at high speed after running out of swipes
+        this.hasCalmedDown = false; // Whether fish has calmed down during fast flee
     }
     
     calculateSonarStrength() {
@@ -173,6 +189,44 @@ export class Fish {
 
             // Get movement from AI
             const movement = this.ai.getMovementVector();
+
+            // Calculate angle based on target direction (what fish is chasing)
+            // Fish should face toward their target, not based on velocity
+            if (this.ai.targetX !== null && this.ai.targetY !== null) {
+                // Calculate direction to target
+                const dx = this.ai.targetX - this.x;
+                const dy = this.ai.targetY - this.y;
+
+                // Only update angle if target is meaningful distance away
+                const distToTarget = Math.sqrt(dx * dx + dy * dy);
+                if (distToTarget > 5) {
+                    // Calculate target angle toward what the fish is chasing
+                    // Canvas Y+ is down, so positive dy = target below, negative dy = target above
+                    // Positive rotation = clockwise (fish points down)
+                    // Negative rotation = counter-clockwise (fish points up)
+
+                    // Normalize angle to work with left/right flipping
+                    // When moving left, we need to mirror the angle
+                    if (dx < 0) {
+                        // Moving left - flip the angle
+                        this.targetAngle = -Math.atan2(dy, Math.abs(dx));
+                    } else {
+                        // Moving right - use angle as-is
+                        this.targetAngle = Math.atan2(dy, Math.abs(dx));
+                    }
+
+                    // Smoothly interpolate current angle to target angle for fluid motion
+                    const angleDiff = this.targetAngle - this.angle;
+                    this.angle += angleDiff * 0.15; // Smooth interpolation factor
+
+                    // Clamp angle to reasonable limits (-45 to +45 degrees = -π/4 to +π/4)
+                    const maxAngle = Math.PI / 4;
+                    this.angle = Math.max(-maxAngle, Math.min(maxAngle, this.angle));
+                }
+            } else {
+                // When idle (no target), gradually return to horizontal
+                this.angle *= 0.9;
+            }
 
             // Apply movement in world coordinates
             this.worldX += movement.x;
@@ -279,33 +333,40 @@ export class Fish {
         const movement = this.ai.getMovementVector();
         const isMovingRight = movement.x >= 0;
 
+        // Save graphics state and apply rotation for angling
+        this.graphics.save();
+        this.graphics.translateCanvas(this.x, this.y);
+
+        // Apply rotation angle, flip if moving left
+        if (isMovingRight) {
+            this.graphics.rotateCanvas(this.angle);
+        } else {
+            // When moving left, flip the fish and reverse the angle
+            this.graphics.scaleCanvas(-1, 1);
+            this.graphics.rotateCanvas(-this.angle);
+        }
+
+        // Draw fish at origin (0, 0) since we translated to fish position
         // Main body - grayish-olive color (top/back)
         this.graphics.fillStyle(GameConfig.COLOR_FISH_BODY, 1.0);
-        this.graphics.fillEllipse(this.x, this.y, bodySize * 2.5, bodySize * 0.8);
+        this.graphics.fillEllipse(0, 0, bodySize * 2.5, bodySize * 0.8);
 
         // Belly - cream/pinkish lighter color (bottom half)
         this.graphics.fillStyle(GameConfig.COLOR_FISH_BELLY, 0.8);
-        this.graphics.fillEllipse(this.x, this.y + bodySize * 0.2, bodySize * 2.2, bodySize * 0.5);
+        this.graphics.fillEllipse(0, bodySize * 0.2, bodySize * 2.2, bodySize * 0.5);
 
         // Tail fin - pale cream color
         const tailSize = bodySize * 0.7;
-        const tailX = isMovingRight ? this.x - bodySize * 1.25 : this.x + bodySize * 1.25;
-        const tailY = this.y;
+        const tailX = -bodySize * 1.25; // Always points backward (left in local space)
+        const tailY = 0;
 
         this.graphics.fillStyle(GameConfig.COLOR_FISH_FINS, 0.9);
         this.graphics.beginPath();
 
-        if (isMovingRight) {
-            // Tail points left when moving right
-            this.graphics.moveTo(tailX, tailY);
-            this.graphics.lineTo(tailX - tailSize, tailY - tailSize * 0.6);
-            this.graphics.lineTo(tailX - tailSize, tailY + tailSize * 0.6);
-        } else {
-            // Tail points right when moving left
-            this.graphics.moveTo(tailX, tailY);
-            this.graphics.lineTo(tailX + tailSize, tailY - tailSize * 0.6);
-            this.graphics.lineTo(tailX + tailSize, tailY + tailSize * 0.6);
-        }
+        // Tail always points backward in local coordinates
+        this.graphics.moveTo(tailX, tailY);
+        this.graphics.lineTo(tailX - tailSize, tailY - tailSize * 0.6);
+        this.graphics.lineTo(tailX - tailSize, tailY + tailSize * 0.6);
 
         this.graphics.closePath();
         this.graphics.fillPath();
@@ -314,16 +375,16 @@ export class Fish {
         this.graphics.fillStyle(GameConfig.COLOR_FISH_FINS, 0.7);
         // Dorsal fin (top)
         this.graphics.fillTriangle(
-            this.x, this.y - bodySize * 0.5,
-            this.x - bodySize * 0.3, this.y - bodySize * 1.2,
-            this.x + bodySize * 0.3, this.y - bodySize * 1.2
+            0, -bodySize * 0.5,
+            -bodySize * 0.3, -bodySize * 1.2,
+            bodySize * 0.3, -bodySize * 1.2
         );
         // Pectoral fins (sides)
-        const finX = isMovingRight ? this.x - bodySize * 0.3 : this.x + bodySize * 0.3;
+        const finX = -bodySize * 0.3;
         this.graphics.fillTriangle(
-            finX, this.y,
-            finX + (isMovingRight ? -1 : 1) * bodySize * 0.4, this.y - bodySize * 0.3,
-            finX + (isMovingRight ? -1 : 1) * bodySize * 0.4, this.y + bodySize * 0.3
+            finX, 0,
+            finX - bodySize * 0.4, -bodySize * 0.3,
+            finX - bodySize * 0.4, bodySize * 0.3
         );
 
         // Light spots pattern - characteristic of lake trout
@@ -332,8 +393,11 @@ export class Fish {
             const offsetX = (Math.random() - 0.5) * bodySize * 1.8;
             const offsetY = (Math.random() - 0.5) * bodySize * 0.5;
             this.graphics.fillStyle(GameConfig.COLOR_FISH_SPOTS, 0.6);
-            this.graphics.fillCircle(this.x + offsetX, this.y + offsetY, 1.5);
+            this.graphics.fillCircle(offsetX, offsetY, 1.5);
         }
+
+        // Restore graphics state (undo rotation and translation)
+        this.graphics.restore();
         
         // Frenzy indicator - bright orange glow when in feeding frenzy
         if (this.inFrenzy) {
@@ -379,6 +443,40 @@ export class Fish {
             this.graphics.fillStyle(GameConfig.COLOR_BAITFISH, 0.6);
             this.graphics.fillCircle(this.x + 5, this.y - 5, 3);
         }
+
+        // DEV: Show speed preference above fish
+        if (!this.scene.add.text) {
+            // Create text if it doesn't exist
+            if (!this.speedPrefText) {
+                this.speedPrefText = this.scene.add.text(this.x, this.y - 40,
+                    this.speedPreference.toFixed(1),
+                    {
+                        fontSize: '12px',
+                        fontFamily: 'Courier New',
+                        color: '#ffff00',
+                        stroke: '#000000',
+                        strokeThickness: 2
+                    }
+                );
+                this.speedPrefText.setOrigin(0.5, 0.5);
+                this.speedPrefText.setDepth(15);
+            }
+        }
+
+        // Update text position if it exists
+        if (this.speedPrefText) {
+            this.speedPrefText.setPosition(this.x, this.y - 40);
+        }
+
+        // Show swipe chances as green circles below fish (when engaged)
+        if (this.swipeChances > 0) {
+            const circleSpacing = 8;
+            const startX = this.x - (this.swipeChances * circleSpacing) / 2;
+            for (let i = 0; i < this.swipeChances; i++) {
+                this.graphics.fillStyle(0x00ff00, 0.8);
+                this.graphics.fillCircle(startX + (i * circleSpacing), this.y + 25, 3);
+            }
+        }
     }
     
     handleCaught() {
@@ -406,6 +504,7 @@ export class Fish {
             name: this.name,
             gender: this.gender,
             weight: this.weight.toFixed(1) + ' lbs',
+            length: this.length + ' in',
             depth: Math.floor(this.depth) + ' ft',
             state: this.ai.state,
             points: this.points,
@@ -415,9 +514,74 @@ export class Fish {
             frenzyIntensity: this.frenzyIntensity.toFixed(2)
         };
     }
-    
+
+    /**
+     * Render fish at a custom position and scale (for catch popup)
+     */
+    renderAtPosition(graphics, x, y, scale = 3) {
+        const bodySize = Math.max(8, this.weight / 2) * scale;
+
+        // Save graphics state and apply rotation for angling
+        graphics.save();
+        graphics.translateCanvas(x, y);
+        graphics.scaleCanvas(1, 1); // Always face right for popup
+        graphics.rotateCanvas(0); // Horizontal orientation
+
+        // Main body - grayish-olive color (top/back)
+        graphics.fillStyle(GameConfig.COLOR_FISH_BODY, 1.0);
+        graphics.fillEllipse(0, 0, bodySize * 2.5, bodySize * 0.8);
+
+        // Belly - cream/pinkish lighter color (bottom half)
+        graphics.fillStyle(GameConfig.COLOR_FISH_BELLY, 0.8);
+        graphics.fillEllipse(0, bodySize * 0.2, bodySize * 2.2, bodySize * 0.5);
+
+        // Tail fin - pale cream color
+        const tailSize = bodySize * 0.7;
+        const tailX = -bodySize * 1.25;
+        const tailY = 0;
+
+        graphics.fillStyle(GameConfig.COLOR_FISH_FINS, 0.9);
+        graphics.beginPath();
+        graphics.moveTo(tailX, tailY);
+        graphics.lineTo(tailX - tailSize, tailY - tailSize * 0.6);
+        graphics.lineTo(tailX - tailSize, tailY + tailSize * 0.6);
+        graphics.closePath();
+        graphics.fillPath();
+
+        // Dorsal and pectoral fins - pale cream
+        graphics.fillStyle(GameConfig.COLOR_FISH_FINS, 0.7);
+        // Dorsal fin (top)
+        graphics.fillTriangle(
+            0, -bodySize * 0.5,
+            -bodySize * 0.3, -bodySize * 1.2,
+            bodySize * 0.3, -bodySize * 1.2
+        );
+        // Pectoral fins (sides)
+        const finX = -bodySize * 0.3;
+        graphics.fillTriangle(
+            finX, 0,
+            finX - bodySize * 0.4, -bodySize * 0.3,
+            finX - bodySize * 0.4, bodySize * 0.3
+        );
+
+        // Light spots pattern - characteristic of lake trout
+        const numSpots = Math.floor(this.weight / 5) + 3;
+        for (let i = 0; i < numSpots; i++) {
+            const offsetX = (Math.random() - 0.5) * bodySize * 1.8;
+            const offsetY = (Math.random() - 0.5) * bodySize * 0.5;
+            graphics.fillStyle(GameConfig.COLOR_FISH_SPOTS, 0.6);
+            graphics.fillCircle(offsetX, offsetY, 2 * scale);
+        }
+
+        // Restore graphics state
+        graphics.restore();
+    }
+
     destroy() {
         this.graphics.destroy();
+        if (this.speedPrefText) {
+            this.speedPrefText.destroy();
+        }
     }
 }
 
