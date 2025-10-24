@@ -3,7 +3,7 @@ import GameConfig from '../config/GameConfig.js';
 export class MenuScene extends Phaser.Scene {
     constructor() {
         super({ key: 'MenuScene' });
-        this.selectedMode = 0; // 0 = arcade, 1 = unlimited
+        this.selectedMode = 0; // 0-5 for 6 game combinations
         this.buttons = [];
     }
 
@@ -51,27 +51,73 @@ export class MenuScene extends Phaser.Scene {
         }).setOrigin(0.5);
 
         // Game mode selection
-        this.add.text(width / 2, 370, 'SELECT GAME MODE', {
+        this.add.text(width / 2, 300, 'SELECT FISHING TYPE & MODE', {
             fontSize: '18px',
             fontFamily: 'Courier New',
             color: '#00ffff',
             fontStyle: 'bold'
         }).setOrigin(0.5);
 
-        // Horizontal button layout
-        const buttonY = 460;
-        const buttonSpacing = 240;
+        // 3x2 Grid layout for 6 combinations (3 fishing types x 2 modes)
+        const buttonWidth = 180;
+        const buttonHeight = 70;
+        const buttonSpacingX = 220;
+        const buttonSpacingY = 85;
         const centerX = width / 2;
+        const startY = 370;
 
-        // Arcade Mode Button (left)
-        const arcadeBtn = this.createModeButton(centerX - buttonSpacing / 2, buttonY, 'ARCADE MODE',
-            '2 Minutes\nCatch as many!', 'arcade', 0);
+        // Row 1: Ice Fishing
+        const iceArcade = this.createModeButton(
+            centerX - buttonSpacingX / 2, startY,
+            'ICE FISHING',
+            'Arcade\n2 Minutes',
+            { fishingType: GameConfig.FISHING_TYPE_ICE, gameMode: GameConfig.GAME_MODE_ARCADE },
+            0
+        );
 
-        // Unlimited Mode Button (right)
-        const unlimitedBtn = this.createModeButton(centerX + buttonSpacing / 2, buttonY, 'UNLIMITED MODE',
-            'No time limit\nRelax & fish', 'unlimited', 1);
+        const iceUnlimited = this.createModeButton(
+            centerX + buttonSpacingX / 2, startY,
+            'ICE FISHING',
+            'Unlimited\nRelax & fish',
+            { fishingType: GameConfig.FISHING_TYPE_ICE, gameMode: GameConfig.GAME_MODE_UNLIMITED },
+            1
+        );
 
-        this.buttons = [arcadeBtn, unlimitedBtn];
+        // Row 2: Kayak Fishing
+        const kayakArcade = this.createModeButton(
+            centerX - buttonSpacingX / 2, startY + buttonSpacingY,
+            'KAYAK FISHING',
+            'Arcade\n2 Minutes',
+            { fishingType: GameConfig.FISHING_TYPE_KAYAK, gameMode: GameConfig.GAME_MODE_ARCADE },
+            2
+        );
+
+        const kayakUnlimited = this.createModeButton(
+            centerX + buttonSpacingX / 2, startY + buttonSpacingY,
+            'KAYAK FISHING',
+            'Unlimited\nSummer paddle',
+            { fishingType: GameConfig.FISHING_TYPE_KAYAK, gameMode: GameConfig.GAME_MODE_UNLIMITED },
+            3
+        );
+
+        // Row 3: Motor Boat Fishing
+        const boatArcade = this.createModeButton(
+            centerX - buttonSpacingX / 2, startY + buttonSpacingY * 2,
+            'MOTOR BOAT',
+            'Arcade\n2 Minutes',
+            { fishingType: GameConfig.FISHING_TYPE_MOTORBOAT, gameMode: GameConfig.GAME_MODE_ARCADE },
+            4
+        );
+
+        const boatUnlimited = this.createModeButton(
+            centerX + buttonSpacingX / 2, startY + buttonSpacingY * 2,
+            'MOTOR BOAT',
+            'Unlimited\nSummer cruise',
+            { fishingType: GameConfig.FISHING_TYPE_MOTORBOAT, gameMode: GameConfig.GAME_MODE_UNLIMITED },
+            5
+        );
+
+        this.buttons = [iceArcade, iceUnlimited, kayakArcade, kayakUnlimited, boatArcade, boatUnlimited];
 
         // Controls hint
         const controlsY = 570;
@@ -96,10 +142,14 @@ export class MenuScene extends Phaser.Scene {
             this.gamepadState = {
                 lastDpadLeft: false,
                 lastDpadRight: false,
+                lastDpadUp: false,
+                lastDpadDown: false,
                 lastX: false,
                 lastA: false,
                 lastAnalogLeft: false,
-                lastAnalogRight: false
+                lastAnalogRight: false,
+                lastAnalogUp: false,
+                lastAnalogDown: false
             };
 
             // Highlight the first button
@@ -112,12 +162,12 @@ export class MenuScene extends Phaser.Scene {
         this.spaceKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
     }
 
-    createModeButton(x, y, title, description, mode, index) {
+    createModeButton(x, y, title, description, modeConfig, index) {
         const container = this.add.container(x, y);
 
-        // Smaller button for horizontal layout
-        const btnWidth = 200;
-        const btnHeight = 80;
+        // Button size for 3x2 grid
+        const btnWidth = 180;
+        const btnHeight = 70;
 
         // Button background
         const btnBg = this.add.graphics();
@@ -149,7 +199,7 @@ export class MenuScene extends Phaser.Scene {
         container.btnBg = btnBg;
         container.titleText = titleText;
         container.descText = descText;
-        container.mode = mode;
+        container.modeConfig = modeConfig; // Store both fishingType and gameMode
         container.index = index;
         container.btnWidth = btnWidth;
         container.btnHeight = btnHeight;
@@ -173,7 +223,7 @@ export class MenuScene extends Phaser.Scene {
         });
 
         container.on('pointerdown', () => {
-            this.startGame(mode);
+            this.startGame(modeConfig);
         });
 
         return container;
@@ -211,63 +261,142 @@ export class MenuScene extends Phaser.Scene {
     }
 
     update() {
-        // Handle keyboard navigation - cycle through modes
+        // Handle keyboard navigation - 3x2 grid navigation
         if (Phaser.Input.Keyboard.JustDown(this.cursors.left)) {
-            this.selectedMode = (this.selectedMode - 1 + this.buttons.length) % this.buttons.length;
+            // Move left in grid (toggle between columns: 0↔1, 2↔3, 4↔5)
+            if (this.selectedMode % 2 === 1) {
+                this.selectedMode--;
+            } else {
+                this.selectedMode++;
+            }
             this.updateSelection();
         }
 
         if (Phaser.Input.Keyboard.JustDown(this.cursors.right)) {
-            this.selectedMode = (this.selectedMode + 1) % this.buttons.length;
+            // Move right in grid (same as left - toggle)
+            if (this.selectedMode % 2 === 1) {
+                this.selectedMode--;
+            } else {
+                this.selectedMode++;
+            }
             this.updateSelection();
+        }
+
+        if (Phaser.Input.Keyboard.JustDown(this.cursors.up)) {
+            // Move up in grid (0→0, 1→1, 2→0, 3→1, 4→2, 5→3)
+            if (this.selectedMode >= 2) {
+                this.selectedMode -= 2;
+                this.updateSelection();
+            }
+        }
+
+        if (Phaser.Input.Keyboard.JustDown(this.cursors.down)) {
+            // Move down in grid (0→2, 1→3, 2→4, 3→5, 4→4, 5→5)
+            if (this.selectedMode < 4) {
+                this.selectedMode += 2;
+                this.updateSelection();
+            }
         }
 
         if (Phaser.Input.Keyboard.JustDown(this.enterKey) ||
             Phaser.Input.Keyboard.JustDown(this.spaceKey)) {
             const selectedButton = this.buttons[this.selectedMode];
             if (selectedButton) {
-                this.startGame(selectedButton.mode);
+                this.startGame(selectedButton.modeConfig);
             }
         }
 
         // Handle gamepad navigation
         if (this.gamepadDetected && window.gamepadManager && window.gamepadManager.isConnected()) {
-            // D-Pad navigation - cycle through modes
+            // D-Pad navigation - 3x2 grid
             const dpadLeft = window.gamepadManager.getButton('DpadLeft');
             const dpadRight = window.gamepadManager.getButton('DpadRight');
+            const dpadUp = window.gamepadManager.getButton('DpadUp');
+            const dpadDown = window.gamepadManager.getButton('DpadDown');
 
             if (dpadLeft.pressed && !this.gamepadState.lastDpadLeft) {
-                this.selectedMode = (this.selectedMode - 1 + this.buttons.length) % this.buttons.length;
+                if (this.selectedMode % 2 === 1) {
+                    this.selectedMode--;
+                } else {
+                    this.selectedMode++;
+                }
                 this.updateSelection();
             }
 
             if (dpadRight.pressed && !this.gamepadState.lastDpadRight) {
-                this.selectedMode = (this.selectedMode + 1) % this.buttons.length;
+                if (this.selectedMode % 2 === 1) {
+                    this.selectedMode--;
+                } else {
+                    this.selectedMode++;
+                }
                 this.updateSelection();
+            }
+
+            if (dpadUp.pressed && !this.gamepadState.lastDpadUp) {
+                if (this.selectedMode >= 2) {
+                    this.selectedMode -= 2;
+                    this.updateSelection();
+                }
+            }
+
+            if (dpadDown.pressed && !this.gamepadState.lastDpadDown) {
+                if (this.selectedMode < 4) {
+                    this.selectedMode += 2;
+                    this.updateSelection();
+                }
             }
 
             this.gamepadState.lastDpadLeft = dpadLeft.pressed;
             this.gamepadState.lastDpadRight = dpadRight.pressed;
+            this.gamepadState.lastDpadUp = dpadUp.pressed;
+            this.gamepadState.lastDpadDown = dpadDown.pressed;
 
-            // Analog stick navigation - cycle through modes
+            // Analog stick navigation - 3x2 grid
             const leftStickX = window.gamepadManager.getAxis('LeftStickX');
+            const leftStickY = window.gamepadManager.getAxis('LeftStickY');
             const analogThreshold = 0.5;
 
             const analogLeft = leftStickX < -analogThreshold;
             const analogRight = leftStickX > analogThreshold;
+            const analogUp = leftStickY < -analogThreshold;
+            const analogDown = leftStickY > analogThreshold;
 
             if (analogLeft && !this.gamepadState.lastAnalogLeft) {
-                this.selectedMode = (this.selectedMode - 1 + this.buttons.length) % this.buttons.length;
+                if (this.selectedMode % 2 === 1) {
+                    this.selectedMode--;
+                } else {
+                    this.selectedMode++;
+                }
                 this.updateSelection();
             }
 
             if (analogRight && !this.gamepadState.lastAnalogRight) {
-                this.selectedMode = (this.selectedMode + 1) % this.buttons.length;
+                if (this.selectedMode % 2 === 1) {
+                    this.selectedMode--;
+                } else {
+                    this.selectedMode++;
+                }
                 this.updateSelection();
+            }
+
+            if (analogUp && !this.gamepadState.lastAnalogUp) {
+                if (this.selectedMode >= 2) {
+                    this.selectedMode -= 2;
+                    this.updateSelection();
+                }
+            }
+
+            if (analogDown && !this.gamepadState.lastAnalogDown) {
+                if (this.selectedMode < 4) {
+                    this.selectedMode += 2;
+                    this.updateSelection();
+                }
             }
 
             this.gamepadState.lastAnalogLeft = analogLeft;
             this.gamepadState.lastAnalogRight = analogRight;
+            this.gamepadState.lastAnalogUp = analogUp;
+            this.gamepadState.lastAnalogDown = analogDown;
 
             // Confirm with X or A button
             const xButton = window.gamepadManager.getButton('X');
@@ -277,7 +406,7 @@ export class MenuScene extends Phaser.Scene {
                 (aButton.pressed && !this.gamepadState.lastA)) {
                 const selectedButton = this.buttons[this.selectedMode];
                 if (selectedButton) {
-                    this.startGame(selectedButton.mode);
+                    this.startGame(selectedButton.modeConfig);
                 }
             }
 
@@ -286,9 +415,10 @@ export class MenuScene extends Phaser.Scene {
         }
     }
 
-    startGame(mode) {
-        // Store game mode in registry for GameScene to access
-        this.registry.set('gameMode', mode);
+    startGame(modeConfig) {
+        // Store fishing type and game mode in registry for GameScene to access
+        this.registry.set('fishingType', modeConfig.fishingType);
+        this.registry.set('gameMode', modeConfig.gameMode);
 
         // Fade out and start game
         this.cameras.main.fadeOut(500);

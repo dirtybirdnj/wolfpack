@@ -2,8 +2,9 @@ import GameConfig from '../config/GameConfig.js';
 import { Constants, Utils } from '../utils/Constants.js';
 
 export class FishAI {
-    constructor(fish) {
+    constructor(fish, fishingType) {
         this.fish = fish;
+        this.fishingType = fishingType; // Store fishing type for thermocline behavior
         this.state = Constants.FISH_STATE.IDLE;
         this.targetX = null;
         this.targetY = null;
@@ -27,6 +28,9 @@ export class FishAI {
         this.targetBaitfishCloud = null;
         this.targetBaitfish = null;
         this.isFrenzying = false;
+
+        // Thermocline behavior (summer modes only)
+        this.returningToThermocline = false;
     }
 
     get aggressiveness() {
@@ -36,10 +40,20 @@ export class FishAI {
     }
     
     calculateDepthPreference() {
-        // Lake trout prefer deeper, cooler water
-        const minDepth = GameConfig.LAKE_TROUT_PREFERRED_DEPTH_MIN;
-        const maxDepth = GameConfig.LAKE_TROUT_PREFERRED_DEPTH_MAX;
-        return Utils.randomBetween(minDepth, maxDepth);
+        const isSummerMode = this.fishingType === GameConfig.FISHING_TYPE_KAYAK ||
+                             this.fishingType === GameConfig.FISHING_TYPE_MOTORBOAT;
+
+        if (isSummerMode) {
+            // Summer: Lake trout prefer to stay below thermocline
+            const minDepth = GameConfig.THERMOCLINE_DEPTH + 5; // 5 feet below thermocline
+            const maxDepth = GameConfig.LAKE_TROUT_PREFERRED_DEPTH_MAX;
+            return Utils.randomBetween(minDepth, maxDepth);
+        } else {
+            // Winter: Lake trout prefer deeper, cooler water
+            const minDepth = GameConfig.LAKE_TROUT_PREFERRED_DEPTH_MIN;
+            const maxDepth = GameConfig.LAKE_TROUT_PREFERRED_DEPTH_MAX;
+            return Utils.randomBetween(minDepth, maxDepth);
+        }
     }
 
     detectFrenzy(lure, allFish) {
@@ -198,31 +212,40 @@ export class FishAI {
             return;
         }
 
+        // SPEED PREFERENCE MATCHING - Auto-engage if lure matches preferred speed
+        const speedDiff = Math.abs(lureSpeed - this.fish.speedPreference);
+        const speedTolerance = 0.5; // How close the speed needs to match
+
+        if (speedDiff < speedTolerance && distance < GameConfig.DETECTION_RANGE * 0.8) {
+            // Lure is moving at preferred speed! Engage automatically
+            this.engageFish();
+            return;
+        }
+
         // Factors that influence interest
         let interestScore = 0;
 
         // Distance factor (closer is more interesting) - use vertical distance
         interestScore += (1 - verticalDist / GameConfig.VERTICAL_DETECTION_RANGE) * 30;
-        
+
         // Speed factor (optimal speed is most attractive)
-        const speedDiff = Math.abs(lureSpeed - this.speedPreference);
         if (speedDiff < GameConfig.SPEED_TOLERANCE) {
             interestScore += 25;
         } else {
             interestScore -= speedDiff * 5;
         }
-        
+
         // Depth preference (fish prefer certain depths)
         if (depthDifference < 20) {
             interestScore += 20;
         }
-        
+
         // Lure action (moving lures are more attractive than static)
-        if (lure.state === Constants.LURE_STATE.RETRIEVING || 
+        if (lure.state === Constants.LURE_STATE.RETRIEVING ||
             lure.state === Constants.LURE_STATE.DROPPING) {
             interestScore += 15;
         }
-        
+
         // Apply personality modifiers
         interestScore *= this.aggressiveness;
 
@@ -245,6 +268,21 @@ export class FishAI {
                 this.fish.triggerInterestFlash(0.5); // Medium intensity for initial interest
             }
         }
+    }
+
+    engageFish() {
+        // Fish is now engaged - lock onto lure with swipe chances
+        this.fish.isEngaged = true;
+        this.fish.swipeChances = Math.floor(Math.random() * 4) + 1; // 1-4 swipes
+        this.fish.maxSwipeChances = this.fish.swipeChances;
+        this.fish.engagementState = 'attacking';
+        this.fish.lastStateChange = this.fish.age;
+
+        this.state = Constants.FISH_STATE.CHASING;
+        this.decisionCooldown = 100;
+        this.fish.triggerInterestFlash(1.0); // Maximum intensity for engagement
+
+        console.log(`Fish ${this.fish.name} engaged with ${this.fish.swipeChances} swipes!`);
     }
     
     interestedBehavior(distance, lure, lureSpeed, baitfishClouds) {
@@ -276,42 +314,80 @@ export class FishAI {
         // Check if lure is in a baitfish cloud - fish can't tell the difference!
         const lureInBaitfishCloud = this.isLureInBaitfishCloud(lure, baitfishClouds);
 
-        // Actively pursuing the lure
+        // ENGAGED FISH BEHAVIOR - Special mechanics for fish locked onto lure
+        if (this.fish.isEngaged) {
+            // Change state every 3 seconds (180 frames at 60fps)
+            const timeSinceStateChange = this.fish.age - this.fish.lastStateChange;
+            if (timeSinceStateChange > 180) {
+                // Randomly pick next state
+                const states = ['attacking', 'waiting', 'loitering'];
+                this.fish.engagementState = states[Math.floor(Math.random() * states.length)];
+                this.fish.lastStateChange = this.fish.age;
+                console.log(`Fish ${this.fish.name} now ${this.fish.engagementState} (${this.fish.swipeChances} swipes left)`);
+            }
+
+            // Behavior based on engagement state
+            if (this.fish.engagementState === 'attacking') {
+                // Aggressively chase lure
+                this.targetX = lure.x;
+                this.targetY = lure.y;
+
+                // Try to strike if close enough
+                if (distance < GameConfig.STRIKE_DISTANCE) {
+                    if (this.fish.scene && this.fish.scene.currentFight && this.fish.scene.currentFight.active) {
+                        this.disengageFish();
+                        return;
+                    }
+
+                    const strikeChance = this.aggressiveness * 0.85;
+                    if (Math.random() < strikeChance) {
+                        this.state = Constants.FISH_STATE.STRIKING;
+                        this.decisionCooldown = 50;
+                        this.fish.triggerInterestFlash(1.0);
+                    }
+                }
+            } else if (this.fish.engagementState === 'waiting') {
+                // Move back and forth past the lure slowly
+                const oscillation = Math.sin(this.fish.age * 0.05) * 40;
+                this.targetX = lure.x + oscillation;
+                this.targetY = lure.y;
+            } else if (this.fish.engagementState === 'loitering') {
+                // Stop and just look at the lure
+                this.targetX = this.fish.x; // Stay in place
+                this.targetY = this.fish.y;
+            }
+
+            return; // Engaged fish don't run normal chase logic
+        }
+
+        // NORMAL CHASE BEHAVIOR (non-engaged fish)
         this.targetX = lure.x;
         this.targetY = lure.y;
 
         // Check if close enough to strike
         if (distance < GameConfig.STRIKE_DISTANCE) {
-            // Reduce cooldown when close for immediate strike decision
-            this.decisionCooldown = 50; // Very short cooldown when in strike range
+            this.decisionCooldown = 50;
 
-            // Check if there's already a fight in progress - don't allow strike
             if (this.fish.scene && this.fish.scene.currentFight && this.fish.scene.currentFight.active) {
-                // Another fish is already hooked - can't strike
                 this.state = Constants.FISH_STATE.FLEEING;
                 this.decisionCooldown = 3000;
                 return;
             }
 
-            // Higher strike chance if lure is in baitfish cloud (fish think it's real food)
-            const baseStrikeChance = this.aggressiveness * 0.85; // Increased from 0.7
+            const baseStrikeChance = this.aggressiveness * 0.85;
             const strikeChance = lureInBaitfishCloud ? baseStrikeChance * 1.5 : baseStrikeChance;
 
             if (Math.random() < strikeChance) {
                 this.state = Constants.FISH_STATE.STRIKING;
-                this.decisionCooldown = 50; // Quick reaction when striking
-
-                // Trigger visual feedback - fish is striking!
-                this.fish.triggerInterestFlash(1.0); // Maximum intensity for strike
+                this.decisionCooldown = 50;
+                this.fish.triggerInterestFlash(1.0);
             }
         } else if (distance < GameConfig.STRIKE_DISTANCE * 1.5) {
-            // Getting close - reduce cooldown for quicker strike
             this.decisionCooldown = 100;
         }
 
         // If lure leaves baitfish cloud, less hungry fish may lose interest
         if (!lureInBaitfishCloud && this.fish.hunger < 70) {
-            // Fish decide whether to keep chasing based on hunger (0-100 scale)
             const keepChasingChance = this.fish.hunger / 100;
             if (Math.random() > keepChasingChance) {
                 this.state = Constants.FISH_STATE.IDLE;
@@ -328,6 +404,36 @@ export class FishAI {
             this.decisionCooldown = 2000;
         }
     }
+
+    disengageFish() {
+        // Fish loses interest and swims away
+        console.log(`Fish ${this.fish.name} disengaged - no more swipes`);
+        this.fish.isEngaged = false;
+        this.fish.swipeChances = 0;
+        this.fish.engagementState = 'waiting';
+        this.state = Constants.FISH_STATE.FLEEING;
+        this.targetX = null;
+        this.targetY = null;
+        this.decisionCooldown = 3000;
+    }
+
+    startFastFlee() {
+        // Fish ran out of swipes - flee at high speed
+        console.log(`Fish ${this.fish.name} ran out of swipes! Fast fleeing...`);
+        this.fish.isEngaged = false;
+        this.fish.swipeChances = 0;
+        this.fish.isFastFleeing = true;
+
+        // 50% chance to calm down before exiting
+        this.fish.hasCalmedDown = Math.random() < 0.5;
+
+        if (this.fish.hasCalmedDown) {
+            console.log(`Fish ${this.fish.name} will calm down before exiting`);
+        }
+
+        this.state = Constants.FISH_STATE.FLEEING;
+        this.decisionCooldown = 50; // Very short cooldown for fast response
+    }
     
     strikingBehavior(distance, lure) {
         // Fish has committed to striking
@@ -339,8 +445,13 @@ export class FishAI {
             if (this.fish.scene && this.fish.scene.currentFight && this.fish.scene.currentFight.active) {
                 // Another fish is already hooked - this fish missed
                 console.log('Fish tried to hook but another fight is in progress');
-                this.state = Constants.FISH_STATE.FLEEING;
-                this.decisionCooldown = 3000;
+
+                if (this.fish.isEngaged) {
+                    this.disengageFish();
+                } else {
+                    this.state = Constants.FISH_STATE.FLEEING;
+                    this.decisionCooldown = 3000;
+                }
                 return;
             }
 
@@ -354,32 +465,78 @@ export class FishAI {
             }
         } else if (distance > GameConfig.STRIKE_DISTANCE * 2) {
             // Missed the strike!
-            this.strikeAttempts++;
 
-            // If in frenzy and has attempts remaining, try again
-            if (this.fish.inFrenzy && this.strikeAttempts < this.maxStrikeAttempts) {
-                console.log(`Fish missed! Attempt ${this.strikeAttempts}/${this.maxStrikeAttempts} - trying again!`);
+            // Handle engaged fish differently
+            if (this.fish.isEngaged) {
+                this.fish.swipeChances -= 2; // Lose 2 swipes on miss
+                console.log(`Engaged fish ${this.fish.name} popped off! Lost 2 swipes, ${this.fish.swipeChances} left`);
 
-                // Turn around and chase again
-                this.state = Constants.FISH_STATE.CHASING;
-                this.targetX = lure.x;
-                this.targetY = lure.y;
-                this.decisionCooldown = 300; // Brief pause before next swipe
+                if (this.fish.swipeChances > 0) {
+                    // Still has swipes - return to chasing
+                    this.state = Constants.FISH_STATE.CHASING;
+                    this.targetX = lure.x;
+                    this.targetY = lure.y;
+                    this.decisionCooldown = 300;
+                } else {
+                    // Out of swipes - fast flee!
+                    this.startFastFlee();
+                }
             } else {
-                // No more attempts or not in frenzy - flee
-                console.log(`Fish giving up after ${this.strikeAttempts} attempts`);
-                this.state = Constants.FISH_STATE.FLEEING;
-                this.decisionCooldown = 3000;
-                this.strikeAttempts = 0; // Reset for next time
+                // Non-engaged fish - use old frenzy system
+                this.strikeAttempts++;
+
+                if (this.fish.inFrenzy && this.strikeAttempts < this.maxStrikeAttempts) {
+                    console.log(`Fish missed! Attempt ${this.strikeAttempts}/${this.maxStrikeAttempts} - trying again!`);
+                    this.state = Constants.FISH_STATE.CHASING;
+                    this.targetX = lure.x;
+                    this.targetY = lure.y;
+                    this.decisionCooldown = 300;
+                } else {
+                    console.log(`Fish giving up after ${this.strikeAttempts} attempts`);
+                    this.state = Constants.FISH_STATE.FLEEING;
+                    this.decisionCooldown = 3000;
+                    this.strikeAttempts = 0;
+                }
             }
         }
     }
     
     fleeingBehavior(distance) {
-        // Fish is spooked and swimming away
+        // FAST FLEEING - Fish ran out of swipes
+        if (this.fish.isFastFleeing) {
+            // Pick direction based on current position - swim off screen
+            const targetOffscreenX = this.fish.x < 400 ? -200 : 1000;
+            this.targetX = targetOffscreenX;
+            this.targetY = this.fish.y; // Maintain current depth
+
+            // Check if fish has reached edge and should calm down
+            const distanceFromCenter = Math.abs(this.fish.x - 400);
+
+            if (this.fish.hasCalmedDown && distanceFromCenter > 200 && distanceFromCenter < 300) {
+                // Fish calms down before exiting
+                console.log(`Fish ${this.fish.name} calmed down and stopped fleeing`);
+                this.fish.isFastFleeing = false;
+                this.fish.hasCalmedDown = false;
+                this.state = Constants.FISH_STATE.IDLE;
+                this.targetX = null;
+                this.targetY = null;
+                this.decisionCooldown = 2000;
+                return;
+            }
+
+            // If fish reaches edge of play area, mark as invisible
+            if (Math.abs(this.fish.x) > 500 || this.fish.x > GameConfig.CANVAS_WIDTH + 100) {
+                console.log(`Fish ${this.fish.name} exited play area`);
+                this.fish.visible = false;
+                this.fish.isFastFleeing = false;
+            }
+            return;
+        }
+
+        // NORMAL FLEEING - Fish is spooked and swimming away
         this.targetX = this.fish.x < 400 ? -100 : 900;
         this.targetY = this.depthPreference * GameConfig.DEPTH_SCALE;
-        
+
         // After fleeing for a while, return to idle
         if (distance > GameConfig.DETECTION_RANGE * 2) {
             this.state = Constants.FISH_STATE.IDLE;
@@ -390,8 +547,41 @@ export class FishAI {
     }
     
     getMovementVector() {
+        const isSummerMode = this.fishingType === GameConfig.FISHING_TYPE_KAYAK ||
+                             this.fishingType === GameConfig.FISHING_TYPE_MOTORBOAT;
+
         // IDLE fish cruise horizontally without a specific target
         if (this.state === Constants.FISH_STATE.IDLE || !this.targetX || !this.targetY) {
+            // Check thermocline in summer modes
+            if (isSummerMode) {
+                const thermoclineDepth = GameConfig.THERMOCLINE_DEPTH;
+                const currentDepth = this.fish.depth;
+
+                // If fish is above thermocline, slowly return below it
+                if (currentDepth < thermoclineDepth) {
+                    this.returningToThermocline = true;
+                    return {
+                        x: this.fish.speed * this.idleDirection * 0.5, // Slower horizontal movement
+                        y: this.fish.speed * 0.3 // Drift downward
+                    };
+                } else if (currentDepth < thermoclineDepth + 5) {
+                    // Just below thermocline, continue drifting down slowly
+                    this.returningToThermocline = true;
+                    return {
+                        x: this.fish.speed * this.idleDirection * 0.7,
+                        y: this.fish.speed * 0.2
+                    };
+                } else {
+                    // Below thermocline, normal cruising
+                    this.returningToThermocline = false;
+                    return {
+                        x: this.fish.speed * this.idleDirection,
+                        y: 0 // Stay at current depth while idle
+                    };
+                }
+            }
+
+            // Winter mode: normal idle behavior
             return {
                 x: this.fish.speed * this.idleDirection,
                 y: 0 // Stay at current depth while idle
@@ -408,29 +598,35 @@ export class FishAI {
 
         // Speed multiplier based on state
         let speedMultiplier = 1;
-        let verticalSpeedMultiplier = 0.5; // Default slower vertical movement
+        let verticalSpeedMultiplier = 0.85; // More fluid vertical movement (increased from 0.5)
 
         switch (this.state) {
             case Constants.FISH_STATE.CHASING:
                 speedMultiplier = GameConfig.CHASE_SPEED_MULTIPLIER;
+                verticalSpeedMultiplier = 0.95; // Near-equal vertical speed when chasing
                 break;
             case Constants.FISH_STATE.STRIKING:
                 speedMultiplier = 2.5;
+                verticalSpeedMultiplier = 1.0; // Full vertical speed when striking
                 break;
             case Constants.FISH_STATE.FLEEING:
-                speedMultiplier = 2.0;
+                // Fast fleeing fish swim at 3x normal speed
+                speedMultiplier = this.fish.isFastFleeing ? 4.0 : 2.0;
+                verticalSpeedMultiplier = 0.9;
                 break;
             case Constants.FISH_STATE.INTERESTED:
                 speedMultiplier = 0.7; // Increased from 0.5 for less hesitation
+                verticalSpeedMultiplier = 0.8;
                 break;
             case Constants.FISH_STATE.HUNTING_BAITFISH:
                 // Aggressive pursuit of baitfish
                 speedMultiplier = GameConfig.BAITFISH_PURSUIT_SPEED;
                 // Hungrier fish move faster vertically to reach baitfish (0-100 scale)
-                verticalSpeedMultiplier = 0.5 + (this.fish.hunger * GameConfig.HUNGER_VERTICAL_SCALING);
+                verticalSpeedMultiplier = 0.85 + (this.fish.hunger * GameConfig.HUNGER_VERTICAL_SCALING);
                 break;
             case Constants.FISH_STATE.FEEDING:
                 speedMultiplier = 0.3;
+                verticalSpeedMultiplier = 0.5;
                 break;
         }
 

@@ -1,8 +1,9 @@
 import GameConfig from '../config/GameConfig.js';
 
 export class SonarDisplay {
-    constructor(scene) {
+    constructor(scene, fishingType) {
         this.scene = scene;
+        this.fishingType = fishingType; // Track fishing type for rendering
         this.graphics = scene.add.graphics();
         this.graphics.setDepth(0); // Render as background
         this.gridOffset = 0;
@@ -171,34 +172,84 @@ export class SonarDisplay {
     }
     
     drawThermoclines() {
-        // Draw temperature layers
-        this.thermoclines.forEach(layer => {
-            const y = layer.depth * GameConfig.DEPTH_SCALE;
-            this.graphics.lineStyle(1, 0x0099ff, layer.strength * 0.3);
-            
-            // Wavy line to show thermocline
+        const isSummerMode = this.fishingType === GameConfig.FISHING_TYPE_KAYAK ||
+                             this.fishingType === GameConfig.FISHING_TYPE_MOTORBOAT;
+
+        if (isSummerMode) {
+            // Summer: Draw prominent thermocline at specified depth
+            const thermoclineY = GameConfig.THERMOCLINE_DEPTH * GameConfig.DEPTH_SCALE;
+            this.graphics.lineStyle(3, 0xff6600, 0.6); // Orange, more visible
+
+            // Wavy line to show thermocline with stronger effect
             this.graphics.beginPath();
-            this.graphics.moveTo(0, y);
+            this.graphics.moveTo(0, thermoclineY);
             for (let x = 0; x < GameConfig.CANVAS_WIDTH; x += 10) {
-                const wave = Math.sin((x + this.scene.time.now * 0.001) * 0.02) * 3;
-                this.graphics.lineTo(x, y + wave);
+                const wave = Math.sin((x + this.scene.time.now * 0.001) * 0.02) * 5;
+                this.graphics.lineTo(x, thermoclineY + wave);
             }
             this.graphics.strokePath();
-        });
+
+            // Add label for thermocline
+            const thermoclineText = this.scene.add.text(
+                GameConfig.CANVAS_WIDTH - 100,
+                thermoclineY - 10,
+                'THERMOCLINE',
+                {
+                    fontSize: '10px',
+                    fontFamily: 'Courier New',
+                    color: '#ff6600',
+                    backgroundColor: '#000000',
+                    padding: { x: 4, y: 2 }
+                }
+            );
+            thermoclineText.setDepth(100);
+            // Clean up text after render
+            this.scene.time.delayedCall(50, () => thermoclineText.destroy());
+        } else {
+            // Winter: Draw subtle temperature layers
+            this.thermoclines.forEach(layer => {
+                const y = layer.depth * GameConfig.DEPTH_SCALE;
+                this.graphics.lineStyle(1, 0x0099ff, layer.strength * 0.3);
+
+                // Wavy line to show thermocline
+                this.graphics.beginPath();
+                this.graphics.moveTo(0, y);
+                for (let x = 0; x < GameConfig.CANVAS_WIDTH; x += 10) {
+                    const wave = Math.sin((x + this.scene.time.now * 0.001) * 0.02) * 3;
+                    this.graphics.lineTo(x, y + wave);
+                }
+                this.graphics.strokePath();
+            });
+        }
     }
     
     drawBottomProfile() {
-        // Draw the lakebed
+        // For boat/kayak modes, get bottom profile from BoatManager and render relative to player
+        // For ice fishing mode, use the static bottom profile
+        const isSummerMode = this.fishingType === GameConfig.FISHING_TYPE_KAYAK ||
+                             this.fishingType === GameConfig.FISHING_TYPE_MOTORBOAT;
+
+        if (isSummerMode && this.scene.boatManager) {
+            // Use BoatManager's lake bed profile and render relative to player position
+            this.drawScrollingBottomProfile();
+        } else {
+            // Ice fishing mode: use static bottom profile
+            this.drawStaticBottomProfile();
+        }
+    }
+
+    drawStaticBottomProfile() {
+        // Draw the lakebed (static, for ice fishing)
         this.graphics.lineStyle(2, 0x444444, 0.8);
         this.graphics.beginPath();
-        
+
         if (this.bottomProfile.length > 0) {
             this.graphics.moveTo(this.bottomProfile[0].x, this.bottomProfile[0].y);
-            
+
             for (let i = 1; i < this.bottomProfile.length; i++) {
                 const point = this.bottomProfile[i];
                 this.graphics.lineTo(point.x, point.y);
-                
+
                 // Draw structure markers
                 if (point.type === 'structure') {
                     this.graphics.fillStyle(0x666666, 0.5);
@@ -206,24 +257,81 @@ export class SonarDisplay {
                 }
             }
         }
-        
+
         this.graphics.strokePath();
-        
+
         // Fill below bottom
         this.graphics.fillStyle(0x222222, 0.3);
         if (this.bottomProfile.length > 0) {
             this.graphics.beginPath();
             this.graphics.moveTo(this.bottomProfile[0].x, this.bottomProfile[0].y);
-            
+
             for (let i = 1; i < this.bottomProfile.length; i++) {
                 this.graphics.lineTo(this.bottomProfile[i].x, this.bottomProfile[i].y);
             }
-            
+
             this.graphics.lineTo(GameConfig.CANVAS_WIDTH, GameConfig.CANVAS_HEIGHT);
             this.graphics.lineTo(0, GameConfig.CANVAS_HEIGHT);
             this.graphics.closePath();
             this.graphics.fillPath();
         }
+    }
+
+    drawScrollingBottomProfile() {
+        // Draw lake bed that scrolls with player position (for boat/kayak modes)
+        const playerWorldX = this.scene.boatManager.playerX;
+        const lakeBedProfile = this.scene.boatManager.lakeBedProfile;
+
+        // Draw the lakebed line
+        this.graphics.lineStyle(2, 0x444444, 0.8);
+        this.graphics.beginPath();
+
+        let firstPoint = true;
+        for (let i = 0; i < lakeBedProfile.length; i++) {
+            const point = lakeBedProfile[i];
+            const offsetFromPlayer = point.x - playerWorldX;
+            const screenX = (GameConfig.CANVAS_WIDTH / 2) + offsetFromPlayer;
+            const screenY = point.depth * GameConfig.DEPTH_SCALE;
+
+            // Only draw points that are visible on screen
+            if (screenX >= -50 && screenX <= GameConfig.CANVAS_WIDTH + 50) {
+                if (firstPoint) {
+                    this.graphics.moveTo(screenX, screenY);
+                    firstPoint = false;
+                } else {
+                    this.graphics.lineTo(screenX, screenY);
+                }
+            }
+        }
+
+        this.graphics.strokePath();
+
+        // Fill below bottom
+        this.graphics.fillStyle(0x222222, 0.3);
+        this.graphics.beginPath();
+
+        firstPoint = true;
+        for (let i = 0; i < lakeBedProfile.length; i++) {
+            const point = lakeBedProfile[i];
+            const offsetFromPlayer = point.x - playerWorldX;
+            const screenX = (GameConfig.CANVAS_WIDTH / 2) + offsetFromPlayer;
+            const screenY = point.depth * GameConfig.DEPTH_SCALE;
+
+            if (screenX >= -50 && screenX <= GameConfig.CANVAS_WIDTH + 50) {
+                if (firstPoint) {
+                    this.graphics.moveTo(screenX, screenY);
+                    firstPoint = false;
+                } else {
+                    this.graphics.lineTo(screenX, screenY);
+                }
+            }
+        }
+
+        // Close the fill area
+        this.graphics.lineTo(GameConfig.CANVAS_WIDTH, GameConfig.CANVAS_HEIGHT);
+        this.graphics.lineTo(0, GameConfig.CANVAS_HEIGHT);
+        this.graphics.closePath();
+        this.graphics.fillPath();
     }
     
     drawScanLine() {
@@ -270,18 +378,36 @@ export class SonarDisplay {
     }
     
     drawSurfaceLine() {
-        // Draw water surface
-        this.graphics.lineStyle(2, GameConfig.COLOR_SURFACE, 0.5);
-        this.graphics.beginPath();
-        this.graphics.moveTo(0, 0);
-        
-        // Animated waves
-        for (let x = 0; x < GameConfig.CANVAS_WIDTH; x += 5) {
-            const wave = Math.sin((x + this.scene.time.now * 0.002) * 0.01) * 2;
-            this.graphics.lineTo(x, wave + 2);
+        const isSummerMode = this.fishingType === GameConfig.FISHING_TYPE_KAYAK ||
+                             this.fishingType === GameConfig.FISHING_TYPE_MOTORBOAT;
+
+        if (isSummerMode) {
+            // Summer: Draw simple black line at water surface (0 depth)
+            this.graphics.lineStyle(2, 0x000000, 1.0);
+            this.graphics.lineBetween(0, 0, GameConfig.CANVAS_WIDTH, 0);
+        } else {
+            // Winter: Draw ice surface (thicker white line on top of black line)
+            // First draw the water line
+            this.graphics.lineStyle(2, 0x000000, 1.0);
+            this.graphics.lineBetween(0, 0, GameConfig.CANVAS_WIDTH, 0);
+
+            // Then draw thicker white ice line on top
+            this.graphics.lineStyle(6, 0xffffff, 0.8);
+            this.graphics.lineBetween(0, 0, GameConfig.CANVAS_WIDTH, 0);
+
+            // Add some texture to ice
+            this.graphics.lineStyle(2, GameConfig.COLOR_SURFACE, 0.5);
+            this.graphics.beginPath();
+            this.graphics.moveTo(0, 2);
+
+            // Animated waves under ice
+            for (let x = 0; x < GameConfig.CANVAS_WIDTH; x += 5) {
+                const wave = Math.sin((x + this.scene.time.now * 0.002) * 0.01) * 2;
+                this.graphics.lineTo(x, wave + 2);
+            }
+
+            this.graphics.strokePath();
         }
-        
-        this.graphics.strokePath();
     }
     
     destroy() {
