@@ -1194,6 +1194,25 @@ export class GameScene extends Phaser.Scene {
         return count;
     }
 
+    releaseFollowerBaitfish() {
+        // Release all baitfish that are loitering near the lure
+        let releasedCount = 0;
+        this.baitfishClouds.forEach(cloud => {
+            cloud.baitfish.forEach(baitfish => {
+                if (baitfish.loiteringNearLure) {
+                    baitfish.loiteringNearLure = false;
+                    baitfish.confusionLevel = 0;
+                    baitfish.hasLeftCloud = false;
+                    releasedCount++;
+                    console.log('Released follower baitfish back to school');
+                }
+            });
+        });
+        if (releasedCount > 0) {
+            console.log(`Released ${releasedCount} follower baitfish`);
+        }
+    }
+
     updateEmergencyFish(fish) {
         // Emergency fish moves between bait clouds
         // If no target or target is gone, find a new bait cloud

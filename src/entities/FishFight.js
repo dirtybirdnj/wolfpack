@@ -284,6 +284,9 @@ export class FishFight {
         this.fish.ai.targetY = this.fish.y + 50; // Dive down a bit
         this.fish.ai.decisionCooldown = 5000; // Long cooldown so it doesn't come back
 
+        // Release all follower baitfish
+        this.scene.releaseFollowerBaitfish();
+
         // Reset lure position
         this.lure.reset();
 
@@ -344,6 +347,12 @@ export class FishFight {
         this.scene.fishCaught++;
         this.scene.events.emit('updateScore', { score: this.scene.score, caught: this.scene.fishCaught });
         this.scene.checkAchievements();
+
+        // Release all follower baitfish
+        this.scene.releaseFollowerBaitfish();
+
+        // Reset lure to surface
+        this.lure.reset();
 
         // Clean up
         this.endFight();
