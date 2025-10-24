@@ -32,12 +32,31 @@ export class FishAI {
 
         // Thermocline behavior (summer modes only)
         this.returningToThermocline = false;
+
+        // Northern Pike ambush behavior
+        if (this.fish.species === 'northern_pike') {
+            this.isAmbushPredator = true;
+            this.ambushPosition = {
+                x: this.fish.worldX,
+                y: this.fish.y
+            };
+            this.ambushRadius = 50; // How far pike will patrol from ambush position
+            this.strikeRange = 60; // Longer strike range than trout (was 25)
+            this.burstSpeed = 2.5; // Explosive burst speed multiplier
+        } else {
+            this.isAmbushPredator = false;
+        }
     }
 
     get aggressiveness() {
         // Apply depth zone bonus to base aggressiveness
         const zoneBonus = this.fish.depthZone.aggressivenessBonus;
         return Math.max(0.1, Math.min(1.0, this.baseAggressiveness + zoneBonus));
+    }
+
+    getStrikeDistance() {
+        // Northern pike have longer strike range due to their elongated body and explosive bursts
+        return this.isAmbushPredator ? this.strikeRange : GameConfig.STRIKE_DISTANCE;
     }
     
     calculateDepthPreference() {
@@ -337,7 +356,7 @@ export class FishAI {
                 this.targetY = lure.y;
 
                 // Try to strike if close enough
-                if (distance < GameConfig.STRIKE_DISTANCE) {
+                if (distance < this.getStrikeDistance()) {
                     if (this.fish.scene && this.fish.scene.currentFight && this.fish.scene.currentFight.active) {
                         this.disengageFish();
                         return;
@@ -369,7 +388,7 @@ export class FishAI {
         this.targetY = lure.y;
 
         // Check if close enough to strike
-        if (distance < GameConfig.STRIKE_DISTANCE) {
+        if (distance < this.getStrikeDistance()) {
             this.decisionCooldown = 50;
 
             if (this.fish.scene && this.fish.scene.currentFight && this.fish.scene.currentFight.active) {
@@ -386,7 +405,7 @@ export class FishAI {
                 this.decisionCooldown = 50;
                 this.fish.triggerInterestFlash(1.0);
             }
-        } else if (distance < GameConfig.STRIKE_DISTANCE * 1.5) {
+        } else if (distance < this.getStrikeDistance() * 1.5) {
             this.decisionCooldown = 100;
         }
 
@@ -467,7 +486,7 @@ export class FishAI {
             if (this.fish.scene) {
                 this.fish.scene.events.emit('fishCaught', this.fish);
             }
-        } else if (distance > GameConfig.STRIKE_DISTANCE * 2) {
+        } else if (distance > this.getStrikeDistance() * 2) {
             // Missed the strike!
 
             // Handle engaged fish differently
@@ -556,7 +575,30 @@ export class FishAI {
 
         // IDLE fish cruise horizontally without a specific target
         if (this.state === Constants.FISH_STATE.IDLE || !this.targetX || !this.targetY) {
-            // Check thermocline in summer modes
+            // Northern Pike: ambush behavior - patrol slowly near ambush position
+            if (this.isAmbushPredator) {
+                const dx = this.ambushPosition.x - this.fish.worldX;
+                const dy = this.ambushPosition.y - this.fish.y;
+                const distanceFromAmbush = Math.sqrt(dx * dx + dy * dy);
+
+                // If too far from ambush position, slowly return
+                if (distanceFromAmbush > this.ambushRadius) {
+                    const returnSpeed = this.fish.speed * 0.4; // Very slow return
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    return {
+                        x: (dx / dist) * returnSpeed,
+                        y: (dy / dist) * returnSpeed * 0.7
+                    };
+                } else {
+                    // Near ambush position - minimal movement (ambush!)
+                    return {
+                        x: this.fish.speed * this.idleDirection * 0.15, // Almost stationary
+                        y: Math.sin(this.fish.frameAge * 0.01) * 0.05 // Subtle hovering
+                    };
+                }
+            }
+
+            // Lake Trout: thermocline behavior in summer modes
             if (isSummerMode) {
                 const thermoclineDepth = GameConfig.THERMOCLINE_DEPTH;
                 const currentDepth = this.fish.depth;
@@ -585,7 +627,7 @@ export class FishAI {
                 }
             }
 
-            // Winter mode: normal idle behavior
+            // Winter mode: normal idle behavior (lake trout)
             return {
                 x: this.fish.speed * this.idleDirection,
                 y: 0 // Stay at current depth while idle
@@ -606,11 +648,21 @@ export class FishAI {
 
         switch (this.state) {
             case Constants.FISH_STATE.CHASING:
-                speedMultiplier = GameConfig.CHASE_SPEED_MULTIPLIER;
+                // Pike don't chase as much - they ambush. Lake trout are pursuit hunters.
+                if (this.isAmbushPredator) {
+                    speedMultiplier = 1.2; // Slow chase
+                } else {
+                    speedMultiplier = GameConfig.CHASE_SPEED_MULTIPLIER;
+                }
                 verticalSpeedMultiplier = 0.95; // Near-equal vertical speed when chasing
                 break;
             case Constants.FISH_STATE.STRIKING:
-                speedMultiplier = 2.5;
+                // Northern pike have EXPLOSIVE strikes (burst speed)
+                if (this.isAmbushPredator) {
+                    speedMultiplier = this.burstSpeed * 2.0; // 5x speed burst!
+                } else {
+                    speedMultiplier = 2.5; // Lake trout normal strike
+                }
                 verticalSpeedMultiplier = 1.0; // Full vertical speed when striking
                 break;
             case Constants.FISH_STATE.FLEEING:
@@ -623,8 +675,12 @@ export class FishAI {
                 verticalSpeedMultiplier = 0.8;
                 break;
             case Constants.FISH_STATE.HUNTING_BAITFISH:
-                // Aggressive pursuit of baitfish
-                speedMultiplier = GameConfig.BAITFISH_PURSUIT_SPEED;
+                // Pike ambush baitfish, trout pursue them
+                if (this.isAmbushPredator) {
+                    speedMultiplier = 1.5; // Pike wait for baitfish to come close
+                } else {
+                    speedMultiplier = GameConfig.BAITFISH_PURSUIT_SPEED;
+                }
                 // Hungrier fish move faster vertically to reach baitfish (0-100 scale)
                 verticalSpeedMultiplier = 0.85 + (this.fish.hunger * GameConfig.HUNGER_VERTICAL_SCALING);
                 break;
