@@ -17,6 +17,13 @@ export class Lure {
         this.weight = 0.5; // Lure weight in ounces (affects drop speed)
         this.spoolReleased = false; // Is the spool currently free-spinning?
 
+        // Jigging mechanics (right stick control)
+        this.jigOffset = 0; // Current jig displacement from base position
+        this.baseY = y; // Base Y position before jigging
+        this.jigSensitivity = 8; // How much 1 unit of stick movement affects lure (in pixels)
+        this.maxJigRange = 20; // Maximum pixels the lure can jig up/down (about 5 feet)
+        this.isJigging = false;
+
         // Visual representation
         this.graphics = scene.add.graphics();
         this.graphics.setDepth(15); // Render on top of fish
@@ -44,20 +51,29 @@ export class Lure {
                 if (this.velocity > maxFallSpeed) {
                     this.velocity = maxFallSpeed;
                 }
+                this.baseY = this.y; // Update base position while dropping
                 break;
 
             case Constants.LURE_STATE.RETRIEVING:
                 this.velocity = -this.retrieveSpeed;
+                this.baseY = this.y; // Update base position while retrieving
                 break;
 
             case Constants.LURE_STATE.IDLE:
                 // Clutch engaged - no drift, lure stays in place
                 this.velocity = 0;
+                // Keep baseY stable during IDLE so jigging works properly
                 break;
         }
-        
-        // Update position
+
+        // Update position (base movement)
         this.y += this.velocity;
+
+        // Apply jig offset on top of base movement
+        if (this.isJigging) {
+            this.y = this.baseY + this.jigOffset;
+        }
+
         this.depth = this.y / GameConfig.DEPTH_SCALE;
         
         // Boundary checks
@@ -149,10 +165,50 @@ export class Lure {
     
     adjustSpeed(delta) {
         this.retrieveSpeed += delta * GameConfig.LURE_SPEED_INCREMENT;
-        this.retrieveSpeed = Math.max(GameConfig.LURE_MIN_RETRIEVE_SPEED, 
+        this.retrieveSpeed = Math.max(GameConfig.LURE_MIN_RETRIEVE_SPEED,
                                      Math.min(GameConfig.LURE_MAX_RETRIEVE_SPEED, this.retrieveSpeed));
     }
-    
+
+    /**
+     * Apply jigging movement from right analog stick
+     * @param {number} stickY - Right stick Y axis value (-1 to 1, where negative is up)
+     * @param {number} deadZone - Dead zone threshold (default 0.1)
+     */
+    applyJig(stickY, deadZone = 0.1) {
+        // Only allow jigging when lure is IDLE (not dropping or retrieving)
+        if (this.state !== Constants.LURE_STATE.IDLE) {
+            this.isJigging = false;
+            this.jigOffset = 0;
+            return;
+        }
+
+        // Check if stick is outside dead zone
+        if (Math.abs(stickY) < deadZone) {
+            // No jig input - return to base position smoothly
+            if (this.isJigging) {
+                // Smooth return to base with damping
+                this.jigOffset *= 0.8;
+                if (Math.abs(this.jigOffset) < 0.5) {
+                    this.jigOffset = 0;
+                    this.isJigging = false;
+                }
+            }
+            return;
+        }
+
+        // Apply jig input
+        this.isJigging = true;
+
+        // Convert stick input to jig offset (negative stickY = up = negative offset)
+        const targetOffset = stickY * this.jigSensitivity;
+
+        // Clamp to max jig range
+        const clampedOffset = Math.max(-this.maxJigRange, Math.min(this.maxJigRange, targetOffset));
+
+        // Smooth the jig movement for realistic feel
+        this.jigOffset = this.jigOffset * 0.7 + clampedOffset * 0.3;
+    }
+
     reset() {
         this.y = this.startY;
         this.depth = this.startY / GameConfig.DEPTH_SCALE;

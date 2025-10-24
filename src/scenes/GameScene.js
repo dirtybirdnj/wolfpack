@@ -418,6 +418,11 @@ export class GameScene extends Phaser.Scene {
             this.debugMode = !this.debugMode;
         }
         this.gamepadState.lastX = xBtn.pressed;
+
+        // === RIGHT STICK: JIGGING CONTROL ===
+        // Right stick Y-axis for fine vertical lure control (1-2 inch movements)
+        const rightStickY = window.gamepadManager.getAxis(3); // Right stick Y axis
+        this.lure.applyJig(rightStickY, DEAD_ZONE);
     }
 
     rumbleGamepad(duration = 200, strongMagnitude = 0.5, weakMagnitude = 0.5) {
