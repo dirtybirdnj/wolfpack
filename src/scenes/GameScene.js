@@ -7,12 +7,15 @@ import FishFight from '../entities/FishFight.js';
 import BaitfishCloud from '../entities/BaitfishCloud.js';
 import IceHoleManager from '../managers/IceHoleManager.js';
 import FishingLine from '../entities/FishingLine.js';
+import { FishingLineModel } from '../models/FishingLineModel.js';
+import Zooplankton from '../entities/Zooplankton.js';
 
 export class GameScene extends Phaser.Scene {
     constructor() {
         super({ key: 'GameScene' });
         this.fishes = [];
         this.baitfishClouds = [];
+        this.zooplankton = []; // Zooplankton at the bottom
         this.score = 0;
         this.fishCaught = 0;
         this.fishLost = 0; // Track fish that broke the line
@@ -60,6 +63,9 @@ export class GameScene extends Phaser.Scene {
         // Create fishing line
         this.fishingLine = new FishingLine(this);
 
+        // Initialize fishing line model
+        this.fishingLineModel = new FishingLineModel();
+
         // Set up input handlers
         this.setupInput();
 
@@ -81,6 +87,14 @@ export class GameScene extends Phaser.Scene {
         this.time.addEvent({
             delay: 2000,
             callback: this.trySpawnBaitfishCloud,
+            callbackScope: this,
+            loop: true
+        });
+
+        // Start spawning zooplankton at the bottom
+        this.time.addEvent({
+            delay: 1500,
+            callback: this.trySpawnZooplankton,
             callbackScope: this,
             loop: true
         });
@@ -351,10 +365,22 @@ export class GameScene extends Phaser.Scene {
         // Continuously update lure info in UI
         this.updateSpeedDisplay();
 
-        // Update all baitfish clouds
+        // Update and render zooplankton
+        this.zooplankton = this.zooplankton.filter(zp => {
+            if (zp.visible && !zp.consumed) {
+                zp.update();
+                zp.render();
+                return true;
+            } else {
+                zp.destroy();
+                return false;
+            }
+        });
+
+        // Update all baitfish clouds (pass zooplankton for hunting behavior)
         this.baitfishClouds = this.baitfishClouds.filter(cloud => {
             if (cloud.visible) {
-                cloud.update(this.fishes);
+                cloud.update(this.fishes, this.zooplankton);
                 return true;
             } else {
                 cloud.destroy();
@@ -569,62 +595,37 @@ export class GameScene extends Phaser.Scene {
         }
 
         // === FISHING MODE (normal controls) ===
-        // D-pad UP or Left Stick UP: Retrieve line
-        const dpadUp = dpadUpBtn.pressed || (leftStickY < -DEAD_ZONE);
-        if (dpadUp) {
-            this.lure.retrieve();
+
+        // === RIGHT TRIGGER (R2): VARIABLE SPEED REELING ===
+        // R2 trigger controls reel speed based on pressure (like a real baitcaster)
+        // Tapping R2 while dropping engages the clutch and stops the drop
+        const r2Trigger = window.gamepadManager.getButton('R2');
+        const triggerThreshold = 0.1; // Minimum trigger pressure to start reeling
+
+        if (r2Trigger.value > triggerThreshold) {
+            // Use trigger pressure to control reel speed
+            // Light pressure = slow retrieve, full pressure = fast retrieve
+            this.lure.retrieveWithTrigger(r2Trigger.value);
         } else {
-            // Only stop retrieve if keyboard also isn't retrieving
-            if (!this.cursors.up.isDown) {
-                this.lure.stopRetrieve();
+            // R2 not pressed - check D-pad up for binary retrieve (backwards compatibility)
+            if (dpadUpBtn.pressed) {
+                this.lure.retrieve();
+            } else {
+                // Only stop retrieve if keyboard also isn't retrieving
+                if (!this.cursors.up.isDown) {
+                    this.lure.stopRetrieve();
+                }
             }
         }
 
-        // D-pad DOWN or Left Stick DOWN: Drop line
-        const dpadDown = dpadDownBtn.pressed || (leftStickY > DEAD_ZONE);
-        if (dpadDown) {
+        // D-pad DOWN: Drop line (release spool)
+        if (dpadDownBtn.pressed) {
             this.lure.drop();
         }
 
-        // Speed adjustments with debouncing
-        const canAdjustSpeed = currentTime - this.gamepadState.lastSpeedAdjust >= this.gamepadState.speedAdjustDelay;
-
-        if (canAdjustSpeed) {
-            // D-pad LEFT or L1 or Left Stick LEFT: Decrease speed
-            const dpadLeft = dpadLeftBtn.pressed || (leftStickX < -DEAD_ZONE);
-            const l1Pressed = l1Btn.pressed;
-
-            if ((dpadLeft && !this.gamepadState.lastDpadLeft) || (l1Pressed && !this.gamepadState.lastL1)) {
-                this.lure.adjustSpeed(-1);
-                this.updateSpeedDisplay();
-                this.gamepadState.lastSpeedAdjust = currentTime;
-            }
-
-            // D-pad RIGHT or R1 or Left Stick RIGHT: Increase speed
-            const dpadRight = dpadRightBtn.pressed || (leftStickX > DEAD_ZONE);
-            const r1Pressed = r1Btn.pressed;
-
-            if ((dpadRight && !this.gamepadState.lastDpadRight) || (r1Pressed && !this.gamepadState.lastR1)) {
-                this.lure.adjustSpeed(1);
-                this.updateSpeedDisplay();
-                this.gamepadState.lastSpeedAdjust = currentTime;
-            }
-
-            // Update state tracking
-            this.gamepadState.lastDpadLeft = dpadLeft;
-            this.gamepadState.lastDpadRight = dpadRight;
-            this.gamepadState.lastL1 = l1Pressed;
-            this.gamepadState.lastR1 = r1Pressed;
-        }
-
-        // Face buttons for secondary actions
-        // A button (X on PS4): Quick drop/retrieve toggle
+        // X button (A on Xbox, X on PS4): Drop line (release spool)
         if (aBtn.pressed && !this.gamepadState.lastA) {
-            if (this.lure.state === 'RETRIEVING') {
-                this.lure.stopRetrieve();
-            } else {
-                this.lure.drop();
-            }
+            this.lure.drop();
         }
         this.gamepadState.lastA = aBtn.pressed;
 
@@ -948,6 +949,29 @@ export class GameScene extends Phaser.Scene {
         this.baitfishClouds.push(cloud);
     }
 
+    trySpawnZooplankton() {
+        // Don't spawn too many zooplankton at once
+        if (this.zooplankton.length >= 30) {
+            return;
+        }
+
+        // Spawn 1-3 zooplankton at a time
+        const spawnCount = Math.floor(Utils.randomBetween(1, 3));
+
+        for (let i = 0; i < spawnCount; i++) {
+            // Spawn at random position across the width, at the bottom
+            const x = Utils.randomBetween(0, GameConfig.CANVAS_WIDTH);
+
+            // Spawn near the bottom (95-100 feet deep)
+            const depth = Utils.randomBetween(95, 100);
+            const y = depth * GameConfig.DEPTH_SCALE;
+
+            // Create zooplankton
+            const zp = new Zooplankton(this, x, y);
+            this.zooplankton.push(zp);
+        }
+    }
+
     handleFishCaught(fish) {
         // Start fish fight!
         console.log('Fish hooked! Starting fight...');
@@ -1167,9 +1191,10 @@ export class GameScene extends Phaser.Scene {
 
         const playerWorldX = currentHole.x;
 
-        // Spawn from random side
+        // Spawn from random side using world coordinates
         const fromLeft = Math.random() < 0.5;
-        const x = fromLeft ? -100 : GameConfig.CANVAS_WIDTH + 100;
+        const spawnDistance = 300;
+        const worldX = playerWorldX + (fromLeft ? -spawnDistance : spawnDistance);
 
         // Spawn at mid-column depth (preferred lake trout zone)
         const y = Utils.randomBetween(
@@ -1177,15 +1202,18 @@ export class GameScene extends Phaser.Scene {
             GameConfig.DEPTH_ZONES.MID_COLUMN.max * GameConfig.DEPTH_SCALE
         );
 
-        // Create fish with max hunger and 30 health
-        const fish = new Fish(this, x, y);
+        // Create fish with max hunger and low health (size MEDIUM for balance)
+        const fish = new Fish(this, worldX, y, 'MEDIUM');
         fish.hunger = 100; // Max hunger - very motivated!
         fish.health = 30; // Low health makes it easier to catch
         fish.isEmergencyFish = true; // Mark as emergency fish
 
-        // Set initial velocity toward player
-        const direction = fromLeft ? 1 : -1;
-        fish.velocity.x = direction * 0.8;
+        // Set initial movement direction toward player
+        if (fromLeft) {
+            fish.ai.idleDirection = 1; // Swim right (toward player)
+        } else {
+            fish.ai.idleDirection = -1; // Swim left (toward player)
+        }
 
         this.fishes.push(fish);
 
@@ -1234,20 +1262,12 @@ export class GameScene extends Phaser.Scene {
             }
         }
 
-        // Move toward target bait cloud
+        // Move toward target bait cloud using AI system
         if (fish.emergencyTarget) {
-            const targetX = fish.emergencyTarget.centerX;
-            const targetY = fish.emergencyTarget.centerY;
-
-            const dx = targetX - fish.x;
-            const dy = targetY - fish.y;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-
-            if (dist > 20) {
-                // Move toward target
-                fish.velocity.x = (dx / dist) * 1.2;
-                fish.velocity.y = (dy / dist) * 0.6;
-            }
+            // Set AI target to the bait cloud
+            fish.ai.targetX = fish.emergencyTarget.centerX;
+            fish.ai.targetY = fish.emergencyTarget.centerY;
+            fish.ai.state = Constants.FISH_STATE.CHASING;
 
             // Check if passing near the lure - trigger frenzy!
             const lureDist = Utils.calculateDistance(fish.x, fish.y, this.lure.x, this.lure.y);
@@ -1342,6 +1362,7 @@ export class GameScene extends Phaser.Scene {
         // Clean up
         this.fishes.forEach(fish => fish.destroy());
         this.baitfishClouds.forEach(cloud => cloud.destroy());
+        this.zooplankton.forEach(zp => zp.destroy());
         this.lure.destroy();
         this.fishingLine.destroy();
         this.sonarDisplay.destroy();

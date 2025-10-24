@@ -16,6 +16,8 @@ export class Lure {
         // Baitcasting reel mechanics
         this.weight = 0.5; // Lure weight in ounces (affects drop speed)
         this.spoolReleased = false; // Is the spool currently free-spinning?
+        this.triggerControlActive = false; // Is R2 trigger controlling speed?
+        this.currentTriggerSpeed = 0; // Current speed from trigger (0-1)
 
         // Jigging mechanics (right stick control)
         this.jigOffset = 0; // Current jig displacement from base position
@@ -55,7 +57,10 @@ export class Lure {
                 break;
 
             case Constants.LURE_STATE.RETRIEVING:
-                this.velocity = -this.retrieveSpeed;
+                // Only set velocity from retrieveSpeed if not using trigger control
+                if (!this.triggerControlActive) {
+                    this.velocity = -this.retrieveSpeed;
+                }
                 this.baseY = this.y; // Update base position while retrieving
                 break;
 
@@ -155,11 +160,54 @@ export class Lure {
         }
     }
 
+    /**
+     * Retrieve with variable speed based on controller trigger value
+     * @param {number} triggerValue - Trigger pressure (0.0 to 1.0)
+     */
+    retrieveWithTrigger(triggerValue) {
+        // Re-engage clutch if dropping (like clicking the reel on a baitcaster)
+        if (this.state === Constants.LURE_STATE.DROPPING) {
+            this.velocity = 0; // Immediate stop - clutch engaged
+            this.spoolReleased = false;
+            this.state = Constants.LURE_STATE.RETRIEVING;
+            console.log('Clutch engaged - stopped drop');
+        } else if (this.state === Constants.LURE_STATE.IDLE) {
+            // Start retrieving from idle
+            this.state = Constants.LURE_STATE.RETRIEVING;
+        } else if (this.state === Constants.LURE_STATE.SURFACE) {
+            // Can't retrieve from surface
+            this.triggerControlActive = false;
+            this.currentTriggerSpeed = 0;
+            return;
+        }
+
+        // Enable trigger control mode
+        this.triggerControlActive = true;
+
+        // Map trigger value (0.0 to 1.0) to retrieve speed
+        // Min speed at light pressure, max speed at full pressure
+        const minSpeed = GameConfig.LURE_MIN_RETRIEVE_SPEED;
+        const maxSpeed = GameConfig.LURE_MAX_RETRIEVE_SPEED; // Use fixed max speed
+
+        // Apply easing curve for better feel (square the input for more control at low end)
+        const easedTrigger = triggerValue * triggerValue;
+        const speedRange = maxSpeed - minSpeed;
+        const targetSpeed = minSpeed + (speedRange * easedTrigger);
+
+        // Store current speed for UI display (0-1 normalized)
+        this.currentTriggerSpeed = easedTrigger;
+
+        // Set velocity directly for immediate response
+        this.velocity = -targetSpeed;
+    }
+
     stopRetrieve() {
         // Stop reeling - clutch stays engaged, lure holds position
         if (this.state === Constants.LURE_STATE.RETRIEVING) {
             this.velocity = 0; // Hold position, no drift
             this.state = Constants.LURE_STATE.IDLE;
+            this.triggerControlActive = false;
+            this.currentTriggerSpeed = 0;
         }
     }
     
@@ -210,7 +258,15 @@ export class Lure {
     }
 
     reset() {
-        // Always reset to surface (y=0) after catching a fish
+        // Always reset to surface (y=0) and center on current ice hole
+        const currentHole = this.scene.iceHoleManager.getCurrentHole();
+        if (currentHole) {
+            this.x = currentHole.x;
+        } else {
+            // Fallback to canvas center if no hole found
+            this.x = GameConfig.CANVAS_WIDTH / 2;
+        }
+
         this.y = 0;
         this.depth = 0;
         this.velocity = 0;
@@ -220,6 +276,8 @@ export class Lure {
         this.baseY = 0;
         this.jigOffset = 0;
         this.isJigging = false;
+        this.triggerControlActive = false;
+        this.currentTriggerSpeed = 0;
     }
     
     getInfo() {

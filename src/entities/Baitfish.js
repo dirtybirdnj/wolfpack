@@ -36,15 +36,20 @@ export class Baitfish {
         this.flickerPhase = Math.random() * Math.PI * 2;
     }
 
-    update(cloudCenter, lakersNearby = false, spreadMultiplier = 1.0, scaredLevel = 0) {
+    update(cloudCenter, lakersNearby = false, spreadMultiplier = 1.0, scaredLevel = 0, nearbyZooplankton = []) {
         if (this.consumed || !this.visible) {
             return;
         }
 
         this.age++;
 
-        // Only normal schooling behavior
-        this.handleNormalBehavior(cloudCenter, lakersNearby, spreadMultiplier);
+        // Check for nearby zooplankton to hunt (new feature)
+        if (nearbyZooplankton && nearbyZooplankton.length > 0 && !lakersNearby) {
+            this.handleHuntingBehavior(nearbyZooplankton);
+        } else {
+            // Normal schooling behavior (confused behavior removed in main)
+            this.handleNormalBehavior(cloudCenter, lakersNearby, spreadMultiplier);
+        }
 
         this.depth = this.y / GameConfig.DEPTH_SCALE;
 
@@ -108,6 +113,51 @@ export class Baitfish {
             this.panicMode = false;
         }
     }
+
+    handleHuntingBehavior(nearbyZooplankton) {
+        // Find the closest zooplankton
+        let closestZooplankton = null;
+        let closestDistance = Infinity;
+
+        nearbyZooplankton.forEach(zp => {
+            if (!zp.visible || zp.consumed) return;
+
+            const distance = Math.sqrt(
+                Math.pow(this.x - zp.x, 2) +
+                Math.pow(this.y - zp.y, 2)
+            );
+
+            if (distance < closestDistance) {
+                closestDistance = distance;
+                closestZooplankton = zp;
+            }
+        });
+
+        if (closestZooplankton) {
+            // If close enough, consume the zooplankton
+            if (closestDistance < 5) {
+                closestZooplankton.consume();
+                return;
+            }
+
+            // Move towards the zooplankton
+            this.targetX = closestZooplankton.x;
+            this.targetY = closestZooplankton.y;
+
+            const dx = this.targetX - this.x;
+            const dy = this.targetY - this.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+
+            if (distance > 1) {
+                // Hunt at normal speed
+                const moveSpeed = this.speed * 1.2;
+
+                this.x += (dx / distance) * moveSpeed;
+                this.y += (dy / distance) * moveSpeed;
+            }
+        }
+    }
+
 
     updateSonarTrail() {
         // Add current position to trail

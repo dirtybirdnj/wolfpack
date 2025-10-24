@@ -52,13 +52,16 @@ export class BaitfishCloud {
         }
     }
 
-    update(lakers = []) {
+    update(lakers = [], zooplankton = []) {
         if (!this.visible) return;
 
         this.age++;
 
         // Check for nearby lakers first to determine behavior
         const lakersNearby = this.checkForLakersNearby(lakers);
+
+        // Check for nearby zooplankton (food source)
+        const nearbyZooplankton = this.findNearbyZooplankton(zooplankton);
 
         // Update scared level based on laker proximity
         if (lakersNearby) {
@@ -113,7 +116,7 @@ export class BaitfishCloud {
         // Update all baitfish in the cloud
         this.baitfish = this.baitfish.filter(baitfish => {
             if (!baitfish.consumed && baitfish.visible) {
-                baitfish.update({ x: this.centerX, y: this.centerY }, lakersNearby, this.spreadMultiplier, this.scaredLevel);
+                baitfish.update({ x: this.centerX, y: this.centerY }, lakersNearby, this.spreadMultiplier, this.scaredLevel, nearbyZooplankton);
                 return true;
             } else if (baitfish.consumed) {
                 baitfish.destroy();
@@ -145,6 +148,21 @@ export class BaitfishCloud {
         });
 
         return this.lakersChasing.length > 0;
+    }
+
+    findNearbyZooplankton(zooplankton) {
+        // Find zooplankton within detection range of the cloud
+        const detectionRange = 200; // Baitfish can detect zooplankton from up to 200 pixels away
+
+        return zooplankton.filter(zp => {
+            if (!zp.visible || zp.consumed) return false;
+
+            const distance = Utils.calculateDistance(
+                zp.x, zp.y,
+                this.centerX, this.centerY
+            );
+            return distance < detectionRange;
+        });
     }
 
     consumeBaitfish() {

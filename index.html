@@ -100,7 +100,7 @@
             grid-column: 1 / 4;
             grid-row: 3;
             display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
+            grid-template-columns: 1fr 1fr 1fr 1fr;
             gap: 20px;
         }
 
@@ -376,32 +376,32 @@
                 <div class="collapsible-content" id="gp-content">
                 <div style="font-weight: bold; color: var(--border-secondary); margin-bottom: 8px; font-size: 11px;">FISHING MODE</div>
                 <div class="control-item">
-                    <span><span class="key">D-PAD ↓</span></span>
+                    <span><span class="key">X (PS: ×)</span></span>
                     <span>Release Spool (Drop)</span>
                 </div>
                 <div class="control-item">
-                    <span><span class="key">D-PAD ↑</span></span>
-                    <span>Engage & Retrieve</span>
+                    <span><span class="key">D-PAD ↓</span></span>
+                    <span>Release Spool (Alt)</span>
                 </div>
                 <div class="control-item">
-                    <span><span class="key">L-STICK</span></span>
-                    <span>Alt Up/Down/Speed</span>
+                    <span><span class="key">R2</span></span>
+                    <span>Reel (Speed = Pressure)</span>
+                </div>
+                <div class="control-item" style="margin-left: 10px; font-size: 9px; color: var(--text-muted);">
+                    <span>↳ Light = Slow</span>
+                    <span>Full = Fast</span>
+                </div>
+                <div class="control-item" style="margin-left: 10px; font-size: 9px; color: var(--text-muted);">
+                    <span>↳ Tap R2 while dropping</span>
+                    <span>Engage clutch</span>
+                </div>
+                <div class="control-item">
+                    <span><span class="key">D-PAD ↑</span></span>
+                    <span>Reel (Fixed Speed)</span>
                 </div>
                 <div class="control-item">
                     <span><span class="key">R-STICK ↕</span></span>
                     <span>Jigging (Fine Control)</span>
-                </div>
-                <div class="control-item">
-                    <span><span class="key">D-PAD ←→</span></span>
-                    <span>Adjust Speed</span>
-                </div>
-                <div class="control-item">
-                    <span><span class="key">L1/R1</span></span>
-                    <span>Adjust Speed (Alt)</span>
-                </div>
-                <div class="control-item">
-                    <span><span class="key">X (PS: ×)</span></span>
-                    <span>Toggle Drop/Retrieve</span>
                 </div>
                 <div class="control-item">
                     <span><span class="key">CIRCLE (PS: ○)</span></span>
@@ -413,7 +413,7 @@
                 </div>
                 <div class="control-item">
                     <span><span class="key">R2</span></span>
-                    <span>Reel in Fish (Fight)</span>
+                    <span>Reel In (Fight Mode)</span>
                 </div>
                 <div class="control-item">
                     <span><span class="key">START</span></span>
@@ -462,7 +462,7 @@
 
         <!-- Game Info Panel (Above Game) -->
         <div id="game-info-panel" class="panel">
-            <div style="display: grid; grid-template-columns: repeat(8, 1fr); gap: 8px; font-size: 10px;">
+            <div style="display: grid; grid-template-columns: repeat(9, 1fr); gap: 8px; font-size: 10px;">
                 <div>
                     <div style="color: var(--text-muted); font-size: 8px;">SCORE</div>
                     <div style="font-weight: bold; color: var(--text-primary); font-size: 11px;"><span id="ui-score">0</span></div>
@@ -482,6 +482,17 @@
                 <div>
                     <div style="color: var(--text-muted); font-size: 8px;">SPEED</div>
                     <div style="font-weight: bold; color: var(--text-primary); font-size: 11px;"><span id="ui-speed">2.0</span></div>
+                </div>
+                <div>
+                    <div style="color: var(--text-muted); font-size: 8px;">REEL</div>
+                    <div style="display: flex; align-items: center; gap: 3px;">
+                        <div style="flex: 1; height: 10px; background: rgba(0, 0, 0, 0.5); border: 1px solid var(--text-muted); border-radius: 2px; position: relative; overflow: hidden; min-width: 40px;">
+                            <div id="reel-speed-fill" style="position: absolute; left: 0; top: 0; bottom: 0; width: 0%; background: linear-gradient(90deg, #00ff00 0%, #ffff00 50%, #ff6600 100%); transition: width 0.05s linear;"></div>
+                        </div>
+                        <div style="color: var(--text-primary); font-size: 9px; font-weight: bold; min-width: 22px;">
+                            <span id="reel-speed-percent">0</span>%
+                        </div>
+                    </div>
                 </div>
                 <div>
                     <div style="color: var(--text-muted); font-size: 8px;">TEMP</div>
@@ -560,7 +571,31 @@
                 </div>
             </div>
 
-            <!-- Column 3: Controller & Info -->
+            <!-- Column 3: Fishing Line -->
+            <div class="panel warning">
+                <h3>🧵 FISHING LINE</h3>
+                <div style="font-size: 11px; margin-bottom: 8px;">
+                    Type: <span id="current-line-type" class="status-value">Braided</span>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr; gap: 4px; margin-bottom: 8px;">
+                    <button id="line-type-braid" class="dev-btn" style="font-size: 10px; padding: 6px 4px;">Braid</button>
+                    <button id="line-type-monofilament" class="dev-btn" style="font-size: 10px; padding: 6px 4px;">Mono</button>
+                    <button id="line-type-fluorocarbon" class="dev-btn" style="font-size: 10px; padding: 6px 4px;">Fluoro</button>
+                </div>
+                <div id="braid-color-section" style="border-top: 1px solid var(--text-muted); padding-top: 8px;">
+                    <div style="font-size: 11px; margin-bottom: 6px;">
+                        Color: <span id="current-braid-color" class="status-value">Neon Green</span>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px;">
+                        <button id="braid-color-neon-green" class="dev-btn" style="font-size: 9px; padding: 4px 2px;">Neon</button>
+                        <button id="braid-color-yellow" class="dev-btn" style="font-size: 9px; padding: 4px 2px;">Yellow</button>
+                        <button id="braid-color-moss-green" class="dev-btn" style="font-size: 9px; padding: 4px 2px;">Moss</button>
+                        <button id="braid-color-white" class="dev-btn" style="font-size: 9px; padding: 4px 2px;">White</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Column 4: Controller & Info -->
             <div class="panel secondary">
                 <h3>🎮 CONTROLLER</h3>
                 <div style="margin: 10px 0;">
