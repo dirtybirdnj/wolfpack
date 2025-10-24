@@ -160,24 +160,31 @@ export class Lure {
      * @param {number} triggerValue - Trigger pressure (0.0 to 1.0)
      */
     retrieveWithTrigger(triggerValue) {
-        // Re-engage clutch if not already retrieving
-        if (this.state !== Constants.LURE_STATE.SURFACE) {
-            this.velocity = 0; // Immediate stop if transitioning from drop
+        // Re-engage clutch if dropping (like clicking the reel on a baitcaster)
+        if (this.state === Constants.LURE_STATE.DROPPING) {
+            this.velocity = 0; // Immediate stop - clutch engaged
             this.spoolReleased = false;
             this.state = Constants.LURE_STATE.RETRIEVING;
+            console.log('Clutch engaged - stopped drop');
+        } else if (this.state === Constants.LURE_STATE.IDLE) {
+            // Start retrieving from idle
+            this.state = Constants.LURE_STATE.RETRIEVING;
+        } else if (this.state === Constants.LURE_STATE.SURFACE) {
+            // Can't retrieve from surface
+            return;
         }
 
         // Map trigger value (0.0 to 1.0) to retrieve speed
         // Min speed at light pressure, max speed at full pressure
         const minSpeed = GameConfig.LURE_MIN_RETRIEVE_SPEED;
-        const maxSpeed = this.retrieveSpeed; // Use current set speed as max
+        const maxSpeed = GameConfig.LURE_MAX_RETRIEVE_SPEED; // Use fixed max speed
 
         // Apply easing curve for better feel (square the input for more control at low end)
         const easedTrigger = triggerValue * triggerValue;
         const speedRange = maxSpeed - minSpeed;
         const targetSpeed = minSpeed + (speedRange * easedTrigger);
 
-        // Smooth the speed changes to avoid jerkiness
+        // Set velocity directly for immediate response
         this.velocity = -targetSpeed;
     }
 

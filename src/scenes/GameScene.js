@@ -597,18 +597,18 @@ export class GameScene extends Phaser.Scene {
         // === FISHING MODE (normal controls) ===
 
         // === RIGHT TRIGGER (R2): VARIABLE SPEED REELING ===
-        // R2 trigger for variable speed retrieve (like a real fishing reel)
+        // R2 trigger controls reel speed based on pressure (like a real baitcaster)
+        // Tapping R2 while dropping engages the clutch and stops the drop
         const r2Trigger = window.gamepadManager.getButton('R2');
         const triggerThreshold = 0.1; // Minimum trigger pressure to start reeling
 
         if (r2Trigger.value > triggerThreshold) {
             // Use trigger pressure to control reel speed
+            // Light pressure = slow retrieve, full pressure = fast retrieve
             this.lure.retrieveWithTrigger(r2Trigger.value);
         } else {
-            // R2 not pressed - check other retrieve inputs
-            // D-pad UP or Left Stick UP: Binary retrieve (on/off)
-            const dpadUp = dpadUpBtn.pressed || (leftStickY < -DEAD_ZONE);
-            if (dpadUp) {
+            // R2 not pressed - check D-pad up for binary retrieve (backwards compatibility)
+            if (dpadUpBtn.pressed) {
                 this.lure.retrieve();
             } else {
                 // Only stop retrieve if keyboard also isn't retrieving
@@ -618,51 +618,14 @@ export class GameScene extends Phaser.Scene {
             }
         }
 
-        // D-pad DOWN or Left Stick DOWN: Drop line
-        const dpadDown = dpadDownBtn.pressed || (leftStickY > DEAD_ZONE);
-        if (dpadDown) {
+        // D-pad DOWN: Drop line (release spool)
+        if (dpadDownBtn.pressed) {
             this.lure.drop();
         }
 
-        // Speed adjustments with debouncing
-        const canAdjustSpeed = currentTime - this.gamepadState.lastSpeedAdjust >= this.gamepadState.speedAdjustDelay;
-
-        if (canAdjustSpeed) {
-            // D-pad LEFT or L1 or Left Stick LEFT: Decrease speed
-            const dpadLeft = dpadLeftBtn.pressed || (leftStickX < -DEAD_ZONE);
-            const l1Pressed = l1Btn.pressed;
-
-            if ((dpadLeft && !this.gamepadState.lastDpadLeft) || (l1Pressed && !this.gamepadState.lastL1)) {
-                this.lure.adjustSpeed(-1);
-                this.updateSpeedDisplay();
-                this.gamepadState.lastSpeedAdjust = currentTime;
-            }
-
-            // D-pad RIGHT or R1 or Left Stick RIGHT: Increase speed
-            const dpadRight = dpadRightBtn.pressed || (leftStickX > DEAD_ZONE);
-            const r1Pressed = r1Btn.pressed;
-
-            if ((dpadRight && !this.gamepadState.lastDpadRight) || (r1Pressed && !this.gamepadState.lastR1)) {
-                this.lure.adjustSpeed(1);
-                this.updateSpeedDisplay();
-                this.gamepadState.lastSpeedAdjust = currentTime;
-            }
-
-            // Update state tracking
-            this.gamepadState.lastDpadLeft = dpadLeft;
-            this.gamepadState.lastDpadRight = dpadRight;
-            this.gamepadState.lastL1 = l1Pressed;
-            this.gamepadState.lastR1 = r1Pressed;
-        }
-
-        // Face buttons for secondary actions
-        // A button (X on PS4): Quick drop/retrieve toggle
+        // X button (A on Xbox, X on PS4): Drop line (release spool)
         if (aBtn.pressed && !this.gamepadState.lastA) {
-            if (this.lure.state === 'RETRIEVING') {
-                this.lure.stopRetrieve();
-            } else {
-                this.lure.drop();
-            }
+            this.lure.drop();
         }
         this.gamepadState.lastA = aBtn.pressed;
 
