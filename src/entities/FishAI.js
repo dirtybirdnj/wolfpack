@@ -402,6 +402,24 @@ export class FishAI {
         this.targetY = null;
         this.decisionCooldown = 3000;
     }
+
+    startFastFlee() {
+        // Fish ran out of swipes - flee at high speed
+        console.log(`Fish ${this.fish.name} ran out of swipes! Fast fleeing...`);
+        this.fish.isEngaged = false;
+        this.fish.swipeChances = 0;
+        this.fish.isFastFleeing = true;
+
+        // 50% chance to calm down before exiting
+        this.fish.hasCalmedDown = Math.random() < 0.5;
+
+        if (this.fish.hasCalmedDown) {
+            console.log(`Fish ${this.fish.name} will calm down before exiting`);
+        }
+
+        this.state = Constants.FISH_STATE.FLEEING;
+        this.decisionCooldown = 50; // Very short cooldown for fast response
+    }
     
     strikingBehavior(distance, lure) {
         // Fish has committed to striking
@@ -436,8 +454,8 @@ export class FishAI {
 
             // Handle engaged fish differently
             if (this.fish.isEngaged) {
-                this.fish.swipeChances--;
-                console.log(`Engaged fish ${this.fish.name} missed! ${this.fish.swipeChances} swipes left`);
+                this.fish.swipeChances -= 2; // Lose 2 swipes on miss
+                console.log(`Engaged fish ${this.fish.name} popped off! Lost 2 swipes, ${this.fish.swipeChances} left`);
 
                 if (this.fish.swipeChances > 0) {
                     // Still has swipes - return to chasing
@@ -446,8 +464,8 @@ export class FishAI {
                     this.targetY = lure.y;
                     this.decisionCooldown = 300;
                 } else {
-                    // Out of swipes - disengage
-                    this.disengageFish();
+                    // Out of swipes - fast flee!
+                    this.startFastFlee();
                 }
             } else {
                 // Non-engaged fish - use old frenzy system
@@ -470,10 +488,41 @@ export class FishAI {
     }
     
     fleeingBehavior(distance) {
-        // Fish is spooked and swimming away
+        // FAST FLEEING - Fish ran out of swipes
+        if (this.fish.isFastFleeing) {
+            // Pick direction based on current position - swim off screen
+            const targetOffscreenX = this.fish.x < 400 ? -200 : 1000;
+            this.targetX = targetOffscreenX;
+            this.targetY = this.fish.y; // Maintain current depth
+
+            // Check if fish has reached edge and should calm down
+            const distanceFromCenter = Math.abs(this.fish.x - 400);
+
+            if (this.fish.hasCalmedDown && distanceFromCenter > 200 && distanceFromCenter < 300) {
+                // Fish calms down before exiting
+                console.log(`Fish ${this.fish.name} calmed down and stopped fleeing`);
+                this.fish.isFastFleeing = false;
+                this.fish.hasCalmedDown = false;
+                this.state = Constants.FISH_STATE.IDLE;
+                this.targetX = null;
+                this.targetY = null;
+                this.decisionCooldown = 2000;
+                return;
+            }
+
+            // If fish reaches edge of play area, mark as invisible
+            if (Math.abs(this.fish.x) > 500 || this.fish.x > GameConfig.CANVAS_WIDTH + 100) {
+                console.log(`Fish ${this.fish.name} exited play area`);
+                this.fish.visible = false;
+                this.fish.isFastFleeing = false;
+            }
+            return;
+        }
+
+        // NORMAL FLEEING - Fish is spooked and swimming away
         this.targetX = this.fish.x < 400 ? -100 : 900;
         this.targetY = this.depthPreference * GameConfig.DEPTH_SCALE;
-        
+
         // After fleeing for a while, return to idle
         if (distance > GameConfig.DETECTION_RANGE * 2) {
             this.state = Constants.FISH_STATE.IDLE;
@@ -514,7 +563,8 @@ export class FishAI {
                 verticalSpeedMultiplier = 1.0; // Full vertical speed when striking
                 break;
             case Constants.FISH_STATE.FLEEING:
-                speedMultiplier = 2.0;
+                // Fast fleeing fish swim at 3x normal speed
+                speedMultiplier = this.fish.isFastFleeing ? 4.0 : 2.0;
                 verticalSpeedMultiplier = 0.9;
                 break;
             case Constants.FISH_STATE.INTERESTED:

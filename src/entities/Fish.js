@@ -86,6 +86,8 @@ export class Fish {
         this.isEngaged = false; // Currently engaged in chase
         this.engagementState = 'waiting'; // attacking, waiting, loitering
         this.lastStateChange = 0; // Time of last state change
+        this.isFastFleeing = false; // Fleeing at high speed after running out of swipes
+        this.hasCalmedDown = false; // Whether fish has calmed down during fast flee
     }
     
     calculateSonarStrength() {
