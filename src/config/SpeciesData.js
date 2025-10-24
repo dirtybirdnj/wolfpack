@@ -404,6 +404,156 @@ export const PREDATOR_SPECIES = {
 
         // Ecological notes
         notes: 'Apex predator in Lake Champlain. Primarily piscivorous, opportunistic hunters. Size affects behavior significantly. Temperature-sensitive.'
+    },
+
+    northern_pike: {
+        name: 'Northern Pike',
+        scientificName: 'Esox lucius',
+        commonNames: ['Pike', 'Northerns', 'Gator', 'Snake'],
+        status: 'Native, aggressive predator',
+
+        // Size categories with behavioral differences
+        sizeCategories: {
+            small: {
+                weightRange: [2, 6],
+                lengthRange: [18, 26],
+                depthPreference: [5, 15],
+                speedMultiplier: 1.3, // very fast
+                aggressivenessMultiplier: 1.5, // extremely aggressive
+                cautiousness: 0.5, // reckless
+                ambushIntensity: 0.7 // moderately patient ambush
+            },
+            medium: {
+                weightRange: [6, 15],
+                lengthRange: [26, 36],
+                depthPreference: [8, 20],
+                speedMultiplier: 1.2,
+                aggressivenessMultiplier: 1.4,
+                cautiousness: 0.6,
+                ambushIntensity: 1.0 // standard ambush behavior
+            },
+            large: {
+                weightRange: [15, 25],
+                lengthRange: [36, 44],
+                depthPreference: [10, 25],
+                speedMultiplier: 1.1,
+                aggressivenessMultiplier: 1.3,
+                cautiousness: 0.7,
+                ambushIntensity: 1.3 // very patient, effective ambushes
+            },
+            trophy: {
+                weightRange: [25, 45],
+                lengthRange: [44, 54],
+                depthPreference: [12, 30],
+                speedMultiplier: 1.0,
+                aggressivenessMultiplier: 1.2,
+                cautiousness: 0.8,
+                ambushIntensity: 1.5 // extremely patient apex predator
+            }
+        },
+
+        // Temperature preferences - warmer than lake trout
+        tempPreference: {
+            optimal: 65, // 60-70°F range
+            min: 50,
+            max: 75,
+            lethal: 80, // more tolerant of warm water than trout
+            behaviorAffect: true
+        },
+
+        // Seasonal depth preferences (feet) - shallower than lake trout
+        depthPreference: {
+            spring: [3, 15], // very shallow for spawning and post-spawn feeding
+            summer: [8, 25], // weed edges, structure
+            fall: [5, 20], // aggressive fall feeding
+            winter: [10, 30] // deeper but still structure-oriented
+        },
+
+        // Diet composition - Lake Champlain northern pike
+        dietPreferences: {
+            yellow_perch: 0.45, // primary prey - abundant in pike habitat
+            alewife: 0.20, // opportunistic on baitfish
+            rainbow_smelt: 0.15, // during smelt runs
+            sculpin: 0.05, // occasional bottom prey
+            cisco: 0.02, // rare
+            // Pike also eat frogs, ducklings, etc. (not modeled)
+            cannibalism: 0.13 // pike regularly eat smaller pike
+        },
+
+        // Behavioral characteristics - AMBUSH predator (not pursuit)
+        behavior: {
+            huntingStyle: 'ambush', // KEY DIFFERENCE from lake trout
+            feedingPeriods: ['dawn', 'dusk', 'all_day_shallow'], // active all day in shallow water
+            aggressionByDepth: {
+                surface: 1.5, // extremely aggressive in shallow
+                midColumn: 1.3, // still very aggressive
+                bottom: 0.9 // less effective on bottom
+            },
+            cannibalismChance: 0.13, // high cannibalism rate
+            opportunisticFeeding: true,
+            structureOriented: true, // LOVES weeds, logs, docks
+            ambushBehavior: {
+                hideInCover: true, // hides near structure
+                burstSpeed: 2.5, // explosive strikes (2.5x normal speed)
+                strikeRange: 30, // longer strike distance than trout
+                patienceLevel: 'high', // waits for perfect opportunity
+                preferredAmbushDepths: [5, 25] // shallow to mid-depth structure
+            },
+            spawnPeriod: {
+                months: [3, 4], // March-April (early spring)
+                behaviorChange: 'lethargic', // less active during spawn
+                feedingReduction: 0.4 // feeds much less during spawn
+            },
+            postSpawnFrenzy: {
+                months: [5, 6], // May-June
+                aggressivenessBonus: 1.8, // extremely aggressive post-spawn
+                feedingIntensity: 'very_high'
+            }
+        },
+
+        // Activity patterns by time of day
+        activityByTime: {
+            dawn: 1.5, // 5-7 AM - peak feeding
+            morning: 1.3, // 7-11 AM - very active
+            midday: 1.0, // 11 AM-3 PM - still active (unlike trout)
+            afternoon: 1.2, // 3-6 PM - active
+            dusk: 1.5, // 6-8 PM - peak feeding
+            night: 0.6, // 8 PM-5 AM - less active at night
+        },
+
+        // Fight characteristics - different from trout
+        fightCharacteristics: {
+            initialRun: 'explosive', // violent, thrashing strike
+            tactics: ['head_shake', 'jump', 'thrash', 'dive_to_weeds'],
+            stamina: 'medium', // shorter fights than trout, but violent
+            difficulty: 'medium',
+            acrobatic: true, // can jump and thrash on surface
+            weedAdvantage: true, // tries to wrap line in weeds
+            teethDanger: true // sharp teeth can cut line
+        },
+
+        // Habitat preferences - VERY different from lake trout
+        habitatPreferences: {
+            primary: ['weed_beds', 'shallow_structure', 'docks_and_pilings'],
+            secondary: ['drop_offs', 'creek_mouths', 'rocky_shorelines'],
+            avoids: ['deep_open_water', 'strong_current']
+        },
+
+        // Visual characteristics
+        appearance: {
+            bodyShape: 'torpedo', // long, cylindrical
+            colorScheme: {
+                base: 0x4a6e3a, // olive green
+                spots: 0xe8e8d0, // cream/white oval spots
+                belly: 0xd8d8c0, // light cream belly
+                fins: 0x6a7e5a, // olive fins with dark markings
+                distinctive: ['elongated_snout', 'duck_bill_mouth', 'sharp_teeth']
+            },
+            markingPattern: 'horizontal_ovals' // cream oval spots in horizontal rows
+        },
+
+        // Ecological notes
+        notes: 'Ambush predator - waits in cover for prey. Explosive strikes. Structure-oriented. More active in warm, shallow water than lake trout. Cannibalistic.'
     }
 };
 

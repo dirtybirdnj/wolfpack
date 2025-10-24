@@ -1,7 +1,7 @@
 import GameConfig from '../config/GameConfig.js';
 import { Constants, Utils } from '../utils/Constants.js';
 import FishAI from './FishAI.js';
-import { getBaitfishSpecies } from '../config/SpeciesData.js';
+import { getBaitfishSpecies, getPredatorSpecies } from '../config/SpeciesData.js';
 
 // Fish name pools
 const MALE_NAMES = [
@@ -17,9 +17,13 @@ const FEMALE_NAMES = [
 ];
 
 export class Fish {
-    constructor(scene, x, y, size = 'MEDIUM', fishingType = null) {
+    constructor(scene, x, y, size = 'MEDIUM', fishingType = null, species = 'lake_trout') {
         this.scene = scene;
         this.fishingType = fishingType || scene.fishingType; // Use provided fishingType or get from scene
+
+        // Species data
+        this.species = species;
+        this.speciesData = getPredatorSpecies(species);
 
         // World coordinates (actual position in the lake)
         this.worldX = x;
@@ -32,8 +36,16 @@ export class Fish {
         // Fish properties
         this.size = Constants.FISH_SIZE[size];
         this.weight = Utils.randomBetween(this.size.min, this.size.max);
-        // Calculate length based on weight (lake trout: length in inches ≈ 10.5 * weight^0.31)
-        this.length = Math.round(10.5 * Math.pow(this.weight, 0.31));
+
+        // Calculate length based on weight - species-specific formulas
+        if (species === 'northern_pike') {
+            // Northern pike: length in inches ≈ 13.5 * weight^0.28 (longer, more slender)
+            this.length = Math.round(13.5 * Math.pow(this.weight, 0.28));
+        } else {
+            // Lake trout: length in inches ≈ 10.5 * weight^0.31
+            this.length = Math.round(10.5 * Math.pow(this.weight, 0.31));
+        }
+
         this.baseSpeed = Utils.randomBetween(GameConfig.FISH_SPEED_MIN, GameConfig.FISH_SPEED_MAX);
         this.points = this.size.points;
 
@@ -96,20 +108,37 @@ export class Fish {
     }
     
     calculateBiologicalAge() {
-        // Lake trout age-weight relationship (bigger fish are older)
-        // Based on typical lake trout growth rates
-        if (this.weight <= 5) {
-            // Small fish: 3-6 years
-            return Math.round(Utils.randomBetween(3, 6));
-        } else if (this.weight <= 12) {
-            // Medium fish: 6-12 years
-            return Math.round(Utils.randomBetween(6, 12));
-        } else if (this.weight <= 25) {
-            // Large fish: 12-20 years
-            return Math.round(Utils.randomBetween(12, 20));
+        // Species-specific age-weight relationships
+        if (this.species === 'northern_pike') {
+            // Northern pike grow faster than lake trout, shorter lifespan
+            if (this.weight <= 6) {
+                // Small pike: 2-4 years
+                return Math.round(Utils.randomBetween(2, 4));
+            } else if (this.weight <= 15) {
+                // Medium pike: 4-8 years
+                return Math.round(Utils.randomBetween(4, 8));
+            } else if (this.weight <= 25) {
+                // Large pike: 8-14 years
+                return Math.round(Utils.randomBetween(8, 14));
+            } else {
+                // Trophy pike: 14-22 years
+                return Math.round(Utils.randomBetween(14, 22));
+            }
         } else {
-            // Trophy fish: 20-30+ years
-            return Math.round(Utils.randomBetween(20, 30));
+            // Lake trout age-weight relationship (slower growth, longer lived)
+            if (this.weight <= 5) {
+                // Small fish: 3-6 years
+                return Math.round(Utils.randomBetween(3, 6));
+            } else if (this.weight <= 12) {
+                // Medium fish: 6-12 years
+                return Math.round(Utils.randomBetween(6, 12));
+            } else if (this.weight <= 25) {
+                // Large fish: 12-20 years
+                return Math.round(Utils.randomBetween(12, 20));
+            } else {
+                // Trophy fish: 20-30+ years
+                return Math.round(Utils.randomBetween(20, 30));
+            }
         }
     }
 
@@ -322,80 +351,78 @@ export class Fish {
     
     render() {
         this.graphics.clear();
-        
+
         if (!this.visible) return;
-        
-        // Choose color based on sonar strength and state
-        let color;
-        if (this.ai.state === Constants.FISH_STATE.STRIKING) {
-            color = GameConfig.COLOR_FISH_STRONG;
-        } else {
-            switch (this.sonarStrength) {
-                case 'strong':
-                    color = GameConfig.COLOR_FISH_STRONG;
-                    break;
-                case 'medium':
-                    color = GameConfig.COLOR_FISH_MEDIUM;
-                    break;
-                default:
-                    color = GameConfig.COLOR_FISH_WEAK;
-            }
-        }
-        
-        // Draw realistic lake trout based on reference photos
-        const bodySize = Math.max(8, this.weight / 2); // Larger, more visible
+
+        const bodySize = Math.max(8, this.weight / 2);
 
         // Get movement direction to orient the fish
         const movement = this.ai.getMovementVector();
         const isMovingRight = movement.x >= 0;
 
-        // Save graphics state and apply rotation for angling
+        // Render species-specific fish
+        if (this.species === 'northern_pike') {
+            this.renderNorthernPike(bodySize, isMovingRight);
+        } else {
+            this.renderLakeTrout(bodySize, isMovingRight);
+        }
+
+        // Interest flash - green circle that fades to show player triggered interest
+        if (this.interestFlash > 0) {
+            const flashSize = bodySize * (2 + (1 - this.interestFlash) * 1.5);
+            const flashAlpha = this.interestFlash * 0.8;
+
+            this.graphics.lineStyle(3, 0x00ff00, flashAlpha);
+            this.graphics.strokeCircle(this.x, this.y, flashSize);
+
+            if (this.interestFlash > 0.7) {
+                const pulseSize = flashSize + Math.sin(this.frameAge * 0.3) * 4;
+                this.graphics.lineStyle(2, 0x00ff00, flashAlpha * 0.5);
+                this.graphics.strokeCircle(this.x, this.y, pulseSize);
+            }
+        }
+    }
+
+    renderLakeTrout(bodySize, isMovingRight) {
+        // Save graphics state and apply rotation
         this.graphics.save();
         this.graphics.translateCanvas(this.x, this.y);
 
-        // Apply rotation angle, flip if moving left
         if (isMovingRight) {
             this.graphics.rotateCanvas(this.angle);
         } else {
-            // When moving left, flip the fish and reverse the angle
             this.graphics.scaleCanvas(-1, 1);
             this.graphics.rotateCanvas(-this.angle);
         }
 
-        // Draw fish at origin (0, 0) since we translated to fish position
-        // Main body - grayish-olive color (top/back)
+        // Main body - grayish-olive color
         this.graphics.fillStyle(GameConfig.COLOR_FISH_BODY, 1.0);
         this.graphics.fillEllipse(0, 0, bodySize * 2.5, bodySize * 0.8);
 
-        // Belly - cream/pinkish lighter color (bottom half)
+        // Belly - cream/pinkish lighter color
         this.graphics.fillStyle(GameConfig.COLOR_FISH_BELLY, 0.8);
         this.graphics.fillEllipse(0, bodySize * 0.2, bodySize * 2.2, bodySize * 0.5);
 
-        // Tail fin - pale cream color
+        // Tail fin
         const tailSize = bodySize * 0.7;
-        const tailX = -bodySize * 1.25; // Always points backward (left in local space)
+        const tailX = -bodySize * 1.25;
         const tailY = 0;
 
         this.graphics.fillStyle(GameConfig.COLOR_FISH_FINS, 0.9);
         this.graphics.beginPath();
-
-        // Tail always points backward in local coordinates
         this.graphics.moveTo(tailX, tailY);
         this.graphics.lineTo(tailX - tailSize, tailY - tailSize * 0.6);
         this.graphics.lineTo(tailX - tailSize, tailY + tailSize * 0.6);
-
         this.graphics.closePath();
         this.graphics.fillPath();
 
-        // Dorsal and pectoral fins - pale cream
+        // Dorsal and pectoral fins
         this.graphics.fillStyle(GameConfig.COLOR_FISH_FINS, 0.7);
-        // Dorsal fin (top)
         this.graphics.fillTriangle(
             0, -bodySize * 0.5,
             -bodySize * 0.3, -bodySize * 1.2,
             bodySize * 0.3, -bodySize * 1.2
         );
-        // Pectoral fins (sides)
         const finX = -bodySize * 0.3;
         this.graphics.fillTriangle(
             finX, 0,
@@ -403,27 +430,85 @@ export class Fish {
             finX - bodySize * 0.4, bodySize * 0.3
         );
 
-        // Restore graphics state (undo rotation and translation)
         this.graphics.restore();
+    }
 
-        // Interest flash - green circle that fades to show player triggered interest
-        if (this.interestFlash > 0) {
-            // Circle size based on how close to striking
-            // Starts large and contracts as fish gets closer to committing
-            const flashSize = bodySize * (2 + (1 - this.interestFlash) * 1.5);
-            const flashAlpha = this.interestFlash * 0.8; // Max alpha 0.8 for visibility
+    renderNorthernPike(bodySize, isMovingRight) {
+        // Northern pike - torpedo-shaped, olive green with cream oval spots
+        const colors = this.speciesData.appearance.colorScheme;
 
-            // Bright green for interest
-            this.graphics.lineStyle(3, 0x00ff00, flashAlpha);
-            this.graphics.strokeCircle(this.x, this.y, flashSize);
+        this.graphics.save();
+        this.graphics.translateCanvas(this.x, this.y);
 
-            // Add pulsing effect for higher interest levels
-            if (this.interestFlash > 0.7) {
-                const pulseSize = flashSize + Math.sin(this.frameAge * 0.3) * 4;
-                this.graphics.lineStyle(2, 0x00ff00, flashAlpha * 0.5);
-                this.graphics.strokeCircle(this.x, this.y, pulseSize);
-            }
+        if (isMovingRight) {
+            this.graphics.rotateCanvas(this.angle);
+        } else {
+            this.graphics.scaleCanvas(-1, 1);
+            this.graphics.rotateCanvas(-this.angle);
         }
+
+        // Pike body - long and cylindrical (torpedo-shaped)
+        // Pike are longer and more slender than trout
+        const pikeLength = bodySize * 3.2; // Longer than trout (2.5)
+        const pikeHeight = bodySize * 0.6; // More slender than trout (0.8)
+
+        // Main body - olive green
+        this.graphics.fillStyle(colors.base, 1.0);
+        this.graphics.fillEllipse(0, 0, pikeLength, pikeHeight);
+
+        // Belly - light cream
+        this.graphics.fillStyle(colors.belly, 0.9);
+        this.graphics.fillEllipse(0, pikeHeight * 0.15, pikeLength * 0.9, pikeHeight * 0.4);
+
+        // Characteristic cream/white oval spots in horizontal rows
+        this.graphics.fillStyle(colors.spots, 0.8);
+        const spotsPerRow = 5;
+        const spotSpacing = pikeLength / (spotsPerRow + 1);
+
+        // Upper row of spots
+        for (let i = 0; i < spotsPerRow; i++) {
+            const spotX = -pikeLength * 0.4 + (i * spotSpacing);
+            const spotY = -pikeHeight * 0.15;
+            this.graphics.fillEllipse(spotX, spotY, bodySize * 0.25, bodySize * 0.15);
+        }
+
+        // Middle row of spots
+        for (let i = 0; i < spotsPerRow; i++) {
+            const spotX = -pikeLength * 0.35 + (i * spotSpacing);
+            const spotY = 0;
+            this.graphics.fillEllipse(spotX, spotY, bodySize * 0.25, bodySize * 0.15);
+        }
+
+        // Tail - pike have a distinctive forked tail
+        const tailSize = bodySize * 0.8;
+        const tailX = -pikeLength * 0.45;
+
+        this.graphics.fillStyle(colors.fins, 0.9);
+        this.graphics.beginPath();
+        this.graphics.moveTo(tailX, 0);
+        this.graphics.lineTo(tailX - tailSize * 0.8, -tailSize * 0.7);
+        this.graphics.lineTo(tailX - tailSize * 0.8, tailSize * 0.7);
+        this.graphics.closePath();
+        this.graphics.fillPath();
+
+        // Dorsal fin - far back on pike (near tail)
+        this.graphics.fillStyle(colors.fins, 0.75);
+        const dorsalX = -pikeLength * 0.25;
+        this.graphics.fillTriangle(
+            dorsalX, -pikeHeight * 0.4,
+            dorsalX - bodySize * 0.5, -pikeHeight * 1.3,
+            dorsalX + bodySize * 0.3, -pikeHeight * 1.0
+        );
+
+        // Pectoral fins
+        const finX = -bodySize * 0.2;
+        this.graphics.fillTriangle(
+            finX, 0,
+            finX - bodySize * 0.3, -pikeHeight * 0.25,
+            finX - bodySize * 0.3, pikeHeight * 0.25
+        );
+
+        this.graphics.restore();
     }
     
     handleCaught() {
@@ -461,7 +546,8 @@ export class Fish {
 
     getInfo() {
         return {
-            name: this.name,
+            name: `${this.name} the ${this.speciesData.name}`,
+            species: this.speciesData.name,
             gender: this.gender,
             age: this.age + ' years',
             weight: this.weight.toFixed(1) + ' lbs',
@@ -482,51 +568,116 @@ export class Fish {
     renderAtPosition(graphics, x, y, scale = 3) {
         const bodySize = Math.max(8, this.weight / 2) * scale;
 
-        // Save graphics state and apply rotation for angling
         graphics.save();
         graphics.translateCanvas(x, y);
         graphics.scaleCanvas(1, 1); // Always face right for popup
         graphics.rotateCanvas(0); // Horizontal orientation
 
-        // Main body - grayish-olive color (top/back)
+        if (this.species === 'northern_pike') {
+            this.renderNorthernPikeAtPosition(graphics, bodySize);
+        } else {
+            this.renderLakeTroutAtPosition(graphics, bodySize);
+        }
+
+        graphics.restore();
+    }
+
+    renderLakeTroutAtPosition(graphics, bodySize) {
+        // Main body - grayish-olive color
         graphics.fillStyle(GameConfig.COLOR_FISH_BODY, 1.0);
         graphics.fillEllipse(0, 0, bodySize * 2.5, bodySize * 0.8);
 
-        // Belly - cream/pinkish lighter color (bottom half)
+        // Belly - cream/pinkish lighter color
         graphics.fillStyle(GameConfig.COLOR_FISH_BELLY, 0.8);
         graphics.fillEllipse(0, bodySize * 0.2, bodySize * 2.2, bodySize * 0.5);
 
-        // Tail fin - pale cream color
+        // Tail fin
         const tailSize = bodySize * 0.7;
         const tailX = -bodySize * 1.25;
-        const tailY = 0;
 
         graphics.fillStyle(GameConfig.COLOR_FISH_FINS, 0.9);
         graphics.beginPath();
-        graphics.moveTo(tailX, tailY);
-        graphics.lineTo(tailX - tailSize, tailY - tailSize * 0.6);
-        graphics.lineTo(tailX - tailSize, tailY + tailSize * 0.6);
+        graphics.moveTo(tailX, 0);
+        graphics.lineTo(tailX - tailSize, -tailSize * 0.6);
+        graphics.lineTo(tailX - tailSize, tailSize * 0.6);
         graphics.closePath();
         graphics.fillPath();
 
-        // Dorsal and pectoral fins - pale cream
+        // Dorsal and pectoral fins
         graphics.fillStyle(GameConfig.COLOR_FISH_FINS, 0.7);
-        // Dorsal fin (top)
         graphics.fillTriangle(
             0, -bodySize * 0.5,
             -bodySize * 0.3, -bodySize * 1.2,
             bodySize * 0.3, -bodySize * 1.2
         );
-        // Pectoral fins (sides)
         const finX = -bodySize * 0.3;
         graphics.fillTriangle(
             finX, 0,
             finX - bodySize * 0.4, -bodySize * 0.3,
             finX - bodySize * 0.4, bodySize * 0.3
         );
+    }
 
-        // Restore graphics state
-        graphics.restore();
+    renderNorthernPikeAtPosition(graphics, bodySize) {
+        const colors = this.speciesData.appearance.colorScheme;
+
+        // Pike body - longer and more slender
+        const pikeLength = bodySize * 3.2;
+        const pikeHeight = bodySize * 0.6;
+
+        // Main body - olive green
+        graphics.fillStyle(colors.base, 1.0);
+        graphics.fillEllipse(0, 0, pikeLength, pikeHeight);
+
+        // Belly - light cream
+        graphics.fillStyle(colors.belly, 0.9);
+        graphics.fillEllipse(0, pikeHeight * 0.15, pikeLength * 0.9, pikeHeight * 0.4);
+
+        // Cream/white oval spots in horizontal rows
+        graphics.fillStyle(colors.spots, 0.8);
+        const spotsPerRow = 5;
+        const spotSpacing = pikeLength / (spotsPerRow + 1);
+
+        for (let i = 0; i < spotsPerRow; i++) {
+            const spotX = -pikeLength * 0.4 + (i * spotSpacing);
+            const spotY = -pikeHeight * 0.15;
+            graphics.fillEllipse(spotX, spotY, bodySize * 0.25, bodySize * 0.15);
+        }
+
+        for (let i = 0; i < spotsPerRow; i++) {
+            const spotX = -pikeLength * 0.35 + (i * spotSpacing);
+            const spotY = 0;
+            graphics.fillEllipse(spotX, spotY, bodySize * 0.25, bodySize * 0.15);
+        }
+
+        // Tail - forked
+        const tailSize = bodySize * 0.8;
+        const tailX = -pikeLength * 0.45;
+
+        graphics.fillStyle(colors.fins, 0.9);
+        graphics.beginPath();
+        graphics.moveTo(tailX, 0);
+        graphics.lineTo(tailX - tailSize * 0.8, -tailSize * 0.7);
+        graphics.lineTo(tailX - tailSize * 0.8, tailSize * 0.7);
+        graphics.closePath();
+        graphics.fillPath();
+
+        // Dorsal fin - far back
+        graphics.fillStyle(colors.fins, 0.75);
+        const dorsalX = -pikeLength * 0.25;
+        graphics.fillTriangle(
+            dorsalX, -pikeHeight * 0.4,
+            dorsalX - bodySize * 0.5, -pikeHeight * 1.3,
+            dorsalX + bodySize * 0.3, -pikeHeight * 1.0
+        );
+
+        // Pectoral fins
+        const finX = -bodySize * 0.2;
+        graphics.fillTriangle(
+            finX, 0,
+            finX - bodySize * 0.3, -pikeHeight * 0.25,
+            finX - bodySize * 0.3, pikeHeight * 0.25
+        );
     }
 
     destroy() {
