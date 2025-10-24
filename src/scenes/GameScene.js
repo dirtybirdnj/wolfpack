@@ -67,6 +67,25 @@ export class GameScene extends Phaser.Scene {
             this.boatManager = null; // Not used in winter modes
         }
 
+        // Show/hide UI panels based on fishing mode
+        const iceDrillPanel = document.getElementById('ice-drill-panel');
+        const kayakPanel = document.getElementById('kayak-tiredness-panel');
+        const boatPanel = document.getElementById('motorboat-gas-panel');
+
+        if (this.fishingType === GameConfig.FISHING_TYPE_ICE) {
+            if (iceDrillPanel) iceDrillPanel.style.display = 'block';
+            if (kayakPanel) kayakPanel.style.display = 'none';
+            if (boatPanel) boatPanel.style.display = 'none';
+        } else if (this.fishingType === GameConfig.FISHING_TYPE_KAYAK) {
+            if (iceDrillPanel) iceDrillPanel.style.display = 'none';
+            if (kayakPanel) kayakPanel.style.display = 'block';
+            if (boatPanel) boatPanel.style.display = 'none';
+        } else if (this.fishingType === GameConfig.FISHING_TYPE_MOTORBOAT) {
+            if (iceDrillPanel) iceDrillPanel.style.display = 'none';
+            if (kayakPanel) kayakPanel.style.display = 'none';
+            if (boatPanel) boatPanel.style.display = 'block';
+        }
+
         // Set up the sonar display (pass fishing type for proper rendering)
         this.sonarDisplay = new SonarDisplay(this, this.fishingType);
 
