@@ -229,6 +229,42 @@ export class GameScene extends Phaser.Scene {
             }
         });
 
+        // Check for cloud merging - clouds that swim close together should combine
+        if (this.baitfishClouds.length > 1) {
+            const mergeDistance = 80; // pixels - clouds within this distance will merge
+            const cloudsToRemove = new Set();
+
+            for (let i = 0; i < this.baitfishClouds.length; i++) {
+                if (cloudsToRemove.has(i)) continue;
+
+                const cloudA = this.baitfishClouds[i];
+
+                for (let j = i + 1; j < this.baitfishClouds.length; j++) {
+                    if (cloudsToRemove.has(j)) continue;
+
+                    const cloudB = this.baitfishClouds[j];
+
+                    // Calculate distance between cloud centers
+                    const distance = Math.sqrt(
+                        Math.pow(cloudA.centerX - cloudB.centerX, 2) +
+                        Math.pow(cloudA.centerY - cloudB.centerY, 2)
+                    );
+
+                    // If clouds are close enough, merge them
+                    if (distance < mergeDistance) {
+                        console.log(`Merging baitfish clouds! ${cloudA.baitfish.length} + ${cloudB.baitfish.length} = ${cloudA.baitfish.length + cloudB.baitfish.length} baitfish`);
+                        cloudA.mergeWith(cloudB);
+                        cloudsToRemove.add(j);
+                    }
+                }
+            }
+
+            // Remove merged clouds
+            if (cloudsToRemove.size > 0) {
+                this.baitfishClouds = this.baitfishClouds.filter((cloud, index) => !cloudsToRemove.has(index));
+            }
+        }
+
         // Update all fish - pass baitfish clouds for hunting behavior
         this.fishes.forEach((fish, index) => {
             fish.update(this.lure, this.fishes, this.baitfishClouds);
