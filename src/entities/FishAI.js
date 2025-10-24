@@ -8,7 +8,7 @@ export class FishAI {
         this.targetX = null;
         this.targetY = null;
         this.alertness = Math.random() * 0.5 + 0.5; // 0.5 to 1.0
-        this.baseAggressiveness = Math.random() * 0.7 + 0.3; // 0.3 to 1.0
+        this.baseAggressiveness = Math.random() * 0.5 + 0.5; // 0.5 to 1.0 (increased from 0.3-1.0)
         this.lastDecisionTime = 0;
         this.decisionCooldown = 500; // milliseconds
 
@@ -247,18 +247,19 @@ export class FishAI {
         this.targetX = lure.x - 20; // Stay slightly behind
         this.targetY = lure.y;
 
-        // Decide whether to chase or lose interest
-        const continueChase = Math.random() < this.aggressiveness;
+        // Decide whether to chase or lose interest - more likely to commit now
+        const chanceToChase = this.aggressiveness * 1.2; // Boosted from 1.0
+        const continueChase = Math.random() < chanceToChase;
 
-        if (distance < GameConfig.DETECTION_RANGE * 0.5 && continueChase) {
-            // Close enough and aggressive enough to chase
+        if (distance < GameConfig.DETECTION_RANGE * 0.6 && continueChase) {
+            // Close enough and aggressive enough to chase (increased from 0.5 to 0.6)
             this.state = Constants.FISH_STATE.CHASING;
             this.decisionCooldown = 200;
 
             // Trigger visual feedback - fish is committing to the chase!
             this.fish.triggerInterestFlash(0.75); // High intensity for chasing
-        } else if (distance > GameConfig.DETECTION_RANGE || !continueChase) {
-            // Lost interest
+        } else if (distance > GameConfig.DETECTION_RANGE * 1.2 || !continueChase) {
+            // Lost interest (increased threshold from 1.0 to 1.2 for more persistence)
             this.state = Constants.FISH_STATE.IDLE;
             this.targetX = null;
             this.targetY = null;
@@ -277,7 +278,7 @@ export class FishAI {
         // Check if close enough to strike
         if (distance < GameConfig.STRIKE_DISTANCE) {
             // Higher strike chance if lure is in baitfish cloud (fish think it's real food)
-            const baseStrikeChance = this.aggressiveness * 0.7;
+            const baseStrikeChance = this.aggressiveness * 0.85; // Increased from 0.7
             const strikeChance = lureInBaitfishCloud ? baseStrikeChance * 1.5 : baseStrikeChance;
 
             if (Math.random() < strikeChance) {
