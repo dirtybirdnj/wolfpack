@@ -1,0 +1,107 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 120" width="280" height="120">
+  <!-- Alewife Option 1 - Clean style based on real fish photo -->
+
+  <defs>
+    <!-- Silver gradient for body -->
+    <linearGradient id="silverBody1" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#1A2A3A;stop-opacity:1" />
+      <stop offset="20%" style="stop-color:#8A9AAA;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#F0F5FA;stop-opacity:1" />
+      <stop offset="80%" style="stop-color:#FFFFFF;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#FFF5F8;stop-opacity:1" />
+    </linearGradient>
+
+    <!-- Iridescent overlay -->
+    <linearGradient id="iridescent1" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#9080C0;stop-opacity:0.5" />
+      <stop offset="25%" style="stop-color:#D0A0D0;stop-opacity:0.6" />
+      <stop offset="50%" style="stop-color:#8090D0;stop-opacity:0.55" />
+      <stop offset="75%" style="stop-color:#C090C0;stop-opacity:0.6" />
+      <stop offset="100%" style="stop-color:#90A0E0;stop-opacity:0.5" />
+    </linearGradient>
+  </defs>
+
+  <!-- Body outline - deep oval shape -->
+  <path d="M 30 60 Q 24 56, 22 60 Q 24 64, 30 63
+           C 50 65, 80 68, 120 69
+           C 165 70, 210 70, 240 68
+           C 255 67, 265 66, 268 60
+           Q 270 58, 268 56
+           C 265 56, 255 55, 240 54
+           C 210 52, 165 52, 120 53
+           C 80 54, 50 57, 30 59 Z"
+        fill="url(#silverBody1)" stroke="#6080A0" stroke-width="2"/>
+
+  <!-- Very dark back - almost black with blue tint -->
+  <path d="M 30 59 C 80 54, 165 52, 240 54 Q 265 55, 268 56
+           Q 268 57, 265 58 C 240 58, 165 57, 120 57 C 80 57, 50 58, 30 59 Z"
+        fill="#0A1A2A" opacity="0.9"/>
+
+  <!-- Iridescent layer - pink/purple/blue sheen -->
+  <ellipse cx="145" cy="57" rx="110" ry="6" fill="url(#iridescent1)" opacity="0.85"/>
+
+  <!-- Additional pink iridescent spots -->
+  <ellipse cx="100" cy="58" rx="30" ry="4" fill="#E0B0D0" opacity="0.5"/>
+  <ellipse cx="180" cy="58" rx="35" ry="4" fill="#C0A0E0" opacity="0.5"/>
+
+  <!-- Bright silver highlight -->
+  <path d="M 45 60 C 95 61, 160 62, 245 60"
+        stroke="#FFFFFF" stroke-width="3" fill="none" opacity="0.95" stroke-linecap="round"/>
+
+  <!-- Secondary shimmer -->
+  <path d="M 50 61 C 100 62, 165 63, 240 61"
+        stroke="#F8FCFF" stroke-width="2" fill="none" opacity="0.85" stroke-linecap="round"/>
+
+  <!-- Pale pink belly -->
+  <path d="M 40 60 C 90 63, 170 64, 250 61 Q 250 62, 245 63
+           C 210 64, 165 64, 120 64 C 80 64, 55 63, 40 62 Z"
+        fill="#FFE8F0" opacity="0.7"/>
+
+  <!-- Head -->
+  <path d="M 30 59 L 24 57 L 17 56 L 11 57 L 7 60 L 6 62 L 7 65 L 11 68 L 17 69 L 24 67 L 30 63 Z"
+        fill="#E0ECF5" stroke="#6080A0" stroke-width="1.8"/>
+
+  <!-- Small upturned mouth -->
+  <path d="M 11 57 L 7 58 L 5 60 L 7 62 L 11 63"
+        stroke="#3A4A5A" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <ellipse cx="6.5" cy="60" rx="2" ry="3" fill="#2A3A4A"/>
+
+  <!-- VERY LARGE eye (key feature) -->
+  <circle cx="21" cy="58" r="9" fill="#F8F5F0"/>
+  <circle cx="22" cy="57" r="7" fill="#0A0A0C"/>
+  <circle cx="23.5" cy="55.5" r="3" fill="#FFFFFF"/>
+  <ellipse cx="22" cy="58.5" rx="2" ry="1.5" fill="#505050" opacity="0.3"/>
+
+  <!-- Gill plate -->
+  <path d="M 28 57 Q 36 58, 38 60 Q 36 64, 28 66 L 27 64 Q 34 62, 36 60 Q 34 58, 27 57 Z"
+        fill="#E8F2F8" stroke="#6080A0" stroke-width="1.6"/>
+  <path d="M 28 58 Q 30 60, 28 62" stroke="#5A6A7A" stroke-width="2.2" fill="none"/>
+
+  <!-- Forked tail -->
+  <path d="M 265 56 Q 275 51, 278 48 L 276 54 L 270 59 L 268 60 Z"
+        fill="#B0C0D0" stroke="#6080A0" stroke-width="1.5"/>
+  <path d="M 265 64 Q 275 69, 278 72 L 276 66 L 270 59 L 268 60 Z"
+        fill="#B0C0D0" stroke="#6080A0" stroke-width="1.5"/>
+
+  <!-- Small dorsal fin -->
+  <path d="M 120 42 L 117 39 L 119 54 L 123 55 L 127 55 L 131 55 L 134 54 L 136 39 L 133 42 Z"
+        fill="#A8B8C8" stroke="#6080A0" stroke-width="1.2"/>
+
+  <!-- Pectoral fin -->
+  <path d="M 33 63 L 29 73 L 33 77 L 38 78 L 41 74 L 39 65 Z"
+        fill="#C0D0E0" opacity="0.8" stroke="#7090A0" stroke-width="1"/>
+
+  <!-- Pelvic fin -->
+  <path d="M 112 68 L 109 76 L 113 79 L 117 78 L 118 74 L 116 69 Z"
+        fill="#C0D0E0" opacity="0.8" stroke="#7090A0" stroke-width="1"/>
+
+  <!-- Anal fin -->
+  <path d="M 170 67 L 167 69 L 168 75 L 174 77 L 180 76 L 183 71 L 181 67 Z"
+        fill="#C0D0E0" opacity="0.8" stroke="#7090A0" stroke-width="1"/>
+
+  <!-- VERY PROMINENT dark dorsal stripe -->
+  <path d="M 33 56 Q 95 53, 160 54 Q 215 55, 265 57"
+        stroke="#000A1A" stroke-width="6" fill="none" opacity="0.85" stroke-linecap="round"/>
+  <path d="M 35 57 Q 97 54, 162 55 Q 217 56, 263 58"
+        stroke="#1A2A3A" stroke-width="4" fill="none" opacity="0.7" stroke-linecap="round"/>
+</svg>
