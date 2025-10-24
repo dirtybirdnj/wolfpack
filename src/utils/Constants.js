@@ -6,7 +6,9 @@ export const Constants = {
         INTERESTED: 'interested',
         CHASING: 'chasing',
         STRIKING: 'striking',
-        FLEEING: 'fleeing'
+        FLEEING: 'fleeing',
+        HUNTING_BAITFISH: 'hunting_baitfish',
+        FEEDING: 'feeding'
     },
     
     // Lure states

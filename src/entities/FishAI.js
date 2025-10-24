@@ -22,6 +22,11 @@ export class FishAI {
         // Behavior modifiers based on conditions
         this.depthPreference = this.calculateDepthPreference();
         this.speedPreference = Utils.randomBetween(1.5, 3.5);
+
+        // Baitfish hunting - lake trout hunt natural prey
+        this.targetBaitfishCloud = null;
+        this.targetBaitfish = null;
+        this.isFrenzying = false;
     }
 
     get aggressiveness() {
@@ -108,7 +113,7 @@ export class FishAI {
         }
     }
 
-    update(lure, currentTime, allFish = []) {
+    update(lure, currentTime, allFish = [], baitfishClouds = []) {
         // Make decisions at intervals, not every frame
         if (currentTime - this.lastDecisionTime < this.decisionCooldown) {
             return;
@@ -128,18 +133,32 @@ export class FishAI {
         // Detect frenzy feeding - other fish chasing excites this one
         this.detectFrenzy(lure, allFish);
 
+        // PRIORITY: Check for baitfish clouds (natural food source)
+        // Fish prioritize real food over lures, especially when hungry
+        const nearbyBaitfishCloud = this.findNearestBaitfishCloud(baitfishClouds);
+
         // State machine for fish behavior
         switch (this.state) {
             case Constants.FISH_STATE.IDLE:
-                this.idleBehavior(distance, lure, lureSpeed, depthDifference);
+                // Check for baitfish first, then lure
+                if (nearbyBaitfishCloud && this.shouldHuntBaitfish(nearbyBaitfishCloud)) {
+                    this.startHuntingBaitfish(nearbyBaitfishCloud);
+                } else {
+                    this.idleBehavior(distance, lure, lureSpeed, depthDifference);
+                }
                 break;
 
             case Constants.FISH_STATE.INTERESTED:
-                this.interestedBehavior(distance, lure, lureSpeed);
+                // Check if baitfish cloud is more attractive than lure
+                if (nearbyBaitfishCloud && this.shouldHuntBaitfish(nearbyBaitfishCloud)) {
+                    this.startHuntingBaitfish(nearbyBaitfishCloud);
+                } else {
+                    this.interestedBehavior(distance, lure, lureSpeed, baitfishClouds);
+                }
                 break;
 
             case Constants.FISH_STATE.CHASING:
-                this.chasingBehavior(distance, lure, lureSpeed);
+                this.chasingBehavior(distance, lure, lureSpeed, baitfishClouds);
                 break;
 
             case Constants.FISH_STATE.STRIKING:
@@ -148,6 +167,14 @@ export class FishAI {
 
             case Constants.FISH_STATE.FLEEING:
                 this.fleeingBehavior(distance);
+                break;
+
+            case Constants.FISH_STATE.HUNTING_BAITFISH:
+                this.huntingBaitfishBehavior(baitfishClouds, lure);
+                break;
+
+            case Constants.FISH_STATE.FEEDING:
+                this.feedingBehavior(baitfishClouds, lure);
                 break;
         }
     }
@@ -206,14 +233,14 @@ export class FishAI {
         }
     }
     
-    interestedBehavior(distance, lure, lureSpeed) {
+    interestedBehavior(distance, lure, lureSpeed, baitfishClouds) {
         // Fish is watching the lure, may approach slowly
         this.targetX = lure.x - 20; // Stay slightly behind
         this.targetY = lure.y;
-        
+
         // Decide whether to chase or lose interest
         const continueChase = Math.random() < this.aggressiveness;
-        
+
         if (distance < GameConfig.DETECTION_RANGE * 0.5 && continueChase) {
             // Close enough and aggressive enough to chase
             this.state = Constants.FISH_STATE.CHASING;
@@ -227,20 +254,39 @@ export class FishAI {
         }
     }
     
-    chasingBehavior(distance, lure, lureSpeed) {
+    chasingBehavior(distance, lure, lureSpeed, baitfishClouds) {
+        // Check if lure is in a baitfish cloud - fish can't tell the difference!
+        const lureInBaitfishCloud = this.isLureInBaitfishCloud(lure, baitfishClouds);
+
         // Actively pursuing the lure
         this.targetX = lure.x;
         this.targetY = lure.y;
-        
+
         // Check if close enough to strike
         if (distance < GameConfig.STRIKE_DISTANCE) {
-            const strikeChance = this.aggressiveness * 0.7;
+            // Higher strike chance if lure is in baitfish cloud (fish think it's real food)
+            const baseStrikeChance = this.aggressiveness * 0.7;
+            const strikeChance = lureInBaitfishCloud ? baseStrikeChance * 1.5 : baseStrikeChance;
+
             if (Math.random() < strikeChance) {
                 this.state = Constants.FISH_STATE.STRIKING;
                 this.decisionCooldown = 100;
             }
         }
-        
+
+        // If lure leaves baitfish cloud, less hungry fish may lose interest
+        if (!lureInBaitfishCloud && this.fish.hunger < 70) {
+            // Fish decide whether to keep chasing based on hunger (0-100 scale)
+            const keepChasingChance = this.fish.hunger / 100;
+            if (Math.random() > keepChasingChance) {
+                this.state = Constants.FISH_STATE.IDLE;
+                this.targetX = null;
+                this.targetY = null;
+                this.decisionCooldown = 1500;
+                return;
+            }
+        }
+
         // May lose interest if lure behavior becomes wrong
         if (lureSpeed > this.speedPreference * 2 || lureSpeed < 0.1) {
             this.state = Constants.FISH_STATE.FLEEING;
@@ -318,6 +364,8 @@ export class FishAI {
 
         // Speed multiplier based on state
         let speedMultiplier = 1;
+        let verticalSpeedMultiplier = 0.5; // Default slower vertical movement
+
         switch (this.state) {
             case Constants.FISH_STATE.CHASING:
                 speedMultiplier = GameConfig.CHASE_SPEED_MULTIPLIER;
@@ -331,12 +379,166 @@ export class FishAI {
             case Constants.FISH_STATE.INTERESTED:
                 speedMultiplier = 0.5;
                 break;
+            case Constants.FISH_STATE.HUNTING_BAITFISH:
+                // Aggressive pursuit of baitfish
+                speedMultiplier = GameConfig.BAITFISH_PURSUIT_SPEED;
+                // Hungrier fish move faster vertically to reach baitfish (0-100 scale)
+                verticalSpeedMultiplier = 0.5 + (this.fish.hunger * GameConfig.HUNGER_VERTICAL_SCALING);
+                break;
+            case Constants.FISH_STATE.FEEDING:
+                speedMultiplier = 0.3;
+                break;
         }
 
         return {
             x: (dx / distance) * this.fish.speed * speedMultiplier,
-            y: (dy / distance) * this.fish.speed * speedMultiplier * 0.5 // Fish move slower vertically
+            y: (dy / distance) * this.fish.speed * speedMultiplier * verticalSpeedMultiplier
         };
+    }
+
+    // ========== BAITFISH HUNTING BEHAVIORS ==========
+
+    findNearestBaitfishCloud(baitfishClouds) {
+        if (!baitfishClouds || baitfishClouds.length === 0) {
+            return null;
+        }
+
+        let nearest = null;
+        let minDistance = Infinity;
+
+        for (const cloud of baitfishClouds) {
+            if (!cloud.visible || cloud.baitfish.length === 0) continue;
+
+            const distance = Utils.calculateDistance(
+                this.fish.x, this.fish.y,
+                cloud.centerX, cloud.centerY
+            );
+
+            // Hunger affects how far vertically fish will pursue baitfish (0-100 scale)
+            const verticalDistance = Math.abs(this.fish.y - cloud.centerY);
+            const maxVerticalRange = GameConfig.BAITFISH_VERTICAL_PURSUIT_RANGE * (this.fish.hunger * GameConfig.HUNGER_VERTICAL_SCALING);
+
+            if (distance < minDistance &&
+                distance < GameConfig.BAITFISH_DETECTION_RANGE &&
+                verticalDistance < maxVerticalRange) {
+                minDistance = distance;
+                nearest = cloud;
+            }
+        }
+
+        return nearest ? { cloud: nearest, distance: minDistance } : null;
+    }
+
+    shouldHuntBaitfish(cloudInfo) {
+        if (!cloudInfo) return false;
+
+        // Hunger is the primary driver (0-100 scale, higher = hungrier)
+        const hungerFactor = this.fish.hunger / 100;
+
+        // Distance factor - closer is more likely
+        const distanceFactor = 1 - (cloudInfo.distance / GameConfig.BAITFISH_DETECTION_RANGE);
+
+        // Check if other fish are hunting this cloud (frenzying)
+        const otherFishHunting = cloudInfo.cloud.lakersChasing.length;
+        const frenzyBonus = Math.min(otherFishHunting * 0.2, 0.6); // Up to +60% if others are chasing
+
+        const huntScore = (hungerFactor * 0.6) + (distanceFactor * 0.3) + frenzyBonus;
+
+        return huntScore > 0.5;
+    }
+
+    startHuntingBaitfish(cloudInfo) {
+        this.state = Constants.FISH_STATE.HUNTING_BAITFISH;
+        this.targetBaitfishCloud = cloudInfo.cloud;
+        this.isFrenzying = cloudInfo.cloud.lakersChasing.length > 0;
+        this.decisionCooldown = 300;
+    }
+
+    huntingBaitfishBehavior(baitfishClouds, lure) {
+        // Verify target cloud still exists and has baitfish
+        if (!this.targetBaitfishCloud ||
+            !this.targetBaitfishCloud.visible ||
+            this.targetBaitfishCloud.baitfish.length === 0) {
+            // Cloud depleted or gone, return to idle
+            this.state = Constants.FISH_STATE.IDLE;
+            this.targetBaitfishCloud = null;
+            this.targetBaitfish = null;
+            this.decisionCooldown = 1000;
+            return;
+        }
+
+        // Find closest baitfish in the cloud
+        const result = this.targetBaitfishCloud.getClosestBaitfish(this.fish.x, this.fish.y);
+
+        if (result.baitfish) {
+            this.targetBaitfish = result.baitfish;
+            this.targetX = result.baitfish.x;
+            this.targetY = result.baitfish.y;
+
+            // Check if we're close enough to eat the baitfish
+            if (result.distance < 8) {
+                // Consume the baitfish!
+                this.targetBaitfishCloud.consumeBaitfish();
+                this.fish.feedOnBaitfish();
+                this.state = Constants.FISH_STATE.FEEDING;
+                this.decisionCooldown = 200;
+                return;
+            }
+        } else {
+            // No baitfish available, head to cloud center
+            this.targetX = this.targetBaitfishCloud.centerX;
+            this.targetY = this.targetBaitfishCloud.centerY;
+        }
+
+        // IMPORTANT: Check if lure is in the baitfish cloud
+        // Fish cannot tell the difference between lure and baitfish!
+        const lureInCloud = this.targetBaitfishCloud.isPlayerLureInCloud(lure);
+        if (lureInCloud) {
+            const lureDistance = Utils.calculateDistance(
+                this.fish.x, this.fish.y,
+                lure.x, lure.y
+            );
+
+            // Sometimes target the lure instead of baitfish (can't tell difference)
+            if (Math.random() < 0.4 || lureDistance < result.distance) {
+                this.state = Constants.FISH_STATE.CHASING;
+                this.targetX = lure.x;
+                this.targetY = lure.y;
+                this.decisionCooldown = 200;
+            }
+        }
+    }
+
+    feedingBehavior(baitfishClouds, lure) {
+        // Brief feeding state, then return to hunting or idle
+        if (this.targetBaitfishCloud &&
+            this.targetBaitfishCloud.visible &&
+            this.targetBaitfishCloud.baitfish.length > 0 &&
+            this.fish.hunger > 40) {
+            // Still hungry and food available, keep hunting
+            this.state = Constants.FISH_STATE.HUNTING_BAITFISH;
+            this.decisionCooldown = 150;
+        } else {
+            // Satisfied or cloud depleted
+            this.state = Constants.FISH_STATE.IDLE;
+            this.targetBaitfishCloud = null;
+            this.targetBaitfish = null;
+            this.decisionCooldown = 2000;
+        }
+    }
+
+    isLureInBaitfishCloud(lure, baitfishClouds) {
+        if (!baitfishClouds || baitfishClouds.length === 0) {
+            return false;
+        }
+
+        for (const cloud of baitfishClouds) {
+            if (cloud.visible && cloud.isPlayerLureInCloud(lure)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
 

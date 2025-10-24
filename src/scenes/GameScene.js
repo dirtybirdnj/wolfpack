@@ -4,11 +4,13 @@ import SonarDisplay from '../utils/SonarDisplay.js';
 import Lure from '../entities/Lure.js';
 import Fish from '../entities/Fish.js';
 import FishFight from '../entities/FishFight.js';
+import BaitfishCloud from '../entities/BaitfishCloud.js';
 
 export class GameScene extends Phaser.Scene {
     constructor() {
         super({ key: 'GameScene' });
         this.fishes = [];
+        this.baitfishClouds = [];
         this.score = 0;
         this.fishCaught = 0;
         this.fishLost = 0; // Track fish that broke the line
@@ -42,7 +44,15 @@ export class GameScene extends Phaser.Scene {
             callbackScope: this,
             loop: true
         });
-        
+
+        // Start spawning baitfish clouds
+        this.time.addEvent({
+            delay: 2000,
+            callback: this.trySpawnBaitfishCloud,
+            callbackScope: this,
+            loop: true
+        });
+
         // Fade in
         this.cameras.main.fadeIn(500);
 
@@ -95,9 +105,20 @@ export class GameScene extends Phaser.Scene {
         // Continuously update lure info in UI
         this.updateSpeedDisplay();
 
-        // Update all fish
+        // Update all baitfish clouds
+        this.baitfishClouds = this.baitfishClouds.filter(cloud => {
+            if (cloud.visible) {
+                cloud.update(this.fishes);
+                return true;
+            } else {
+                cloud.destroy();
+                return false;
+            }
+        });
+
+        // Update all fish - pass baitfish clouds for hunting behavior
         this.fishes.forEach((fish, index) => {
-            fish.update(this.lure, this.fishes);
+            fish.update(this.lure, this.fishes, this.baitfishClouds);
 
             // Remove fish that are no longer visible or caught
             if (!fish.visible) {
@@ -109,6 +130,11 @@ export class GameScene extends Phaser.Scene {
         // Spawn fish based on chance
         if (Math.random() < GameConfig.FISH_SPAWN_CHANCE) {
             this.trySpawnFish();
+        }
+
+        // Spawn baitfish clouds based on chance
+        if (Math.random() < GameConfig.BAITFISH_CLOUD_SPAWN_CHANCE) {
+            this.trySpawnBaitfishCloud();
         }
 
         // Debug visualization
@@ -197,7 +223,49 @@ export class GameScene extends Phaser.Scene {
 
         this.fishes.push(fish);
     }
-    
+
+    trySpawnBaitfishCloud() {
+        // Don't spawn too many clouds at once
+        if (this.baitfishClouds.length >= 3) {
+            return;
+        }
+
+        // Determine cloud size
+        const cloudSize = Math.floor(
+            Utils.randomBetween(
+                GameConfig.BAITFISH_CLOUD_MIN_COUNT,
+                GameConfig.BAITFISH_CLOUD_MAX_COUNT
+            )
+        );
+
+        // Baitfish prefer certain depth zones (typically shallower than lake trout)
+        let depth;
+        const depthRoll = Math.random();
+        if (depthRoll < 0.4) {
+            // Shallow - 20-40 ft
+            depth = Utils.randomBetween(20, 40);
+        } else if (depthRoll < 0.8) {
+            // Mid depth - 40-70 ft
+            depth = Utils.randomBetween(40, 70);
+        } else {
+            // Deeper - 70-100 ft
+            depth = Utils.randomBetween(70, 100);
+        }
+
+        // Spawn from left or right edge
+        const fromLeft = Math.random() < 0.5;
+        const x = fromLeft ? -50 : GameConfig.CANVAS_WIDTH + 50;
+        const y = depth * GameConfig.DEPTH_SCALE;
+
+        // Create the baitfish cloud
+        const cloud = new BaitfishCloud(this, x, y, cloudSize);
+
+        // Set initial drift direction
+        cloud.velocity.x = fromLeft ? Utils.randomBetween(0.3, 0.8) : Utils.randomBetween(-0.8, -0.3);
+
+        this.baitfishClouds.push(cloud);
+    }
+
     handleFishCaught(fish) {
         // Start fish fight!
         console.log('Fish hooked! Starting fight...');
@@ -431,6 +499,7 @@ export class GameScene extends Phaser.Scene {
     shutdown() {
         // Clean up
         this.fishes.forEach(fish => fish.destroy());
+        this.baitfishClouds.forEach(cloud => cloud.destroy());
         this.lure.destroy();
         this.sonarDisplay.destroy();
         if (this.debugGraphics) {
