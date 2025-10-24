@@ -531,11 +531,27 @@ export class GameScene extends Phaser.Scene {
         const isBoatMode = this.boatManager !== null;
 
         if (isBoatMode) {
-            // Boat mode: left/right moves the boat
-            if (this.cursors.left.isDown) {
-                this.boatManager.movePlayer(-1);
-            } else if (this.cursors.right.isDown) {
-                this.boatManager.movePlayer(1);
+            // Boat mode: left/right moves the boat (but only if lure is at surface)
+            if (this.cursors.left.isDown || this.cursors.right.isDown) {
+                // Check if lure is at surface before allowing movement
+                if (this.lure.state === Constants.LURE_STATE.SURFACE) {
+                    if (this.cursors.left.isDown) {
+                        this.boatManager.movePlayer(-1);
+                    } else if (this.cursors.right.isDown) {
+                        this.boatManager.movePlayer(1);
+                    }
+                } else {
+                    // Show warning if trying to move with lure down
+                    if (!this.movementWarningShown) {
+                        this.showAchievement('Reel Up First', 'Reel up to move locations');
+                        this.movementWarningShown = true;
+                        // Reset warning flag after a delay
+                        this.time.delayedCall(2000, () => {
+                            this.movementWarningShown = false;
+                        });
+                    }
+                    this.boatManager.stopMoving();
+                }
             } else {
                 this.boatManager.stopMoving();
             }
@@ -640,6 +656,37 @@ export class GameScene extends Phaser.Scene {
 
                 // Exit early - don't process fishing controls
                 return;
+            }
+        }
+
+        // === BOAT/KAYAK MOVEMENT (Summer modes only) ===
+        if (this.boatManager) {
+            // D-pad left/right and left stick X: Move boat/kayak (but only if lure is at surface)
+            const movingLeft = dpadLeftBtn.pressed || leftStickX < -DEAD_ZONE;
+            const movingRight = dpadRightBtn.pressed || leftStickX > DEAD_ZONE;
+
+            if (movingLeft || movingRight) {
+                // Check if lure is at surface before allowing movement
+                if (this.lure.state === Constants.LURE_STATE.SURFACE) {
+                    if (movingLeft) {
+                        this.boatManager.movePlayer(-1);
+                    } else if (movingRight) {
+                        this.boatManager.movePlayer(1);
+                    }
+                } else {
+                    // Show warning if trying to move with lure down
+                    if (!this.movementWarningShown) {
+                        this.showAchievement('Reel Up First', 'Reel up to move locations');
+                        this.movementWarningShown = true;
+                        // Reset warning flag after a delay
+                        this.time.delayedCall(2000, () => {
+                            this.movementWarningShown = false;
+                        });
+                    }
+                    this.boatManager.stopMoving();
+                }
+            } else {
+                this.boatManager.stopMoving();
             }
         }
 

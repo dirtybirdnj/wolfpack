@@ -224,17 +224,32 @@ export class SonarDisplay {
     }
     
     drawBottomProfile() {
-        // Draw the lakebed
+        // For boat/kayak modes, get bottom profile from BoatManager and render relative to player
+        // For ice fishing mode, use the static bottom profile
+        const isSummerMode = this.fishingType === GameConfig.FISHING_TYPE_KAYAK ||
+                             this.fishingType === GameConfig.FISHING_TYPE_MOTORBOAT;
+
+        if (isSummerMode && this.scene.boatManager) {
+            // Use BoatManager's lake bed profile and render relative to player position
+            this.drawScrollingBottomProfile();
+        } else {
+            // Ice fishing mode: use static bottom profile
+            this.drawStaticBottomProfile();
+        }
+    }
+
+    drawStaticBottomProfile() {
+        // Draw the lakebed (static, for ice fishing)
         this.graphics.lineStyle(2, 0x444444, 0.8);
         this.graphics.beginPath();
-        
+
         if (this.bottomProfile.length > 0) {
             this.graphics.moveTo(this.bottomProfile[0].x, this.bottomProfile[0].y);
-            
+
             for (let i = 1; i < this.bottomProfile.length; i++) {
                 const point = this.bottomProfile[i];
                 this.graphics.lineTo(point.x, point.y);
-                
+
                 // Draw structure markers
                 if (point.type === 'structure') {
                     this.graphics.fillStyle(0x666666, 0.5);
@@ -242,24 +257,81 @@ export class SonarDisplay {
                 }
             }
         }
-        
+
         this.graphics.strokePath();
-        
+
         // Fill below bottom
         this.graphics.fillStyle(0x222222, 0.3);
         if (this.bottomProfile.length > 0) {
             this.graphics.beginPath();
             this.graphics.moveTo(this.bottomProfile[0].x, this.bottomProfile[0].y);
-            
+
             for (let i = 1; i < this.bottomProfile.length; i++) {
                 this.graphics.lineTo(this.bottomProfile[i].x, this.bottomProfile[i].y);
             }
-            
+
             this.graphics.lineTo(GameConfig.CANVAS_WIDTH, GameConfig.CANVAS_HEIGHT);
             this.graphics.lineTo(0, GameConfig.CANVAS_HEIGHT);
             this.graphics.closePath();
             this.graphics.fillPath();
         }
+    }
+
+    drawScrollingBottomProfile() {
+        // Draw lake bed that scrolls with player position (for boat/kayak modes)
+        const playerWorldX = this.scene.boatManager.playerX;
+        const lakeBedProfile = this.scene.boatManager.lakeBedProfile;
+
+        // Draw the lakebed line
+        this.graphics.lineStyle(2, 0x444444, 0.8);
+        this.graphics.beginPath();
+
+        let firstPoint = true;
+        for (let i = 0; i < lakeBedProfile.length; i++) {
+            const point = lakeBedProfile[i];
+            const offsetFromPlayer = point.x - playerWorldX;
+            const screenX = (GameConfig.CANVAS_WIDTH / 2) + offsetFromPlayer;
+            const screenY = point.depth * GameConfig.DEPTH_SCALE;
+
+            // Only draw points that are visible on screen
+            if (screenX >= -50 && screenX <= GameConfig.CANVAS_WIDTH + 50) {
+                if (firstPoint) {
+                    this.graphics.moveTo(screenX, screenY);
+                    firstPoint = false;
+                } else {
+                    this.graphics.lineTo(screenX, screenY);
+                }
+            }
+        }
+
+        this.graphics.strokePath();
+
+        // Fill below bottom
+        this.graphics.fillStyle(0x222222, 0.3);
+        this.graphics.beginPath();
+
+        firstPoint = true;
+        for (let i = 0; i < lakeBedProfile.length; i++) {
+            const point = lakeBedProfile[i];
+            const offsetFromPlayer = point.x - playerWorldX;
+            const screenX = (GameConfig.CANVAS_WIDTH / 2) + offsetFromPlayer;
+            const screenY = point.depth * GameConfig.DEPTH_SCALE;
+
+            if (screenX >= -50 && screenX <= GameConfig.CANVAS_WIDTH + 50) {
+                if (firstPoint) {
+                    this.graphics.moveTo(screenX, screenY);
+                    firstPoint = false;
+                } else {
+                    this.graphics.lineTo(screenX, screenY);
+                }
+            }
+        }
+
+        // Close the fill area
+        this.graphics.lineTo(GameConfig.CANVAS_WIDTH, GameConfig.CANVAS_HEIGHT);
+        this.graphics.lineTo(0, GameConfig.CANVAS_HEIGHT);
+        this.graphics.closePath();
+        this.graphics.fillPath();
     }
     
     drawScanLine() {
