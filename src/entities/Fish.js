@@ -341,31 +341,6 @@ export class Fish {
             }
         }
         
-        // Draw sonar trail (arc-like pattern)
-        for (let i = 0; i < this.sonarTrail.length; i++) {
-            const point = this.sonarTrail[i];
-            const alpha = 1 - (point.age / this.maxTrailLength);
-
-            // Create arc-like sonar return
-            const arcSize = this.weight / 5 + 3;
-
-            // Draw a simple line to simulate sonar trail
-            if (i > 0) {
-                const prevPoint = this.sonarTrail[i - 1];
-                this.graphics.lineStyle(2, color, alpha * 0.3);
-                this.graphics.lineBetween(prevPoint.x, prevPoint.y, point.x, point.y);
-            }
-        }
-
-        // Draw detection range circle - shows fish awareness zone
-        // Horizontal detection range
-        this.graphics.lineStyle(1, color, 0.15);
-        this.graphics.strokeCircle(this.x, this.y, GameConfig.DETECTION_RANGE);
-
-        // Vertical detection range - ellipse showing tall vertical awareness
-        this.graphics.lineStyle(1, color, 0.1);
-        this.graphics.strokeEllipse(this.x, this.y, GameConfig.DETECTION_RANGE, GameConfig.VERTICAL_DETECTION_RANGE);
-
         // Draw realistic lake trout based on reference photos
         const bodySize = Math.max(8, this.weight / 2); // Larger, more visible
 
@@ -427,24 +402,8 @@ export class Fish {
             finX - bodySize * 0.4, bodySize * 0.3
         );
 
-        // Light spots pattern - characteristic of lake trout
-        const numSpots = Math.floor(this.weight / 5) + 3;
-        for (let i = 0; i < numSpots; i++) {
-            const offsetX = (Math.random() - 0.5) * bodySize * 1.8;
-            const offsetY = (Math.random() - 0.5) * bodySize * 0.5;
-            this.graphics.fillStyle(GameConfig.COLOR_FISH_SPOTS, 0.6);
-            this.graphics.fillCircle(offsetX, offsetY, 1.5);
-        }
-
         // Restore graphics state (undo rotation and translation)
         this.graphics.restore();
-        
-        // Frenzy indicator - bright orange glow when in feeding frenzy
-        if (this.inFrenzy) {
-            const glowSize = bodySize * 2.5 + (Math.sin(this.frameAge * 0.2) * 3);
-            this.graphics.lineStyle(2, 0xff6600, 0.6 + (this.frenzyIntensity * 0.4));
-            this.graphics.strokeCircle(this.x, this.y, glowSize);
-        }
 
         // Interest flash - green circle that fades to show player triggered interest
         if (this.interestFlash > 0) {
@@ -462,59 +421,6 @@ export class Fish {
                 const pulseSize = flashSize + Math.sin(this.frameAge * 0.3) * 4;
                 this.graphics.lineStyle(2, 0x00ff00, flashAlpha * 0.5);
                 this.graphics.strokeCircle(this.x, this.y, pulseSize);
-            }
-        }
-
-        // State indicator (for debugging/gameplay feedback)
-        if (this.ai.state === Constants.FISH_STATE.INTERESTED) {
-            // Show a "?" when interested
-            this.graphics.lineStyle(1, GameConfig.COLOR_TEXT, 0.5);
-            this.graphics.strokeCircle(this.x, this.y - 10, 5);
-        } else if (this.ai.state === Constants.FISH_STATE.CHASING) {
-            // Show pursuit indicator
-            this.graphics.lineStyle(2, GameConfig.COLOR_FISH_STRONG, 0.7);
-            this.graphics.lineBetween(this.x - 10, this.y, this.x - 5, this.y);
-        } else if (this.ai.state === Constants.FISH_STATE.HUNTING_BAITFISH) {
-            // Show hunting indicator (aggressive pursuit of baitfish)
-            this.graphics.lineStyle(2, GameConfig.COLOR_BAITFISH_PANIC, 0.8);
-            this.graphics.strokeCircle(this.x, this.y, 8);
-        } else if (this.ai.state === Constants.FISH_STATE.FEEDING) {
-            // Show feeding indicator
-            this.graphics.fillStyle(GameConfig.COLOR_BAITFISH, 0.6);
-            this.graphics.fillCircle(this.x + 5, this.y - 5, 3);
-        }
-
-        // DEV: Show speed preference above fish
-        if (!this.scene.add.text) {
-            // Create text if it doesn't exist
-            if (!this.speedPrefText) {
-                this.speedPrefText = this.scene.add.text(this.x, this.y - 40,
-                    this.speedPreference.toFixed(1),
-                    {
-                        fontSize: '12px',
-                        fontFamily: 'Courier New',
-                        color: '#ffff00',
-                        stroke: '#000000',
-                        strokeThickness: 2
-                    }
-                );
-                this.speedPrefText.setOrigin(0.5, 0.5);
-                this.speedPrefText.setDepth(15);
-            }
-        }
-
-        // Update text position if it exists
-        if (this.speedPrefText) {
-            this.speedPrefText.setPosition(this.x, this.y - 40);
-        }
-
-        // Show swipe chances as green circles below fish (when engaged)
-        if (this.swipeChances > 0) {
-            const circleSpacing = 8;
-            const startX = this.x - (this.swipeChances * circleSpacing) / 2;
-            for (let i = 0; i < this.swipeChances; i++) {
-                this.graphics.fillStyle(0x00ff00, 0.8);
-                this.graphics.fillCircle(startX + (i * circleSpacing), this.y + 25, 3);
             }
         }
     }
@@ -604,15 +510,6 @@ export class Fish {
             finX - bodySize * 0.4, -bodySize * 0.3,
             finX - bodySize * 0.4, bodySize * 0.3
         );
-
-        // Light spots pattern - characteristic of lake trout
-        const numSpots = Math.floor(this.weight / 5) + 3;
-        for (let i = 0; i < numSpots; i++) {
-            const offsetX = (Math.random() - 0.5) * bodySize * 1.8;
-            const offsetY = (Math.random() - 0.5) * bodySize * 0.5;
-            graphics.fillStyle(GameConfig.COLOR_FISH_SPOTS, 0.6);
-            graphics.fillCircle(offsetX, offsetY, 2 * scale);
-        }
 
         // Restore graphics state
         graphics.restore();
