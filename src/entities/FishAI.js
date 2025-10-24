@@ -408,29 +408,34 @@ export class FishAI {
 
         // Speed multiplier based on state
         let speedMultiplier = 1;
-        let verticalSpeedMultiplier = 0.5; // Default slower vertical movement
+        let verticalSpeedMultiplier = 0.85; // More fluid vertical movement (increased from 0.5)
 
         switch (this.state) {
             case Constants.FISH_STATE.CHASING:
                 speedMultiplier = GameConfig.CHASE_SPEED_MULTIPLIER;
+                verticalSpeedMultiplier = 0.95; // Near-equal vertical speed when chasing
                 break;
             case Constants.FISH_STATE.STRIKING:
                 speedMultiplier = 2.5;
+                verticalSpeedMultiplier = 1.0; // Full vertical speed when striking
                 break;
             case Constants.FISH_STATE.FLEEING:
                 speedMultiplier = 2.0;
+                verticalSpeedMultiplier = 0.9;
                 break;
             case Constants.FISH_STATE.INTERESTED:
                 speedMultiplier = 0.7; // Increased from 0.5 for less hesitation
+                verticalSpeedMultiplier = 0.8;
                 break;
             case Constants.FISH_STATE.HUNTING_BAITFISH:
                 // Aggressive pursuit of baitfish
                 speedMultiplier = GameConfig.BAITFISH_PURSUIT_SPEED;
                 // Hungrier fish move faster vertically to reach baitfish (0-100 scale)
-                verticalSpeedMultiplier = 0.5 + (this.fish.hunger * GameConfig.HUNGER_VERTICAL_SCALING);
+                verticalSpeedMultiplier = 0.85 + (this.fish.hunger * GameConfig.HUNGER_VERTICAL_SCALING);
                 break;
             case Constants.FISH_STATE.FEEDING:
                 speedMultiplier = 0.3;
+                verticalSpeedMultiplier = 0.5;
                 break;
         }
 
