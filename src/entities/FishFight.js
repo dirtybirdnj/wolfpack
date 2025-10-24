@@ -137,10 +137,6 @@ export class FishFight {
         // Move both lure and fish upward as fish is reeled in
         const targetY = this.initialDepth - (this.initialDepth * reelProgress);
 
-        // Update lure position (rises with fish)
-        this.lure.y = targetY;
-        this.lure.depth = this.lure.y / GameConfig.DEPTH_SCALE;
-
         // Fish thrashing animation - left/right oscillation
         this.thrashAmount = Math.sin(this.fightTime * this.thrashSpeed) * 15;
 
@@ -148,10 +144,17 @@ export class FishFight {
         const tirednessMultiplier = 1 - (this.fishTiredness / 100);
         const actualThrash = this.thrashAmount * tirednessMultiplier;
 
-        // Position fish at lure with thrashing offset
+        // Position fish at depth with thrashing
         this.fish.x = this.lure.x + actualThrash;
-        this.fish.y = this.lure.y;
+        this.fish.y = targetY;
         this.fish.depth = this.fish.y / GameConfig.DEPTH_SCALE;
+
+        // Position lure at fish's mouth (slightly offset for visual realism)
+        // Fish mouth is slightly forward, so offset lure by a few pixels in thrash direction
+        const mouthOffset = actualThrash > 0 ? 8 : -8; // Lure at mouth edge
+        this.lure.x = this.fish.x + mouthOffset;
+        this.lure.y = this.fish.y;
+        this.lure.depth = this.lure.y / GameConfig.DEPTH_SCALE;
     }
 
     renderTensionBar() {
