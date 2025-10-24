@@ -1,0 +1,104 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 250 110" width="250" height="110">
+  <!-- Alewife Option A - Clean Minimal Style -->
+  <!-- Built from scratch to match silvery reference photo -->
+
+  <!-- STEP 1: Body outline - deep oval shape (not elongated) -->
+  <path d="M 25 55 Q 20 52, 18 55 Q 20 58, 25 57
+           C 40 58, 60 60, 90 61
+           C 130 62, 170 62, 195 60
+           C 210 59, 220 58, 225 55
+           Q 227 53, 225 51
+           C 220 52, 210 51, 195 50
+           C 170 48, 130 48, 90 49
+           C 60 50, 40 52, 25 53 Z"
+        fill="#F0F5F8" stroke="#8090A0" stroke-width="1.8"/>
+
+  <!-- Silver-white body shimmer -->
+  <ellipse cx="120" cy="55" rx="95" ry="7" fill="#FFFFFF" opacity="0.95"/>
+
+  <!-- Dark bluish-black back -->
+  <path d="M 25 53 C 60 50, 130 48, 195 50 Q 220 51, 225 51
+           Q 220 53, 195 54 C 170 53, 130 52, 90 52 C 60 52, 40 52.5, 25 53 Z"
+        fill="#3A4A5F" opacity="0.85"/>
+
+  <!-- Iridescent pink/purple sheen -->
+  <path d="M 30 54 C 70 51, 140 50, 200 52
+           Q 205 52, 200 53 C 165 53, 130 53, 90 53 C 60 53, 45 53.5, 30 54 Z"
+        fill="#D8C8E8" opacity="0.4"/>
+
+  <!-- Another silver highlight -->
+  <path d="M 35 55 C 80 55.5, 140 56, 200 55
+           Q 205 55, 200 54.5 C 165 54.8, 130 54.8, 90 54.8 C 60 54.8, 50 55, 35 55 Z"
+        fill="#F8FCFF" opacity="0.8"/>
+
+  <!-- Head -->
+  <path d="M 25 53 L 20 51 L 14 50 L 9 52 L 6 55 L 6 57 L 9 60 L 14 61 L 20 60 L 25 57 Z"
+        fill="#E8F0F5" stroke="#8090A0" stroke-width="1.5"/>
+
+  <!-- Small upturned mouth -->
+  <path d="M 9 52 L 6 53 L 5 55 L 6 57 L 9 58"
+        stroke="#506070" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+  <ellipse cx="6" cy="55" rx="1.5" ry="2" fill="#405060"/>
+
+  <!-- Very large eye (baitfish characteristic) -->
+  <circle cx="17" cy="53" r="7" fill="#F8F5F0"/>
+  <circle cx="18" cy="52" r="5.5" fill="#1A1A1C"/>
+  <circle cx="19.5" cy="51" r="2.2" fill="#FFFFFF"/>
+  <circle cx="17.5" cy="53.5" r="1.5" fill="#505050" opacity="0.3"/>
+
+  <!-- Gill plate -->
+  <path d="M 23 52 Q 28 53, 30 55 Q 28 58, 23 59 L 22 58 Q 26 56.5, 28 55 Q 26 53.5, 22 52 Z"
+        fill="#F0F5F8" stroke="#8090A0" stroke-width="1.5"/>
+  <path d="M 23 52.5 Q 25 55, 23 57.5" stroke="#6A7A8A" stroke-width="2" fill="none"/>
+
+  <!-- STEP 2: Tail - forked -->
+  <path d="M 220 51 Q 235 45, 242 41 L 248 42 L 250 48 L 247 52 L 238 56 L 225 55 Z"
+        fill="#C8D4E0" stroke="#7085A0" stroke-width="1.6"/>
+  <path d="M 220 59 Q 235 65, 242 69 L 248 68 L 250 62 L 247 52 L 238 56 L 225 55 Z"
+        fill="#C8D4E0" stroke="#7085A0" stroke-width="1.6"/>
+
+  <!-- STEP 3: Fins -->
+
+  <!-- Dorsal fin - small -->
+  <path d="M 105 35 L 102 32 L 104 48 L 108 49 L 112 49 L 116 49 L 119 48 L 121 32 L 118 35 Z"
+        fill="#B0C0D0" stroke="#708090" stroke-width="1.2"/>
+  <line x1="107" y1="36" x2="107" y2="48" stroke="#8090A0" stroke-width="0.7" opacity="0.5"/>
+  <line x1="113" y1="35" x2="113" y2="49" stroke="#8090A0" stroke-width="0.7" opacity="0.5"/>
+
+  <!-- Pectoral fin -->
+  <path d="M 28 58 L 25 68 L 29 72 L 35 73 L 37 69 L 35 60 Z"
+        fill="#D0DCE8" opacity="0.85" stroke="#809098" stroke-width="1.1"/>
+  <line x1="30" y1="61" x2="27" y2="70" stroke="#90A0B0" stroke-width="0.6" opacity="0.4"/>
+  <line x1="33" y1="60" x2="31" y2="72" stroke="#90A0B0" stroke-width="0.6" opacity="0.4"/>
+
+  <!-- Pelvic fin -->
+  <path d="M 95 60 L 92 69 L 96 72 L 100 71 L 101 68 L 99 61 Z"
+        fill="#D0DCE8" opacity="0.85" stroke="#809098" stroke-width="1.1"/>
+
+  <!-- Anal fin -->
+  <path d="M 145 59 L 142 61 L 144 68 L 151 70 L 158 69 L 161 63 L 159 59 Z"
+        fill="#D0DCE8" opacity="0.85" stroke="#809098" stroke-width="1.1"/>
+  <line x1="149" y1="60" x2="149" y2="69" stroke="#90A0B0" stroke-width="0.6" opacity="0.4"/>
+
+  <!-- STEP 4: Dark dorsal stripe (very prominent) -->
+  <path d="M 28 50 Q 80 47, 140 48 Q 180 49, 220 51"
+        stroke="#2A3A50" stroke-width="4.5" fill="none" opacity="0.75" stroke-linecap="round"/>
+
+  <!-- Iridescent spots on back -->
+  <g opacity="0.7">
+    <circle cx="55" cy="50" r="1.8" fill="#C8B8E8"/>
+    <circle cx="75" cy="49" r="1.8" fill="#D8C8F0"/>
+    <circle cx="95" cy="48" r="1.8" fill="#C8B8E8"/>
+    <circle cx="115" cy="49" r="1.8" fill="#E8D8F8"/>
+    <circle cx="135" cy="48" r="1.8" fill="#C8B8E8"/>
+    <circle cx="155" cy="49" r="1.8" fill="#D8C8F0"/>
+    <circle cx="175" cy="50" r="1.8" fill="#C8B8E8"/>
+    <circle cx="195" cy="51" r="1.8" fill="#E8D8F8"/>
+  </g>
+
+  <!-- Body outline highlight -->
+  <path d="M 18 55 Q 25 48, 90 46 Q 170 46, 220 49"
+        stroke="#B0C0D0" stroke-width="1" fill="none" opacity="0.4"/>
+  <path d="M 18 55 Q 25 62, 90 64 Q 170 64, 220 61"
+        stroke="#B0C0D0" stroke-width="1" fill="none" opacity="0.4"/>
+</svg>

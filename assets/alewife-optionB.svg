@@ -1,0 +1,173 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 270 120" width="270" height="120">
+  <!-- Alewife Option B - Medium Detail with Iridescence -->
+
+  <defs>
+    <!-- Silver body gradient -->
+    <linearGradient id="silverBody" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#4A5A70;stop-opacity:1" />
+      <stop offset="25%" style="stop-color:#B0C0D8;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#F0F5FA;stop-opacity:1" />
+      <stop offset="75%" style="stop-color:#FFFFFF;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#F8FCFF;stop-opacity:1" />
+    </linearGradient>
+
+    <!-- Iridescent gradient -->
+    <linearGradient id="iridescent" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#D8C8F0;stop-opacity:0.5" />
+      <stop offset="33%" style="stop-color:#F0D8E8;stop-opacity:0.6" />
+      <stop offset="66%" style="stop-color:#C8D8F8;stop-opacity:0.5" />
+      <stop offset="100%" style="stop-color:#E8D8F0;stop-opacity:0.5" />
+    </linearGradient>
+
+    <!-- Fin gradient -->
+    <linearGradient id="finSilver" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#D0DCE8;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#A8B8C8;stop-opacity:0.9" />
+    </linearGradient>
+  </defs>
+
+  <!-- Shadow -->
+  <ellipse cx="135" cy="75" rx="100" ry="15" fill="#6A7A8A" opacity="0.2"/>
+
+  <!-- STEP 1: Body outline - oval/deep shape -->
+  <path d="M 30 60 Q 25 57, 23 60 Q 25 63, 30 62
+           C 48 64, 72 66, 105 67
+           C 145 68, 185 68, 215 66
+           C 230 65, 240 64, 245 60
+           Q 247 58, 245 56
+           C 240 56, 230 55, 215 54
+           C 185 52, 145 52, 105 53
+           C 72 54, 48 56, 30 58 Z"
+        fill="url(#silverBody)" stroke="#7088A0" stroke-width="2"/>
+
+  <!-- Dark back -->
+  <path d="M 30 58 C 72 54, 145 52, 215 54 Q 240 55, 245 56
+           Q 245 57, 240 58 Q 230 59, 215 59
+           C 185 58, 145 57, 105 57 C 72 57, 48 57.5, 30 58 Z"
+        fill="#2A3A50" opacity="0.8"/>
+
+  <!-- Iridescent layer -->
+  <ellipse cx="135" cy="58" rx="105" ry="5" fill="url(#iridescent)"/>
+
+  <!-- Bright silver highlight -->
+  <path d="M 40 60 C 85 61, 150 62, 220 60
+           Q 225 60, 220 59.5
+           C 185 60, 145 60, 105 60 C 72 60, 55 60, 40 60 Z"
+        fill="#FFFFFF" opacity="0.9"/>
+
+  <!-- Secondary shimmer -->
+  <path d="M 45 59 C 90 59.5, 155 60, 220 58.5"
+        stroke="#FAFCFF" stroke-width="2.5" fill="none" opacity="0.85" stroke-linecap="round"/>
+
+  <!-- Head structure -->
+  <path d="M 30 58 L 24 56 L 17 54 L 11 56 L 8 59 L 7 60 L 7 62 L 8 65 L 11 68 L 17 70 L 24 68 L 30 62 Z"
+        fill="#E0ECF5" stroke="#7088A0" stroke-width="1.8"/>
+
+  <!-- Snout -->
+  <path d="M 17 54 L 11 56 L 8 59 L 7 60 L 7 62 L 8 65 L 11 68 L 17 70
+           L 16 66 L 15 62 L 15 60 L 16 56 Z"
+        fill="#C8D8E8"/>
+
+  <!-- Small mouth - upturned -->
+  <path d="M 11 56 L 8 57.5 L 6.5 60 L 8 62.5 L 11 64"
+        stroke="#405060" stroke-width="2.8" fill="none" stroke-linecap="round"/>
+  <ellipse cx="7.5" cy="60" rx="2" ry="3" fill="#304050" opacity="0.8"/>
+  <path d="M 11 58 L 13 60 L 11 62" stroke="#607080" stroke-width="1.5" fill="none"/>
+
+  <!-- Large eye -->
+  <ellipse cx="21" cy="57" rx="8" ry="7.5" fill="#FBF8F3"/>
+  <circle cx="22" cy="56" r="6" fill="#1A1A1E"/>
+  <circle cx="23.5" cy="54.5" r="2.5" fill="#FFFFFF" opacity="0.95"/>
+  <ellipse cx="22" cy="57.5" rx="1.8" ry="1.2" fill="#505050" opacity="0.3"/>
+  <path d="M 16 57 Q 21 53, 26 57" stroke="#7088A0" stroke-width="1.1" fill="none" opacity="0.5"/>
+
+  <!-- Gill plate with detail -->
+  <path d="M 28 56 Q 35 57.5, 37 60 Q 35 64, 28 66
+           L 26 64 Q 32 62, 34 60 Q 32 58, 26 56 Z"
+        fill="#E8F2F8" stroke="#7088A0" stroke-width="1.8" opacity="0.95"/>
+  <path d="M 28 57 Q 30 60, 28 63" stroke="#5A6A7A" stroke-width="2.5" fill="none" opacity="0.7"/>
+  <path d="M 30 58 Q 32 60, 30 62" stroke="#6A7A8A" stroke-width="1.8" fill="none" opacity="0.55"/>
+  <path d="M 32 58.5 Q 33 60, 32 61.5" stroke="#7A8A9A" stroke-width="1.2" fill="none" opacity="0.4"/>
+
+  <!-- STEP 2: Tail - forked -->
+  <path d="M 240 56 Q 257 49, 265 45
+           L 263 51 L 257 57 L 245 60 Z"
+        fill="url(#finSilver)" stroke="#6080A0" stroke-width="1.7"/>
+  <path d="M 240 64 Q 257 71, 265 75
+           L 263 69 L 257 57 L 245 60 Z"
+        fill="url(#finSilver)" stroke="#6080A0" stroke-width="1.7"/>
+  <!-- Tail rays -->
+  <line x1="244" y1="58" x2="260" y2="48" stroke="#8098B0" stroke-width="0.9" opacity="0.6"/>
+  <line x1="244" y1="62" x2="260" y2="72" stroke="#8098B0" stroke-width="0.9" opacity="0.6"/>
+
+  <!-- STEP 3: Fins -->
+
+  <!-- Dorsal fin -->
+  <path d="M 115 40 L 111 36 L 113 54 L 118 56 L 123 56 L 128 56 L 133 56 L 136 54 L 138 36 L 134 40 Z"
+        fill="url(#finSilver)" stroke="#6080A0" stroke-width="1.4"/>
+  <line x1="117" y1="42" x2="117" y2="55" stroke="#7090A8" stroke-width="0.8" opacity="0.5"/>
+  <line x1="124" y1="40" x2="124" y2="56" stroke="#7090A8" stroke-width="0.8" opacity="0.5"/>
+  <line x1="131" y1="42" x2="131" y2="55" stroke="#7090A8" stroke-width="0.8" opacity="0.5"/>
+
+  <!-- Pectoral fin -->
+  <path d="M 34 63 L 30 75 L 35 80 L 42 82 L 46 78 L 44 66 Z"
+        fill="url(#finSilver)" opacity="0.88" stroke="#6080A0" stroke-width="1.4"/>
+  <line x1="37" y1="67" x2="33" y2="77" stroke="#7090A8" stroke-width="0.7" opacity="0.5"/>
+  <line x1="40" y1="66" x2="37" y2="80" stroke="#7090A8" stroke-width="0.7" opacity="0.5"/>
+  <line x1="43" y1="66" x2="41" y2="81" stroke="#7090A8" stroke-width="0.7" opacity="0.5"/>
+
+  <!-- Pelvic fin -->
+  <path d="M 107 66 L 103 77 L 108 81 L 114 80 L 116 76 L 114 68 Z"
+        fill="url(#finSilver)" opacity="0.88" stroke="#6080A0" stroke-width="1.4"/>
+  <line x1="109" y1="69" x2="106" y2="78" stroke="#7090A8" stroke-width="0.7" opacity="0.5"/>
+
+  <!-- Anal fin -->
+  <path d="M 160 65 L 156 68 L 158 76 L 166 79 L 174 78 L 179 73 L 181 68 L 176 65 Z"
+        fill="url(#finSilver)" opacity="0.88" stroke="#6080A0" stroke-width="1.4"/>
+  <line x1="164" y1="67" x2="164" y2="78" stroke="#7090A8" stroke-width="0.7" opacity="0.5"/>
+  <line x1="171" y1="67" x2="172" y2="78" stroke="#7090A8" stroke-width="0.7" opacity="0.5"/>
+
+  <!-- STEP 4: Dark dorsal stripe - very prominent -->
+  <path d="M 33 54 Q 90 51, 155 52 Q 200 53, 240 56"
+        stroke="#1A2A40" stroke-width="5" fill="none" opacity="0.8" stroke-linecap="round"/>
+
+  <!-- Secondary dark stripe -->
+  <path d="M 35 55 Q 92 52, 157 53 Q 202 54, 238 57"
+        stroke="#2A3A50" stroke-width="3" fill="none" opacity="0.6" stroke-linecap="round"/>
+
+  <!-- Scale pattern hints -->
+  <g opacity="0.3">
+    <circle cx="50" cy="58" r="2.5" fill="none" stroke="#6A7A8A" stroke-width="0.6"/>
+    <circle cx="57" cy="59" r="2.5" fill="none" stroke="#6A7A8A" stroke-width="0.6"/>
+    <circle cx="64" cy="58" r="2.5" fill="none" stroke="#6A7A8A" stroke-width="0.6"/>
+    <circle cx="71" cy="59" r="2.5" fill="none" stroke="#6A7A8A" stroke-width="0.6"/>
+    <circle cx="78" cy="58" r="2.5" fill="none" stroke="#6A7A8A" stroke-width="0.6"/>
+    <circle cx="85" cy="59" r="2.5" fill="none" stroke="#6A7A8A" stroke-width="0.6"/>
+    <circle cx="92" cy="58" r="2.5" fill="none" stroke="#6A7A8A" stroke-width="0.6"/>
+    <circle cx="99" cy="59" r="2.5" fill="none" stroke="#6A7A8A" stroke-width="0.6"/>
+    <circle cx="106" cy="58" r="2.5" fill="none" stroke="#6A7A8A" stroke-width="0.6"/>
+    <circle cx="113" cy="59" r="2.5" fill="none" stroke="#6A7A8A" stroke-width="0.6"/>
+    <circle cx="120" cy="58" r="2.5" fill="none" stroke="#6A7A8A" stroke-width="0.6"/>
+    <circle cx="127" cy="59" r="2.5" fill="none" stroke="#6A7A8A" stroke-width="0.6"/>
+    <circle cx="134" cy="58" r="2.5" fill="none" stroke="#6A7A8A" stroke-width="0.6"/>
+    <circle cx="141" cy="59" r="2.5" fill="none" stroke="#6A7A8A" stroke-width="0.6"/>
+    <circle cx="148" cy="58" r="2.5" fill="none" stroke="#6A7A8A" stroke-width="0.6"/>
+    <circle cx="155" cy="59" r="2.5" fill="none" stroke="#6A7A8A" stroke-width="0.6"/>
+    <circle cx="162" cy="58" r="2.5" fill="none" stroke="#6A7A8A" stroke-width="0.6"/>
+    <circle cx="169" cy="59" r="2.5" fill="none" stroke="#6A7A8A" stroke-width="0.6"/>
+    <circle cx="176" cy="58" r="2.5" fill="none" stroke="#6A7A8A" stroke-width="0.6"/>
+  </g>
+
+  <!-- Iridescent spots -->
+  <g opacity="0.75">
+    <circle cx="60" cy="55" r="2" fill="#D8C8F0"/>
+    <circle cx="80" cy="54" r="2.2" fill="#E8D8F8"/>
+    <circle cx="100" cy="55" r="2" fill="#C8B8E8"/>
+    <circle cx="120" cy="54" r="2.2" fill="#F0E0FF"/>
+    <circle cx="140" cy="55" r="2" fill="#D8C8F0"/>
+    <circle cx="160" cy="54" r="2.2" fill="#E8D8F8"/>
+    <circle cx="180" cy="55" r="2" fill="#C8B8E8"/>
+    <circle cx="200" cy="56" r="2.2" fill="#F0E0FF"/>
+    <circle cx="220" cy="57" r="2" fill="#D8C8F0"/>
+  </g>
+</svg>
