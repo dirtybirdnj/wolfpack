@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gamepad API Test</title>
+    <style>
+        body {
+            font-family: monospace;
+            background: #1a1a1a;
+            color: #00ff00;
+            padding: 40px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: #00ff00;
+            text-align: center;
+        }
+        .status {
+            background: #2a2a2a;
+            padding: 20px;
+            border: 2px solid #00ff00;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        .gamepad {
+            background: #1a2a1a;
+            padding: 15px;
+            margin: 10px 0;
+            border: 1px solid #00aa00;
+            border-radius: 5px;
+        }
+        .button {
+            display: inline-block;
+            padding: 5px 10px;
+            margin: 3px;
+            background: #333;
+            border: 1px solid #666;
+            border-radius: 3px;
+            font-size: 12px;
+        }
+        .button.pressed {
+            background: #00ff00;
+            color: #000;
+            font-weight: bold;
+        }
+        .axis {
+            display: inline-block;
+            padding: 5px 10px;
+            margin: 3px;
+            background: #222;
+            border: 1px solid #555;
+            border-radius: 3px;
+            font-size: 12px;
+        }
+        .info {
+            background: #2a2a4a;
+            padding: 15px;
+            margin: 20px 0;
+            border: 2px solid #4444ff;
+            border-radius: 5px;
+        }
+        .error {
+            background: #4a2a2a;
+            color: #ff6666;
+            padding: 15px;
+            margin: 20px 0;
+            border: 2px solid #ff4444;
+            border-radius: 5px;
+        }
+        .success {
+            background: #2a4a2a;
+            color: #66ff66;
+            padding: 15px;
+            margin: 20px 0;
+            border: 2px solid #44ff44;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎮 Raw Gamepad API Test</h1>
+
+    <div class="info">
+        <h3>Instructions:</h3>
+        <ol>
+            <li>Make sure your controller is connected to your Mac via Bluetooth</li>
+            <li><strong>PRESS ANY BUTTON</strong> on your controller (required for browser to detect it)</li>
+            <li>Watch this page for changes</li>
+        </ol>
+    </div>
+
+    <div class="status">
+        <h3>Gamepad API Status:</h3>
+        <div id="api-status">Checking...</div>
+    </div>
+
+    <div class="status">
+        <h3>Detected Gamepads:</h3>
+        <div id="gamepad-list">No gamepads detected yet. Press any button on your controller!</div>
+    </div>
+
+    <div id="gamepad-details"></div>
+
+    <script>
+        console.log('🎮 Starting Gamepad API Test...');
+        console.log('🎮 navigator.getGamepads:', navigator.getGamepads);
+        console.log('🎮 Gamepad API supported:', 'getGamepads' in navigator);
+
+        const apiStatus = document.getElementById('api-status');
+        const gamepadList = document.getElementById('gamepad-list');
+        const gamepadDetails = document.getElementById('gamepad-details');
+
+        // Check API support
+        if (!navigator.getGamepads) {
+            apiStatus.innerHTML = '<div class="error">❌ Gamepad API NOT SUPPORTED in this browser!</div>';
+            console.error('❌ Gamepad API not supported');
+        } else {
+            apiStatus.innerHTML = '<div class="success">✅ Gamepad API is supported in this browser</div>';
+            console.log('✅ Gamepad API is supported');
+        }
+
+        // Listen for gamepad connections
+        window.addEventListener('gamepadconnected', (e) => {
+            console.log('🎮 GAMEPAD CONNECTED EVENT:', e.gamepad);
+            console.log('   ID:', e.gamepad.id);
+            console.log('   Index:', e.gamepad.index);
+            console.log('   Connected:', e.gamepad.connected);
+            console.log('   Buttons:', e.gamepad.buttons.length);
+            console.log('   Axes:', e.gamepad.axes.length);
+            console.log('   Mapping:', e.gamepad.mapping);
+            console.log('   Full object:', e.gamepad);
+
+            updateDisplay();
+        });
+
+        window.addEventListener('gamepaddisconnected', (e) => {
+            console.log('🎮 GAMEPAD DISCONNECTED EVENT:', e.gamepad);
+            updateDisplay();
+        });
+
+        // Poll for gamepad state
+        function updateDisplay() {
+            const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+
+            console.log('🔄 Polling gamepads:', gamepads);
+
+            let html = '';
+            let foundCount = 0;
+
+            for (let i = 0; i < gamepads.length; i++) {
+                const gamepad = gamepads[i];
+                if (gamepad) {
+                    foundCount++;
+                    console.log(`   Gamepad ${i}:`, gamepad.id);
+
+                    html += `<div class="gamepad">`;
+                    html += `<h4>🎮 Gamepad ${i}: ${gamepad.id}</h4>`;
+                    html += `<div><strong>Connected:</strong> ${gamepad.connected}</div>`;
+                    html += `<div><strong>Index:</strong> ${gamepad.index}</div>`;
+                    html += `<div><strong>Mapping:</strong> ${gamepad.mapping}</div>`;
+                    html += `<div><strong>Timestamp:</strong> ${gamepad.timestamp}</div>`;
+
+                    // Buttons
+                    html += `<div style="margin-top: 10px;"><strong>Buttons (${gamepad.buttons.length}):</strong><br>`;
+                    gamepad.buttons.forEach((button, idx) => {
+                        const pressed = button.pressed ? 'pressed' : '';
+                        const value = button.value.toFixed(2);
+                        html += `<span class="button ${pressed}">B${idx}: ${value}</span>`;
+                    });
+                    html += `</div>`;
+
+                    // Axes
+                    html += `<div style="margin-top: 10px;"><strong>Axes (${gamepad.axes.length}):</strong><br>`;
+                    gamepad.axes.forEach((axis, idx) => {
+                        const value = axis.toFixed(3);
+                        html += `<span class="axis">A${idx}: ${value}</span>`;
+                    });
+                    html += `</div>`;
+
+                    html += `</div>`;
+                }
+            }
+
+            if (foundCount === 0) {
+                gamepadList.innerHTML = '<div class="error">❌ No gamepads detected<br><br><strong>Did you press a button on your controller?</strong><br>The browser cannot detect gamepads until you press a button!</div>';
+            } else {
+                gamepadList.innerHTML = `<div class="success">✅ Found ${foundCount} gamepad(s)!</div>`;
+            }
+
+            gamepadDetails.innerHTML = html;
+        }
+
+        // Update display continuously
+        setInterval(updateDisplay, 100);
+
+        // Initial check
+        updateDisplay();
+
+        console.log('🎮 Test page loaded. Press any button on your controller!');
+    </script>
+</body>
+</html>

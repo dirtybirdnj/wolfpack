@@ -1,93 +1,214 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lake Champlain Ice Fishing - Sonar Simulator</title>
     <style>
+        :root[data-theme="dark"] {
+            --bg-gradient-1: #1a2332;
+            --bg-gradient-2: #0d1117;
+            --text-primary: #00ff00;
+            --text-secondary: #88ff88;
+            --text-muted: #666;
+            --border-primary: #00ff00;
+            --border-secondary: #00aaff;
+            --border-warning: #ffaa00;
+            --panel-bg: rgba(0, 0, 0, 0.7);
+            --panel-bg-alt: rgba(20, 20, 50, 0.9);
+            --button-bg: #00ff00;
+            --button-text: #000;
+            --shadow-color: rgba(0, 255, 0, 0.3);
+            --key-bg: #00ff00;
+            --key-text: #000;
+        }
+
+        :root[data-theme="light"] {
+            --bg-gradient-1: #e8f4f8;
+            --bg-gradient-2: #d0e8f0;
+            --text-primary: #006400;
+            --text-secondary: #008000;
+            --text-muted: #999;
+            --border-primary: #008000;
+            --border-secondary: #0066cc;
+            --border-warning: #ff8800;
+            --panel-bg: rgba(255, 255, 255, 0.9);
+            --panel-bg-alt: rgba(240, 248, 255, 0.95);
+            --button-bg: #008000;
+            --button-text: #fff;
+            --shadow-color: rgba(0, 100, 0, 0.2);
+            --key-bg: #008000;
+            --key-text: #fff;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
         body {
             margin: 0;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            background: linear-gradient(135deg, #1a2332 0%, #0d1117 100%);
+            padding: 0;
+            min-height: 100vh;
+            background: linear-gradient(135deg, var(--bg-gradient-1) 0%, var(--bg-gradient-2) 100%);
             font-family: 'Courier New', monospace;
-            color: #00ff00;
+            color: var(--text-primary);
+            overflow-x: hidden;
         }
 
-        h1 {
-            color: #00ff00;
-            text-shadow: 0 0 10px #00ff00;
-            font-size: 24px;
-            margin-bottom: 10px;
-        }
-
-        .subtitle {
-            color: #88ff88;
-            font-size: 14px;
-            margin-bottom: 20px;
+        #header {
             text-align: center;
-        }
-
-        #main-game-wrapper {
-            display: flex;
-            gap: 20px;
-            align-items: flex-start;
-        }
-
-        #game-container {
-            border: 2px solid #00ff00;
-            box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
+            padding: 20px;
             position: relative;
         }
 
-        #fish-status-panel {
-            width: 300px;
+        h1 {
+            color: var(--text-primary);
+            text-shadow: 0 0 10px var(--text-primary);
+            font-size: 28px;
+            margin: 0 0 10px 0;
         }
-        
-        .controls {
-            margin-top: 20px;
-            padding: 15px;
-            background: rgba(0, 0, 0, 0.7);
-            border: 1px solid #00ff00;
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 14px;
+            margin: 0;
+        }
+
+        #theme-toggle {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: var(--panel-bg);
+            border: 2px solid var(--border-primary);
+            color: var(--text-primary);
+            padding: 10px 20px;
             border-radius: 5px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        #theme-toggle:hover {
+            background: var(--border-primary);
+            color: var(--button-text);
+            transform: scale(1.05);
+        }
+
+        #main-layout {
+            display: grid;
+            grid-template-columns: 250px 1fr 250px;
+            grid-template-rows: auto auto 1fr auto;
+            gap: 20px;
+            max-width: 1800px;
+            margin: 0 auto;
+            padding: 0 20px 20px 20px;
+            align-items: start;
+        }
+
+        #left-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            grid-column: 1;
+            grid-row: 1 / 4;
+        }
+
+        #right-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            grid-column: 3;
+            grid-row: 1 / 4;
+        }
+
+        #game-info-panel {
+            grid-column: 2;
+            grid-row: 1;
+        }
+
+        #game-container {
+            border: 2px solid var(--border-primary);
+            box-shadow: 0 0 20px var(--shadow-color);
+            position: relative;
+            margin: 0 auto;
+            grid-column: 2;
+            grid-row: 2;
+        }
+
+        #dev-toolbar {
+            grid-column: 1 / 4;
+            grid-row: 4;
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 20px;
+        }
+
+        .controller-status-hidden {
+            display: none !important;
+        }
+
+        .panel {
+            padding: 15px;
+            background: var(--panel-bg);
+            border: 2px solid var(--border-primary);
+            border-radius: 8px;
             font-size: 12px;
             line-height: 1.6;
         }
-        
-        .controls h3 {
-            margin: 0 0 10px 0;
-            color: #ffff00;
+
+        .panel.secondary {
+            border-color: var(--border-secondary);
         }
-        
+
+        .panel.warning {
+            border-color: var(--border-warning);
+        }
+
+        .panel h3 {
+            margin: 0 0 10px 0;
+            color: var(--text-primary);
+            font-size: 14px;
+        }
+
+        .panel.secondary h3 {
+            color: var(--border-secondary);
+        }
+
+        .panel.warning h3 {
+            color: var(--border-warning);
+        }
+
         .control-item {
             display: flex;
             justify-content: space-between;
             margin: 5px 0;
+            gap: 10px;
         }
-        
+
+        .control-item > span:first-child {
+            flex-shrink: 0;
+        }
+
+        .control-item > span:last-child {
+            text-align: right;
+        }
+
         .key {
-            background: #00ff00;
-            color: #000;
+            background: var(--key-bg);
+            color: var(--key-text);
             padding: 2px 8px;
             border-radius: 3px;
             font-weight: bold;
-            margin-right: 10px;
-        }
-
-        .dev-tools {
-            background: rgba(20, 20, 50, 0.9);
-            border-color: #ffaa00;
-        }
-
-        .dev-tools h3 {
-            color: #ffaa00;
+            margin-right: 5px;
+            display: inline-block;
+            white-space: nowrap;
         }
 
         .dev-btn {
-            background: #00ff00;
-            color: #000;
+            background: var(--button-bg);
+            color: var(--button-text);
             border: none;
             padding: 8px 12px;
             margin: 2px;
@@ -97,93 +218,527 @@
             font-size: 11px;
             cursor: pointer;
             transition: all 0.2s;
+            width: 100%;
         }
 
-        .dev-btn:hover {
-            background: #ffff00;
-            transform: scale(1.05);
+        .dev-btn:hover:not(:disabled) {
+            opacity: 0.8;
+            transform: scale(1.02);
         }
 
-        .dev-btn:active {
-            background: #ffaa00;
-            transform: scale(0.95);
+        .dev-btn:active:not(:disabled) {
+            transform: scale(0.98);
         }
 
-        #fish-count {
-            color: #ffaa00;
+        .dev-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .dev-btn.secondary {
+            background: var(--border-secondary);
+        }
+
+        .dev-btn.warning {
+            background: var(--border-warning);
+        }
+
+        #fish-status-container {
+            max-height: 400px;
+            overflow-y: auto;
+            font-size: 10px;
+            line-height: 1.4;
+        }
+
+        .status-value {
             font-weight: bold;
         }
 
-        #dev-score {
-            color: #00ff00;
-            font-weight: bold;
+        .status-connected {
+            color: var(--text-primary);
+        }
+
+        .status-disconnected {
+            color: #ff6666;
+        }
+
+        /* Hide help text by default when in a hidden state */
+        #controller-help.hidden {
+            display: none !important;
+        }
+
+        /* Responsive */
+        @media (max-width: 1600px) {
+            #main-layout {
+                grid-template-columns: 220px 1fr 220px;
+            }
+        }
+
+        @media (max-width: 1200px) {
+            #main-layout {
+                grid-template-columns: 1fr;
+                max-width: 900px;
+            }
+
+            #left-panel {
+                order: 2;
+            }
+
+            #game-container {
+                order: 1;
+            }
+
+            #right-panel {
+                order: 3;
+            }
+        }
+
+        /* Scrollbar styling for dark theme */
+        :root[data-theme="dark"] #fish-status-container::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        :root[data-theme="dark"] #fish-status-container::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        :root[data-theme="dark"] #fish-status-container::-webkit-scrollbar-thumb {
+            background: var(--border-primary);
+            border-radius: 4px;
+        }
+
+        /* Scrollbar styling for light theme */
+        :root[data-theme="light"] #fish-status-container::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        :root[data-theme="light"] #fish-status-container::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.1);
+        }
+
+        :root[data-theme="light"] #fish-status-container::-webkit-scrollbar-thumb {
+            background: var(--border-primary);
+            border-radius: 4px;
         }
     </style>
 </head>
 <body>
-    <h1>🎣 LAKE CHAMPLAIN SONAR 🎣</h1>
-    <div class="subtitle">Ice Fishing Simulator • Lake Trout • 45°N, Between the Greens and Adirondacks</div>
-
-    <div id="main-game-wrapper">
-        <div id="game-container"></div>
-
-        <div class="controls dev-tools" id="fish-status-panel">
-            <h3>🐟 FISH STATUS</h3>
-            <div id="fish-status-container" style="max-height: 600px; overflow-y: auto; font-size: 10px; line-height: 1.4;">
-                <div style="color: #888; font-style: italic;">No fish spawned</div>
-            </div>
-        </div>
+    <div id="header">
+        <h1>🎣 LAKE CHAMPLAIN SONAR 🎣</h1>
+        <div class="subtitle">Ice Fishing Simulator • Lake Trout • 45°N, Between the Greens and Adirondacks</div>
+        <button id="theme-toggle" onclick="toggleTheme()">☀️ Light Mode</button>
     </div>
 
-    <div style="display: flex; gap: 20px; margin-top: 20px; align-items: flex-start;">
-        <div class="controls">
-            <h3>BAITCASTING CONTROLS</h3>
-            <div class="control-item">
-                <span><span class="key">SPACE</span> or <span class="key">↓</span></span>
-                <span>Release Spool (Drop)</span>
+    <div id="main-layout">
+        <!-- Left Panel -->
+        <div id="left-panel">
+            <!-- Controller Status -->
+            <div class="panel secondary" id="controller-status-panel">
+                <h3>🎮 CONTROLLER STATUS</h3>
+                <div style="margin: 10px 0;">
+                    <div>Status: <span id="controller-status" class="status-value status-disconnected">Not Connected</span></div>
+                    <div id="controller-name" style="color: var(--text-muted); font-size: 10px; margin-top: 5px;">No controller detected</div>
+                    <div id="controller-help" style="color: var(--border-warning); font-size: 10px; margin-top: 8px; font-style: italic;">
+                        ⚠️ Press any button on your controller to connect
+                    </div>
+                </div>
+                <button id="test-controller-btn" class="dev-btn secondary" disabled>Test Controller</button>
+                <button id="check-gamepads-btn" class="dev-btn warning">Check Gamepads</button>
             </div>
-            <div class="control-item">
-                <span><span class="key">↑</span></span>
-                <span>Engage Clutch & Retrieve</span>
+
+            <!-- Keyboard Controls -->
+            <div class="panel" id="keyboard-controls">
+                <h3>⌨️ KEYBOARD CONTROLS</h3>
+                <div class="control-item">
+                    <span><span class="key">SPACE</span> <span class="key">↓</span></span>
+                    <span>Release Spool (Drop)</span>
+                </div>
+                <div class="control-item">
+                    <span><span class="key">↑</span></span>
+                    <span>Engage Clutch & Retrieve</span>
+                </div>
+                <div class="control-item">
+                    <span>Release <span class="key">↑</span></span>
+                    <span>Hold Position</span>
+                </div>
+                <div class="control-item">
+                    <span><span class="key">←</span> <span class="key">→</span></span>
+                    <span>Adjust Speed</span>
+                </div>
+                <div class="control-item">
+                    <span><span class="key">R</span></span>
+                    <span>Reset to Surface</span>
+                </div>
             </div>
-            <div class="control-item">
-                <span>Release <span class="key">↑</span></span>
-                <span>Hold Position (Clutch On)</span>
+
+            <!-- Gamepad Controls -->
+            <div class="panel" id="gamepad-controls" style="display: none;">
+                <h3>🎮 GAMEPAD CONTROLS</h3>
+                <div class="control-item">
+                    <span><span class="key">D-PAD ↓</span></span>
+                    <span>Release Spool</span>
+                </div>
+                <div class="control-item">
+                    <span><span class="key">D-PAD ↑</span></span>
+                    <span>Engage & Retrieve</span>
+                </div>
+                <div class="control-item">
+                    <span><span class="key">L-STICK</span></span>
+                    <span>Alt Movement</span>
+                </div>
+                <div class="control-item">
+                    <span><span class="key">L1/R1</span></span>
+                    <span>Adjust Speed</span>
+                </div>
+                <div class="control-item">
+                    <span><span class="key">CIRCLE</span></span>
+                    <span>Reset to Surface</span>
+                </div>
+                <div class="control-item">
+                    <span><span class="key">X</span></span>
+                    <span>Quick Toggle</span>
+                </div>
+                <div class="control-item">
+                    <span><span class="key">R2</span></span>
+                    <span>Reel in Fish</span>
+                </div>
             </div>
-            <div class="control-item">
-                <span><span class="key">←</span> <span class="key">→</span></span>
-                <span>Adjust Retrieve Speed</span>
-            </div>
-            <div class="control-item">
-                <span><span class="key">R</span></span>
-                <span>Reset to Surface</span>
+
+            <!-- Ice Fishing Drill Battery -->
+            <div class="panel secondary">
+                <h3>⛏️ ICE DRILL</h3>
+                <div style="margin: 10px 0; font-size: 12px;">
+                    <div style="margin-bottom: 8px;">
+                        <strong>Battery:</strong> <span id="drill-charges" class="status-value" style="color: var(--text-primary);">4/4</span>
+                    </div>
+                    <div style="display: flex; gap: 4px; margin-bottom: 8px;">
+                        <div id="battery-bar-1" class="battery-bar" style="width: 25%; height: 20px; background: var(--border-primary); border-radius: 2px;"></div>
+                        <div id="battery-bar-2" class="battery-bar" style="width: 25%; height: 20px; background: var(--border-primary); border-radius: 2px;"></div>
+                        <div id="battery-bar-3" class="battery-bar" style="width: 25%; height: 20px; background: var(--border-primary); border-radius: 2px;"></div>
+                        <div id="battery-bar-4" class="battery-bar" style="width: 25%; height: 20px; background: var(--border-primary); border-radius: 2px;"></div>
+                    </div>
+                    <div style="font-size: 10px; color: var(--text-muted); font-style: italic;">
+                        Triangle: Move Mode<br>
+                        Square: Drill (costs 1 charge)<br>
+                        L/R: Walk on ice
+                    </div>
+                    <div style="margin-top: 8px; font-size: 11px;">
+                        <div>Current Hole: <span id="current-hole" class="status-value">#1</span></div>
+                        <div>Hole Depth: <span id="hole-depth" class="status-value">140ft</span></div>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <div class="controls dev-tools">
-            <h3>🔧 DEV TOOLS</h3>
-            <div style="margin: 10px 0;">
+        <!-- Game Info Panel (Above Game) -->
+        <div id="game-info-panel" class="panel">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; font-size: 13px;">
+                <div>
+                    <div style="color: var(--text-muted); font-size: 10px;">SCORE</div>
+                    <div style="font-weight: bold; color: var(--text-primary);"><span id="ui-score">0</span></div>
+                </div>
+                <div>
+                    <div style="color: var(--text-muted); font-size: 10px;">CAUGHT / LOST</div>
+                    <div style="font-weight: bold;"><span id="ui-caught" style="color: var(--text-primary);">0</span> / <span id="ui-lost" style="color: #ff6666;">0</span></div>
+                </div>
+                <div>
+                    <div style="color: var(--text-muted); font-size: 10px;">LURE DEPTH</div>
+                    <div style="font-weight: bold; color: var(--border-secondary);"><span id="ui-depth">0</span> ft</div>
+                </div>
+                <div>
+                    <div style="color: var(--text-muted); font-size: 10px;">LURE STATE</div>
+                    <div style="font-weight: bold; color: var(--text-secondary);"><span id="ui-lure-state">SURFACE</span></div>
+                </div>
+                <div>
+                    <div style="color: var(--text-muted); font-size: 10px;">RETRIEVE SPEED</div>
+                    <div style="font-weight: bold; color: var(--text-primary);"><span id="ui-speed">2.0</span></div>
+                </div>
+                <div>
+                    <div style="color: var(--text-muted); font-size: 10px;">WATER TEMP</div>
+                    <div style="font-weight: bold; color: var(--border-secondary);"><span id="ui-temp">40</span>°F</div>
+                </div>
+                <div>
+                    <div style="color: var(--text-muted); font-size: 10px;">TIME</div>
+                    <div style="font-weight: bold; color: var(--text-primary);"><span id="ui-time">0:00</span></div>
+                </div>
+                <div>
+                    <div style="color: var(--text-muted); font-size: 10px;">ZONE</div>
+                    <div style="font-weight: bold;" id="ui-zone-text"><span id="ui-zone">Surface</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Center Panel (Game) -->
+        <div id="game-container"></div>
+
+        <!-- Right Panel -->
+        <div id="right-panel">
+            <!-- Fish Status -->
+            <div class="panel warning">
+                <h3>🐟 FISH STATUS</h3>
+                <div id="fish-status-container">
+                    <div style="color: var(--text-muted); font-style: italic;">No fish spawned</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dev Toolbar (Bottom) -->
+        <div id="dev-toolbar">
+            <!-- Column 1: Actions -->
+            <div class="panel warning">
+                <h3>🔧 DEV ACTIONS</h3>
                 <button id="spawn-fish-btn" class="dev-btn">Spawn Fish</button>
                 <button id="spawn-5-fish-btn" class="dev-btn">Spawn 5 Fish</button>
-            </div>
-            <div style="margin: 10px 0;">
                 <button id="reset-game-btn" class="dev-btn">Reset Game</button>
-                <button id="toggle-debug-btn" class="dev-btn">Toggle Debug Info</button>
+                <button id="toggle-debug-btn" class="dev-btn">Toggle Debug</button>
             </div>
-            <div style="margin-top: 10px; font-size: 11px; line-height: 1.6;">
-                <div>Fish Count: <span id="fish-count">0</span></div>
-                <div>Score: <span id="dev-score">0</span></div>
-                <div>Lure Depth: <span id="dev-depth">0</span> ft</div>
-                <div>Lure State: <span id="dev-lure-state">SURFACE</span></div>
-                <div>Game Time: <span id="dev-time">0:00</span></div>
+
+            <!-- Column 2: Stats -->
+            <div class="panel warning">
+                <h3>📊 DEV STATS</h3>
+                <div style="font-size: 12px; line-height: 1.8;">
+                    <div>Active Fish: <span id="fish-count" class="status-value">0</span></div>
+                    <div>Score: <span id="dev-score" class="status-value">0</span></div>
+                    <div>Lure Depth: <span id="dev-depth" class="status-value">0</span> ft</div>
+                    <div>Lure State: <span id="dev-lure-state" class="status-value">SURFACE</span></div>
+                    <div>Game Time: <span id="dev-time" class="status-value">0:00</span></div>
+                </div>
+            </div>
+
+            <!-- Column 3: Info -->
+            <div class="panel warning">
+                <h3>ℹ️ DEV INFO</h3>
+                <div style="font-size: 11px; line-height: 1.6; color: var(--text-muted);">
+                    <div><strong>Build:</strong> v0.3.0-ice-fishing</div>
+                    <div><strong>Engine:</strong> Phaser 3.80.1</div>
+                    <div><strong>Target:</strong> Lake Trout</div>
+                    <div><strong>Location:</strong> Lake Champlain</div>
+                    <div style="margin-top: 8px; font-style: italic;">
+                        Use dev tools to test game mechanics<br>
+                        Debug mode shows AI state and ranges
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
     <!-- Load Phaser from CDN -->
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js"></script>
-    
+
     <!-- Load game modules -->
     <script type="module" src="src/index.js"></script>
+
+    <!-- Theme Toggle -->
+    <script>
+        function toggleTheme() {
+            const html = document.documentElement;
+            const currentTheme = html.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            const button = document.getElementById('theme-toggle');
+
+            html.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+
+            button.textContent = newTheme === 'dark' ? '☀️ Light Mode' : '🌙 Dark Mode';
+        }
+
+        // Load saved theme on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            const savedTheme = localStorage.getItem('theme') || 'dark';
+            const html = document.documentElement;
+            const button = document.getElementById('theme-toggle');
+
+            html.setAttribute('data-theme', savedTheme);
+            button.textContent = savedTheme === 'dark' ? '☀️ Light Mode' : '🌙 Dark Mode';
+        });
+    </script>
+
+    <!-- Initialize Gamepad Manager and Test Button -->
+    <script type="module">
+        import gamepadManager from './src/utils/GamepadManager.js';
+
+        // Make gamepad manager globally available for Phaser scenes
+        window.gamepadManager = gamepadManager;
+
+        // Setup test controller button
+        document.getElementById('test-controller-btn').addEventListener('click', () => {
+            const gamepad = gamepadManager.getGamepad();
+            if (!gamepad) {
+                alert('No controller connected!');
+                return;
+            }
+
+            // Create test overlay
+            const overlay = document.createElement('div');
+            overlay.id = 'test-overlay';
+            overlay.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.95);
+                color: #00ff00;
+                font-family: 'Courier New', monospace;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                z-index: 10000;
+                padding: 40px;
+                box-sizing: border-box;
+            `;
+
+            overlay.innerHTML = `
+                <div style="max-width: 800px; width: 100%;">
+                    <h2 style="text-align: center; color: #00aaff; margin-bottom: 20px;">🎮 CONTROLLER TEST MODE</h2>
+                    <div style="background: rgba(0, 50, 100, 0.3); padding: 20px; border: 2px solid #00aaff; border-radius: 10px; margin-bottom: 20px;">
+                        <div style="font-size: 14px; margin-bottom: 10px;">
+                            <strong>Controller:</strong> <span id="test-controller-name">${gamepad.id}</span>
+                        </div>
+                        <div style="font-size: 12px; color: #888;">
+                            Press any button or move any stick to see its state
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+                        <div style="background: rgba(0, 100, 0, 0.2); padding: 15px; border: 1px solid #00ff00; border-radius: 5px;">
+                            <h3 style="margin: 0 0 10px 0; color: #ffff00;">BUTTONS</h3>
+                            <div id="test-buttons" style="font-size: 11px; line-height: 1.8; font-family: monospace;"></div>
+                        </div>
+
+                        <div style="background: rgba(0, 100, 0, 0.2); padding: 15px; border: 1px solid #00ff00; border-radius: 5px;">
+                            <h3 style="margin: 0 0 10px 0; color: #ffff00;">AXES (STICKS)</h3>
+                            <div id="test-axes" style="font-size: 11px; line-height: 1.8; font-family: monospace;"></div>
+                        </div>
+                    </div>
+
+                    <div style="text-align: center;">
+                        <button id="close-test-btn" style="background: #ff6666; color: #000; border: none; padding: 12px 30px; font-size: 14px; font-family: 'Courier New', monospace; font-weight: bold; border-radius: 5px; cursor: pointer;">
+                            CLOSE TEST (Press START or ESC)
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            document.body.appendChild(overlay);
+
+            const buttonsDiv = document.getElementById('test-buttons');
+            const axesDiv = document.getElementById('test-axes');
+            const closeBtn = document.getElementById('close-test-btn');
+
+            // Button names for display
+            const buttonNames = [
+                'X (A)', 'Circle (B)', 'Square (X)', 'Triangle (Y)',
+                'L1 (LB)', 'R1 (RB)', 'L2 (LT)', 'R2 (RT)',
+                'Select', 'Start', 'L3', 'R3',
+                'D-Up', 'D-Down', 'D-Left', 'D-Right'
+            ];
+
+            // Update test display
+            let testInterval = setInterval(() => {
+                const currentGamepad = gamepadManager.getGamepad();
+                if (!currentGamepad) {
+                    clearInterval(testInterval);
+                    overlay.remove();
+                    return;
+                }
+
+                // Update buttons
+                let buttonsHTML = '';
+                currentGamepad.buttons.forEach((button, i) => {
+                    const name = buttonNames[i] || `Button ${i}`;
+                    const pressed = button.pressed ? '🟢 PRESSED' : '⚫ Released';
+                    const value = button.value.toFixed(2);
+                    const color = button.pressed ? '#00ff00' : '#666';
+                    buttonsHTML += `<div style="color: ${color};">${name.padEnd(15)} ${pressed} (${value})</div>`;
+                });
+                buttonsDiv.innerHTML = buttonsHTML;
+
+                // Update axes
+                let axesHTML = '';
+                const axisNames = ['Left X', 'Left Y', 'Right X', 'Right Y'];
+                currentGamepad.axes.forEach((value, i) => {
+                    const name = axisNames[i] || `Axis ${i}`;
+                    const bar = '█'.repeat(Math.abs(value * 10));
+                    const direction = value > 0 ? '→' : value < 0 ? '←' : '·';
+                    axesHTML += `<div>${name.padEnd(10)} ${direction} ${bar} ${value.toFixed(3)}</div>`;
+                });
+                axesDiv.innerHTML = axesHTML;
+
+                // Check for Start button or ESC key to close
+                if (currentGamepad.buttons[9]?.pressed) { // Start button
+                    clearInterval(testInterval);
+                    overlay.remove();
+                }
+            }, 50); // 20 Hz update rate
+
+            // Close button handler
+            closeBtn.addEventListener('click', () => {
+                clearInterval(testInterval);
+                overlay.remove();
+            });
+
+            // ESC key handler
+            const escHandler = (e) => {
+                if (e.key === 'Escape') {
+                    clearInterval(testInterval);
+                    overlay.remove();
+                    document.removeEventListener('keydown', escHandler);
+                }
+            };
+            document.addEventListener('keydown', escHandler);
+        });
+
+        // Check Gamepads button - manual diagnostic
+        document.getElementById('check-gamepads-btn').addEventListener('click', () => {
+            console.log('🔍 Manual gamepad check requested...');
+            console.log('🔍 Gamepad API supported?', !!navigator.getGamepads);
+
+            if (!navigator.getGamepads) {
+                alert('❌ Gamepad API not supported in this browser!');
+                return;
+            }
+
+            const gamepads = navigator.getGamepads();
+            console.log('🔍 Raw navigator.getGamepads():', gamepads);
+
+            let foundCount = 0;
+            let message = 'Gamepad Check Results:\n\n';
+
+            for (let i = 0; i < gamepads.length; i++) {
+                if (gamepads[i]) {
+                    foundCount++;
+                    const pad = gamepads[i];
+                    message += `✅ Gamepad ${i}: ${pad.id}\n`;
+                    message += `   Connected: ${pad.connected}\n`;
+                    message += `   Buttons: ${pad.buttons.length}\n`;
+                    message += `   Axes: ${pad.axes.length}\n\n`;
+                    console.log('🔍 Found gamepad:', pad);
+                } else {
+                    console.log(`🔍 Gamepad slot ${i}: null`);
+                }
+            }
+
+            if (foundCount === 0) {
+                message += '❌ No gamepads detected.\n\n';
+                message += 'IMPORTANT: You must press a button on your\n';
+                message += 'controller before the browser can detect it.\n\n';
+                message += 'Steps:\n';
+                message += '1. Make sure controller is ON and connected\n';
+                message += '2. Press ANY button on the controller\n';
+                message += '3. Click "Check Gamepads" again\n';
+            } else {
+                message += `✅ Found ${foundCount} gamepad(s)!`;
+            }
+
+            alert(message);
+        });
+
+        // Log initial state
+        console.log('🎮 Gamepad Manager initialized. Waiting for controller connection...');
+        console.log('🎮 Press any button on your controller to connect it.');
+        console.log('🎮 You can also click "Check Gamepads" to manually check for controllers.');
+    </script>
 </body>
 </html>
