@@ -238,24 +238,25 @@ export class GameScene extends Phaser.Scene {
             return; // Block all game logic
         }
 
-        // Handle pause input (keyboard)
-        if (Phaser.Input.Keyboard.JustDown(this.escKey) || Phaser.Input.Keyboard.JustDown(this.pKey)) {
-            this.togglePause();
-        }
-
-        // Handle pause input (gamepad - Start button)
-        if (window.gamepadManager && window.gamepadManager.isConnected()) {
-            const startBtn = window.gamepadManager.getButton('Start');
-            if (startBtn.pressed && !this.gamepadState.lastStart) {
+        // If paused, only check for unpause input
+        if (this.isPaused) {
+            // Check for unpause (keyboard)
+            if (Phaser.Input.Keyboard.JustDown(this.escKey) || Phaser.Input.Keyboard.JustDown(this.pKey)) {
                 this.togglePause();
             }
-            this.gamepadState.lastStart = startBtn.pressed;
+            // Check for unpause (gamepad)
+            if (window.gamepadManager && window.gamepadManager.isConnected()) {
+                const startBtn = window.gamepadManager.getButton('Start');
+                if (startBtn.pressed && !this.gamepadState.lastStart) {
+                    this.togglePause();
+                }
+                this.gamepadState.lastStart = startBtn.pressed;
+            }
+            return; // Skip all game updates
         }
 
-        // If paused, skip all game updates
-        if (this.isPaused) {
-            return;
-        }
+        // Handle pause input only when not paused (moved to end of update for efficiency)
+        // This runs only once per frame when game is active
 
         // If fighting a fish, handle fight updates
         if (this.currentFight && this.currentFight.active) {
@@ -400,6 +401,18 @@ export class GameScene extends Phaser.Scene {
             this.renderDebugInfo();
         } else if (this.debugGraphics) {
             this.debugGraphics.clear();
+        }
+
+        // Check for pause input at end of frame (after all game logic)
+        if (Phaser.Input.Keyboard.JustDown(this.escKey) || Phaser.Input.Keyboard.JustDown(this.pKey)) {
+            this.togglePause();
+        }
+        if (window.gamepadManager && window.gamepadManager.isConnected()) {
+            const startBtn = window.gamepadManager.getButton('Start');
+            if (startBtn.pressed && !this.gamepadState.lastStart) {
+                this.togglePause();
+            }
+            this.gamepadState.lastStart = startBtn.pressed;
         }
     }
     
