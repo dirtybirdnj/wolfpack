@@ -336,10 +336,10 @@
             <div class="panel secondary" id="controller-status-panel">
                 <h3>🎮 CONTROLLER STATUS</h3>
                 <div style="margin: 10px 0;">
-                    <div>Status: <span id="controller-status" class="status-value status-disconnected">Not Connected</span></div>
-                    <div id="controller-name" style="color: var(--text-muted); font-size: 10px; margin-top: 5px;">No controller detected</div>
-                    <div id="controller-help" style="color: var(--border-warning); font-size: 10px; margin-top: 8px; font-style: italic;">
-                        ⚠️ Press any button on your controller to connect
+                    <div>Status: <span id="controller-status" class="status-value status-disconnected">Waiting for Input</span></div>
+                    <div id="controller-name" style="color: var(--border-warning); font-size: 10px; margin-top: 5px; font-weight: bold;">Press any button on your controller</div>
+                    <div id="controller-help" style="color: var(--text-muted); font-size: 10px; margin-top: 8px; font-style: italic;">
+                        Browsers require a button press to detect gamepads
                     </div>
                 </div>
                 <button id="test-controller-btn" class="dev-btn secondary" disabled>Test Controller</button>
