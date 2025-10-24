@@ -16,6 +16,8 @@ export class Lure {
         // Baitcasting reel mechanics
         this.weight = 0.5; // Lure weight in ounces (affects drop speed)
         this.spoolReleased = false; // Is the spool currently free-spinning?
+        this.triggerControlActive = false; // Is R2 trigger controlling speed?
+        this.currentTriggerSpeed = 0; // Current speed from trigger (0-1)
 
         // Jigging mechanics (right stick control)
         this.jigOffset = 0; // Current jig displacement from base position
@@ -55,7 +57,10 @@ export class Lure {
                 break;
 
             case Constants.LURE_STATE.RETRIEVING:
-                this.velocity = -this.retrieveSpeed;
+                // Only set velocity from retrieveSpeed if not using trigger control
+                if (!this.triggerControlActive) {
+                    this.velocity = -this.retrieveSpeed;
+                }
                 this.baseY = this.y; // Update base position while retrieving
                 break;
 
@@ -171,8 +176,13 @@ export class Lure {
             this.state = Constants.LURE_STATE.RETRIEVING;
         } else if (this.state === Constants.LURE_STATE.SURFACE) {
             // Can't retrieve from surface
+            this.triggerControlActive = false;
+            this.currentTriggerSpeed = 0;
             return;
         }
+
+        // Enable trigger control mode
+        this.triggerControlActive = true;
 
         // Map trigger value (0.0 to 1.0) to retrieve speed
         // Min speed at light pressure, max speed at full pressure
@@ -184,6 +194,9 @@ export class Lure {
         const speedRange = maxSpeed - minSpeed;
         const targetSpeed = minSpeed + (speedRange * easedTrigger);
 
+        // Store current speed for UI display (0-1 normalized)
+        this.currentTriggerSpeed = easedTrigger;
+
         // Set velocity directly for immediate response
         this.velocity = -targetSpeed;
     }
@@ -193,6 +206,8 @@ export class Lure {
         if (this.state === Constants.LURE_STATE.RETRIEVING) {
             this.velocity = 0; // Hold position, no drift
             this.state = Constants.LURE_STATE.IDLE;
+            this.triggerControlActive = false;
+            this.currentTriggerSpeed = 0;
         }
     }
     

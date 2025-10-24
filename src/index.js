@@ -119,6 +119,22 @@ function setupDevTools(game) {
                 if (zoneText) {
                     zoneText.style.color = zoneColor;
                 }
+
+                // Update reeling speed meter
+                const reelSpeedFill = document.getElementById('reel-speed-fill');
+                const reelSpeedPercent = document.getElementById('reel-speed-percent');
+
+                if (reelSpeedFill && reelSpeedPercent) {
+                    // Get current trigger speed (0-1 normalized)
+                    const speedValue = gameScene.lure.currentTriggerSpeed || 0;
+                    const speedPercent = Math.round(speedValue * 100);
+
+                    // Update bar width
+                    reelSpeedFill.style.width = `${speedPercent}%`;
+
+                    // Update percentage text
+                    reelSpeedPercent.textContent = speedPercent;
+                }
             }
 
             // Time - show countdown for arcade, count up for unlimited
