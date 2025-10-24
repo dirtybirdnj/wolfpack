@@ -532,14 +532,26 @@ export class GameScene extends Phaser.Scene {
         }
 
         // === FISHING MODE (normal controls) ===
-        // D-pad UP or Left Stick UP: Retrieve line
-        const dpadUp = dpadUpBtn.pressed || (leftStickY < -DEAD_ZONE);
-        if (dpadUp) {
-            this.lure.retrieve();
+
+        // === RIGHT TRIGGER (R2): VARIABLE SPEED REELING ===
+        // R2 trigger for variable speed retrieve (like a real fishing reel)
+        const r2Trigger = window.gamepadManager.getButton('R2');
+        const triggerThreshold = 0.1; // Minimum trigger pressure to start reeling
+
+        if (r2Trigger.value > triggerThreshold) {
+            // Use trigger pressure to control reel speed
+            this.lure.retrieveWithTrigger(r2Trigger.value);
         } else {
-            // Only stop retrieve if keyboard also isn't retrieving
-            if (!this.cursors.up.isDown) {
-                this.lure.stopRetrieve();
+            // R2 not pressed - check other retrieve inputs
+            // D-pad UP or Left Stick UP: Binary retrieve (on/off)
+            const dpadUp = dpadUpBtn.pressed || (leftStickY < -DEAD_ZONE);
+            if (dpadUp) {
+                this.lure.retrieve();
+            } else {
+                // Only stop retrieve if keyboard also isn't retrieving
+                if (!this.cursors.up.isDown) {
+                    this.lure.stopRetrieve();
+                }
             }
         }
 

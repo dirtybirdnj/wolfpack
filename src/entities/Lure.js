@@ -155,6 +155,32 @@ export class Lure {
         }
     }
 
+    /**
+     * Retrieve with variable speed based on controller trigger value
+     * @param {number} triggerValue - Trigger pressure (0.0 to 1.0)
+     */
+    retrieveWithTrigger(triggerValue) {
+        // Re-engage clutch if not already retrieving
+        if (this.state !== Constants.LURE_STATE.SURFACE) {
+            this.velocity = 0; // Immediate stop if transitioning from drop
+            this.spoolReleased = false;
+            this.state = Constants.LURE_STATE.RETRIEVING;
+        }
+
+        // Map trigger value (0.0 to 1.0) to retrieve speed
+        // Min speed at light pressure, max speed at full pressure
+        const minSpeed = GameConfig.LURE_MIN_RETRIEVE_SPEED;
+        const maxSpeed = this.retrieveSpeed; // Use current set speed as max
+
+        // Apply easing curve for better feel (square the input for more control at low end)
+        const easedTrigger = triggerValue * triggerValue;
+        const speedRange = maxSpeed - minSpeed;
+        const targetSpeed = minSpeed + (speedRange * easedTrigger);
+
+        // Smooth the speed changes to avoid jerkiness
+        this.velocity = -targetSpeed;
+    }
+
     stopRetrieve() {
         // Stop reeling - clutch stays engaged, lure holds position
         if (this.state === Constants.LURE_STATE.RETRIEVING) {
