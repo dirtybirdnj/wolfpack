@@ -683,13 +683,20 @@ export class GameScene extends Phaser.Scene {
             return;
         }
 
-        // Determine cloud size
-        const cloudSize = Math.floor(
-            Utils.randomBetween(
-                GameConfig.BAITFISH_CLOUD_MIN_COUNT,
-                GameConfig.BAITFISH_CLOUD_MAX_COUNT
-            )
-        );
+        // Determine cloud size using weighted distribution for more variety
+        // 60% small (3-8), 30% medium (9-15), 10% large (16-24)
+        let cloudSize;
+        const sizeRoll = Math.random();
+        if (sizeRoll < 0.6) {
+            // Small clouds (most common)
+            cloudSize = Math.floor(Utils.randomBetween(3, 8));
+        } else if (sizeRoll < 0.9) {
+            // Medium clouds (less common)
+            cloudSize = Math.floor(Utils.randomBetween(9, 15));
+        } else {
+            // Large clouds (rare - creates exciting feeding opportunities)
+            cloudSize = Math.floor(Utils.randomBetween(16, 24));
+        }
 
         // Baitfish prefer certain depth zones (typically shallower than lake trout)
         let depth;
