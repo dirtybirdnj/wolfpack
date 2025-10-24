@@ -321,6 +321,24 @@ export class FishFight {
             onComplete: () => text.destroy()
         });
 
+        // Store caught fish data for end screen
+        const fishData = {
+            name: info.name,
+            weight: info.weight,
+            weightValue: this.fish.weight,
+            points: this.fish.points,
+            size: info.size,
+            gender: info.gender,
+            health: this.fish.health,
+            hunger: this.fish.hunger,
+            depth: this.fish.depth,
+            depthZone: this.fish.depthZone.name,
+            reelCount: this.reelCount,
+            fightTime: this.fightTime,
+            isEmergencyFish: this.fish.isEmergencyFish || false
+        };
+        this.scene.caughtFishData.push(fishData);
+
         // Update score
         this.scene.score += this.fish.points;
         this.scene.fishCaught++;

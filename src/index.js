@@ -3,7 +3,9 @@
 
 import GameConfig from './config/GameConfig.js';
 import BootScene from './scenes/BootScene.js';
+import MenuScene from './scenes/MenuScene.js';
 import GameScene from './scenes/GameScene.js';
+import GameOverScene from './scenes/GameOverScene.js';
 import UIScene from './scenes/UIScene.js';
 
 // Phaser game configuration
@@ -20,7 +22,7 @@ const config = {
             debug: false
         }
     },
-    scene: [BootScene, GameScene, UIScene],
+    scene: [BootScene, MenuScene, GameScene, GameOverScene, UIScene],
     render: {
         pixelArt: false,
         antialias: true,
@@ -119,10 +121,17 @@ function setupDevTools(game) {
                 }
             }
 
-            // Time
-            const minutes = Math.floor(gameScene.gameTime / 60);
-            const secs = gameScene.gameTime % 60;
-            const timeStr = `${minutes}:${secs.toString().padStart(2, '0')}`;
+            // Time - show countdown for arcade, count up for unlimited
+            let timeStr;
+            if (gameScene.gameMode === GameConfig.GAME_MODE_ARCADE) {
+                const minutes = Math.floor(gameScene.timeRemaining / 60);
+                const secs = gameScene.timeRemaining % 60;
+                timeStr = `${minutes}:${secs.toString().padStart(2, '0')}`;
+            } else {
+                const minutes = Math.floor(gameScene.gameTime / 60);
+                const secs = gameScene.gameTime % 60;
+                timeStr = `${minutes}:${secs.toString().padStart(2, '0')}`;
+            }
             const uiTime = document.getElementById('ui-time');
             if (uiTime) uiTime.textContent = timeStr;
 
