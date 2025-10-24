@@ -608,12 +608,22 @@ export class FishFight {
         this.fish.renderAtPosition(fishGraphics, popupX, popupY - 40, 4);
 
         // Fish stats
-        const ageInSeconds = Math.floor(this.fish.age / 60);
+        // Format age display (fish.age is already in years from calculateBiologicalAge)
+        let ageDisplay;
+        if (this.fish.age < 2) {
+            // Young fish: show in months
+            const ageInMonths = Math.round(this.fish.age * 12);
+            ageDisplay = `${ageInMonths} months`;
+        } else {
+            // Adult fish: show in years
+            ageDisplay = `${this.fish.age} years`;
+        }
+
         const statsText = this.scene.add.text(popupX, popupY + 100,
             `${info.name} (${info.gender})\n\n` +
             `Weight: ${info.weight}\n` +
             `Length: ${info.length}\n` +
-            `Age: ${ageInSeconds} seconds\n\n` +
+            `Age: ${ageDisplay}\n\n` +
             `Points: +${this.fish.points}`,
             {
                 fontSize: '20px',
