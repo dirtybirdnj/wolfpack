@@ -632,7 +632,7 @@ export class FishFight {
                 align: 'center',
                 stroke: '#000000',
                 strokeThickness: 3,
-                lineSpacing: 5
+                lineSpacing: 8
             }
         );
         statsText.setOrigin(0.5, 0.5);
