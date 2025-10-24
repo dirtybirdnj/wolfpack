@@ -236,26 +236,27 @@ export class Fish {
             // Keep fish in depth bounds
             this.y = Math.max(10, Math.min(GameConfig.MAX_DEPTH * GameConfig.DEPTH_SCALE - 10, this.y));
 
-            // Convert world position to screen position based on player's current hole
-            const currentHole = this.scene.iceHoleManager.getCurrentHole();
-            if (currentHole) {
-                const playerWorldX = currentHole.x;
-                const offsetFromPlayer = this.worldX - playerWorldX;
-                this.x = (GameConfig.CANVAS_WIDTH / 2) + offsetFromPlayer;
+            // Convert world position to screen position based on player position
+            let playerWorldX;
+            if (this.scene.iceHoleManager) {
+                const currentHole = this.scene.iceHoleManager.getCurrentHole();
+                playerWorldX = currentHole ? currentHole.x : this.worldX;
+            } else if (this.scene.boatManager) {
+                playerWorldX = this.scene.boatManager.playerX;
             } else {
-                // Fallback if no hole exists
-                this.x = this.worldX;
+                playerWorldX = this.worldX; // Fallback
             }
+
+            const offsetFromPlayer = this.worldX - playerWorldX;
+            this.x = (GameConfig.CANVAS_WIDTH / 2) + offsetFromPlayer;
 
             // Update sonar trail
             this.updateSonarTrail();
 
             // Remove fish if too far from player in world coordinates (beyond ~500 units)
-            if (currentHole) {
-                const distanceFromPlayer = Math.abs(this.worldX - currentHole.x);
-                if (distanceFromPlayer > 500) {
-                    this.visible = false;
-                }
+            const distanceFromPlayer = Math.abs(this.worldX - playerWorldX);
+            if (distanceFromPlayer > 500) {
+                this.visible = false;
             }
         }
 

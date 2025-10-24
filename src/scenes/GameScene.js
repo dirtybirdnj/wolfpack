@@ -69,8 +69,8 @@ export class GameScene extends Phaser.Scene {
         // Set up the sonar display (pass fishing type for proper rendering)
         this.sonarDisplay = new SonarDisplay(this, this.fishingType);
 
-        // Create the player's lure - start at better viewing depth
-        this.lure = new Lure(this, GameConfig.CANVAS_WIDTH / 2, 100); // Centered, 25ft deep
+        // Create the player's lure - start at surface (0 feet)
+        this.lure = new Lure(this, GameConfig.CANVAS_WIDTH / 2, 0); // Centered at surface
 
         // Create fishing line
         this.fishingLine = new FishingLine(this);
