@@ -1,7 +1,7 @@
 {
-  "name": "lake-trout-sonar-game",
+  "name": "wolfpack",
   "version": "1.0.0",
-  "description": "Lake Champlain ice fishing sonar simulator game built with Phaser",
+  "description": "Wolfpack - Lake Champlain ice fishing sonar simulator game built with Phaser",
   "main": "src/index.js",
   "scripts": {
     "start": "http-server . -p 8080 -c-1",

@@ -1,6 +1,6 @@
-# Lake Trout Sonar Fishing Game
+# Wolfpack
 
-A Lake Champlain ice fishing simulator that mimics the sonar/fish finder view, built with Phaser 3.
+A Lake Champlain ice fishing simulator that mimics the sonar/fish finder view, built with Phaser 3. Hunt for lake trout in packs across the deep, cold waters of Lake Champlain.
 
 ## 🎣 About
 
@@ -54,7 +54,7 @@ No build step is required - the game runs directly from static files!
 ## 📁 Project Structure
 
 ```
-lake-trout-sonar-game/
+wolfpack/
 ├── index.html           # Main HTML file
 ├── package.json         # Node.js dependencies
 ├── README.md           # This file
