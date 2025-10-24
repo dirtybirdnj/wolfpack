@@ -36,6 +36,9 @@ export class Fish {
         this.baseSpeed = Utils.randomBetween(GameConfig.FISH_SPEED_MIN, GameConfig.FISH_SPEED_MAX);
         this.points = this.size.points;
 
+        // Biological age - bigger fish are older (in years)
+        this.age = this.calculateBiologicalAge();
+
         // Fish personality - name and gender
         this.gender = Math.random() < 0.5 ? 'male' : 'female';
         this.name = this.gender === 'male'
@@ -48,7 +51,7 @@ export class Fish {
 
         // AI controller - pass fishing type for thermocline behavior
         this.ai = new FishAI(this, this.fishingType);
-        
+
         // Visual properties for sonar display
         this.sonarTrail = [];
         this.maxTrailLength = 30;
@@ -59,7 +62,7 @@ export class Fish {
         // State
         this.caught = false;
         this.visible = true;
-        this.age = 0;
+        this.frameAge = 0; // Frames on screen (for animation timing)
 
         // Biological properties - fish are hungrier and have faster metabolism
         this.hunger = Utils.randomBetween(50, 90); // 0-100, higher = more hungry (increased from 20-80)
@@ -91,6 +94,24 @@ export class Fish {
         this.hasCalmedDown = false; // Whether fish has calmed down during fast flee
     }
     
+    calculateBiologicalAge() {
+        // Lake trout age-weight relationship (bigger fish are older)
+        // Based on typical lake trout growth rates
+        if (this.weight <= 5) {
+            // Small fish: 3-6 years
+            return Math.round(Utils.randomBetween(3, 6));
+        } else if (this.weight <= 12) {
+            // Medium fish: 6-12 years
+            return Math.round(Utils.randomBetween(6, 12));
+        } else if (this.weight <= 25) {
+            // Large fish: 12-20 years
+            return Math.round(Utils.randomBetween(12, 20));
+        } else {
+            // Trophy fish: 20-30+ years
+            return Math.round(Utils.randomBetween(20, 30));
+        }
+    }
+
     calculateSonarStrength() {
         // Larger fish produce stronger sonar returns
         if (this.weight > 25) return 'strong';
@@ -101,7 +122,7 @@ export class Fish {
     updateBiology() {
         // Hunger increases based on metabolism (every ~2 seconds at 60fps, faster than before)
         // Fish now get hungry much faster and need to keep feeding
-        if (this.age % 120 === 0) { // Changed from 300 to 120 (5 sec -> 2 sec)
+        if (this.frameAge % 120 === 0) { // Changed from 300 to 120 (5 sec -> 2 sec)
             const hungerIncrease = 1.5 * this.metabolism; // Base 1.5 per tick, modified by metabolism
             this.hunger = Math.min(100, this.hunger + hungerIncrease);
         }
@@ -109,12 +130,12 @@ export class Fish {
         // Health is affected by hunger levels
         if (this.hunger > 85) {
             // Very hungry - health decreases faster
-            if (this.age % 300 === 0) { // Changed from 600 to 300 (twice as fast)
+            if (this.frameAge % 300 === 0) { // Changed from 600 to 300 (twice as fast)
                 this.health = Math.max(0, this.health - 0.8);
             }
         } else if (this.hunger < 30) {
             // Well fed - health increases
-            if (this.age % 600 === 0) {
+            if (this.frameAge % 600 === 0) {
                 this.health = Math.min(100, this.health + 0.5);
             }
         }
@@ -172,7 +193,7 @@ export class Fish {
             return;
         }
 
-        this.age++;
+        this.frameAge++;
 
         // Update biological state
         this.updateBiology();
@@ -420,7 +441,7 @@ export class Fish {
         
         // Frenzy indicator - bright orange glow when in feeding frenzy
         if (this.inFrenzy) {
-            const glowSize = bodySize * 2.5 + (Math.sin(this.age * 0.2) * 3);
+            const glowSize = bodySize * 2.5 + (Math.sin(this.frameAge * 0.2) * 3);
             this.graphics.lineStyle(2, 0xff6600, 0.6 + (this.frenzyIntensity * 0.4));
             this.graphics.strokeCircle(this.x, this.y, glowSize);
         }
@@ -438,7 +459,7 @@ export class Fish {
 
             // Add pulsing effect for higher interest levels
             if (this.interestFlash > 0.7) {
-                const pulseSize = flashSize + Math.sin(this.age * 0.3) * 4;
+                const pulseSize = flashSize + Math.sin(this.frameAge * 0.3) * 4;
                 this.graphics.lineStyle(2, 0x00ff00, flashAlpha * 0.5);
                 this.graphics.strokeCircle(this.x, this.y, pulseSize);
             }
@@ -515,13 +536,14 @@ export class Fish {
     feedOnBaitfish() {
         // Fish has consumed a baitfish, reduce hunger
         this.hunger = Math.max(0, this.hunger - GameConfig.BAITFISH_CONSUMPTION_HUNGER_REDUCTION);
-        this.lastFed = this.age;
+        this.lastFed = this.frameAge;
     }
 
     getInfo() {
         return {
             name: this.name,
             gender: this.gender,
+            age: this.age + ' years',
             weight: this.weight.toFixed(1) + ' lbs',
             length: this.length + ' in',
             depth: Math.floor(this.depth) + ' ft',
