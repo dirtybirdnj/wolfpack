@@ -39,9 +39,10 @@ export class GameScene extends Phaser.Scene {
     }
     
     create() {
-        // Get game mode from registry (set by MenuScene)
+        // Get fishing type and game mode from registry (set by MenuScene)
+        this.fishingType = this.registry.get('fishingType') || GameConfig.FISHING_TYPE_ICE;
         this.gameMode = this.registry.get('gameMode') || GameConfig.GAME_MODE_UNLIMITED;
-        console.log(`Starting game in ${this.gameMode} mode`);
+        console.log(`Starting game: ${this.fishingType} fishing in ${this.gameMode} mode`);
 
         // Initialize timer based on game mode
         if (this.gameMode === GameConfig.GAME_MODE_ARCADE) {
@@ -53,20 +54,20 @@ export class GameScene extends Phaser.Scene {
         }
 
         // Determine if this is a summer mode (kayak or motorboat)
-        const isSummerMode = this.gameMode === GameConfig.GAME_MODE_KAYAK ||
-                             this.gameMode === GameConfig.GAME_MODE_MOTORBOAT;
+        const isSummerMode = this.fishingType === GameConfig.FISHING_TYPE_KAYAK ||
+                             this.fishingType === GameConfig.FISHING_TYPE_MOTORBOAT;
 
-        // Set up appropriate manager based on game mode
+        // Set up appropriate manager based on fishing type
         if (isSummerMode) {
-            this.boatManager = new BoatManager(this, this.gameMode);
+            this.boatManager = new BoatManager(this, this.fishingType);
             this.iceHoleManager = null; // Not used in summer modes
         } else {
             this.iceHoleManager = new IceHoleManager(this);
             this.boatManager = null; // Not used in winter modes
         }
 
-        // Set up the sonar display (pass game mode for proper rendering)
-        this.sonarDisplay = new SonarDisplay(this, this.gameMode);
+        // Set up the sonar display (pass fishing type for proper rendering)
+        this.sonarDisplay = new SonarDisplay(this, this.fishingType);
 
         // Create the player's lure - start at better viewing depth
         this.lure = new Lure(this, GameConfig.CANVAS_WIDTH / 2, 100); // Centered, 25ft deep
@@ -1394,6 +1395,7 @@ export class GameScene extends Phaser.Scene {
         this.registry.set('finalFishLost', this.fishLost);
         this.registry.set('finalGameTime', this.gameTime);
         this.registry.set('caughtFishData', this.caughtFishData);
+        this.registry.set('fishingType', this.fishingType);
         this.registry.set('gameMode', this.gameMode);
 
         // Fade out and go to game over scene

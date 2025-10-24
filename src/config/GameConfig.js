@@ -1,10 +1,14 @@
 // Game configuration and constants
 export const GameConfig = {
-    // Game modes
+    // Fishing types (ice, kayak, boat)
+    FISHING_TYPE_ICE: 'ice',
+    FISHING_TYPE_KAYAK: 'kayak',
+    FISHING_TYPE_MOTORBOAT: 'motorboat',
+
+    // Game modes (arcade, unlimited)
     GAME_MODE_ARCADE: 'arcade',
     GAME_MODE_UNLIMITED: 'unlimited',
-    GAME_MODE_KAYAK: 'kayak',
-    GAME_MODE_MOTORBOAT: 'motorboat',
+
     ARCADE_TIME_LIMIT: 120, // 2 minutes in seconds
     ARCADE_EMERGENCY_SPAWN_TIME: 30, // spawn emergency fish when < 30 seconds left
 

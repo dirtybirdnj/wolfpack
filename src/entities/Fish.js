@@ -16,9 +16,9 @@ const FEMALE_NAMES = [
 ];
 
 export class Fish {
-    constructor(scene, x, y, size = 'MEDIUM', gameMode = null) {
+    constructor(scene, x, y, size = 'MEDIUM', fishingType = null) {
         this.scene = scene;
-        this.gameMode = gameMode || scene.gameMode; // Use provided gameMode or get from scene
+        this.fishingType = fishingType || scene.fishingType; // Use provided fishingType or get from scene
 
         // World coordinates (actual position in the lake)
         this.worldX = x;
@@ -44,8 +44,8 @@ export class Fish {
         this.depthZone = this.getDepthZone();
         this.speed = this.baseSpeed * this.depthZone.speedMultiplier;
 
-        // AI controller - pass game mode for thermocline behavior
-        this.ai = new FishAI(this, this.gameMode);
+        // AI controller - pass fishing type for thermocline behavior
+        this.ai = new FishAI(this, this.fishingType);
         
         // Visual properties for sonar display
         this.sonarTrail = [];

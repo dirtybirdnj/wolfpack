@@ -1,9 +1,9 @@
 import GameConfig from '../config/GameConfig.js';
 
 export class SonarDisplay {
-    constructor(scene, gameMode) {
+    constructor(scene, fishingType) {
         this.scene = scene;
-        this.gameMode = gameMode; // Track game mode for rendering
+        this.fishingType = fishingType; // Track fishing type for rendering
         this.graphics = scene.add.graphics();
         this.graphics.setDepth(0); // Render as background
         this.gridOffset = 0;
@@ -172,8 +172,8 @@ export class SonarDisplay {
     }
     
     drawThermoclines() {
-        const isSummerMode = this.gameMode === GameConfig.GAME_MODE_KAYAK ||
-                             this.gameMode === GameConfig.GAME_MODE_MOTORBOAT;
+        const isSummerMode = this.fishingType === GameConfig.FISHING_TYPE_KAYAK ||
+                             this.fishingType === GameConfig.FISHING_TYPE_MOTORBOAT;
 
         if (isSummerMode) {
             // Summer: Draw prominent thermocline at specified depth
@@ -306,8 +306,8 @@ export class SonarDisplay {
     }
     
     drawSurfaceLine() {
-        const isSummerMode = this.gameMode === GameConfig.GAME_MODE_KAYAK ||
-                             this.gameMode === GameConfig.GAME_MODE_MOTORBOAT;
+        const isSummerMode = this.fishingType === GameConfig.FISHING_TYPE_KAYAK ||
+                             this.fishingType === GameConfig.FISHING_TYPE_MOTORBOAT;
 
         if (isSummerMode) {
             // Summer: Draw simple black line at water surface (0 depth)

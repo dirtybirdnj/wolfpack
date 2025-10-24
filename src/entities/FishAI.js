@@ -2,9 +2,9 @@ import GameConfig from '../config/GameConfig.js';
 import { Constants, Utils } from '../utils/Constants.js';
 
 export class FishAI {
-    constructor(fish, gameMode) {
+    constructor(fish, fishingType) {
         this.fish = fish;
-        this.gameMode = gameMode; // Store game mode for thermocline behavior
+        this.fishingType = fishingType; // Store fishing type for thermocline behavior
         this.state = Constants.FISH_STATE.IDLE;
         this.targetX = null;
         this.targetY = null;
@@ -40,8 +40,8 @@ export class FishAI {
     }
     
     calculateDepthPreference() {
-        const isSummerMode = this.gameMode === GameConfig.GAME_MODE_KAYAK ||
-                             this.gameMode === GameConfig.GAME_MODE_MOTORBOAT;
+        const isSummerMode = this.fishingType === GameConfig.FISHING_TYPE_KAYAK ||
+                             this.fishingType === GameConfig.FISHING_TYPE_MOTORBOAT;
 
         if (isSummerMode) {
             // Summer: Lake trout prefer to stay below thermocline
@@ -404,8 +404,8 @@ export class FishAI {
     }
     
     getMovementVector() {
-        const isSummerMode = this.gameMode === GameConfig.GAME_MODE_KAYAK ||
-                             this.gameMode === GameConfig.GAME_MODE_MOTORBOAT;
+        const isSummerMode = this.fishingType === GameConfig.FISHING_TYPE_KAYAK ||
+                             this.fishingType === GameConfig.FISHING_TYPE_MOTORBOAT;
 
         // IDLE fish cruise horizontally without a specific target
         if (this.state === Constants.FISH_STATE.IDLE || !this.targetX || !this.targetY) {

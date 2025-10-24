@@ -4,9 +4,9 @@ import GameConfig from '../config/GameConfig.js';
  * Manages kayak and motor boat fishing modes
  */
 export class BoatManager {
-    constructor(scene, gameMode) {
+    constructor(scene, fishingType) {
         this.scene = scene;
-        this.gameMode = gameMode;
+        this.fishingType = fishingType;
 
         // Player position on water (horizontal, in game units)
         this.playerX = this.getStartingPosition();
@@ -33,12 +33,12 @@ export class BoatManager {
         // Initialize UI
         this.updateUI();
 
-        const modeText = gameMode === GameConfig.GAME_MODE_KAYAK ? 'kayak' : 'motor boat';
+        const modeText = fishingType === GameConfig.FISHING_TYPE_KAYAK ? 'kayak' : 'motor boat';
         console.log(`🚣 Boat Manager initialized - Starting ${modeText} fishing`);
     }
 
     getStartingPosition() {
-        if (this.gameMode === GameConfig.GAME_MODE_KAYAK) {
+        if (this.fishingType === GameConfig.FISHING_TYPE_KAYAK) {
             // Kayak: Start in middle of lake at depth between 70-120 feet
             // Find a position with the right depth
             for (let x = 3000; x < 7000; x += 100) {
@@ -89,7 +89,7 @@ export class BoatManager {
 
     movePlayer(direction) {
         // direction: -1 = left, 1 = right
-        if (this.gameMode === GameConfig.GAME_MODE_KAYAK) {
+        if (this.fishingType === GameConfig.FISHING_TYPE_KAYAK) {
             // Kayak mode
             if (this.tiredness >= GameConfig.KAYAK_TIREDNESS_THRESHOLD) {
                 // Too tired to paddle
@@ -125,7 +125,7 @@ export class BoatManager {
 
     update() {
         // Update meters
-        if (this.gameMode === GameConfig.GAME_MODE_KAYAK) {
+        if (this.fishingType === GameConfig.FISHING_TYPE_KAYAK) {
             this.updateKayak();
         } else {
             this.updateMotorboat();
@@ -201,7 +201,7 @@ export class BoatManager {
     drawBoat() {
         const screenX = GameConfig.CANVAS_WIDTH / 2; // Boat always centered
 
-        if (this.gameMode === GameConfig.GAME_MODE_KAYAK) {
+        if (this.fishingType === GameConfig.FISHING_TYPE_KAYAK) {
             // Draw kayak
             this.graphics.fillStyle(0xff6600, 1.0);
             // Kayak body (elongated ellipse)
@@ -244,7 +244,7 @@ export class BoatManager {
     }
 
     updateUI() {
-        if (this.gameMode === GameConfig.GAME_MODE_KAYAK) {
+        if (this.fishingType === GameConfig.FISHING_TYPE_KAYAK) {
             // Update tiredness meter
             const tirednessEl = document.getElementById('kayak-tiredness');
             if (tirednessEl) {
