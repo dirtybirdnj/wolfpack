@@ -1,8 +1,9 @@
 import GameConfig from '../config/GameConfig.js';
 
 export class SonarDisplay {
-    constructor(scene) {
+    constructor(scene, gameMode) {
         this.scene = scene;
+        this.gameMode = gameMode; // Track game mode for rendering
         this.graphics = scene.add.graphics();
         this.graphics.setDepth(0); // Render as background
         this.gridOffset = 0;
@@ -171,20 +172,55 @@ export class SonarDisplay {
     }
     
     drawThermoclines() {
-        // Draw temperature layers
-        this.thermoclines.forEach(layer => {
-            const y = layer.depth * GameConfig.DEPTH_SCALE;
-            this.graphics.lineStyle(1, 0x0099ff, layer.strength * 0.3);
-            
-            // Wavy line to show thermocline
+        const isSummerMode = this.gameMode === GameConfig.GAME_MODE_KAYAK ||
+                             this.gameMode === GameConfig.GAME_MODE_MOTORBOAT;
+
+        if (isSummerMode) {
+            // Summer: Draw prominent thermocline at specified depth
+            const thermoclineY = GameConfig.THERMOCLINE_DEPTH * GameConfig.DEPTH_SCALE;
+            this.graphics.lineStyle(3, 0xff6600, 0.6); // Orange, more visible
+
+            // Wavy line to show thermocline with stronger effect
             this.graphics.beginPath();
-            this.graphics.moveTo(0, y);
+            this.graphics.moveTo(0, thermoclineY);
             for (let x = 0; x < GameConfig.CANVAS_WIDTH; x += 10) {
-                const wave = Math.sin((x + this.scene.time.now * 0.001) * 0.02) * 3;
-                this.graphics.lineTo(x, y + wave);
+                const wave = Math.sin((x + this.scene.time.now * 0.001) * 0.02) * 5;
+                this.graphics.lineTo(x, thermoclineY + wave);
             }
             this.graphics.strokePath();
-        });
+
+            // Add label for thermocline
+            const thermoclineText = this.scene.add.text(
+                GameConfig.CANVAS_WIDTH - 100,
+                thermoclineY - 10,
+                'THERMOCLINE',
+                {
+                    fontSize: '10px',
+                    fontFamily: 'Courier New',
+                    color: '#ff6600',
+                    backgroundColor: '#000000',
+                    padding: { x: 4, y: 2 }
+                }
+            );
+            thermoclineText.setDepth(100);
+            // Clean up text after render
+            this.scene.time.delayedCall(50, () => thermoclineText.destroy());
+        } else {
+            // Winter: Draw subtle temperature layers
+            this.thermoclines.forEach(layer => {
+                const y = layer.depth * GameConfig.DEPTH_SCALE;
+                this.graphics.lineStyle(1, 0x0099ff, layer.strength * 0.3);
+
+                // Wavy line to show thermocline
+                this.graphics.beginPath();
+                this.graphics.moveTo(0, y);
+                for (let x = 0; x < GameConfig.CANVAS_WIDTH; x += 10) {
+                    const wave = Math.sin((x + this.scene.time.now * 0.001) * 0.02) * 3;
+                    this.graphics.lineTo(x, y + wave);
+                }
+                this.graphics.strokePath();
+            });
+        }
     }
     
     drawBottomProfile() {
@@ -270,18 +306,36 @@ export class SonarDisplay {
     }
     
     drawSurfaceLine() {
-        // Draw water surface
-        this.graphics.lineStyle(2, GameConfig.COLOR_SURFACE, 0.5);
-        this.graphics.beginPath();
-        this.graphics.moveTo(0, 0);
-        
-        // Animated waves
-        for (let x = 0; x < GameConfig.CANVAS_WIDTH; x += 5) {
-            const wave = Math.sin((x + this.scene.time.now * 0.002) * 0.01) * 2;
-            this.graphics.lineTo(x, wave + 2);
+        const isSummerMode = this.gameMode === GameConfig.GAME_MODE_KAYAK ||
+                             this.gameMode === GameConfig.GAME_MODE_MOTORBOAT;
+
+        if (isSummerMode) {
+            // Summer: Draw simple black line at water surface (0 depth)
+            this.graphics.lineStyle(2, 0x000000, 1.0);
+            this.graphics.lineBetween(0, 0, GameConfig.CANVAS_WIDTH, 0);
+        } else {
+            // Winter: Draw ice surface (thicker white line on top of black line)
+            // First draw the water line
+            this.graphics.lineStyle(2, 0x000000, 1.0);
+            this.graphics.lineBetween(0, 0, GameConfig.CANVAS_WIDTH, 0);
+
+            // Then draw thicker white ice line on top
+            this.graphics.lineStyle(6, 0xffffff, 0.8);
+            this.graphics.lineBetween(0, 0, GameConfig.CANVAS_WIDTH, 0);
+
+            // Add some texture to ice
+            this.graphics.lineStyle(2, GameConfig.COLOR_SURFACE, 0.5);
+            this.graphics.beginPath();
+            this.graphics.moveTo(0, 2);
+
+            // Animated waves under ice
+            for (let x = 0; x < GameConfig.CANVAS_WIDTH; x += 5) {
+                const wave = Math.sin((x + this.scene.time.now * 0.002) * 0.01) * 2;
+                this.graphics.lineTo(x, wave + 2);
+            }
+
+            this.graphics.strokePath();
         }
-        
-        this.graphics.strokePath();
     }
     
     destroy() {

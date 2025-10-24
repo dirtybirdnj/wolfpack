@@ -3,8 +3,30 @@ export const GameConfig = {
     // Game modes
     GAME_MODE_ARCADE: 'arcade',
     GAME_MODE_UNLIMITED: 'unlimited',
+    GAME_MODE_KAYAK: 'kayak',
+    GAME_MODE_MOTORBOAT: 'motorboat',
     ARCADE_TIME_LIMIT: 120, // 2 minutes in seconds
     ARCADE_EMERGENCY_SPAWN_TIME: 30, // spawn emergency fish when < 30 seconds left
+
+    // Kayak mode settings
+    KAYAK_MOVE_SPEED: 1.5, // pixels per frame (slow movement)
+    KAYAK_TIREDNESS_RATE: 0.15, // tiredness increase per frame when paddling
+    KAYAK_RECOVERY_RATE: 0.25, // tiredness decrease per frame when resting
+    KAYAK_TIREDNESS_THRESHOLD: 80, // must rest above this percentage
+    KAYAK_START_DEPTH_MIN: 70, // feet
+    KAYAK_START_DEPTH_MAX: 120, // feet
+
+    // Motor boat mode settings
+    MOTORBOAT_MOVE_SPEED: 4.0, // pixels per frame (fast movement)
+    MOTORBOAT_GAS_USAGE: 0.08, // gas decrease per frame when moving
+    MOTORBOAT_START_GAS: 100, // start with full tank
+    MOTORBOAT_DOCK_POSITION: 100, // X position of docks (right side)
+    MOTORBOAT_DEEP_WATER_START: 700, // X position where deep water begins
+
+    // Summer settings (for kayak and motorboat modes)
+    SUMMER_WATER_TEMP_MIN: 68, // warmer summer water
+    SUMMER_WATER_TEMP_MAX: 75,
+    THERMOCLINE_DEPTH: 35, // feet - lake trout stay below this in summer
 
     // Canvas settings - optimized for 13" screens with improved visibility
     CANVAS_WIDTH: 900,

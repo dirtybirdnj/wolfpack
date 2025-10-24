@@ -2,8 +2,9 @@ import GameConfig from '../config/GameConfig.js';
 import { Constants, Utils } from '../utils/Constants.js';
 
 export class FishAI {
-    constructor(fish) {
+    constructor(fish, gameMode) {
         this.fish = fish;
+        this.gameMode = gameMode; // Store game mode for thermocline behavior
         this.state = Constants.FISH_STATE.IDLE;
         this.targetX = null;
         this.targetY = null;
@@ -27,6 +28,9 @@ export class FishAI {
         this.targetBaitfishCloud = null;
         this.targetBaitfish = null;
         this.isFrenzying = false;
+
+        // Thermocline behavior (summer modes only)
+        this.returningToThermocline = false;
     }
 
     get aggressiveness() {
@@ -36,10 +40,20 @@ export class FishAI {
     }
     
     calculateDepthPreference() {
-        // Lake trout prefer deeper, cooler water
-        const minDepth = GameConfig.LAKE_TROUT_PREFERRED_DEPTH_MIN;
-        const maxDepth = GameConfig.LAKE_TROUT_PREFERRED_DEPTH_MAX;
-        return Utils.randomBetween(minDepth, maxDepth);
+        const isSummerMode = this.gameMode === GameConfig.GAME_MODE_KAYAK ||
+                             this.gameMode === GameConfig.GAME_MODE_MOTORBOAT;
+
+        if (isSummerMode) {
+            // Summer: Lake trout prefer to stay below thermocline
+            const minDepth = GameConfig.THERMOCLINE_DEPTH + 5; // 5 feet below thermocline
+            const maxDepth = GameConfig.LAKE_TROUT_PREFERRED_DEPTH_MAX;
+            return Utils.randomBetween(minDepth, maxDepth);
+        } else {
+            // Winter: Lake trout prefer deeper, cooler water
+            const minDepth = GameConfig.LAKE_TROUT_PREFERRED_DEPTH_MIN;
+            const maxDepth = GameConfig.LAKE_TROUT_PREFERRED_DEPTH_MAX;
+            return Utils.randomBetween(minDepth, maxDepth);
+        }
     }
 
     detectFrenzy(lure, allFish) {
@@ -390,8 +404,41 @@ export class FishAI {
     }
     
     getMovementVector() {
+        const isSummerMode = this.gameMode === GameConfig.GAME_MODE_KAYAK ||
+                             this.gameMode === GameConfig.GAME_MODE_MOTORBOAT;
+
         // IDLE fish cruise horizontally without a specific target
         if (this.state === Constants.FISH_STATE.IDLE || !this.targetX || !this.targetY) {
+            // Check thermocline in summer modes
+            if (isSummerMode) {
+                const thermoclineDepth = GameConfig.THERMOCLINE_DEPTH;
+                const currentDepth = this.fish.depth;
+
+                // If fish is above thermocline, slowly return below it
+                if (currentDepth < thermoclineDepth) {
+                    this.returningToThermocline = true;
+                    return {
+                        x: this.fish.speed * this.idleDirection * 0.5, // Slower horizontal movement
+                        y: this.fish.speed * 0.3 // Drift downward
+                    };
+                } else if (currentDepth < thermoclineDepth + 5) {
+                    // Just below thermocline, continue drifting down slowly
+                    this.returningToThermocline = true;
+                    return {
+                        x: this.fish.speed * this.idleDirection * 0.7,
+                        y: this.fish.speed * 0.2
+                    };
+                } else {
+                    // Below thermocline, normal cruising
+                    this.returningToThermocline = false;
+                    return {
+                        x: this.fish.speed * this.idleDirection,
+                        y: 0 // Stay at current depth while idle
+                    };
+                }
+            }
+
+            // Winter mode: normal idle behavior
             return {
                 x: this.fish.speed * this.idleDirection,
                 y: 0 // Stay at current depth while idle

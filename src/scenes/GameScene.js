@@ -6,6 +6,7 @@ import Fish from '../entities/Fish.js';
 import FishFight from '../entities/FishFight.js';
 import BaitfishCloud from '../entities/BaitfishCloud.js';
 import IceHoleManager from '../managers/IceHoleManager.js';
+import BoatManager from '../managers/BoatManager.js';
 import FishingLine from '../entities/FishingLine.js';
 import { FishingLineModel } from '../models/FishingLineModel.js';
 import Zooplankton from '../entities/Zooplankton.js';
@@ -51,11 +52,21 @@ export class GameScene extends Phaser.Scene {
             this.gameTime = 0;
         }
 
-        // Set up ice hole manager (must be first!)
-        this.iceHoleManager = new IceHoleManager(this);
+        // Determine if this is a summer mode (kayak or motorboat)
+        const isSummerMode = this.gameMode === GameConfig.GAME_MODE_KAYAK ||
+                             this.gameMode === GameConfig.GAME_MODE_MOTORBOAT;
 
-        // Set up the sonar display
-        this.sonarDisplay = new SonarDisplay(this);
+        // Set up appropriate manager based on game mode
+        if (isSummerMode) {
+            this.boatManager = new BoatManager(this, this.gameMode);
+            this.iceHoleManager = null; // Not used in summer modes
+        } else {
+            this.iceHoleManager = new IceHoleManager(this);
+            this.boatManager = null; // Not used in winter modes
+        }
+
+        // Set up the sonar display (pass game mode for proper rendering)
+        this.sonarDisplay = new SonarDisplay(this, this.gameMode);
 
         // Create the player's lure - start at better viewing depth
         this.lure = new Lure(this, GameConfig.CANVAS_WIDTH / 2, 100); // Centered, 25ft deep
@@ -70,7 +81,11 @@ export class GameScene extends Phaser.Scene {
         this.setupInput();
 
         // Set water temperature (affects fish behavior)
-        this.waterTemp = Utils.randomBetween(GameConfig.WATER_TEMP_MIN, GameConfig.WATER_TEMP_MAX);
+        if (isSummerMode) {
+            this.waterTemp = Utils.randomBetween(GameConfig.SUMMER_WATER_TEMP_MIN, GameConfig.SUMMER_WATER_TEMP_MAX);
+        } else {
+            this.waterTemp = Utils.randomBetween(GameConfig.WATER_TEMP_MIN, GameConfig.WATER_TEMP_MAX);
+        }
 
         // Event listeners
         this.events.on('fishCaught', this.handleFishCaught, this);
@@ -341,8 +356,12 @@ export class GameScene extends Phaser.Scene {
             // Don't block normal gameplay - fish and bait continue to move!
         }
 
-        // Update ice hole manager (must be before input)
-        this.iceHoleManager.update();
+        // Update appropriate manager (must be before input)
+        if (this.iceHoleManager) {
+            this.iceHoleManager.update();
+        } else if (this.boatManager) {
+            this.boatManager.update();
+        }
 
         // Update sonar display
         this.sonarDisplay.update();
@@ -360,7 +379,8 @@ export class GameScene extends Phaser.Scene {
 
         // Update fishing line (always - connects hole to lure or hooked fish)
         const hookedFish = this.currentFight && this.currentFight.active ? this.currentFight.fish : null;
-        this.fishingLine.update(this.lure, hookedFish, this.iceHoleManager);
+        const manager = this.iceHoleManager || this.boatManager;
+        this.fishingLine.update(this.lure, hookedFish, manager);
 
         // Continuously update lure info in UI
         this.updateSpeedDisplay();
@@ -506,29 +526,55 @@ export class GameScene extends Phaser.Scene {
     }
     
     handleInput() {
-        // Drop lure with space or down arrow
-        if (this.spaceKey.isDown || this.cursors.down.isDown) {
-            this.lure.drop();
-        }
+        // Check if in boat mode
+        const isBoatMode = this.boatManager !== null;
 
-        // Retrieve lure with up arrow
-        if (this.cursors.up.isDown) {
-            this.lure.retrieve();
+        if (isBoatMode) {
+            // Boat mode: left/right moves the boat
+            if (this.cursors.left.isDown) {
+                this.boatManager.movePlayer(-1);
+            } else if (this.cursors.right.isDown) {
+                this.boatManager.movePlayer(1);
+            } else {
+                this.boatManager.stopMoving();
+            }
+
+            // Up/down still controls lure
+            if (this.spaceKey.isDown || this.cursors.down.isDown) {
+                this.lure.drop();
+            }
+
+            if (this.cursors.up.isDown) {
+                this.lure.retrieve();
+            } else {
+                this.lure.stopRetrieve();
+            }
         } else {
-            this.lure.stopRetrieve();
+            // Ice fishing mode: original controls
+            // Drop lure with space or down arrow
+            if (this.spaceKey.isDown || this.cursors.down.isDown) {
+                this.lure.drop();
+            }
+
+            // Retrieve lure with up arrow
+            if (this.cursors.up.isDown) {
+                this.lure.retrieve();
+            } else {
+                this.lure.stopRetrieve();
+            }
+
+            // Adjust retrieve speed with left/right arrows
+            if (Phaser.Input.Keyboard.JustDown(this.cursors.left)) {
+                this.lure.adjustSpeed(-1);
+                this.updateSpeedDisplay();
+            }
+            if (Phaser.Input.Keyboard.JustDown(this.cursors.right)) {
+                this.lure.adjustSpeed(1);
+                this.updateSpeedDisplay();
+            }
         }
 
-        // Adjust retrieve speed with left/right arrows
-        if (Phaser.Input.Keyboard.JustDown(this.cursors.left)) {
-            this.lure.adjustSpeed(-1);
-            this.updateSpeedDisplay();
-        }
-        if (Phaser.Input.Keyboard.JustDown(this.cursors.right)) {
-            this.lure.adjustSpeed(1);
-            this.updateSpeedDisplay();
-        }
-
-        // Reset lure with R key
+        // Reset lure with R key (all modes)
         if (Phaser.Input.Keyboard.JustDown(this.rKey)) {
             this.lure.reset();
         }
