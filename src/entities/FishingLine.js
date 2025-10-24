@@ -18,11 +18,13 @@ export class FishingLine {
         this.iceHoleY = 54; // Ice surface height
     }
 
-    update(lure, hookedFish = null, iceHoleManager = null) {
+    update(lure, hookedFish = null, manager = null) {
         this.graphics.clear();
 
-        // Get ice hole X position (always center of screen when fishing)
-        const iceHoleX = GameConfig.CANVAS_WIDTH / 2;
+        // Get line start position (always center of screen when fishing)
+        const lineStartX = GameConfig.CANVAS_WIDTH / 2;
+        // Get surface height from manager (ice or water)
+        const surfaceY = manager ? (manager.iceHeight || manager.waterHeight || 0) : this.iceHoleY;
 
         // Determine where the line ends
         let endX, endY;
@@ -46,14 +48,14 @@ export class FishingLine {
             endY = lure.y;
         }
 
-        // Only draw line if lure is below ice surface
-        if (endY > this.iceHoleY) {
+        // Only draw line if lure is below surface
+        if (endY > surfaceY) {
             // Draw the fishing line with slight curve for realism
-            const midX = (iceHoleX + endX) / 2;
-            const midY = (this.iceHoleY + endY) / 2;
+            const midX = (lineStartX + endX) / 2;
+            const midY = (surfaceY + endY) / 2;
             const lineLength = Math.sqrt(
-                Math.pow(endX - iceHoleX, 2) +
-                Math.pow(endY - this.iceHoleY, 2)
+                Math.pow(endX - lineStartX, 2) +
+                Math.pow(endY - surfaceY, 2)
             );
 
             // Sag amount based on line length (more length = more sag)
@@ -61,7 +63,7 @@ export class FishingLine {
 
             // Draw curved line using Phaser's path system
             const curve = new Phaser.Curves.QuadraticBezier(
-                new Phaser.Math.Vector2(iceHoleX, this.iceHoleY),
+                new Phaser.Math.Vector2(lineStartX, surfaceY),
                 new Phaser.Math.Vector2(midX, midY + sagAmount),
                 new Phaser.Math.Vector2(endX, endY)
             );
