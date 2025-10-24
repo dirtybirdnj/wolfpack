@@ -26,7 +26,7 @@ export class IceHoleManager {
         this.iceGraphics.setDepth(1000); // On top of most things
 
         // Ice surface height (in pixels from top)
-        this.iceHeight = 60;
+        this.iceHeight = 48;
 
         // Lake bed depth variation (for different hole locations)
         this.lakeBedProfile = this.generateLakeBedProfile();
@@ -234,22 +234,22 @@ export class IceHoleManager {
 
         // Hole opening (dark circle)
         this.iceGraphics.fillStyle(0x1a3a4a, 1.0);
-        this.iceGraphics.fillCircle(screenX, this.iceHeight / 2, 20);
+        this.iceGraphics.fillCircle(screenX, this.iceHeight / 2, 16);
 
         // Hole rim (lighter)
         this.iceGraphics.lineStyle(2, 0xffffff, 0.8);
-        this.iceGraphics.strokeCircle(screenX, this.iceHeight / 2, 20);
+        this.iceGraphics.strokeCircle(screenX, this.iceHeight / 2, 16);
 
         // Current hole indicator
         if (isCurrent) {
             this.iceGraphics.lineStyle(3, 0x00ff00, 1.0);
-            this.iceGraphics.strokeCircle(screenX, this.iceHeight / 2, 25);
+            this.iceGraphics.strokeCircle(screenX, this.iceHeight / 2, 20);
         }
 
         // Hole number
         const textColor = isCurrent ? '#00ff00' : '#ffffff';
         const text = this.scene.add.text(screenX, this.iceHeight / 2, `${index + 1}`, {
-            fontSize: '12px',
+            fontSize: '10px',
             fontFamily: 'Courier New',
             color: textColor,
             fontStyle: 'bold'
@@ -284,7 +284,7 @@ export class IceHoleManager {
         // Position indicator below
         const depthHere = this.getDepthAtPosition(this.playerX);
         const text = this.scene.add.text(screenX, this.iceHeight + 15, `Depth: ${depthHere.toFixed(0)}ft`, {
-            fontSize: '10px',
+            fontSize: '8px',
             fontFamily: 'Courier New',
             color: '#ffff00',
             backgroundColor: '#000000',

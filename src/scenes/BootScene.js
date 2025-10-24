@@ -19,24 +19,24 @@ export class BootScene extends Phaser.Scene {
             }
         });
         
-        loadingBox.fillRect(150, 250, 500, 50);
-        
+        loadingBox.fillRect(120, 200, 400, 40);
+
         // Loading text
-        const loadingText = this.add.text(400, 220, 'Calibrating Sonar...', {
-            fontSize: '20px',
+        const loadingText = this.add.text(GameConfig.CANVAS_WIDTH / 2, 175, 'Calibrating Sonar...', {
+            fontSize: '16px',
             fontFamily: 'Courier New',
             color: '#00ff00'
         });
         loadingText.setOrigin(0.5, 0.5);
-        
+
         // Lake Champlain fact display
         const randomFact = LAKE_CHAMPLAIN_FACTS[Math.floor(Math.random() * LAKE_CHAMPLAIN_FACTS.length)];
-        const factText = this.add.text(400, 350, randomFact, {
-            fontSize: '14px',
+        const factText = this.add.text(GameConfig.CANVAS_WIDTH / 2, 280, randomFact, {
+            fontSize: '11px',
             fontFamily: 'Courier New',
             color: '#88ff88',
             align: 'center',
-            wordWrap: { width: 600 }
+            wordWrap: { width: 480 }
         });
         factText.setOrigin(0.5, 0.5);
         
@@ -44,7 +44,7 @@ export class BootScene extends Phaser.Scene {
         this.load.on('progress', (value) => {
             loadingBar.clear();
             loadingBar.fillStyle(GameConfig.COLOR_TEXT, 1);
-            loadingBar.fillRect(155, 255, 490 * value, 40);
+            loadingBar.fillRect(124, 204, 392 * value, 32);
         });
         
         this.load.on('complete', () => {
@@ -89,23 +89,23 @@ export class BootScene extends Phaser.Scene {
     
     create() {
         // Display title screen
-        this.add.text(400, 150, 'LAKE CHAMPLAIN\nSONAR FISHING', {
-            fontSize: '36px',
+        this.add.text(GameConfig.CANVAS_WIDTH / 2, 100, 'LAKE CHAMPLAIN\nSONAR FISHING', {
+            fontSize: '28px',
             fontFamily: 'Courier New',
             color: '#00ff00',
             align: 'center',
-            lineSpacing: 10
+            lineSpacing: 8
         }).setOrigin(0.5, 0.5);
 
-        this.add.text(400, 250, 'Lake Trout Simulator', {
-            fontSize: '18px',
+        this.add.text(GameConfig.CANVAS_WIDTH / 2, 180, 'Lake Trout Simulator', {
+            fontSize: '14px',
             fontFamily: 'Courier New',
             color: '#88ff88'
         }).setOrigin(0.5, 0.5);
 
         // Location text
-        this.add.text(400, 320, '45°00\'N 73°15\'W\nBurlington, Vermont', {
-            fontSize: '14px',
+        this.add.text(GameConfig.CANVAS_WIDTH / 2, 230, '45°00\'N 73°15\'W\nBurlington, Vermont', {
+            fontSize: '11px',
             fontFamily: 'Courier New',
             color: '#66aa66',
             align: 'center'
@@ -121,8 +121,8 @@ export class BootScene extends Phaser.Scene {
             'Water Temp: 38-42°F'
         ].join('\n');
 
-        const instructText = this.add.text(400, 450, instructions, {
-            fontSize: '14px',
+        const instructText = this.add.text(GameConfig.CANVAS_WIDTH / 2, 360, instructions, {
+            fontSize: '11px',
             fontFamily: 'Courier New',
             color: '#00ff00',
             align: 'center',

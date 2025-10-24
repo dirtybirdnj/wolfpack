@@ -131,8 +131,8 @@ export class GameScene extends Phaser.Scene {
     }
 
     showGamepadConnectedNotification(gamepadId) {
-        const text = this.add.text(400, 50, 'Gamepad Connected!', {
-            fontSize: '16px',
+        const text = this.add.text(GameConfig.CANVAS_WIDTH / 2, 40, 'Gamepad Connected!', {
+            fontSize: '13px',
             fontFamily: 'Courier New',
             color: '#00ff00',
             stroke: '#000000',
@@ -463,14 +463,14 @@ export class GameScene extends Phaser.Scene {
         // Create test window
         const windowBg = this.add.graphics();
         windowBg.fillStyle(0x1a1a2e, 0.95);
-        windowBg.fillRoundedRect(100, 50, 600, 500, 10);
+        windowBg.fillRoundedRect(80, 40, 480, 400, 10);
         windowBg.lineStyle(2, 0x00aaff, 1);
-        windowBg.strokeRoundedRect(100, 50, 600, 500, 10);
+        windowBg.strokeRoundedRect(80, 40, 480, 400, 10);
         windowBg.setDepth(2001);
 
         // Title
-        const title = this.add.text(400, 80, 'CONTROLLER TEST', {
-            fontSize: '24px',
+        const title = this.add.text(GameConfig.CANVAS_WIDTH / 2, 64, 'CONTROLLER TEST', {
+            fontSize: '19px',
             fontFamily: 'Courier New',
             color: '#00aaff',
             fontStyle: 'bold'
@@ -479,8 +479,8 @@ export class GameScene extends Phaser.Scene {
         title.setDepth(2002);
 
         // Instructions
-        const instructions = this.add.text(400, 120, 'Press buttons on your controller to test', {
-            fontSize: '14px',
+        const instructions = this.add.text(GameConfig.CANVAS_WIDTH / 2, 96, 'Press buttons on your controller to test', {
+            fontSize: '11px',
             fontFamily: 'Courier New',
             color: '#888888'
         });
@@ -489,31 +489,31 @@ export class GameScene extends Phaser.Scene {
 
         // Input status text
         const statusTexts = {
-            dpadUp: this.createTestText(150, 170, 'D-Pad UP'),
-            dpadDown: this.createTestText(150, 200, 'D-Pad DOWN'),
-            dpadLeft: this.createTestText(150, 230, 'D-Pad LEFT'),
-            dpadRight: this.createTestText(150, 260, 'D-Pad RIGHT'),
-            buttonA: this.createTestText(450, 170, 'A Button'),
-            buttonB: this.createTestText(450, 200, 'B Button'),
-            buttonX: this.createTestText(450, 230, 'X Button'),
-            buttonY: this.createTestText(450, 260, 'Y Button'),
-            l1: this.createTestText(150, 310, 'L1/LB'),
-            r1: this.createTestText(450, 310, 'R1/RB'),
-            l2: this.createTestText(150, 340, 'L2/LT'),
-            r2: this.createTestText(450, 340, 'R2/RT'),
-            leftStick: this.createTestText(150, 390, 'Left Stick'),
-            rightStick: this.createTestText(450, 390, 'Right Stick')
+            dpadUp: this.createTestText(120, 136, 'D-Pad UP'),
+            dpadDown: this.createTestText(120, 160, 'D-Pad DOWN'),
+            dpadLeft: this.createTestText(120, 184, 'D-Pad LEFT'),
+            dpadRight: this.createTestText(120, 208, 'D-Pad RIGHT'),
+            buttonA: this.createTestText(360, 136, 'A Button'),
+            buttonB: this.createTestText(360, 160, 'B Button'),
+            buttonX: this.createTestText(360, 184, 'X Button'),
+            buttonY: this.createTestText(360, 208, 'Y Button'),
+            l1: this.createTestText(120, 248, 'L1/LB'),
+            r1: this.createTestText(360, 248, 'R1/RB'),
+            l2: this.createTestText(120, 272, 'L2/LT'),
+            r2: this.createTestText(360, 272, 'R2/RT'),
+            leftStick: this.createTestText(120, 312, 'Left Stick'),
+            rightStick: this.createTestText(360, 312, 'Right Stick')
         };
 
         // OK Button
         const okButton = this.add.graphics();
         okButton.fillStyle(0x00aaff, 1);
-        okButton.fillRoundedRect(300, 470, 200, 50, 5);
+        okButton.fillRoundedRect(240, 376, 160, 40, 5);
         okButton.setDepth(2002);
-        okButton.setInteractive(new Phaser.Geom.Rectangle(300, 470, 200, 50), Phaser.Geom.Rectangle.Contains);
+        okButton.setInteractive(new Phaser.Geom.Rectangle(240, 376, 160, 40), Phaser.Geom.Rectangle.Contains);
 
-        const okText = this.add.text(400, 495, 'OK', {
-            fontSize: '20px',
+        const okText = this.add.text(GameConfig.CANVAS_WIDTH / 2, 396, 'OK', {
+            fontSize: '16px',
             fontFamily: 'Courier New',
             color: '#ffffff',
             fontStyle: 'bold'
@@ -528,13 +528,13 @@ export class GameScene extends Phaser.Scene {
         okButton.on('pointerover', () => {
             okButton.clear();
             okButton.fillStyle(0x00ddff, 1);
-            okButton.fillRoundedRect(300, 470, 200, 50, 5);
+            okButton.fillRoundedRect(240, 376, 160, 40, 5);
         });
 
         okButton.on('pointerout', () => {
             okButton.clear();
             okButton.fillStyle(0x00aaff, 1);
-            okButton.fillRoundedRect(300, 470, 200, 50, 5);
+            okButton.fillRoundedRect(240, 376, 160, 40, 5);
         });
 
         // Store UI elements
@@ -582,7 +582,7 @@ export class GameScene extends Phaser.Scene {
 
     createTestText(x, y, label) {
         const text = this.add.text(x, y, `${label}: ⬜`, {
-            fontSize: '14px',
+            fontSize: '11px',
             fontFamily: 'Courier New',
             color: '#ffffff'
         });
@@ -727,15 +727,15 @@ export class GameScene extends Phaser.Scene {
         this.rumbleGamepad(300, 0.6, 0.3); // 300ms, strong motor 60%, weak motor 30%
 
         // Show hook notification
-        const text = this.add.text(400, 200,
+        const text = this.add.text(GameConfig.CANVAS_WIDTH / 2, 160,
             'FISH ON!\nTAP SPACEBAR OR R2 TO REEL!',
             {
-                fontSize: '28px',
+                fontSize: '22px',
                 fontFamily: 'Courier New',
                 color: '#ffff00',
                 align: 'center',
                 stroke: '#000000',
-                strokeThickness: 4
+                strokeThickness: 3
             }
         );
         text.setOrigin(0.5, 0.5);
@@ -754,23 +754,23 @@ export class GameScene extends Phaser.Scene {
     
     showCatchNotification(fish) {
         const info = fish.getInfo();
-        const text = this.add.text(400, 300, 
-            `FISH ON!\n${info.weight}\n+${fish.points} points`, 
+        const text = this.add.text(GameConfig.CANVAS_WIDTH / 2, 240,
+            `FISH ON!\n${info.weight}\n+${fish.points} points`,
             {
-                fontSize: '24px',
+                fontSize: '19px',
                 fontFamily: 'Courier New',
                 color: '#ffff00',
                 align: 'center',
                 stroke: '#000000',
-                strokeThickness: 4
+                strokeThickness: 3
             }
         );
         text.setOrigin(0.5, 0.5);
-        
+
         // Animate and remove
         this.tweens.add({
             targets: text,
-            y: 250,
+            y: 200,
             alpha: 0,
             duration: 2000,
             ease: 'Power2',
@@ -794,15 +794,15 @@ export class GameScene extends Phaser.Scene {
     }
     
     showAchievement(title, description) {
-        const achievementText = this.add.text(400, 100,
+        const achievementText = this.add.text(GameConfig.CANVAS_WIDTH / 2, 80,
             `🏆 ${title} 🏆\n${description}`,
             {
-                fontSize: '18px',
+                fontSize: '14px',
                 fontFamily: 'Courier New',
                 color: '#00ff00',
                 align: 'center',
                 stroke: '#000000',
-                strokeThickness: 3
+                strokeThickness: 2
             }
         );
         achievementText.setOrigin(0.5, 0.5);

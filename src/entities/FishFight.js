@@ -133,10 +133,10 @@ export class FishFight {
     renderTensionBar() {
         this.tensionBar.clear();
 
-        const barX = 50;
-        const barY = 100;
-        const barWidth = 200;
-        const barHeight = 30;
+        const barX = 40;
+        const barY = 80;
+        const barWidth = 160;
+        const barHeight = 24;
 
         // Background
         this.tensionBar.fillStyle(0x000000, 0.8);
@@ -167,7 +167,7 @@ export class FishFight {
         const tensionText = this.scene.add.text(barX + barWidth / 2, barY + barHeight / 2,
             `TENSION: ${Math.floor(this.lineTension)}%`,
             {
-                fontSize: '14px',
+                fontSize: '11px',
                 fontFamily: 'Courier New',
                 color: '#ffffff',
                 fontStyle: 'bold'
@@ -177,10 +177,10 @@ export class FishFight {
         tensionText.setDepth(501);
 
         // Fish stats
-        const statsText = this.scene.add.text(barX, barY + barHeight + 10,
+        const statsText = this.scene.add.text(barX, barY + barHeight + 8,
             `Fish: ${this.fish.weight.toFixed(1)} lbs | Tiredness: ${Math.floor(this.fishTiredness)}% | Distance: ${Math.floor(this.fishDistance / GameConfig.DEPTH_SCALE)} ft`,
             {
-                fontSize: '12px',
+                fontSize: '10px',
                 fontFamily: 'Courier New',
                 color: '#00ff00'
             }
@@ -188,10 +188,10 @@ export class FishFight {
         statsText.setDepth(501);
 
         // Instructions
-        const instructText = this.scene.add.text(barX, barY - 25,
+        const instructText = this.scene.add.text(barX, barY - 20,
             'TAP SPACEBAR TO REEL - Manage tension or line breaks!',
             {
-                fontSize: '11px',
+                fontSize: '9px',
                 fontFamily: 'Courier New',
                 color: '#ffff00'
             }
@@ -210,15 +210,15 @@ export class FishFight {
         console.log('LINE BROKE! Fish escaped.');
 
         // Show message
-        const text = this.scene.add.text(400, 300,
+        const text = this.scene.add.text(GameConfig.CANVAS_WIDTH / 2, 240,
             'LINE BROKE!\nFish Escaped!',
             {
-                fontSize: '32px',
+                fontSize: '26px',
                 fontFamily: 'Courier New',
                 color: '#ff0000',
                 align: 'center',
                 stroke: '#000000',
-                strokeThickness: 4
+                strokeThickness: 3
             }
         );
         text.setOrigin(0.5, 0.5);
@@ -240,8 +240,8 @@ export class FishFight {
         this.fish.ai.state = 'FLEEING';
 
         // Set fast escape velocity
-        const escapeDirection = this.fish.x < 400 ? -1 : 1; // Swim away from center
-        this.fish.ai.targetX = escapeDirection < 0 ? -200 : 1000;
+        const escapeDirection = this.fish.x < GameConfig.CANVAS_WIDTH / 2 ? -1 : 1; // Swim away from center
+        this.fish.ai.targetX = escapeDirection < 0 ? -200 : GameConfig.CANVAS_WIDTH + 200;
         this.fish.ai.targetY = this.fish.y + 50; // Dive down a bit
         this.fish.ai.decisionCooldown = 5000; // Long cooldown so it doesn't come back
 
@@ -260,15 +260,15 @@ export class FishFight {
 
         // Show success message
         const info = this.fish.getInfo();
-        const text = this.scene.add.text(400, 300,
+        const text = this.scene.add.text(GameConfig.CANVAS_WIDTH / 2, 240,
             `FISH LANDED!\n${info.weight}\n+${this.fish.points} points\nReels: ${this.reelCount}`,
             {
-                fontSize: '28px',
+                fontSize: '22px',
                 fontFamily: 'Courier New',
                 color: '#00ff00',
                 align: 'center',
                 stroke: '#000000',
-                strokeThickness: 4
+                strokeThickness: 3
             }
         );
         text.setOrigin(0.5, 0.5);
@@ -276,7 +276,7 @@ export class FishFight {
 
         this.scene.tweens.add({
             targets: text,
-            y: 250,
+            y: 200,
             alpha: 0,
             duration: 3000,
             onComplete: () => text.destroy()
