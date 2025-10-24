@@ -100,7 +100,7 @@
             grid-column: 1 / 4;
             grid-row: 3;
             display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
+            grid-template-columns: 1fr 1fr 1fr 1fr;
             gap: 20px;
         }
 
@@ -560,7 +560,31 @@
                 </div>
             </div>
 
-            <!-- Column 3: Controller & Info -->
+            <!-- Column 3: Fishing Line -->
+            <div class="panel warning">
+                <h3>🧵 FISHING LINE</h3>
+                <div style="font-size: 11px; margin-bottom: 8px;">
+                    Type: <span id="current-line-type" class="status-value">Braided</span>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr; gap: 4px; margin-bottom: 8px;">
+                    <button id="line-type-braid" class="dev-btn" style="font-size: 10px; padding: 6px 4px;">Braid</button>
+                    <button id="line-type-monofilament" class="dev-btn" style="font-size: 10px; padding: 6px 4px;">Mono</button>
+                    <button id="line-type-fluorocarbon" class="dev-btn" style="font-size: 10px; padding: 6px 4px;">Fluoro</button>
+                </div>
+                <div id="braid-color-section" style="border-top: 1px solid var(--text-muted); padding-top: 8px;">
+                    <div style="font-size: 11px; margin-bottom: 6px;">
+                        Color: <span id="current-braid-color" class="status-value">Neon Green</span>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px;">
+                        <button id="braid-color-neon-green" class="dev-btn" style="font-size: 9px; padding: 4px 2px;">Neon</button>
+                        <button id="braid-color-yellow" class="dev-btn" style="font-size: 9px; padding: 4px 2px;">Yellow</button>
+                        <button id="braid-color-moss-green" class="dev-btn" style="font-size: 9px; padding: 4px 2px;">Moss</button>
+                        <button id="braid-color-white" class="dev-btn" style="font-size: 9px; padding: 4px 2px;">White</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Column 4: Controller & Info -->
             <div class="panel secondary">
                 <h3>🎮 CONTROLLER</h3>
                 <div style="margin: 10px 0;">

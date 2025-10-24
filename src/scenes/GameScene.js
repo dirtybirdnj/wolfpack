@@ -7,12 +7,15 @@ import FishFight from '../entities/FishFight.js';
 import BaitfishCloud from '../entities/BaitfishCloud.js';
 import IceHoleManager from '../managers/IceHoleManager.js';
 import FishingLine from '../entities/FishingLine.js';
+import { FishingLineModel } from '../models/FishingLineModel.js';
+import Zooplankton from '../entities/Zooplankton.js';
 
 export class GameScene extends Phaser.Scene {
     constructor() {
         super({ key: 'GameScene' });
         this.fishes = [];
         this.baitfishClouds = [];
+        this.zooplankton = []; // Zooplankton at the bottom
         this.score = 0;
         this.fishCaught = 0;
         this.fishLost = 0; // Track fish that broke the line
@@ -40,6 +43,9 @@ export class GameScene extends Phaser.Scene {
         // Create fishing line
         this.fishingLine = new FishingLine(this);
 
+        // Initialize fishing line model
+        this.fishingLineModel = new FishingLineModel();
+
         // Set up input handlers
         this.setupInput();
         
@@ -61,6 +67,14 @@ export class GameScene extends Phaser.Scene {
         this.time.addEvent({
             delay: 2000,
             callback: this.trySpawnBaitfishCloud,
+            callbackScope: this,
+            loop: true
+        });
+
+        // Start spawning zooplankton at the bottom
+        this.time.addEvent({
+            delay: 1500,
+            callback: this.trySpawnZooplankton,
             callbackScope: this,
             loop: true
         });
@@ -328,10 +342,22 @@ export class GameScene extends Phaser.Scene {
         // Continuously update lure info in UI
         this.updateSpeedDisplay();
 
-        // Update all baitfish clouds
+        // Update and render zooplankton
+        this.zooplankton = this.zooplankton.filter(zp => {
+            if (zp.visible && !zp.consumed) {
+                zp.update();
+                zp.render();
+                return true;
+            } else {
+                zp.destroy();
+                return false;
+            }
+        });
+
+        // Update all baitfish clouds (pass zooplankton for hunting behavior)
         this.baitfishClouds = this.baitfishClouds.filter(cloud => {
             if (cloud.visible) {
-                cloud.update(this.fishes);
+                cloud.update(this.fishes, this.zooplankton);
                 return true;
             } else {
                 cloud.destroy();
@@ -885,6 +911,29 @@ export class GameScene extends Phaser.Scene {
         this.baitfishClouds.push(cloud);
     }
 
+    trySpawnZooplankton() {
+        // Don't spawn too many zooplankton at once
+        if (this.zooplankton.length >= 30) {
+            return;
+        }
+
+        // Spawn 1-3 zooplankton at a time
+        const spawnCount = Math.floor(Utils.randomBetween(1, 3));
+
+        for (let i = 0; i < spawnCount; i++) {
+            // Spawn at random position across the width, at the bottom
+            const x = Utils.randomBetween(0, GameConfig.CANVAS_WIDTH);
+
+            // Spawn near the bottom (95-100 feet deep)
+            const depth = Utils.randomBetween(95, 100);
+            const y = depth * GameConfig.DEPTH_SCALE;
+
+            // Create zooplankton
+            const zp = new Zooplankton(this, x, y);
+            this.zooplankton.push(zp);
+        }
+    }
+
     handleFishCaught(fish) {
         // Start fish fight!
         console.log('Fish hooked! Starting fight...');
@@ -1049,6 +1098,7 @@ export class GameScene extends Phaser.Scene {
         // Clean up
         this.fishes.forEach(fish => fish.destroy());
         this.baitfishClouds.forEach(cloud => cloud.destroy());
+        this.zooplankton.forEach(zp => zp.destroy());
         this.lure.destroy();
         this.fishingLine.destroy();
         this.sonarDisplay.destroy();

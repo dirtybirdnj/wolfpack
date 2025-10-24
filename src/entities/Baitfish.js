@@ -42,27 +42,32 @@ export class Baitfish {
         this.flickerPhase = Math.random() * Math.PI * 2;
     }
 
-    update(cloudCenter, lakersNearby = false, spreadMultiplier = 1.0, scaredLevel = 0) {
+    update(cloudCenter, lakersNearby = false, spreadMultiplier = 1.0, scaredLevel = 0, nearbyZooplankton = []) {
         if (this.consumed || !this.visible) {
             return;
         }
 
         this.age++;
 
-        // Occasionally get confused (1% chance per frame, more likely when scared)
-        const confusionChance = 0.001 + (scaredLevel * 0.002);
-        if (this.confusionLevel === 0 && Math.random() < confusionChance) {
-            // Get confused!
-            this.confusionLevel = Math.random() < 0.3 ? 2 : 1; // 30% chance of VERY confused
-            console.log(`Baitfish got ${this.confusionLevel === 2 ? 'VERY' : ''} confused!`);
-        }
-
-        // Handle confusion behavior
-        if (this.confusionLevel > 0) {
-            this.handleConfusedBehavior(cloudCenter);
+        // Check for nearby zooplankton to hunt
+        if (nearbyZooplankton && nearbyZooplankton.length > 0 && !lakersNearby) {
+            this.handleHuntingBehavior(nearbyZooplankton);
         } else {
-            // Normal schooling behavior
-            this.handleNormalBehavior(cloudCenter, lakersNearby, spreadMultiplier);
+            // Occasionally get confused (1% chance per frame, more likely when scared)
+            const confusionChance = 0.001 + (scaredLevel * 0.002);
+            if (this.confusionLevel === 0 && Math.random() < confusionChance) {
+                // Get confused!
+                this.confusionLevel = Math.random() < 0.3 ? 2 : 1; // 30% chance of VERY confused
+                console.log(`Baitfish got ${this.confusionLevel === 2 ? 'VERY' : ''} confused!`);
+            }
+
+            // Handle confusion behavior
+            if (this.confusionLevel > 0) {
+                this.handleConfusedBehavior(cloudCenter);
+            } else {
+                // Normal schooling behavior
+                this.handleNormalBehavior(cloudCenter, lakersNearby, spreadMultiplier);
+            }
         }
 
         this.depth = this.y / GameConfig.DEPTH_SCALE;
@@ -125,6 +130,50 @@ export class Baitfish {
         // Reset panic after a while
         if (this.panicMode && Math.random() < 0.01) {
             this.panicMode = false;
+        }
+    }
+
+    handleHuntingBehavior(nearbyZooplankton) {
+        // Find the closest zooplankton
+        let closestZooplankton = null;
+        let closestDistance = Infinity;
+
+        nearbyZooplankton.forEach(zp => {
+            if (!zp.visible || zp.consumed) return;
+
+            const distance = Math.sqrt(
+                Math.pow(this.x - zp.x, 2) +
+                Math.pow(this.y - zp.y, 2)
+            );
+
+            if (distance < closestDistance) {
+                closestDistance = distance;
+                closestZooplankton = zp;
+            }
+        });
+
+        if (closestZooplankton) {
+            // If close enough, consume the zooplankton
+            if (closestDistance < 5) {
+                closestZooplankton.consume();
+                return;
+            }
+
+            // Move towards the zooplankton
+            this.targetX = closestZooplankton.x;
+            this.targetY = closestZooplankton.y;
+
+            const dx = this.targetX - this.x;
+            const dy = this.targetY - this.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+
+            if (distance > 1) {
+                // Hunt at normal speed
+                const moveSpeed = this.speed * 1.2;
+
+                this.x += (dx / distance) * moveSpeed;
+                this.y += (dy / distance) * moveSpeed;
+            }
         }
     }
 

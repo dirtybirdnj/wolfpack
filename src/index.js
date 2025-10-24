@@ -217,6 +217,97 @@ function setupDevTools(game) {
         }
     }, 500);
 
+    // Fishing Line Type Buttons
+    const lineTypes = ['braid', 'monofilament', 'fluorocarbon'];
+    const lineTypeLabels = {
+        'braid': 'Braided',
+        'monofilament': 'Monofilament',
+        'fluorocarbon': 'Fluorocarbon'
+    };
+
+    lineTypes.forEach(lineType => {
+        const btn = document.getElementById(`line-type-${lineType}`);
+        if (btn) {
+            btn.addEventListener('click', () => {
+                const gameScene = game.scene.getScene('GameScene');
+                if (gameScene && gameScene.scene.isActive() && gameScene.fishingLineModel) {
+                    gameScene.fishingLineModel.setLineType(lineType);
+                    document.getElementById('current-line-type').textContent = lineTypeLabels[lineType];
+                    console.log(`Fishing line changed to ${lineTypeLabels[lineType]}`);
+
+                    // Visual feedback - highlight selected button
+                    lineTypes.forEach(lt => {
+                        const b = document.getElementById(`line-type-${lt}`);
+                        if (b) {
+                            b.style.background = lt === lineType ? '#ffaa00' : '';
+                        }
+                    });
+
+                    // Show/hide braid color section
+                    const braidColorSection = document.getElementById('braid-color-section');
+                    if (braidColorSection) {
+                        braidColorSection.style.display = lineType === 'braid' ? 'block' : 'none';
+                    }
+                }
+            });
+        }
+    });
+
+    // Braid Color Buttons
+    const braidColors = ['neon-green', 'yellow', 'moss-green', 'white'];
+    const braidColorLabels = {
+        'neon-green': 'Neon Green',
+        'yellow': 'Yellow',
+        'moss-green': 'Moss Green',
+        'white': 'White'
+    };
+
+    braidColors.forEach(color => {
+        const btn = document.getElementById(`braid-color-${color}`);
+        if (btn) {
+            btn.addEventListener('click', () => {
+                const gameScene = game.scene.getScene('GameScene');
+                if (gameScene && gameScene.scene.isActive() && gameScene.fishingLineModel) {
+                    gameScene.fishingLineModel.setBraidColor(color);
+                    document.getElementById('current-braid-color').textContent = braidColorLabels[color];
+                    console.log(`Braid color changed to ${braidColorLabels[color]}`);
+
+                    // Visual feedback - highlight selected button
+                    braidColors.forEach(c => {
+                        const b = document.getElementById(`braid-color-${c}`);
+                        if (b) {
+                            b.style.background = c === color ? '#ffaa00' : '';
+                        }
+                    });
+                }
+            });
+        }
+    });
+
+    // Set initial fishing line display
+    setTimeout(() => {
+        const gameScene = game.scene.getScene('GameScene');
+        if (gameScene && gameScene.scene.isActive() && gameScene.fishingLineModel) {
+            const lineType = gameScene.fishingLineModel.lineType;
+            const braidColor = gameScene.fishingLineModel.braidColor;
+
+            document.getElementById('current-line-type').textContent = gameScene.fishingLineModel.getDisplayName();
+            document.getElementById('current-braid-color').textContent = gameScene.fishingLineModel.getBraidColorDisplayName();
+
+            // Highlight default line type button
+            const defaultLineBtn = document.getElementById(`line-type-${lineType}`);
+            if (defaultLineBtn) {
+                defaultLineBtn.style.background = '#ffaa00';
+            }
+
+            // Highlight default braid color button
+            const defaultColorBtn = document.getElementById(`braid-color-${braidColor}`);
+            if (defaultColorBtn) {
+                defaultColorBtn.style.background = '#ffaa00';
+            }
+        }
+    }, 500);
+
     // Note: Test Controller Button is handled in index.html
     // to avoid duplicate event listeners that could interfere with game state
 }
