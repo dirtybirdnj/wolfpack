@@ -186,14 +186,8 @@ function setupDevTools(game) {
         }
     });
 
-    // Test Controller Button
-    document.getElementById('test-controller-btn').addEventListener('click', () => {
-        const gameScene = game.scene.getScene('GameScene');
-        if (gameScene && gameScene.scene.isActive()) {
-            gameScene.showControllerTest();
-            console.log('Controller test opened');
-        }
-    });
+    // Note: Test Controller Button is handled in index.html
+    // to avoid duplicate event listeners that could interfere with game state
 }
 
 function updateFishStatus(gameScene) {
