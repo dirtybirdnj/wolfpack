@@ -33,14 +33,28 @@ class GamepadManager {
         const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
         console.log('🎮 GamepadManager: navigator.getGamepads() returned:', gamepads);
 
+        let foundAny = false;
         for (let i = 0; i < gamepads.length; i++) {
             const gamepad = gamepads[i];
             if (gamepad) {
                 console.log('🎮 GamepadManager: Found existing gamepad!', gamepad.id, 'at index', i);
+                console.log('🎮 GamepadManager: Gamepad details:', {
+                    id: gamepad.id,
+                    index: gamepad.index,
+                    connected: gamepad.connected,
+                    buttons: gamepad.buttons.length,
+                    axes: gamepad.axes.length,
+                    mapping: gamepad.mapping
+                });
                 this.connectedGamepad = gamepad;
                 this.updateControllerStatus(true, gamepad.id);
                 this.notifyListeners('connected', gamepad);
+                foundAny = true;
             }
+        }
+
+        if (!foundAny) {
+            console.log('⚠️ GamepadManager: No gamepads found in array. Press any button on your controller!');
         }
     }
 
@@ -51,6 +65,15 @@ class GamepadManager {
         window.addEventListener('gamepadconnected', (e) => {
             console.log('✅ Gamepad connected (native event):', e.gamepad.id);
             console.log('✅ Gamepad object:', e.gamepad);
+            console.log('✅ Gamepad details:', {
+                id: e.gamepad.id,
+                index: e.gamepad.index,
+                connected: e.gamepad.connected,
+                buttons: e.gamepad.buttons.length,
+                axes: e.gamepad.axes.length,
+                mapping: e.gamepad.mapping,
+                timestamp: e.gamepad.timestamp
+            });
             this.connectedGamepad = e.gamepad;
             this.updateGamepads();
             this.notifyListeners('connected', e.gamepad);
