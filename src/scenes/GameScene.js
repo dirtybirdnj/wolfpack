@@ -351,18 +351,50 @@ export class GameScene extends Phaser.Scene {
         // Continuously update lure info in UI
         this.updateSpeedDisplay();
 
-        // Count how many baitfish are currently loitering near lure
-        const lureFollowersCount = this.countBaitfishLoiteringNearLure();
-
         // Update all baitfish clouds
         this.baitfishClouds = this.baitfishClouds.filter(cloud => {
             if (cloud.visible) {
-                cloud.update(this.fishes, lureFollowersCount);
+                cloud.update(this.fishes);
                 return true;
             } else {
                 cloud.destroy();
                 return false;
             }
+        });
+
+        // Check for cloud splitting when lure passes through
+        if (this.lure.state === Constants.LURE_STATE.DROPPING) {
+            const newClouds = []; // Store new clouds created from splits
+
+            for (const cloud of this.baitfishClouds) {
+                // Check if lure is within the cloud
+                const distance = Math.sqrt(
+                    Math.pow(this.lure.x - cloud.centerX, 2) +
+                    Math.pow(this.lure.y - cloud.centerY, 2)
+                );
+
+                // If lure passes through cloud, 50% chance to split
+                if (distance < GameConfig.BAITFISH_CLOUD_RADIUS) {
+                    // Only split if we haven't already split this cloud this frame
+                    // and if random chance succeeds
+                    if (!cloud.splitThisFrame && Math.random() < 0.5) {
+                        const newCloud = cloud.split();
+                        if (newCloud) {
+                            newClouds.push(newCloud);
+                            cloud.splitThisFrame = true; // Mark to prevent re-splitting
+                            console.log('Lure split baitfish cloud!');
+                        }
+                    }
+                }
+            }
+
+            // Add new split clouds to the array
+            this.baitfishClouds.push(...newClouds);
+        }
+
+        // Reset split flags for next frame
+        this.baitfishClouds.forEach(cloud => {
+            cloud.splitThisFrame = false;
         });
 
         // Check for cloud merging - clouds that swim close together should combine
@@ -400,9 +432,6 @@ export class GameScene extends Phaser.Scene {
                 this.baitfishClouds = this.baitfishClouds.filter((cloud, index) => !cloudsToRemove.has(index));
             }
         }
-
-        // Check for confused baitfish joining new clouds
-        this.checkBaitfishCloudJoining();
 
         // Update all fish - pass baitfish clouds for hunting behavior
         this.fishes.forEach((fish, index) => {
@@ -1182,101 +1211,6 @@ export class GameScene extends Phaser.Scene {
             delay: 1000,
             onComplete: () => text.destroy()
         });
-    }
-
-    checkBaitfishCloudJoining() {
-        // Check if confused baitfish are close enough to join new clouds
-        const joinDistance = 60; // pixels - baitfish within this distance can join
-
-        this.baitfishClouds.forEach(cloud => {
-            // Check each cloud's baitfish to see if they're confused and near another cloud
-            cloud.baitfish.forEach(baitfish => {
-                if (baitfish.canJoinCloud && baitfish.hasLeftCloud && baitfish.confusionLevel > 0) {
-                    // This baitfish is looking for a new cloud
-                    // Check if it's close to any other cloud
-                    this.baitfishClouds.forEach(targetCloud => {
-                        if (targetCloud.id !== baitfish.cloudId) {
-                            const dist = Math.sqrt(
-                                Math.pow(baitfish.x - targetCloud.centerX, 2) +
-                                Math.pow(baitfish.y - targetCloud.centerY, 2)
-                            );
-
-                            if (dist < joinDistance) {
-                                // Close enough to join!
-                                baitfish.joinCloud(targetCloud.id);
-                            }
-                        }
-                    });
-                }
-            });
-        });
-    }
-
-    countBaitfishLoiteringNearLure() {
-        // Count how many baitfish are currently loitering near the lure
-        let count = 0;
-        this.baitfishClouds.forEach(cloud => {
-            cloud.baitfish.forEach(baitfish => {
-                if (baitfish.loiteringNearLure) {
-                    count++;
-                }
-            });
-        });
-        return count;
-    }
-
-    releaseFollowerBaitfish() {
-        // Release all baitfish that are loitering near the lure
-        // Make them seek a new cloud to join
-        let releasedCount = 0;
-
-        this.baitfishClouds.forEach(cloud => {
-            cloud.baitfish.forEach(baitfish => {
-                if (baitfish.loiteringNearLure) {
-                    // Find nearest cloud that's not their original cloud
-                    let nearestCloud = null;
-                    let nearestDistance = Infinity;
-
-                    this.baitfishClouds.forEach(targetCloud => {
-                        // Don't join the same cloud they left
-                        if (targetCloud.id !== baitfish.cloudId) {
-                            const dist = Math.sqrt(
-                                Math.pow(baitfish.x - targetCloud.centerX, 2) +
-                                Math.pow(baitfish.y - targetCloud.centerY, 2)
-                            );
-
-                            if (dist < nearestDistance) {
-                                nearestDistance = dist;
-                                nearestCloud = targetCloud;
-                            }
-                        }
-                    });
-
-                    // Set them to confused state so they can actively seek and join new cloud
-                    baitfish.loiteringNearLure = false;
-                    baitfish.confusionLevel = 1; // Level 1 confusion - will seek clouds
-                    baitfish.hasLeftCloud = true; // Mark as having left so they can join new cloud
-
-                    // Set target to nearest cloud if found
-                    if (nearestCloud) {
-                        baitfish.targetX = nearestCloud.centerX;
-                        baitfish.targetY = nearestCloud.centerY;
-                        console.log(`Released baitfish seeking new cloud at distance ${nearestDistance.toFixed(0)}`);
-                    } else {
-                        // No other cloud available - just return to original
-                        baitfish.confusionLevel = 0;
-                        baitfish.hasLeftCloud = false;
-                        console.log('Released baitfish returning to original cloud (no alternatives)');
-                    }
-
-                    releasedCount++;
-                }
-            });
-        });
-
-        if (releasedCount > 0) {
-            console.log(`Released ${releasedCount} follower baitfish to seek new clouds`);
-        }
     }
 
     updateEmergencyFish(fish) {

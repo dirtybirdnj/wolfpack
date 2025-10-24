@@ -97,7 +97,9 @@ export class MenuScene extends Phaser.Scene {
                 lastDpadLeft: false,
                 lastDpadRight: false,
                 lastX: false,
-                lastA: false
+                lastA: false,
+                lastAnalogLeft: false,
+                lastAnalogRight: false
             };
 
             // Highlight the first button
@@ -209,14 +211,14 @@ export class MenuScene extends Phaser.Scene {
     }
 
     update() {
-        // Handle keyboard navigation
+        // Handle keyboard navigation - cycle through modes
         if (Phaser.Input.Keyboard.JustDown(this.cursors.left)) {
-            this.selectedMode = Math.max(0, this.selectedMode - 1);
+            this.selectedMode = (this.selectedMode - 1 + this.buttons.length) % this.buttons.length;
             this.updateSelection();
         }
 
         if (Phaser.Input.Keyboard.JustDown(this.cursors.right)) {
-            this.selectedMode = Math.min(this.buttons.length - 1, this.selectedMode + 1);
+            this.selectedMode = (this.selectedMode + 1) % this.buttons.length;
             this.updateSelection();
         }
 
@@ -230,22 +232,42 @@ export class MenuScene extends Phaser.Scene {
 
         // Handle gamepad navigation
         if (this.gamepadDetected && window.gamepadManager && window.gamepadManager.isConnected()) {
-            // Left/Right navigation
+            // D-Pad navigation - cycle through modes
             const dpadLeft = window.gamepadManager.getButton('DpadLeft');
             const dpadRight = window.gamepadManager.getButton('DpadRight');
 
             if (dpadLeft.pressed && !this.gamepadState.lastDpadLeft) {
-                this.selectedMode = Math.max(0, this.selectedMode - 1);
+                this.selectedMode = (this.selectedMode - 1 + this.buttons.length) % this.buttons.length;
                 this.updateSelection();
             }
 
             if (dpadRight.pressed && !this.gamepadState.lastDpadRight) {
-                this.selectedMode = Math.min(this.buttons.length - 1, this.selectedMode + 1);
+                this.selectedMode = (this.selectedMode + 1) % this.buttons.length;
                 this.updateSelection();
             }
 
             this.gamepadState.lastDpadLeft = dpadLeft.pressed;
             this.gamepadState.lastDpadRight = dpadRight.pressed;
+
+            // Analog stick navigation - cycle through modes
+            const leftStickX = window.gamepadManager.getAxis('LeftStickX');
+            const analogThreshold = 0.5;
+
+            const analogLeft = leftStickX < -analogThreshold;
+            const analogRight = leftStickX > analogThreshold;
+
+            if (analogLeft && !this.gamepadState.lastAnalogLeft) {
+                this.selectedMode = (this.selectedMode - 1 + this.buttons.length) % this.buttons.length;
+                this.updateSelection();
+            }
+
+            if (analogRight && !this.gamepadState.lastAnalogRight) {
+                this.selectedMode = (this.selectedMode + 1) % this.buttons.length;
+                this.updateSelection();
+            }
+
+            this.gamepadState.lastAnalogLeft = analogLeft;
+            this.gamepadState.lastAnalogRight = analogRight;
 
             // Confirm with X or A button
             const xButton = window.gamepadManager.getButton('X');

@@ -32,50 +32,19 @@ export class Baitfish {
         this.age = 0;
         this.panicMode = false;
 
-        // Confusion mechanics
-        this.confusionLevel = 0; // 0 = normal, 1 = confused, 2 = VERY confused
-        this.hasLeftCloud = false;
-        this.loiteringNearLure = false;
-        this.lureTarget = null;
-
         // Flicker effect for baitfish (they shimmer on sonar)
         this.flickerPhase = Math.random() * Math.PI * 2;
     }
 
-    update(cloudCenter, lakersNearby = false, spreadMultiplier = 1.0, scaredLevel = 0, lureFollowersCount = 0) {
+    update(cloudCenter, lakersNearby = false, spreadMultiplier = 1.0, scaredLevel = 0) {
         if (this.consumed || !this.visible) {
             return;
         }
 
         this.age++;
 
-        // Occasionally get confused (reduced chance for better schooling)
-        const confusionChance = 0.0003 + (scaredLevel * 0.0008);  // Reduced from 0.001 and 0.002
-        if (this.confusionLevel === 0 && Math.random() < confusionChance) {
-            // Get confused!
-            this.confusionLevel = Math.random() < 0.15 ? 2 : 1; // 15% chance of VERY confused (reduced from 30%)
-            console.log(`Baitfish got ${this.confusionLevel === 2 ? 'VERY' : ''} confused!`);
-        }
-
-        // Handle confusion behavior
-        if (this.confusionLevel > 0) {
-            // Confused fish have a chance to recover and rejoin the school
-            // Level 1 confusion (regular confused) recovers faster than level 2 (VERY confused)
-            const recoveryChance = this.confusionLevel === 1 ? 0.002 : 0.0005;  // Level 1: 0.2%, Level 2: 0.05%
-
-            // Don't recover if loitering near lure (they're committed)
-            if (!this.loiteringNearLure && Math.random() < recoveryChance) {
-                console.log(`Baitfish recovered from confusion and rejoining school`);
-                this.confusionLevel = 0;
-                this.hasLeftCloud = false;
-                this.loiteringNearLure = false;
-            } else {
-                this.handleConfusedBehavior(cloudCenter, lureFollowersCount);
-            }
-        } else {
-            // Normal schooling behavior
-            this.handleNormalBehavior(cloudCenter, lakersNearby, spreadMultiplier);
-        }
+        // Only normal schooling behavior
+        this.handleNormalBehavior(cloudCenter, lakersNearby, spreadMultiplier);
 
         this.depth = this.y / GameConfig.DEPTH_SCALE;
 
@@ -140,102 +109,6 @@ export class Baitfish {
         }
     }
 
-    handleConfusedBehavior(cloudCenter, lureFollowersCount = 0) {
-        const MAX_LURE_FOLLOWERS = 5;
-
-        if (!this.hasLeftCloud) {
-            // Swim away from the cloud
-            const awayX = this.x > cloudCenter.x ? 1 : -1;
-            const awayY = this.y > cloudCenter.y ? 1 : -1;
-
-            this.targetX = this.x + awayX * 100;
-            this.targetY = this.y + awayY * 60;
-
-            // Mark as having left
-            const distFromCloud = Math.sqrt(
-                Math.pow(this.x - cloudCenter.x, 2) +
-                Math.pow(this.y - cloudCenter.y, 2)
-            );
-
-            if (distFromCloud > 80) {
-                this.hasLeftCloud = true;
-                console.log('Confused baitfish has left its cloud');
-            }
-        }
-
-        // VERY confused baitfish seek the lure (but only if limit not reached)
-        if (this.confusionLevel === 2 && this.hasLeftCloud) {
-            // Get the lure from the scene
-            const lure = this.scene.lure;
-
-            if (lure && !this.loiteringNearLure) {
-                // Check if we can start following the lure
-                if (lureFollowersCount < MAX_LURE_FOLLOWERS) {
-                    // Swim towards the lure
-                    const distToLure = Math.sqrt(
-                        Math.pow(this.x - lure.x, 2) +
-                        Math.pow(this.y - lure.y, 2)
-                    );
-
-                    if (distToLure < 30) {
-                        // Close enough - start loitering
-                        this.loiteringNearLure = true;
-                        this.lureTarget = { x: lure.x, y: lure.y };
-                        console.log(`VERY confused baitfish now loitering near lure (${lureFollowersCount + 1}/${MAX_LURE_FOLLOWERS})`);
-                    } else {
-                        // Move towards lure
-                        this.targetX = lure.x;
-                        this.targetY = lure.y;
-                    }
-                } else {
-                    // Too many followers - just wander confused
-                    if (Math.random() < 0.02) {
-                        this.targetX = this.x + Utils.randomBetween(-50, 50);
-                        this.targetY = this.y + Utils.randomBetween(-30, 30);
-                    }
-                }
-            } else if (this.loiteringNearLure && lure) {
-                // Already loitering - continue regardless of count
-                // Loiter near the lure with small random movements
-                const loiterRange = 25;
-                this.targetX = lure.x + Utils.randomBetween(-loiterRange, loiterRange);
-                this.targetY = lure.y + Utils.randomBetween(-loiterRange * 0.6, loiterRange * 0.6);
-            }
-        }
-
-        // Move towards target (away from cloud or towards/near lure)
-        const dx = this.targetX - this.x;
-        const dy = this.targetY - this.y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-
-        if (distance > 1) {
-            // Confused baitfish swim slower and more erratically
-            const confusedSpeed = this.speed * 0.6;
-
-            this.x += (dx / distance) * confusedSpeed;
-            this.y += (dy / distance) * confusedSpeed * 0.7;
-
-            // Add some wobble to confused movement
-            this.x += Utils.randomBetween(-0.5, 0.5);
-            this.y += Utils.randomBetween(-0.3, 0.3);
-        }
-    }
-
-    canJoinCloud(cloudId) {
-        // Can join any cloud EXCEPT the one it left
-        return this.confusionLevel > 0 && this.hasLeftCloud && cloudId !== this.cloudId;
-    }
-
-    joinCloud(newCloudId) {
-        if (this.canJoinCloud(newCloudId)) {
-            this.cloudId = newCloudId;
-            this.confusionLevel = 0;
-            this.hasLeftCloud = false;
-            this.loiteringNearLure = false;
-            console.log('Confused baitfish joined a new cloud');
-        }
-    }
-
     updateSonarTrail() {
         // Add current position to trail
         this.sonarTrail.push({
@@ -281,38 +154,17 @@ export class Baitfish {
         // Draw main baitfish (small mark)
         const bodySize = this.size + 1;
 
-        // Confused baitfish show up differently
-        const confusedColor = this.confusionLevel === 2 ? 0xffff00 : // VERY confused = yellow
-                            this.confusionLevel === 1 ? 0xffaa00 : // confused = orange
-                            color; // normal
-
-        const finalColor = this.confusionLevel > 0 ? confusedColor : color;
-
         // Small elongated mark (baitfish are thin)
-        this.graphics.fillStyle(finalColor, 0.6 * flickerIntensity);
+        this.graphics.fillStyle(color, 0.6 * flickerIntensity);
         this.graphics.fillEllipse(this.x, this.y, bodySize * 1.5, bodySize * 0.7);
 
         // Brighter center dot
-        this.graphics.fillStyle(finalColor, 0.9 * flickerIntensity);
+        this.graphics.fillStyle(color, 0.9 * flickerIntensity);
         this.graphics.fillCircle(this.x, this.y, bodySize * 0.4);
-
-        // Confused indicator - wobbling circle
-        if (this.confusionLevel > 0) {
-            const wobble = Math.sin(this.age * 0.2) * 2;
-            this.graphics.lineStyle(1, finalColor, 0.5);
-            this.graphics.strokeCircle(this.x + wobble, this.y, bodySize * 3);
-        }
-
-        // Loitering near lure indicator - double circle
-        if (this.loiteringNearLure) {
-            this.graphics.lineStyle(2, 0xffff00, 0.7);
-            this.graphics.strokeCircle(this.x, this.y, bodySize * 4);
-            this.graphics.strokeCircle(this.x, this.y, bodySize * 5);
-        }
 
         // Occasional flash (like light reflecting off scales on sonar)
         if (Math.random() < 0.05) {
-            this.graphics.lineStyle(1, finalColor, 0.8);
+            this.graphics.lineStyle(1, color, 0.8);
             this.graphics.strokeCircle(this.x, this.y, bodySize * 2);
         }
     }
