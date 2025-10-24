@@ -46,6 +46,20 @@ export class FishAI {
         } else {
             this.isAmbushPredator = false;
         }
+
+        // Smallmouth Bass circling behavior
+        if (this.fish.species === 'smallmouth_bass') {
+            this.circlesBeforeStrike = true;
+            this.isCircling = false;
+            this.circleAngle = Math.random() * Math.PI * 2; // Starting angle for circle
+            this.circleRadius = 35; // Circle radius around lure
+            this.circleSpeed = 0.08; // How fast to circle (radians per frame)
+            this.circleDirection = Math.random() < 0.5 ? 1 : -1; // Clockwise or counter-clockwise
+            this.circleTime = 0; // How long bass has been circling
+            this.maxCircleTime = 120; // Max frames to circle before deciding (2 seconds at 60fps)
+        } else {
+            this.circlesBeforeStrike = false;
+        }
     }
 
     get aggressiveness() {

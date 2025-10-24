@@ -957,13 +957,15 @@ export class GameScene extends Phaser.Scene {
         }
 
         // Select species based on Lake Champlain distribution
-        // Lake Trout: 70%, Northern Pike: 30%
+        // Lake Trout: 50%, Northern Pike: 25%, Smallmouth Bass: 25%
         let species = 'lake_trout';
         const speciesRoll = Math.random();
-        if (speciesRoll < 0.70) {
+        if (speciesRoll < 0.50) {
             species = 'lake_trout'; // Dominant coldwater predator
+        } else if (speciesRoll < 0.75) {
+            species = 'northern_pike'; // Aggressive shallow-water ambusher
         } else {
-            species = 'northern_pike'; // Aggressive shallow-water predator
+            species = 'smallmouth_bass'; // Structure-oriented fighter
         }
 
         // Determine fish spawn depth based on species-specific behavior
@@ -974,6 +976,14 @@ export class GameScene extends Phaser.Scene {
             // Pike prefer shallow, structure-oriented water
             // Always spawn in top 30 feet regardless of temperature
             depth = Utils.randomBetween(8, 30);
+        } else if (species === 'smallmouth_bass') {
+            // Smallmouth bass prefer mid-depth rocky structure
+            // 10-40 feet, slightly deeper in warmer water
+            if (tempFactor < 0.5) {
+                depth = Utils.randomBetween(10, 30); // Shallower in cold water
+            } else {
+                depth = Utils.randomBetween(15, 40); // Deeper in warm water
+            }
         } else {
             // Lake trout prefer different depths based on temperature
             if (tempFactor < 0.3) {
