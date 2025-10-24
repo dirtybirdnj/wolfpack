@@ -7,11 +7,27 @@
   <!-- Belly (lighter) -->
   <ellipse cx="150" cy="75" rx="120" ry="20" fill="#C8D4CC" opacity="0.9"/>
 
-  <!-- Head shape -->
-  <ellipse cx="35" cy="60" rx="30" ry="32" fill="#7A8A7D"/>
+  <!-- Head shape - more angular -->
+  <path d="M 65 60 L 50 45 L 35 40 L 20 45 L 12 55 L 10 65 L 15 75 L 25 80 L 40 82 L 55 78 L 65 70 Z" fill="#7A8A7D"/>
 
-  <!-- Mouth -->
-  <path d="M 10 60 Q 15 55, 20 58 Q 15 62, 10 60 Z" fill="#6B7B6E" stroke="#5A6A5D" stroke-width="1"/>
+  <!-- Open mouth with gap in outline -->
+  <path d="M 10 65 L 5 63 L 2 60 L 5 57 L 10 55 L 12 55" fill="#4A5A4D" stroke="#3A4A3D" stroke-width="1.5"/>
+  <path d="M 10 65 L 12 65" stroke="none"/>
+
+  <!-- Lower jaw -->
+  <path d="M 12 55 L 15 50 L 12 48 L 8 52 L 5 57" fill="#6B7B6E" stroke="#4A5A4D" stroke-width="1"/>
+
+  <!-- Upper jaw/snout - angular -->
+  <path d="M 5 57 L 2 60 L 5 63 L 8 65 L 12 65 L 15 70 L 12 72 L 8 68 L 5 63" fill="#6B7B6E" stroke="#4A5A4D" stroke-width="1"/>
+
+  <!-- Gill plate with definition -->
+  <path d="M 40 45 Q 48 50, 50 60 Q 48 70, 40 75 L 38 73 Q 45 68, 47 60 Q 45 52, 38 47 Z" fill="#8B9B8E" stroke="#5A6A5D" stroke-width="1.5" opacity="0.9"/>
+
+  <!-- Gill opening/line -->
+  <path d="M 40 47 Q 42 60, 40 73" stroke="#4A5A4D" stroke-width="2" fill="none" opacity="0.7"/>
+
+  <!-- Gill plate details -->
+  <path d="M 42 52 Q 44 60, 42 68" stroke="#6A7A6D" stroke-width="1" fill="none" opacity="0.5"/>
 
   <!-- Eye -->
   <circle cx="30" cy="55" r="5" fill="#F5E6D3"/>
@@ -35,6 +51,26 @@
 
   <!-- Tail (forked) -->
   <path d="M 270 40 Q 290 30, 295 45 Q 290 50, 280 55 L 270 60 L 280 65 Q 290 70, 295 75 Q 290 90, 270 80 Q 275 60, 270 40 Z" fill="#A8B8AB" opacity="0.85"/>
+
+  <!-- Subtle scale pattern on body -->
+  <g opacity="0.15">
+    <circle cx="70" cy="50" r="3" fill="none" stroke="#5A6A5D" stroke-width="0.5"/>
+    <circle cx="76" cy="52" r="3" fill="none" stroke="#5A6A5D" stroke-width="0.5"/>
+    <circle cx="82" cy="50" r="3" fill="none" stroke="#5A6A5D" stroke-width="0.5"/>
+    <circle cx="70" cy="56" r="3" fill="none" stroke="#5A6A5D" stroke-width="0.5"/>
+    <circle cx="76" cy="58" r="3" fill="none" stroke="#5A6A5D" stroke-width="0.5"/>
+    <circle cx="82" cy="56" r="3" fill="none" stroke="#5A6A5D" stroke-width="0.5"/>
+    <circle cx="88" cy="54" r="3" fill="none" stroke="#5A6A5D" stroke-width="0.5"/>
+    <circle cx="94" cy="56" r="3" fill="none" stroke="#5A6A5D" stroke-width="0.5"/>
+    <circle cx="100" cy="54" r="3" fill="none" stroke="#5A6A5D" stroke-width="0.5"/>
+    <circle cx="106" cy="56" r="3" fill="none" stroke="#5A6A5D" stroke-width="0.5"/>
+    <circle cx="70" cy="62" r="3" fill="none" stroke="#5A6A5D" stroke-width="0.5"/>
+    <circle cx="76" cy="64" r="3" fill="none" stroke="#5A6A5D" stroke-width="0.5"/>
+    <circle cx="82" cy="62" r="3" fill="none" stroke="#5A6A5D" stroke-width="0.5"/>
+    <circle cx="88" cy="64" r="3" fill="none" stroke="#5A6A5D" stroke-width="0.5"/>
+    <circle cx="94" cy="62" r="3" fill="none" stroke="#5A6A5D" stroke-width="0.5"/>
+    <circle cx="100" cy="64" r="3" fill="none" stroke="#5A6A5D" stroke-width="0.5"/>
+  </g>
 
   <!-- Spots on body (characteristic lake trout pattern) -->
   <circle cx="80" cy="45" r="2.5" fill="#D4E4D7" opacity="0.8"/>
@@ -70,6 +106,6 @@
   <circle cx="250" cy="65" r="1.5" fill="#D4E4D7" opacity="0.7"/>
   <circle cx="260" cy="70" r="1.5" fill="#D4E4D7" opacity="0.7"/>
 
-  <!-- Body outline for definition -->
-  <ellipse cx="150" cy="60" rx="130" ry="35" fill="none" stroke="#5A6A5D" stroke-width="1.5" opacity="0.5"/>
+  <!-- Body outline for definition (with gap at mouth) -->
+  <path d="M 12 55 Q 30 35, 65 30 Q 150 25, 235 30 Q 270 35, 280 40 M 280 80 Q 270 85, 235 90 Q 150 95, 65 90 Q 30 85, 12 65" stroke="#5A6A5D" stroke-width="1.5" fill="none" opacity="0.5"/>
 </svg>

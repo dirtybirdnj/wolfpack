@@ -10,19 +10,32 @@
   <!-- Extra silver shimmer effect -->
   <ellipse cx="100" cy="50" rx="75" ry="10" fill="#F0F5F9" opacity="0.85"/>
 
-  <!-- Head -->
-  <ellipse cx="25" cy="40" rx="20" ry="20" fill="#5A7A8F"/>
+  <!-- Head - angular shape -->
+  <path d="M 45 40 L 35 30 L 25 26 L 15 28 L 8 35 L 6 42 L 8 48 L 15 53 L 25 55 L 35 52 L 45 46 Z" fill="#5A7A8F"/>
 
-  <!-- Gill cover -->
-  <path d="M 30 35 Q 35 40, 30 45" stroke="#4A6A7F" stroke-width="1.5" fill="none" opacity="0.7"/>
+  <!-- Open mouth with gap -->
+  <path d="M 6 42 L 3 41 L 1 39 L 2 37 L 5 36 L 8 35" fill="#3A5A6F" stroke="#2A4A5F" stroke-width="1.2"/>
+
+  <!-- Lower jaw -->
+  <path d="M 8 35 L 10 32 L 8 30 L 5 33 L 3 37" fill="#4A6A7F" stroke="#3A5A6F" stroke-width="0.8"/>
+
+  <!-- Upper jaw - angular -->
+  <path d="M 3 37 L 1 39 L 3 41 L 6 42 L 8 48 L 6 50 L 3 45 L 2 41" fill="#4A6A7F" stroke="#3A5A6F" stroke-width="0.8"/>
+
+  <!-- Gill plate with definition -->
+  <path d="M 30 30 Q 38 35, 40 40 Q 38 47, 30 52 L 28 50 Q 35 45, 37 40 Q 35 35, 28 32 Z" fill="#6B8BA3" stroke="#4A6A7F" stroke-width="1.5" opacity="0.9"/>
+
+  <!-- Gill opening/line -->
+  <path d="M 30 32 Q 32 40, 30 50" stroke="#3A5A6F" stroke-width="2" fill="none" opacity="0.7"/>
+
+  <!-- Gill plate radiating lines (more detailed for alewife) -->
+  <path d="M 32 35 Q 34 40, 32 45" stroke="#5A7A8F" stroke-width="0.8" fill="none" opacity="0.6"/>
+  <path d="M 34 37 Q 36 40, 34 43" stroke="#5A7A8F" stroke-width="0.6" fill="none" opacity="0.5"/>
 
   <!-- Eye (large and prominent) -->
   <circle cx="22" cy="36" r="6" fill="#F5F0E8"/>
   <circle cx="23" cy="35" r="4.5" fill="#1A1A1A"/>
   <circle cx="24" cy="34" r="1.5" fill="#FFFFFF"/>
-
-  <!-- Mouth (small) -->
-  <path d="M 8 40 Q 10 38, 12 40" stroke="#3A5A6F" stroke-width="1" fill="none"/>
 
   <!-- Dorsal fin (small) -->
   <path d="M 85 22 Q 95 15, 105 22 L 102 28 Q 95 25, 88 27 Z" fill="#5A7A8F" opacity="0.8"/>
@@ -39,21 +52,74 @@
   <!-- Tail (forked) -->
   <path d="M 180 30 Q 195 22, 198 33 Q 194 37, 186 40 L 180 40 L 186 43 Q 194 46, 198 50 Q 195 61, 180 53 Q 183 40, 180 30 Z" fill="#6B8BA3" opacity="0.85"/>
 
+  <!-- Detailed scale pattern (more visible on alewife) -->
+  <g opacity="0.4">
+    <!-- Row 1 -->
+    <circle cx="48" cy="35" r="2.5" fill="none" stroke="#4A6A7F" stroke-width="0.6"/>
+    <circle cx="53" cy="36" r="2.5" fill="none" stroke="#4A6A7F" stroke-width="0.6"/>
+    <circle cx="58" cy="35" r="2.5" fill="none" stroke="#4A6A7F" stroke-width="0.6"/>
+    <circle cx="63" cy="36" r="2.5" fill="none" stroke="#4A6A7F" stroke-width="0.6"/>
+    <circle cx="68" cy="35" r="2.5" fill="none" stroke="#4A6A7F" stroke-width="0.6"/>
+    <circle cx="73" cy="36" r="2.5" fill="none" stroke="#4A6A7F" stroke-width="0.6"/>
+    <circle cx="78" cy="35" r="2.5" fill="none" stroke="#4A6A7F" stroke-width="0.6"/>
+    <circle cx="83" cy="36" r="2.5" fill="none" stroke="#4A6A7F" stroke-width="0.6"/>
+    <circle cx="88" cy="35" r="2.5" fill="none" stroke="#4A6A7F" stroke-width="0.6"/>
+    <circle cx="93" cy="36" r="2.5" fill="none" stroke="#4A6A7F" stroke-width="0.6"/>
+    <circle cx="98" cy="35" r="2.5" fill="none" stroke="#4A6A7F" stroke-width="0.6"/>
+    <circle cx="103" cy="36" r="2.5" fill="none" stroke="#4A6A7F" stroke-width="0.6"/>
+    <circle cx="108" cy="35" r="2.5" fill="none" stroke="#4A6A7F" stroke-width="0.6"/>
+    <circle cx="113" cy="36" r="2.5" fill="none" stroke="#4A6A7F" stroke-width="0.6"/>
+    <circle cx="118" cy="35" r="2.5" fill="none" stroke="#4A6A7F" stroke-width="0.6"/>
+    <circle cx="123" cy="36" r="2.5" fill="none" stroke="#4A6A7F" stroke-width="0.6"/>
+    <!-- Row 2 (offset) -->
+    <circle cx="50" cy="40" r="2.5" fill="none" stroke="#4A6A7F" stroke-width="0.6"/>
+    <circle cx="55" cy="41" r="2.5" fill="none" stroke="#4A6A7F" stroke-width="0.6"/>
+    <circle cx="60" cy="40" r="2.5" fill="none" stroke="#4A6A7F" stroke-width="0.6"/>
+    <circle cx="65" cy="41" r="2.5" fill="none" stroke="#4A6A7F" stroke-width="0.6"/>
+    <circle cx="70" cy="40" r="2.5" fill="none" stroke="#4A6A7F" stroke-width="0.6"/>
+    <circle cx="75" cy="41" r="2.5" fill="none" stroke="#4A6A7F" stroke-width="0.6"/>
+    <circle cx="80" cy="40" r="2.5" fill="none" stroke="#4A6A7F" stroke-width="0.6"/>
+    <circle cx="85" cy="41" r="2.5" fill="none" stroke="#4A6A7F" stroke-width="0.6"/>
+    <circle cx="90" cy="40" r="2.5" fill="none" stroke="#4A6A7F" stroke-width="0.6"/>
+    <circle cx="95" cy="41" r="2.5" fill="none" stroke="#4A6A7F" stroke-width="0.6"/>
+    <circle cx="100" cy="40" r="2.5" fill="none" stroke="#4A6A7F" stroke-width="0.6"/>
+    <circle cx="105" cy="41" r="2.5" fill="none" stroke="#4A6A7F" stroke-width="0.6"/>
+    <circle cx="110" cy="40" r="2.5" fill="none" stroke="#4A6A7F" stroke-width="0.6"/>
+    <circle cx="115" cy="41" r="2.5" fill="none" stroke="#4A6A7F" stroke-width="0.6"/>
+    <circle cx="120" cy="40" r="2.5" fill="none" stroke="#4A6A7F" stroke-width="0.6"/>
+    <!-- Row 3 -->
+    <circle cx="48" cy="45" r="2.5" fill="none" stroke="#4A6A7F" stroke-width="0.6"/>
+    <circle cx="53" cy="46" r="2.5" fill="none" stroke="#4A6A7F" stroke-width="0.6"/>
+    <circle cx="58" cy="45" r="2.5" fill="none" stroke="#4A6A7F" stroke-width="0.6"/>
+    <circle cx="63" cy="46" r="2.5" fill="none" stroke="#4A6A7F" stroke-width="0.6"/>
+    <circle cx="68" cy="45" r="2.5" fill="none" stroke="#4A6A7F" stroke-width="0.6"/>
+    <circle cx="73" cy="46" r="2.5" fill="none" stroke="#4A6A7F" stroke-width="0.6"/>
+    <circle cx="78" cy="45" r="2.5" fill="none" stroke="#4A6A7F" stroke-width="0.6"/>
+    <circle cx="83" cy="46" r="2.5" fill="none" stroke="#4A6A7F" stroke-width="0.6"/>
+    <circle cx="88" cy="45" r="2.5" fill="none" stroke="#4A6A7F" stroke-width="0.6"/>
+    <circle cx="93" cy="46" r="2.5" fill="none" stroke="#4A6A7F" stroke-width="0.6"/>
+    <circle cx="98" cy="45" r="2.5" fill="none" stroke="#4A6A7F" stroke-width="0.6"/>
+    <circle cx="103" cy="46" r="2.5" fill="none" stroke="#4A6A7F" stroke-width="0.6"/>
+    <circle cx="108" cy="45" r="2.5" fill="none" stroke="#4A6A7F" stroke-width="0.6"/>
+    <circle cx="113" cy="46" r="2.5" fill="none" stroke="#4A6A7F" stroke-width="0.6"/>
+    <circle cx="118" cy="45" r="2.5" fill="none" stroke="#4A6A7F" stroke-width="0.6"/>
+  </g>
+
   <!-- Dark back stripe (characteristic of alewife) -->
-  <path d="M 35 32 Q 80 28, 130 30 Q 160 31, 180 35" stroke="#3A5A6F" stroke-width="3" fill="none" opacity="0.6"/>
+  <path d="M 35 28 Q 80 25, 130 27 Q 160 28, 180 32" stroke="#3A5A6F" stroke-width="3" fill="none" opacity="0.6"/>
 
   <!-- Subtle iridescent spots on back -->
-  <circle cx="60" cy="32" r="1.5" fill="#8AAAC4" opacity="0.6"/>
-  <circle cx="75" cy="30" r="1.5" fill="#8AAAC4" opacity="0.6"/>
-  <circle cx="90" cy="31" r="1.5" fill="#8AAAC4" opacity="0.6"/>
-  <circle cx="105" cy="29" r="1.5" fill="#8AAAC4" opacity="0.6"/>
-  <circle cx="120" cy="30" r="1.5" fill="#8AAAC4" opacity="0.6"/>
-  <circle cx="135" cy="32" r="1.5" fill="#8AAAC4" opacity="0.6"/>
-  <circle cx="150" cy="33" r="1.5" fill="#8AAAC4" opacity="0.6"/>
+  <circle cx="60" cy="30" r="1.5" fill="#8AAAC4" opacity="0.6"/>
+  <circle cx="75" cy="28" r="1.5" fill="#8AAAC4" opacity="0.6"/>
+  <circle cx="90" cy="29" r="1.5" fill="#8AAAC4" opacity="0.6"/>
+  <circle cx="105" cy="27" r="1.5" fill="#8AAAC4" opacity="0.6"/>
+  <circle cx="120" cy="28" r="1.5" fill="#8AAAC4" opacity="0.6"/>
+  <circle cx="135" cy="30" r="1.5" fill="#8AAAC4" opacity="0.6"/>
+  <circle cx="150" cy="31" r="1.5" fill="#8AAAC4" opacity="0.6"/>
 
   <!-- Lateral line scales effect -->
   <path d="M 40 42 L 45 42 M 48 42 L 53 42 M 56 42 L 61 42 M 64 42 L 69 42 M 72 42 L 77 42 M 80 42 L 85 42 M 88 42 L 93 42 M 96 42 L 101 42 M 104 42 L 109 42 M 112 42 L 117 42 M 120 42 L 125 42 M 128 42 L 133 42 M 136 42 L 141 42 M 144 42 L 149 42" stroke="#B8C8D5" stroke-width="0.5" opacity="0.5"/>
 
-  <!-- Body outline for definition -->
-  <ellipse cx="100" cy="40" rx="85" ry="22" fill="none" stroke="#4A6A7F" stroke-width="1" opacity="0.4"/>
+  <!-- Body outline for definition (with gap at mouth) -->
+  <path d="M 8 35 Q 25 22, 45 20 Q 100 18, 150 22 Q 180 25, 186 30 M 186 50 Q 180 55, 150 58 Q 100 62, 45 58 Q 25 56, 8 48" stroke="#4A6A7F" stroke-width="1" fill="none" opacity="0.4"/>
 </svg>
