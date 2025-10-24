@@ -73,14 +73,6 @@ window.addEventListener('load', () => {
 });
 
 function setupDevTools(game) {
-    // Hide controller status panel once game starts
-    setTimeout(() => {
-        const controllerPanel = document.getElementById('controller-status-panel');
-        if (controllerPanel) {
-            controllerPanel.classList.add('controller-status-hidden');
-        }
-    }, 2000); // Hide after 2 seconds
-
     // Update UI stats every 100ms
     setInterval(() => {
         const gameScene = game.scene.getScene('GameScene');
