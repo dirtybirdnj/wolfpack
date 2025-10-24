@@ -554,6 +554,156 @@ export const PREDATOR_SPECIES = {
 
         // Ecological notes
         notes: 'Ambush predator - waits in cover for prey. Explosive strikes. Structure-oriented. More active in warm, shallow water than lake trout. Cannibalistic.'
+    },
+
+    smallmouth_bass: {
+        name: 'Smallmouth Bass',
+        scientificName: 'Micropterus dolomieu',
+        commonNames: ['Smallie', 'Bronzeback', 'Brown Bass', 'Smalljaw'],
+        status: 'Native, highly prized sport fish',
+
+        // Size categories with behavioral differences
+        sizeCategories: {
+            small: {
+                weightRange: [0.5, 2],
+                lengthRange: [10, 14],
+                depthPreference: [5, 20],
+                speedMultiplier: 1.4, // very fast
+                aggressivenessMultiplier: 1.6, // extremely aggressive
+                cautiousness: 0.4, // bold
+                territorialIntensity: 1.2
+            },
+            medium: {
+                weightRange: [2, 4],
+                lengthRange: [14, 18],
+                depthPreference: [10, 30],
+                speedMultiplier: 1.3,
+                aggressivenessMultiplier: 1.5,
+                cautiousness: 0.5,
+                territorialIntensity: 1.4
+            },
+            large: {
+                weightRange: [4, 6],
+                lengthRange: [18, 21],
+                depthPreference: [15, 40],
+                speedMultiplier: 1.2,
+                aggressivenessMultiplier: 1.4,
+                cautiousness: 0.6,
+                territorialIntensity: 1.6
+            },
+            trophy: {
+                weightRange: [6, 8],
+                lengthRange: [21, 24],
+                depthPreference: [20, 50],
+                speedMultiplier: 1.1,
+                aggressivenessMultiplier: 1.3,
+                cautiousness: 0.7, // larger fish more cautious
+                territorialIntensity: 1.8 // very territorial
+            }
+        },
+
+        // Temperature preferences - warm water species
+        tempPreference: {
+            optimal: 68, // 65-72°F range
+            min: 55,
+            max: 78,
+            lethal: 85,
+            behaviorAffect: true
+        },
+
+        // Seasonal depth preferences (feet)
+        depthPreference: {
+            spring: [5, 15], // shallow for spawning (May-June)
+            summer: [15, 40], // deeper structure during heat
+            fall: [10, 30], // aggressive fall feeding
+            winter: [30, 60] // deep, lethargic (ice fishing mode)
+        },
+
+        // Diet composition - Lake Champlain smallmouth bass
+        dietPreferences: {
+            yellow_perch: 0.30, // primary prey in Lake Champlain
+            alewife: 0.25, // opportunistic on baitfish
+            rainbow_smelt: 0.15,
+            sculpin: 0.12, // bottom-oriented feeding
+            cisco: 0.03, // rare
+            crayfish: 0.15 // major food source (not modeled as prey yet)
+        },
+
+        // Behavioral characteristics - ACTIVE PREDATOR
+        behavior: {
+            huntingStyle: 'active_pursuit', // circles and investigates before striking
+            feedingPeriods: ['dawn', 'dusk', 'overcast_days'], // low-light feeders
+            aggressionByDepth: {
+                surface: 1.4, // aggressive in shallow
+                midColumn: 1.5, // most aggressive in mid-column near structure
+                bottom: 1.2 // less aggressive on bottom
+            },
+            cannibalismChance: 0.02, // rare
+            opportunisticFeeding: true,
+            structureOriented: true, // LOVES rocky structure, drop-offs
+            territorialBehavior: {
+                defendsTerritory: true, // especially during spawn
+                circlingBehavior: true, // circles lure before committing
+                cautionLevel: 'medium', // can be line-shy but also aggressive
+                preferredStructure: ['rocky_points', 'boulder_fields', 'drop_offs', 'ledges']
+            },
+            spawnPeriod: {
+                months: [5, 6], // May-June
+                behaviorChange: 'extremely_aggressive', // very aggressive guarding nest
+                feedingReduction: 0.3 // still feeds during spawn
+            },
+            postSpawnFrenzy: {
+                months: [7, 8], // July-August
+                aggressivenessBonus: 1.6, // aggressive summer feeding
+                feedingIntensity: 'very_high'
+            }
+        },
+
+        // Activity patterns by time of day
+        activityByTime: {
+            dawn: 1.6, // 5-7 AM - peak feeding
+            morning: 1.2, // 7-11 AM - active
+            midday: 0.7, // 11 AM-3 PM - less active (bright sun)
+            afternoon: 1.1, // 3-6 PM - picks up
+            dusk: 1.6, // 6-8 PM - peak feeding
+            night: 0.8, // 8 PM-5 AM - moderate activity
+        },
+
+        // Fight characteristics - EXTREMELY ACROBATIC
+        fightCharacteristics: {
+            initialRun: 'explosive', // powerful first run
+            tactics: ['jump', 'head_shake', 'aerial_acrobatics', 'dive_to_rocks', 'surface_thrash'],
+            stamina: 'high', // pound-for-pound strongest fighter
+            difficulty: 'hard',
+            acrobatic: true, // VERY acrobatic - multiple jumps
+            jumpProbability: 0.4, // 40% chance to jump during fight
+            structureAdvantage: true, // tries to reach rocks/structure
+            lineShy: true // can be spooked by heavy line/clumsy presentation
+        },
+
+        // Habitat preferences - ROCKY STRUCTURE
+        habitatPreferences: {
+            primary: ['rocky_points', 'boulder_fields', 'drop_offs'],
+            secondary: ['ledges', 'submerged_rocks', 'gravel_bars'],
+            avoids: ['muddy_bottom', 'heavy_vegetation', 'stagnant_water']
+        },
+
+        // Visual characteristics
+        appearance: {
+            bodyShape: 'compact_muscular', // deep-bodied, powerful
+            colorScheme: {
+                base: 0x6b5d3f, // bronze/brown
+                bars: 0x3a2f1f, // dark brown/black vertical bars
+                belly: 0xc9b896, // cream/tan belly
+                eyes: 0xcc3333, // distinctive red eyes
+                fins: 0x5a4d30, // bronze/olive fins
+                distinctive: ['red_eyes', 'vertical_bars', 'large_mouth']
+            },
+            markingPattern: 'vertical_bars' // 8-10 dark vertical bars
+        },
+
+        // Ecological notes
+        notes: 'Aggressive active predator. Structure-oriented. Extremely acrobatic fighter - jumps frequently. Territorial, especially during spawn. Line-shy but opportunistic.'
     }
 };
 

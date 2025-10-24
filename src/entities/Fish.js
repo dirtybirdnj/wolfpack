@@ -41,6 +41,9 @@ export class Fish {
         if (species === 'northern_pike') {
             // Northern pike: length in inches ≈ 13.5 * weight^0.28 (longer, more slender)
             this.length = Math.round(13.5 * Math.pow(this.weight, 0.28));
+        } else if (species === 'smallmouth_bass') {
+            // Smallmouth bass: length in inches ≈ 11.2 * weight^0.33 (compact, deep-bodied)
+            this.length = Math.round(11.2 * Math.pow(this.weight, 0.33));
         } else {
             // Lake trout: length in inches ≈ 10.5 * weight^0.31
             this.length = Math.round(10.5 * Math.pow(this.weight, 0.31));
@@ -123,6 +126,21 @@ export class Fish {
             } else {
                 // Trophy pike: 14-22 years
                 return Math.round(Utils.randomBetween(14, 22));
+            }
+        } else if (this.species === 'smallmouth_bass') {
+            // Smallmouth bass moderate growth, medium lifespan
+            if (this.weight <= 2) {
+                // Small bass: 2-4 years
+                return Math.round(Utils.randomBetween(2, 4));
+            } else if (this.weight <= 4) {
+                // Medium bass: 4-7 years
+                return Math.round(Utils.randomBetween(4, 7));
+            } else if (this.weight <= 6) {
+                // Large bass: 7-12 years
+                return Math.round(Utils.randomBetween(7, 12));
+            } else {
+                // Trophy bass: 12-18 years
+                return Math.round(Utils.randomBetween(12, 18));
             }
         } else {
             // Lake trout age-weight relationship (slower growth, longer lived)
@@ -363,6 +381,8 @@ export class Fish {
         // Render species-specific fish
         if (this.species === 'northern_pike') {
             this.renderNorthernPike(bodySize, isMovingRight);
+        } else if (this.species === 'smallmouth_bass') {
+            this.renderSmallmouthBass(bodySize, isMovingRight);
         } else {
             this.renderLakeTrout(bodySize, isMovingRight);
         }
@@ -510,7 +530,101 @@ export class Fish {
 
         this.graphics.restore();
     }
-    
+
+    renderSmallmouthBass(bodySize, isMovingRight) {
+        // Smallmouth bass - compact, deep-bodied with bronze coloring and vertical bars
+        const colors = this.speciesData.appearance.colorScheme;
+
+        this.graphics.save();
+        this.graphics.translateCanvas(this.x, this.y);
+
+        if (isMovingRight) {
+            this.graphics.rotateCanvas(this.angle);
+        } else {
+            this.graphics.scaleCanvas(-1, 1);
+            this.graphics.rotateCanvas(-this.angle);
+        }
+
+        // Bass body - compact and muscular (shorter and deeper than trout)
+        const bassLength = bodySize * 2.2; // Shorter than trout (2.5)
+        const bassHeight = bodySize * 0.9; // Deeper body than trout (0.8)
+
+        // Main body - bronze/brown
+        this.graphics.fillStyle(colors.base, 1.0);
+        this.graphics.fillEllipse(0, 0, bassLength, bassHeight);
+
+        // Belly - cream/tan
+        this.graphics.fillStyle(colors.belly, 0.9);
+        this.graphics.fillEllipse(0, bassHeight * 0.2, bassLength * 0.85, bassHeight * 0.5);
+
+        // Vertical bars - distinctive feature of smallmouth
+        this.graphics.fillStyle(colors.bars, 0.7);
+        const barCount = 9; // 8-10 bars
+        const barWidth = bassLength * 0.08;
+        const barSpacing = bassLength / (barCount + 1);
+
+        for (let i = 0; i < barCount; i++) {
+            const barX = -bassLength * 0.4 + (i * barSpacing);
+            // Bars are taller in the middle, shorter at ends
+            const heightMultiplier = 1.0 - Math.abs(i - barCount / 2) * 0.15;
+            const barHeight = bassHeight * 0.8 * heightMultiplier;
+
+            this.graphics.fillRect(
+                barX - barWidth / 2,
+                -barHeight / 2,
+                barWidth,
+                barHeight
+            );
+        }
+
+        // Red eye - distinctive feature
+        const eyeX = bassLength * 0.35;
+        const eyeY = -bassHeight * 0.25;
+        this.graphics.fillStyle(colors.eyes, 1.0);
+        this.graphics.fillCircle(eyeX, eyeY, bodySize * 0.15);
+
+        // Tail - slightly forked
+        const tailSize = bodySize * 0.75;
+        const tailX = -bassLength * 0.45;
+
+        this.graphics.fillStyle(colors.fins, 0.9);
+        this.graphics.beginPath();
+        this.graphics.moveTo(tailX, 0);
+        this.graphics.lineTo(tailX - tailSize * 0.7, -tailSize * 0.6);
+        this.graphics.lineTo(tailX - tailSize * 0.7, tailSize * 0.6);
+        this.graphics.closePath();
+        this.graphics.fillPath();
+
+        // Dorsal fin - spiny front section, soft rear section (bass characteristic)
+        this.graphics.fillStyle(colors.fins, 0.8);
+
+        // Spiny dorsal (front)
+        const spinyDorsalX = -bassLength * 0.15;
+        this.graphics.fillTriangle(
+            spinyDorsalX, -bassHeight * 0.5,
+            spinyDorsalX - bodySize * 0.4, -bassHeight * 1.3,
+            spinyDorsalX + bodySize * 0.2, -bassHeight * 1.2
+        );
+
+        // Soft dorsal (rear)
+        const softDorsalX = bassLength * 0.05;
+        this.graphics.fillTriangle(
+            softDorsalX, -bassHeight * 0.5,
+            softDorsalX - bodySize * 0.2, -bassHeight * 1.1,
+            softDorsalX + bodySize * 0.3, -bassHeight * 1.0
+        );
+
+        // Pectoral fins
+        const finX = -bodySize * 0.2;
+        this.graphics.fillTriangle(
+            finX, 0,
+            finX - bodySize * 0.35, -bassHeight * 0.3,
+            finX - bodySize * 0.35, bassHeight * 0.3
+        );
+
+        this.graphics.restore();
+    }
+
     handleCaught() {
         // Animation when fish is caught
         this.graphics.clear();
@@ -575,6 +689,8 @@ export class Fish {
 
         if (this.species === 'northern_pike') {
             this.renderNorthernPikeAtPosition(graphics, bodySize);
+        } else if (this.species === 'smallmouth_bass') {
+            this.renderSmallmouthBassAtPosition(graphics, bodySize);
         } else {
             this.renderLakeTroutAtPosition(graphics, bodySize);
         }
@@ -677,6 +793,84 @@ export class Fish {
             finX, 0,
             finX - bodySize * 0.3, -pikeHeight * 0.25,
             finX - bodySize * 0.3, pikeHeight * 0.25
+        );
+    }
+
+    renderSmallmouthBassAtPosition(graphics, bodySize) {
+        const colors = this.speciesData.appearance.colorScheme;
+
+        // Bass body - compact and muscular
+        const bassLength = bodySize * 2.2;
+        const bassHeight = bodySize * 0.9;
+
+        // Main body - bronze/brown
+        graphics.fillStyle(colors.base, 1.0);
+        graphics.fillEllipse(0, 0, bassLength, bassHeight);
+
+        // Belly - cream/tan
+        graphics.fillStyle(colors.belly, 0.9);
+        graphics.fillEllipse(0, bassHeight * 0.2, bassLength * 0.85, bassHeight * 0.5);
+
+        // Vertical bars
+        graphics.fillStyle(colors.bars, 0.7);
+        const barCount = 9;
+        const barWidth = bassLength * 0.08;
+        const barSpacing = bassLength / (barCount + 1);
+
+        for (let i = 0; i < barCount; i++) {
+            const barX = -bassLength * 0.4 + (i * barSpacing);
+            const heightMultiplier = 1.0 - Math.abs(i - barCount / 2) * 0.15;
+            const barHeight = bassHeight * 0.8 * heightMultiplier;
+
+            graphics.fillRect(
+                barX - barWidth / 2,
+                -barHeight / 2,
+                barWidth,
+                barHeight
+            );
+        }
+
+        // Red eye
+        const eyeX = bassLength * 0.35;
+        const eyeY = -bassHeight * 0.25;
+        graphics.fillStyle(colors.eyes, 1.0);
+        graphics.fillCircle(eyeX, eyeY, bodySize * 0.15);
+
+        // Tail
+        const tailSize = bodySize * 0.75;
+        const tailX = -bassLength * 0.45;
+
+        graphics.fillStyle(colors.fins, 0.9);
+        graphics.beginPath();
+        graphics.moveTo(tailX, 0);
+        graphics.lineTo(tailX - tailSize * 0.7, -tailSize * 0.6);
+        graphics.lineTo(tailX - tailSize * 0.7, tailSize * 0.6);
+        graphics.closePath();
+        graphics.fillPath();
+
+        // Dorsal fins - spiny and soft sections
+        graphics.fillStyle(colors.fins, 0.8);
+
+        const spinyDorsalX = -bassLength * 0.15;
+        graphics.fillTriangle(
+            spinyDorsalX, -bassHeight * 0.5,
+            spinyDorsalX - bodySize * 0.4, -bassHeight * 1.3,
+            spinyDorsalX + bodySize * 0.2, -bassHeight * 1.2
+        );
+
+        const softDorsalX = bassLength * 0.05;
+        graphics.fillTriangle(
+            softDorsalX, -bassHeight * 0.5,
+            softDorsalX - bodySize * 0.2, -bassHeight * 1.1,
+            softDorsalX + bodySize * 0.3, -bassHeight * 1.0
+        );
+
+        // Pectoral fins
+        const finX = -bodySize * 0.2;
+        graphics.fillTriangle(
+            finX, 0,
+            finX - bodySize * 0.35, -bassHeight * 0.3,
+            finX - bodySize * 0.35, bassHeight * 0.3
         );
     }
 
