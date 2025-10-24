@@ -97,7 +97,7 @@ export class Fish {
         }
     }
     
-    update(lure, allFish = []) {
+    update(lure, allFish = [], baitfishClouds = []) {
         if (this.caught) {
             this.handleCaught();
             return;
@@ -113,8 +113,8 @@ export class Fish {
         this.depthZone = this.getDepthZone();
         this.speed = this.baseSpeed * this.depthZone.speedMultiplier;
 
-        // Update AI with info about other fish for frenzy detection
-        this.ai.update(lure, this.scene.time.now, allFish);
+        // Update AI with info about other fish for frenzy detection AND baitfish for hunting
+        this.ai.update(lure, this.scene.time.now, allFish, baitfishClouds);
 
         // Get movement from AI
         const movement = this.ai.getMovementVector();
@@ -252,6 +252,14 @@ export class Fish {
             // Show pursuit indicator
             this.graphics.lineStyle(2, GameConfig.COLOR_FISH_STRONG, 0.7);
             this.graphics.lineBetween(this.x - 10, this.y, this.x - 5, this.y);
+        } else if (this.ai.state === Constants.FISH_STATE.HUNTING_BAITFISH) {
+            // Show hunting indicator (aggressive pursuit of baitfish)
+            this.graphics.lineStyle(2, GameConfig.COLOR_BAITFISH_PANIC, 0.8);
+            this.graphics.strokeCircle(this.x, this.y, 8);
+        } else if (this.ai.state === Constants.FISH_STATE.FEEDING) {
+            // Show feeding indicator
+            this.graphics.fillStyle(GameConfig.COLOR_BAITFISH, 0.6);
+            this.graphics.fillCircle(this.x + 5, this.y - 5, 3);
         }
     }
     
@@ -262,13 +270,19 @@ export class Fish {
         this.graphics.strokeCircle(this.x, this.y, 15);
         this.graphics.lineStyle(2, GameConfig.COLOR_LURE, 0.8);
         this.graphics.strokeCircle(this.x, this.y, 20);
-        
+
         // Remove after animation
         setTimeout(() => {
             this.visible = false;
         }, 500);
     }
-    
+
+    feedOnBaitfish() {
+        // Fish has consumed a baitfish, reduce hunger
+        this.hunger = Math.max(0, this.hunger - GameConfig.BAITFISH_CONSUMPTION_HUNGER_REDUCTION);
+        this.lastFed = this.age;
+    }
+
     getInfo() {
         return {
             weight: this.weight.toFixed(1) + ' lbs',

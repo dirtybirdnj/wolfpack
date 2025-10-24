@@ -62,6 +62,21 @@ export const GameConfig = {
     UI_FONT_SIZE: 14,
     UI_PADDING: 10,
 
+    // Baitfish settings
+    BAITFISH_CLOUD_SPAWN_CHANCE: 0.003, // per frame
+    BAITFISH_CLOUD_MIN_COUNT: 5,
+    BAITFISH_CLOUD_MAX_COUNT: 20,
+    BAITFISH_CLOUD_RADIUS: 40, // pixels - how close to be "in the cloud"
+    COLOR_BAITFISH: 0x88ccff, // Light blue/silver for alewives
+    COLOR_BAITFISH_PANIC: 0xccddff, // Brighter when panicking
+
+    // Baitfish pursuit mechanics (works with 0-100 hunger scale)
+    BAITFISH_DETECTION_RANGE: 150, // Pixels - fish can see baitfish from farther away
+    BAITFISH_PURSUIT_SPEED: 2.2, // Multiplier when chasing baitfish
+    BAITFISH_VERTICAL_PURSUIT_RANGE: 200, // Base vertical range in pixels
+    HUNGER_VERTICAL_SCALING: 0.01, // How hunger affects vertical range (0-100 scale)
+    BAITFISH_CONSUMPTION_HUNGER_REDUCTION: 15, // Hunger reduced when eating baitfish
+
     // Depth-based behavior zones
     DEPTH_ZONES: {
         SURFACE: {
