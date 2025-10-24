@@ -1191,9 +1191,10 @@ export class GameScene extends Phaser.Scene {
 
         const playerWorldX = currentHole.x;
 
-        // Spawn from random side
+        // Spawn from random side using world coordinates
         const fromLeft = Math.random() < 0.5;
-        const x = fromLeft ? -100 : GameConfig.CANVAS_WIDTH + 100;
+        const spawnDistance = 300;
+        const worldX = playerWorldX + (fromLeft ? -spawnDistance : spawnDistance);
 
         // Spawn at mid-column depth (preferred lake trout zone)
         const y = Utils.randomBetween(
@@ -1201,15 +1202,18 @@ export class GameScene extends Phaser.Scene {
             GameConfig.DEPTH_ZONES.MID_COLUMN.max * GameConfig.DEPTH_SCALE
         );
 
-        // Create fish with max hunger and 30 health
-        const fish = new Fish(this, x, y);
+        // Create fish with max hunger and low health (size MEDIUM for balance)
+        const fish = new Fish(this, worldX, y, 'MEDIUM');
         fish.hunger = 100; // Max hunger - very motivated!
         fish.health = 30; // Low health makes it easier to catch
         fish.isEmergencyFish = true; // Mark as emergency fish
 
-        // Set initial velocity toward player
-        const direction = fromLeft ? 1 : -1;
-        fish.velocity.x = direction * 0.8;
+        // Set initial movement direction toward player
+        if (fromLeft) {
+            fish.ai.idleDirection = 1; // Swim right (toward player)
+        } else {
+            fish.ai.idleDirection = -1; // Swim left (toward player)
+        }
 
         this.fishes.push(fish);
 
