@@ -47,7 +47,7 @@
 
         body {
             margin: 0;
-            padding: 0;
+            padding: 20px;
             min-height: 100vh;
             background: linear-gradient(135deg, var(--bg-gradient-1) 0%, var(--bg-gradient-2) 100%);
             font-family: 'Courier New', monospace;
@@ -55,34 +55,14 @@
             overflow-x: hidden;
         }
 
-        #header {
-            text-align: center;
-            padding: 20px;
-            position: relative;
-        }
-
-        h1 {
-            color: var(--text-primary);
-            text-shadow: 0 0 10px var(--text-primary);
-            font-size: 28px;
-            margin: 0 0 10px 0;
-        }
-
-        .subtitle {
-            color: var(--text-secondary);
-            font-size: 14px;
-            margin: 0;
-        }
-
 
         #main-layout {
             display: grid;
             grid-template-columns: 250px 1fr 250px;
-            grid-template-rows: auto auto 1fr auto;
+            grid-template-rows: auto 1fr auto;
             gap: 20px;
             max-width: 1800px;
             margin: 0 auto;
-            padding: 0 20px 20px 20px;
             align-items: start;
         }
 
@@ -91,7 +71,7 @@
             flex-direction: column;
             gap: 15px;
             grid-column: 1;
-            grid-row: 1 / 4;
+            grid-row: 1 / 3;
         }
 
         #right-panel {
@@ -99,7 +79,7 @@
             flex-direction: column;
             gap: 15px;
             grid-column: 3;
-            grid-row: 1 / 4;
+            grid-row: 1 / 3;
         }
 
         #game-info-panel {
@@ -118,7 +98,7 @@
 
         #dev-toolbar {
             grid-column: 1 / 4;
-            grid-row: 4;
+            grid-row: 3;
             display: grid;
             grid-template-columns: 1fr 1fr 1fr;
             gap: 20px;
@@ -309,11 +289,6 @@
     </style>
 </head>
 <body>
-    <div id="header">
-        <h1>🎣 LAKE CHAMPLAIN SONAR 🎣</h1>
-        <div class="subtitle">Ice Fishing Simulator • Lake Trout • 45°N, Between the Greens and Adirondacks</div>
-    </div>
-
     <div id="main-layout">
         <!-- Left Panel -->
         <div id="left-panel">
@@ -345,9 +320,10 @@
             <!-- Gamepad Controls -->
             <div class="panel" id="gamepad-controls" style="display: none;">
                 <h3>🎮 GAMEPAD CONTROLS</h3>
+                <div style="font-weight: bold; color: var(--border-secondary); margin-bottom: 8px; font-size: 11px;">FISHING MODE</div>
                 <div class="control-item">
                     <span><span class="key">D-PAD ↓</span></span>
-                    <span>Release Spool</span>
+                    <span>Release Spool (Drop)</span>
                 </div>
                 <div class="control-item">
                     <span><span class="key">D-PAD ↑</span></span>
@@ -355,23 +331,52 @@
                 </div>
                 <div class="control-item">
                     <span><span class="key">L-STICK</span></span>
-                    <span>Alt Movement</span>
+                    <span>Alt Up/Down/Speed</span>
                 </div>
                 <div class="control-item">
-                    <span><span class="key">L1/R1</span></span>
+                    <span><span class="key">R-STICK ↕</span></span>
+                    <span>Jigging (Fine Control)</span>
+                </div>
+                <div class="control-item">
+                    <span><span class="key">D-PAD ←→</span></span>
                     <span>Adjust Speed</span>
                 </div>
                 <div class="control-item">
-                    <span><span class="key">CIRCLE</span></span>
+                    <span><span class="key">L1/R1</span></span>
+                    <span>Adjust Speed (Alt)</span>
+                </div>
+                <div class="control-item">
+                    <span><span class="key">X (PS: ×)</span></span>
+                    <span>Toggle Drop/Retrieve</span>
+                </div>
+                <div class="control-item">
+                    <span><span class="key">CIRCLE (PS: ○)</span></span>
                     <span>Reset to Surface</span>
                 </div>
                 <div class="control-item">
-                    <span><span class="key">X</span></span>
-                    <span>Quick Toggle</span>
+                    <span><span class="key">SQUARE (PS: □)</span></span>
+                    <span>Toggle Debug Mode</span>
                 </div>
                 <div class="control-item">
                     <span><span class="key">R2</span></span>
-                    <span>Reel in Fish</span>
+                    <span>Reel in Fish (Fight)</span>
+                </div>
+                <div style="font-weight: bold; color: var(--border-warning); margin: 10px 0 8px 0; font-size: 11px; border-top: 1px solid var(--text-muted); padding-top: 8px;">MOVEMENT MODE</div>
+                <div class="control-item">
+                    <span><span class="key">TRIANGLE (PS: △)</span></span>
+                    <span>Toggle Move/Fish Mode</span>
+                </div>
+                <div class="control-item">
+                    <span><span class="key">D-PAD ←→</span></span>
+                    <span>Walk on Ice</span>
+                </div>
+                <div class="control-item">
+                    <span><span class="key">L-STICK ←→</span></span>
+                    <span>Walk on Ice (Alt)</span>
+                </div>
+                <div class="control-item">
+                    <span><span class="key">SQUARE (PS: □)</span></span>
+                    <span>Drill New Hole</span>
                 </div>
             </div>
 
@@ -382,18 +387,13 @@
                     <div style="margin-bottom: 8px;">
                         <strong>Battery:</strong> <span id="drill-charges" class="status-value" style="color: var(--text-primary);">4/4</span>
                     </div>
-                    <div style="display: flex; gap: 4px; margin-bottom: 8px;">
+                    <div style="display: flex; gap: 4px; margin-bottom: 12px;">
                         <div id="battery-bar-1" class="battery-bar" style="width: 25%; height: 20px; background: var(--border-primary); border-radius: 2px;"></div>
                         <div id="battery-bar-2" class="battery-bar" style="width: 25%; height: 20px; background: var(--border-primary); border-radius: 2px;"></div>
                         <div id="battery-bar-3" class="battery-bar" style="width: 25%; height: 20px; background: var(--border-primary); border-radius: 2px;"></div>
                         <div id="battery-bar-4" class="battery-bar" style="width: 25%; height: 20px; background: var(--border-primary); border-radius: 2px;"></div>
                     </div>
-                    <div style="font-size: 10px; color: var(--text-muted); font-style: italic;">
-                        Triangle: Move Mode<br>
-                        Square: Drill (costs 1 charge)<br>
-                        L/R: Walk on ice
-                    </div>
-                    <div style="margin-top: 8px; font-size: 11px;">
+                    <div style="font-size: 11px;">
                         <div>Current Hole: <span id="current-hole" class="status-value">#1</span></div>
                         <div>Hole Depth: <span id="hole-depth" class="status-value">140ft</span></div>
                     </div>
