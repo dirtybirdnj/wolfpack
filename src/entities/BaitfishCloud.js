@@ -1,14 +1,19 @@
 import GameConfig from '../config/GameConfig.js';
 import { Utils } from '../utils/Constants.js';
 import Baitfish from './Baitfish.js';
+import { getBaitfishSpecies } from '../config/SpeciesData.js';
 
 export class BaitfishCloud {
-    constructor(scene, x, y, count) {
+    constructor(scene, x, y, count, speciesType = 'alewife') {
         this.scene = scene;
         this.id = `cloud_${Date.now()}_${Math.random()}`;
         this.centerX = x;
         this.centerY = y;
         this.depth = y / GameConfig.DEPTH_SCALE;
+
+        // Species information
+        this.speciesType = speciesType;
+        this.speciesData = getBaitfishSpecies(speciesType);
 
         // Cloud properties
         this.baitfish = [];
@@ -36,16 +41,32 @@ export class BaitfishCloud {
     }
 
     spawnBaitfish(count) {
+        // Adjust spawn pattern based on species behavior
+        const schoolingDensity = this.speciesData.schoolingDensity;
+        let spreadX = 60;
+        let spreadY = 40;
+
+        if (schoolingDensity === 'very_high') {
+            // Tighter schools (smelt)
+            spreadX = 40;
+            spreadY = 25;
+        } else if (schoolingDensity === 'none') {
+            // Very spread out (sculpin)
+            spreadX = 100;
+            spreadY = 60;
+        }
+
         for (let i = 0; i < count; i++) {
-            // Spawn in a tight cluster for better schooling
-            const offsetX = Utils.randomBetween(-60, 60);  // Reduced from -160,160 for tighter schools
-            const offsetY = Utils.randomBetween(-40, 40);  // Reduced from -100,100 for tighter schools
+            // Spawn in a cluster based on species schooling behavior
+            const offsetX = Utils.randomBetween(-spreadX, spreadX);
+            const offsetY = Utils.randomBetween(-spreadY, spreadY);
 
             const baitfish = new Baitfish(
                 this.scene,
                 this.centerX + offsetX,
                 this.centerY + offsetY,
-                this.id
+                this.id,
+                this.speciesType // Pass species type to baitfish
             );
 
             this.baitfish.push(baitfish);
