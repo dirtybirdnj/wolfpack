@@ -285,6 +285,14 @@ export class FishAI {
             // Reduce cooldown when close for immediate strike decision
             this.decisionCooldown = 50; // Very short cooldown when in strike range
 
+            // Check if there's already a fight in progress - don't allow strike
+            if (this.fish.scene && this.fish.scene.currentFight && this.fish.scene.currentFight.active) {
+                // Another fish is already hooked - can't strike
+                this.state = Constants.FISH_STATE.FLEEING;
+                this.decisionCooldown = 3000;
+                return;
+            }
+
             // Higher strike chance if lure is in baitfish cloud (fish think it's real food)
             const baseStrikeChance = this.aggressiveness * 0.85; // Increased from 0.7
             const strikeChance = lureInBaitfishCloud ? baseStrikeChance * 1.5 : baseStrikeChance;
@@ -327,6 +335,15 @@ export class FishAI {
         this.targetY = lure.y;
 
         if (distance < 5) {
+            // Check if there's already a fight in progress
+            if (this.fish.scene && this.fish.scene.currentFight && this.fish.scene.currentFight.active) {
+                // Another fish is already hooked - this fish missed
+                console.log('Fish tried to hook but another fight is in progress');
+                this.state = Constants.FISH_STATE.FLEEING;
+                this.decisionCooldown = 3000;
+                return;
+            }
+
             // Fish has caught the lure!
             this.fish.caught = true;
             this.state = Constants.FISH_STATE.FLEEING;
