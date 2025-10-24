@@ -12,6 +12,13 @@ export class FishFight {
         this.fishDistance = Math.abs(this.fish.y - 0); // Distance to surface
         this.initialDepth = this.fish.y; // Starting depth for visual tracking
 
+        // Fight states: 'hookset', 'fighting', 'thrashing', 'giving_up'
+        this.fightState = 'hookset';
+        this.stateTimer = 0;
+        this.nextThrashTime = 300; // Frames until next potential thrash (~5 seconds at 60fps)
+        this.thrashDuration = 0;
+        this.thrashIntensity = 0;
+
         // Reel tracking
         this.lastReelTime = 0;
         this.reelCount = 0;
@@ -24,14 +31,18 @@ export class FishFight {
         const biologicalCondition = (healthFactor + hungerFactor) / 2; // Average of both
 
         this.fishStrength = (this.fish.weight / 5) * biologicalCondition; // Biology affects strength
-        this.fishTiredness = (1 - biologicalCondition) * 30; // Poor condition = starts more tired
+        this.fishEnergy = 100 - ((1 - biologicalCondition) * 30); // Energy level (starts lower if in poor condition)
         this.fightTime = 0;
+
+        // Downward swimming behavior
+        this.swimDownForce = 0;
+        this.swimDownTarget = this.fish.y; // Target depth to swim to
 
         // Thrashing animation
         this.thrashAmount = 0;
         this.thrashSpeed = 0.15 + (biologicalCondition * 0.1); // Healthier fish thrash faster
 
-        console.log(`Fish condition - Health: ${this.fish.health.toFixed(0)}%, Hunger: ${this.fish.hunger.toFixed(0)}%, Strength: ${this.fishStrength.toFixed(1)}, Initial Tiredness: ${this.fishTiredness.toFixed(1)}`);
+        console.log(`Fish condition - Health: ${this.fish.health.toFixed(0)}%, Hunger: ${this.fish.hunger.toFixed(0)}%, Strength: ${this.fishStrength.toFixed(1)}, Initial Energy: ${this.fishEnergy.toFixed(1)}`);
 
 
         // Visual
@@ -41,21 +52,25 @@ export class FishFight {
         // Attach fish to lure visually
         this.attachFishToLure();
 
-        console.log(`Fish fight started! Fish: ${this.fish.weight.toFixed(1)} lbs, Distance: ${this.fishDistance.toFixed(0)}px`);
+        console.log(`Fish fight started! Fish: ${this.fish.weight.toFixed(1)} lbs, Distance: ${this.fishDistance.toFixed(0)}px, State: ${this.fightState}`);
     }
 
     update(currentTime, spacePressed) {
         if (!this.active) return;
 
         this.fightTime++;
+        this.stateTimer++;
+
+        // Update fight state based on energy and time
+        this.updateFightState();
 
         // Handle spacebar reeling
         if (spacePressed && currentTime - this.lastReelTime > GameConfig.MIN_REEL_INTERVAL) {
             this.reel(currentTime);
         }
 
-        // Fish pulls on line based on tiredness
-        this.applyFishPull();
+        // Fish pulls on line and tries to swim down based on state
+        this.applyFishBehavior();
 
         // Tension naturally decays (line gives)
         this.lineTension -= GameConfig.TENSION_DECAY_RATE;
@@ -73,11 +88,145 @@ export class FishFight {
             return;
         }
 
-        // Update fish position (pulled toward surface)
+        // Update fish position (pulled toward surface, swims down)
         this.updateFishPosition();
 
         // Render tension bar
         this.renderTensionBar();
+    }
+
+    updateFightState() {
+        const energyPercent = this.fishEnergy;
+
+        // State transitions
+        switch (this.fightState) {
+            case 'hookset':
+                // Initial fight lasts about 3 seconds
+                if (this.stateTimer > 180) {
+                    this.fightState = 'fighting';
+                    this.stateTimer = 0;
+                    console.log('Fish transitioned to FIGHTING state');
+                }
+                break;
+
+            case 'fighting':
+                // Check for thrashing every 5 seconds
+                if (this.stateTimer >= this.nextThrashTime) {
+                    this.enterThrashingState();
+                }
+
+                // Check if giving up
+                if (energyPercent < 25) {
+                    this.fightState = 'giving_up';
+                    this.stateTimer = 0;
+                    console.log('Fish is GIVING UP - energy below 25%');
+                }
+                break;
+
+            case 'thrashing':
+                // Thrash for about 2-3 seconds
+                if (this.thrashDuration <= 0) {
+                    this.fightState = 'fighting';
+                    this.stateTimer = 0;
+                    // Next thrash in about 5 seconds
+                    this.nextThrashTime = 300 + Math.random() * 120; // 5-7 seconds
+                    console.log('Fish returned to FIGHTING state');
+                }
+                break;
+
+            case 'giving_up':
+                // Once giving up, stays in this state
+                break;
+        }
+    }
+
+    enterThrashingState() {
+        this.fightState = 'thrashing';
+        this.stateTimer = 0;
+        this.thrashDuration = 120 + Math.random() * 60; // 2-3 seconds
+        this.thrashIntensity = 1.0;
+
+        console.log('Fish entered THRASHING state!');
+
+        // Check for hook spit based on fish size
+        const hookSpitChance = this.calculateHookSpitChance();
+        if (Math.random() < hookSpitChance) {
+            console.log(`Fish spit the hook! (${(hookSpitChance * 100).toFixed(1)}% chance)`);
+            this.spitHook();
+        }
+    }
+
+    calculateHookSpitChance() {
+        // Larger fish have higher chance to spit hook
+        const sizeCategory = this.fish.sizeCategory;
+
+        let baseChance = 0;
+        switch (sizeCategory) {
+            case 'SMALL':
+                baseChance = 0.02; // 2% chance
+                break;
+            case 'MEDIUM':
+                baseChance = 0.05; // 5% chance
+                break;
+            case 'LARGE':
+                baseChance = 0.10; // 10% chance
+                break;
+            case 'TROPHY':
+                baseChance = 0.15; // 15% chance
+                break;
+            default:
+                baseChance = 0.03;
+        }
+
+        // Higher energy fish more likely to spit hook
+        const energyFactor = this.fishEnergy / 100;
+        return baseChance * (0.5 + energyFactor);
+    }
+
+    spitHook() {
+        console.log('HOOK SPIT! Fish escaped.');
+
+        // Show message
+        const text = this.scene.add.text(GameConfig.CANVAS_WIDTH / 2, 240,
+            'HOOK SPIT!\nFish Escaped!',
+            {
+                fontSize: '26px',
+                fontFamily: 'Courier New',
+                color: '#ffaa00',
+                align: 'center',
+                stroke: '#000000',
+                strokeThickness: 3
+            }
+        );
+        text.setOrigin(0.5, 0.5);
+        text.setDepth(1000);
+
+        this.scene.tweens.add({
+            targets: text,
+            alpha: 0,
+            duration: 2000,
+            onComplete: () => text.destroy()
+        });
+
+        // Update stats
+        this.scene.fishLost++;
+        this.scene.events.emit('updateFishLost', this.scene.fishLost);
+
+        // Release fish from lure
+        this.fish.caught = false;
+        this.fish.ai.state = 'FLEEING';
+
+        // Set fast escape velocity - dive deep!
+        const escapeDirection = this.fish.x < GameConfig.CANVAS_WIDTH / 2 ? -1 : 1;
+        this.fish.ai.targetX = escapeDirection < 0 ? -200 : GameConfig.CANVAS_WIDTH + 200;
+        this.fish.ai.targetY = this.fish.y + 150; // Dive deep
+        this.fish.ai.decisionCooldown = 5000;
+
+        // Reset lure position
+        this.lure.reset();
+
+        // Clean up fight
+        this.endFight();
     }
 
     reel(currentTime) {
@@ -94,33 +243,73 @@ export class FishFight {
             this.fishDistance = Math.max(0, this.fishDistance);
         }
 
-        // Tire the fish slightly
-        this.fishTiredness += GameConfig.FISH_TIRE_RATE;
-        this.fishTiredness = Math.min(100, this.fishTiredness);
+        // Drain fish energy
+        this.fishEnergy -= GameConfig.FISH_TIRE_RATE;
+        this.fishEnergy = Math.max(0, this.fishEnergy);
     }
 
-    applyFishPull() {
-        // Fish fights back based on strength and tiredness
-        const tirednessMultiplier = 1 - (this.fishTiredness / 100);
+    applyFishBehavior() {
+        // Fish behavior varies by state
+        const energyMultiplier = this.fishEnergy / 100;
 
-        // Healthy, well-fed fish fight harder with more aggressive pulls
-        const healthFactor = this.fish.health / 100;
-        const energyFactor = 1 - (this.fish.hunger / 100); // Lower hunger = more energy
+        let pullStrength = 0;
+        let swimDownStrength = 0;
 
-        // Combine all factors for realistic fight behavior
-        const fightIntensity = tirednessMultiplier * healthFactor * energyFactor;
+        switch (this.fightState) {
+            case 'hookset':
+                // Initial panic - strong pull and swim down
+                pullStrength = GameConfig.FISH_PULL_BASE * this.fishStrength * 1.5;
+                swimDownStrength = this.fishStrength * 2.0;
+                break;
 
-        const pullStrength = GameConfig.FISH_PULL_BASE * this.fishStrength * fightIntensity;
+            case 'fighting':
+                // Normal fighting - moderate pull and swim down
+                pullStrength = GameConfig.FISH_PULL_BASE * this.fishStrength * energyMultiplier;
+                swimDownStrength = this.fishStrength * 1.2 * energyMultiplier;
 
-        // Strong, healthy fish can make sudden surges
-        if (fightIntensity > 0.7 && Math.random() < 0.05) {
-            // Surge! Extra tension
-            this.lineTension += pullStrength * 0.5;
-        } else {
-            this.lineTension += pullStrength * 0.1; // Apply pull gradually
+                // Occasional surges
+                if (energyMultiplier > 0.5 && Math.random() < 0.03) {
+                    pullStrength *= 1.5;
+                    swimDownStrength *= 1.5;
+                }
+                break;
+
+            case 'thrashing':
+                // Violent thrashing - very strong pull but erratic
+                this.thrashDuration--;
+                pullStrength = GameConfig.FISH_PULL_BASE * this.fishStrength * 2.0 * this.thrashIntensity;
+                swimDownStrength = this.fishStrength * 2.5 * this.thrashIntensity;
+
+                // Drain energy faster during thrashing
+                this.fishEnergy -= 0.2;
+                this.fishEnergy = Math.max(0, this.fishEnergy);
+                break;
+
+            case 'giving_up':
+                // Weak fighting
+                pullStrength = GameConfig.FISH_PULL_BASE * this.fishStrength * 0.3;
+                swimDownStrength = this.fishStrength * 0.4;
+                break;
         }
 
+        // Apply pull to line tension
+        this.lineTension += pullStrength * 0.1;
         this.lineTension = Math.min(GameConfig.MAX_LINE_TENSION, this.lineTension);
+
+        // Apply downward swimming force
+        this.swimDownForce = swimDownStrength;
+
+        // Set swim down target based on state
+        if (this.fightState === 'thrashing' || this.fightState === 'hookset') {
+            // Try to swim deeper
+            this.swimDownTarget = this.fish.y + 50;
+        } else if (this.fightState === 'giving_up') {
+            // Just maintain position
+            this.swimDownTarget = this.fish.y;
+        } else {
+            // Normal fighting - try to go down a bit
+            this.swimDownTarget = this.fish.y + 20;
+        }
     }
 
     attachFishToLure() {
@@ -134,24 +323,43 @@ export class FishFight {
         // Calculate how much the fish has been reeled in
         const reelProgress = 1 - (this.fishDistance / this.initialDepth);
 
-        // Move both lure and fish upward as fish is reeled in
-        const targetY = this.initialDepth - (this.initialDepth * reelProgress);
+        // Base Y position from reeling
+        let targetY = this.initialDepth - (this.initialDepth * reelProgress);
 
-        // Fish thrashing animation - left/right oscillation
-        this.thrashAmount = Math.sin(this.fightTime * this.thrashSpeed) * 15;
+        // Apply downward swimming force - fish tries to swim down
+        const swimDownEffect = this.swimDownForce * 0.3; // Scale down for realistic movement
+        targetY += swimDownEffect;
 
-        // Tired fish thrash less
-        const tirednessMultiplier = 1 - (this.fishTiredness / 100);
-        const actualThrash = this.thrashAmount * tirednessMultiplier;
+        // Clamp to prevent fish from swimming too deep or going above starting point
+        const maxDepth = Math.min(this.initialDepth + 30, GameConfig.MAX_DEPTH * GameConfig.DEPTH_SCALE);
+        targetY = Math.max(0, Math.min(maxDepth, targetY));
+
+        // Fish thrashing animation - more intense during thrashing state
+        let thrashMultiplier = 1.0;
+        if (this.fightState === 'thrashing') {
+            thrashMultiplier = 2.5; // Violent thrashing
+        } else if (this.fightState === 'giving_up') {
+            thrashMultiplier = 0.3; // Weak thrashing
+        } else if (this.fightState === 'hookset') {
+            thrashMultiplier = 1.8; // Strong initial fight
+        }
+
+        this.thrashAmount = Math.sin(this.fightTime * this.thrashSpeed) * 15 * thrashMultiplier;
+
+        // Energy affects thrashing intensity
+        const energyMultiplier = this.fishEnergy / 100;
+        const actualThrash = this.thrashAmount * energyMultiplier;
+
+        // Add vertical thrashing component (fish also thrashes up/down)
+        const verticalThrash = Math.cos(this.fightTime * this.thrashSpeed * 1.3) * 8 * thrashMultiplier * energyMultiplier;
 
         // Position fish at depth with thrashing
         this.fish.x = this.lure.x + actualThrash;
-        this.fish.y = targetY;
+        this.fish.y = targetY + verticalThrash;
         this.fish.depth = this.fish.y / GameConfig.DEPTH_SCALE;
 
         // Position lure at fish's mouth (slightly offset for visual realism)
-        // Fish mouth is slightly forward, so offset lure by a few pixels in thrash direction
-        const mouthOffset = actualThrash > 0 ? 8 : -8; // Lure at mouth edge
+        const mouthOffset = actualThrash > 0 ? 8 : -8;
         this.lure.x = this.fish.x + mouthOffset;
         this.lure.y = this.fish.y;
         this.lure.depth = this.lure.y / GameConfig.DEPTH_SCALE;
@@ -203,27 +411,45 @@ export class FishFight {
         tensionText.setOrigin(0.5, 0.5);
         tensionText.setDepth(501);
 
-        // Fish stats with health/hunger
-        const healthColor = this.fish.health > 60 ? '#00ff00' : this.fish.health > 30 ? '#ffaa00' : '#ff6666';
-        const hungerColor = this.fish.hunger > 70 ? '#ff6666' : this.fish.hunger > 40 ? '#ffaa00' : '#00ff00';
+        // Fish stats with energy and state
+        const energyColor = this.fishEnergy > 60 ? '#00ff00' : this.fishEnergy > 25 ? '#ffaa00' : '#ff6666';
+
+        // State display with colors
+        let stateText = this.fightState.toUpperCase();
+        let stateColor = '#00ff00';
+        switch (this.fightState) {
+            case 'hookset':
+                stateColor = '#ffff00';
+                break;
+            case 'fighting':
+                stateColor = '#00ff00';
+                break;
+            case 'thrashing':
+                stateColor = '#ff6666';
+                stateText = '⚠️ THRASHING ⚠️';
+                break;
+            case 'giving_up':
+                stateColor = '#888888';
+                break;
+        }
 
         const statsText = this.scene.add.text(barX, barY + barHeight + 8,
-            `Fish: ${this.fish.weight.toFixed(1)} lbs | Tired: ${Math.floor(this.fishTiredness)}% | Dist: ${Math.floor(this.fishDistance / GameConfig.DEPTH_SCALE)} ft`,
+            `Fish: ${this.fish.weight.toFixed(1)} lbs | Energy: ${Math.floor(this.fishEnergy)}% | Dist: ${Math.floor(this.fishDistance / GameConfig.DEPTH_SCALE)} ft`,
             {
                 fontSize: '10px',
                 fontFamily: 'Courier New',
-                color: '#00ff00'
+                color: energyColor
             }
         );
         statsText.setDepth(501);
 
-        // Condition stats
+        // State and condition
         const conditionText = this.scene.add.text(barX, barY + barHeight + 21,
-            `Health: ${Math.floor(this.fish.health)}% | Hunger: ${Math.floor(this.fish.hunger)}%`,
+            `State: ${stateText} | Health: ${Math.floor(this.fish.health)}% | Hunger: ${Math.floor(this.fish.hunger)}%`,
             {
                 fontSize: '9px',
                 fontFamily: 'Courier New',
-                color: '#888888'
+                color: stateColor
             }
         );
         conditionText.setDepth(501);
