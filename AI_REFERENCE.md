@@ -9,6 +9,7 @@
 ## 🗺️ Quick File Map
 
 ### Need to modify...
+- **Species data (NEW!)** → `src/config/SpeciesData.js`
 - **Fish spawning** → `src/scenes/systems/SpawningSystem.js`
 - **Fish AI behavior** → `src/entities/FishAI.js`
 - **Fish appearance** → `src/entities/Fish.js`
@@ -54,14 +55,22 @@ GameScene (orchestrator)
 ## 🎯 Common Tasks (How-To)
 
 ### Add a New Fish Species
-1. Open `src/entities/FishAI.js`
-2. Add species-specific behavior in `decideBehavior()` method
-3. Open `src/entities/Fish.js`
-4. Add species appearance in constructor
-5. Open `src/scenes/systems/SpawningSystem.js`
-6. Modify `trySpawnFish()` to include new species in spawn logic
+1. Open `src/config/SpeciesData.js`
+2. Add species data to PREDATOR_SPECIES object with all properties (depth ranges, behaviors, diet, etc.)
+3. Open `src/entities/FishAI.js` constructor
+4. Add species-specific AI behavior initialization (if needed)
+5. Open `src/entities/Fish.js`
+6. Add species rendering method: `render[SpeciesName](bodySize, isMovingRight)`
+7. Update main `render()` method to call new species renderer
+8. Open `src/scenes/systems/SpawningSystem.js`
+9. Update `trySpawnFish()` spawn probabilities to include new species
 
-**Estimated lines to read**: ~300 (vs ~2000 in old architecture)
+**Estimated lines to read**: ~500
+
+**Current Species**:
+- Lake Trout (pursuit hunter, deep cold water)
+- Northern Pike (ambush predator, shallow structure)
+- Smallmouth Bass (active predator, rocky areas, circles before striking)
 
 ### Adjust Game Balance
 1. Open `src/config/GameConfig.js`
