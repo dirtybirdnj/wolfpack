@@ -115,7 +115,8 @@ export class GameScene extends Phaser.Scene {
             lastR1: false,
             lastA: false,
             lastB: false,
-            lastX: false
+            lastX: false,
+            lastY: false // Triangle/Y button for movement mode
         };
     }
 
@@ -190,6 +191,9 @@ export class GameScene extends Phaser.Scene {
 
             return;
         }
+
+        // Update ice hole manager (must be before input)
+        this.iceHoleManager.update();
 
         // Update sonar display
         this.sonarDisplay.update();
@@ -278,11 +282,45 @@ export class GameScene extends Phaser.Scene {
         const aBtn = window.gamepadManager.getButton('X'); // X button on PS4 = A on Xbox
         const bBtn = window.gamepadManager.getButton('Circle'); // Circle on PS4 = B on Xbox
         const xBtn = window.gamepadManager.getButton('Square'); // Square on PS4 = X on Xbox
+        const yBtn = window.gamepadManager.getButton('Triangle'); // Triangle on PS4 = Y on Xbox
 
         // Get analog stick axes
         const leftStickX = window.gamepadManager.getAxis(0); // Left stick X
         const leftStickY = window.gamepadManager.getAxis(1); // Left stick Y
 
+        // === ICE HOLE MOVEMENT MODE ===
+        // Triangle/Y button: Toggle movement mode (walk on ice)
+        if (yBtn.pressed && !this.gamepadState.lastY) {
+            if (this.iceHoleManager.movementMode) {
+                this.iceHoleManager.exitMovementMode();
+            } else {
+                this.iceHoleManager.enterMovementMode();
+            }
+        }
+        this.gamepadState.lastY = yBtn.pressed;
+
+        // If in movement mode, different controls apply
+        if (this.iceHoleManager.movementMode) {
+            // L/R movement on ice surface
+            const moveSpeed = 5;
+            if (dpadLeftBtn.pressed || leftStickX < -DEAD_ZONE) {
+                this.iceHoleManager.movePlayer(-moveSpeed);
+            }
+            if (dpadRightBtn.pressed || leftStickX > DEAD_ZONE) {
+                this.iceHoleManager.movePlayer(moveSpeed);
+            }
+
+            // Square/X button: Drill new hole
+            if (xBtn.pressed && !this.gamepadState.lastX) {
+                this.iceHoleManager.drillNewHole();
+            }
+            this.gamepadState.lastX = xBtn.pressed;
+
+            // Exit early - don't process fishing controls
+            return;
+        }
+
+        // === FISHING MODE (normal controls) ===
         // D-pad UP or Left Stick UP: Retrieve line
         const dpadUp = dpadUpBtn.pressed || (leftStickY < -DEAD_ZONE);
         if (dpadUp) {
@@ -554,11 +592,17 @@ export class GameScene extends Phaser.Scene {
         if (this.fishes.length >= 4) {
             return;
         }
-        
+
+        // Get current hole position in world coordinates
+        const currentHole = this.iceHoleManager.getCurrentHole();
+        if (!currentHole) return;
+
+        const playerWorldX = currentHole.x;
+
         // Determine fish spawn depth based on realistic lake trout behavior
         let depth;
         const tempFactor = (this.waterTemp - 38) / 7; // 0 to 1 based on temp range
-        
+
         // Lake trout prefer different depths based on temperature
         if (tempFactor < 0.3) {
             // Cold water - fish can be shallower
@@ -567,7 +611,7 @@ export class GameScene extends Phaser.Scene {
             // Warmer water - fish go deeper
             depth = Utils.randomBetween(30, 120);
         }
-        
+
         // Determine fish size
         const sizeRoll = Math.random();
         let size;
@@ -580,20 +624,22 @@ export class GameScene extends Phaser.Scene {
         } else {
             size = 'TROPHY';
         }
-        
-        // Spawn from left or right edge
-        const fromLeft = Math.random() < 0.5;
-        const x = fromLeft ? -30 : GameConfig.CANVAS_WIDTH + 30;
-        const y = depth * GameConfig.DEPTH_SCALE;
-        
-        // Create the fish
-        const fish = new Fish(this, x, y, size);
 
-        // Set initial movement direction based on spawn side
+        // Spawn fish in world coordinates relative to player's hole
+        // Fish spawn at random distances around the player (200-400 units away)
+        const spawnDistance = Utils.randomBetween(200, 400);
+        const fromLeft = Math.random() < 0.5;
+        const worldX = playerWorldX + (fromLeft ? -spawnDistance : spawnDistance);
+        const y = depth * GameConfig.DEPTH_SCALE;
+
+        // Create the fish (worldX will be used internally, x will be calculated for screen)
+        const fish = new Fish(this, worldX, y, size);
+
+        // Set initial movement direction - fish swim toward and past the player
         if (fromLeft) {
-            fish.ai.idleDirection = 1; // Swim right
+            fish.ai.idleDirection = 1; // Swim right (toward and past player)
         } else {
-            fish.ai.idleDirection = -1; // Swim left
+            fish.ai.idleDirection = -1; // Swim left (toward and past player)
         }
 
         this.fishes.push(fish);

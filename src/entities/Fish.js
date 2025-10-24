@@ -5,6 +5,11 @@ import FishAI from './FishAI.js';
 export class Fish {
     constructor(scene, x, y, size = 'MEDIUM') {
         this.scene = scene;
+
+        // World coordinates (actual position in the lake)
+        this.worldX = x;
+
+        // Screen coordinates (for rendering - calculated based on player position)
         this.x = x;
         this.y = y;
         this.depth = y / GameConfig.DEPTH_SCALE;
@@ -119,20 +124,34 @@ export class Fish {
         // Get movement from AI
         const movement = this.ai.getMovementVector();
 
-        // Apply movement
-        this.x += movement.x;
+        // Apply movement in world coordinates
+        this.worldX += movement.x;
         this.y += movement.y;
         this.depth = this.y / GameConfig.DEPTH_SCALE;
 
-        // Keep fish in bounds
+        // Keep fish in depth bounds
         this.y = Math.max(10, Math.min(GameConfig.MAX_DEPTH * GameConfig.DEPTH_SCALE - 10, this.y));
-        
+
+        // Convert world position to screen position based on player's current hole
+        const currentHole = this.scene.iceHoleManager.getCurrentHole();
+        if (currentHole) {
+            const playerWorldX = currentHole.x;
+            const offsetFromPlayer = this.worldX - playerWorldX;
+            this.x = (GameConfig.CANVAS_WIDTH / 2) + offsetFromPlayer;
+        } else {
+            // Fallback if no hole exists
+            this.x = this.worldX;
+        }
+
         // Update sonar trail
         this.updateSonarTrail();
-        
-        // Remove fish if it goes off screen
-        if (this.x < -50 || this.x > GameConfig.CANVAS_WIDTH + 50) {
-            this.visible = false;
+
+        // Remove fish if too far from player in world coordinates (beyond ~500 units)
+        if (currentHole) {
+            const distanceFromPlayer = Math.abs(this.worldX - currentHole.x);
+            if (distanceFromPlayer > 500) {
+                this.visible = false;
+            }
         }
         
         // Render

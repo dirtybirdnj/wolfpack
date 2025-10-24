@@ -34,6 +34,10 @@ export class IceHoleManager {
         // Create initial hole at starting position
         this.drillHole(this.playerX);
 
+        // Initialize UI
+        this.updateBatteryUI();
+        this.updateHoleUI();
+
         console.log('🧊 Ice Hole Manager initialized - Starting at hole #1');
     }
 
@@ -106,7 +110,8 @@ export class IceHoleManager {
         this.currentHoleIndex = this.holes.length - 1;
 
         // Update UI
-        this.scene.events.emit('updateDrillCharges', this.drillChargesRemaining);
+        this.updateBatteryUI();
+        this.updateHoleUI();
         this.scene.showAchievement('New Hole Drilled!', `Battery: ${this.drillChargesRemaining} left`);
 
         return true;
@@ -134,6 +139,7 @@ export class IceHoleManager {
             this.movementMode = false;
             this.currentHoleIndex = this.holes.indexOf(nearestHole);
             console.log(`🎣 Entering fishing mode at hole #${this.currentHoleIndex + 1}`);
+            this.updateHoleUI();
             this.scene.showAchievement('Fishing Mode', `At hole #${this.currentHoleIndex + 1}`);
         } else {
             console.warn('Not at a hole! Move to a hole or drill one.');
@@ -288,6 +294,45 @@ export class IceHoleManager {
         // Player is centered, so offset everything by player position
         const offset = worldX - this.playerX;
         return (GameConfig.CANVAS_WIDTH / 2) + offset;
+    }
+
+    updateBatteryUI() {
+        // Update battery charge display
+        const chargesEl = document.getElementById('drill-charges');
+        if (chargesEl) {
+            chargesEl.textContent = `${this.drillChargesRemaining}/${this.maxDrillCharges}`;
+        }
+
+        // Update battery bars
+        for (let i = 1; i <= this.maxDrillCharges; i++) {
+            const barEl = document.getElementById(`battery-bar-${i}`);
+            if (barEl) {
+                if (i <= this.drillChargesRemaining) {
+                    barEl.style.background = 'var(--border-primary)';
+                    barEl.style.opacity = '1';
+                } else {
+                    barEl.style.background = 'var(--text-muted)';
+                    barEl.style.opacity = '0.3';
+                }
+            }
+        }
+    }
+
+    updateHoleUI() {
+        // Update current hole display
+        const holeEl = document.getElementById('current-hole');
+        if (holeEl) {
+            holeEl.textContent = `#${this.currentHoleIndex + 1}`;
+        }
+
+        // Update hole depth
+        const depthEl = document.getElementById('hole-depth');
+        if (depthEl) {
+            const currentHole = this.getCurrentHole();
+            if (currentHole) {
+                depthEl.textContent = `${currentHole.depth.toFixed(0)}ft`;
+            }
+        }
     }
 
     destroy() {

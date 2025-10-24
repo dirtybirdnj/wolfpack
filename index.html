@@ -374,6 +374,31 @@
                 </div>
             </div>
 
+            <!-- Ice Fishing Drill Battery -->
+            <div class="panel secondary">
+                <h3>⛏️ ICE DRILL</h3>
+                <div style="margin: 10px 0; font-size: 12px;">
+                    <div style="margin-bottom: 8px;">
+                        <strong>Battery:</strong> <span id="drill-charges" class="status-value" style="color: var(--text-primary);">4/4</span>
+                    </div>
+                    <div style="display: flex; gap: 4px; margin-bottom: 8px;">
+                        <div id="battery-bar-1" class="battery-bar" style="width: 25%; height: 20px; background: var(--border-primary); border-radius: 2px;"></div>
+                        <div id="battery-bar-2" class="battery-bar" style="width: 25%; height: 20px; background: var(--border-primary); border-radius: 2px;"></div>
+                        <div id="battery-bar-3" class="battery-bar" style="width: 25%; height: 20px; background: var(--border-primary); border-radius: 2px;"></div>
+                        <div id="battery-bar-4" class="battery-bar" style="width: 25%; height: 20px; background: var(--border-primary); border-radius: 2px;"></div>
+                    </div>
+                    <div style="font-size: 10px; color: var(--text-muted); font-style: italic;">
+                        Triangle: Move Mode<br>
+                        Square: Drill (costs 1 charge)<br>
+                        L/R: Walk on ice
+                    </div>
+                    <div style="margin-top: 8px; font-size: 11px;">
+                        <div>Current Hole: <span id="current-hole" class="status-value">#1</span></div>
+                        <div>Hole Depth: <span id="hole-depth" class="status-value">140ft</span></div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Dev Tools -->
             <div class="panel warning">
                 <h3>🔧 DEV TOOLS</h3>
