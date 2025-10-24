@@ -133,10 +133,10 @@ export class FishFight {
     renderTensionBar() {
         this.tensionBar.clear();
 
-        const barX = 40;
-        const barY = 80;
-        const barWidth = 160;
-        const barHeight = 24;
+        const barX = 45;
+        const barY = 90;
+        const barWidth = 180;
+        const barHeight = 26;
 
         // Background
         this.tensionBar.fillStyle(0x000000, 0.8);

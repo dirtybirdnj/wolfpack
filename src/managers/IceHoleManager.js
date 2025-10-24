@@ -26,7 +26,7 @@ export class IceHoleManager {
         this.iceGraphics.setDepth(1000); // On top of most things
 
         // Ice surface height (in pixels from top)
-        this.iceHeight = 48;
+        this.iceHeight = 54;
 
         // Lake bed depth variation (for different hole locations)
         this.lakeBedProfile = this.generateLakeBedProfile();

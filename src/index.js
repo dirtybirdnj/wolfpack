@@ -250,7 +250,7 @@ function updateFishStatus(gameScene) {
             <div style="background: #ffff0020; border: 2px solid #ffff00; padding: 4px; font-weight: bold; font-size: 11px; color: #ffff00;">
                 ☀️ SURFACE (0-40ft) [${surfaceFish.length}]
             </div>
-            ${surfaceFish.length > 0 ? surfaceFish.map(renderFish).join('') : '<div style="color: #666; font-size: 9px; padding: 4px; font-style: italic;">No fish</div>'}
+            ${surfaceFish.length > 0 ? surfaceFish.map(renderFish).join('') : ''}
         </div>
     `;
 
@@ -260,7 +260,7 @@ function updateFishStatus(gameScene) {
             <div style="background: #00ff0020; border: 2px solid #00ff00; padding: 4px; font-weight: bold; font-size: 11px; color: #00ff00;">
                 🎯 MID-COLUMN (40-100ft) [${midColumnFish.length}]
             </div>
-            ${midColumnFish.length > 0 ? midColumnFish.map(renderFish).join('') : '<div style="color: #666; font-size: 9px; padding: 4px; font-style: italic;">No fish</div>'}
+            ${midColumnFish.length > 0 ? midColumnFish.map(renderFish).join('') : ''}
         </div>
     `;
 
@@ -270,7 +270,7 @@ function updateFishStatus(gameScene) {
             <div style="background: #88888820; border: 2px solid #888888; padding: 4px; font-weight: bold; font-size: 11px; color: #888888;">
                 ⚓ BOTTOM (100-150ft) [${bottomFish.length}]
             </div>
-            ${bottomFish.length > 0 ? bottomFish.map(renderFish).join('') : '<div style="color: #666; font-size: 9px; padding: 4px; font-style: italic;">No fish</div>'}
+            ${bottomFish.length > 0 ? bottomFish.map(renderFish).join('') : ''}
         </div>
     `;
 

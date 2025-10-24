@@ -58,9 +58,9 @@
 
         #main-layout {
             display: grid;
-            grid-template-columns: 250px 1fr 250px;
+            grid-template-columns: 220px 1fr 220px;
             grid-template-rows: auto 1fr auto;
-            gap: 20px;
+            gap: 15px;
             max-width: 1800px;
             margin: 0 auto;
             align-items: start;
@@ -69,7 +69,7 @@
         #left-panel {
             display: flex;
             flex-direction: column;
-            gap: 15px;
+            gap: 12px;
             grid-column: 1;
             grid-row: 1 / 3;
         }
@@ -77,7 +77,7 @@
         #right-panel {
             display: flex;
             flex-direction: column;
-            gap: 15px;
+            gap: 12px;
             grid-column: 3;
             grid-row: 1 / 3;
         }
@@ -109,12 +109,12 @@
         }
 
         .panel {
-            padding: 15px;
+            padding: 12px;
             background: var(--panel-bg);
             border: 2px solid var(--border-primary);
             border-radius: 8px;
-            font-size: 12px;
-            line-height: 1.6;
+            font-size: 11px;
+            line-height: 1.5;
         }
 
         .panel.secondary {
@@ -126,9 +126,9 @@
         }
 
         .panel h3 {
-            margin: 0 0 10px 0;
+            margin: 0 0 8px 0;
             color: var(--text-primary);
-            font-size: 14px;
+            font-size: 13px;
         }
 
         .panel.secondary h3 {
@@ -142,8 +142,9 @@
         .control-item {
             display: flex;
             justify-content: space-between;
-            margin: 5px 0;
-            gap: 10px;
+            margin: 3px 0;
+            gap: 8px;
+            font-size: 10px;
         }
 
         .control-item > span:first-child {
@@ -157,12 +158,13 @@
         .key {
             background: var(--key-bg);
             color: var(--key-text);
-            padding: 2px 8px;
+            padding: 1px 6px;
             border-radius: 3px;
             font-weight: bold;
-            margin-right: 5px;
+            margin-right: 4px;
             display: inline-block;
             white-space: nowrap;
+            font-size: 9px;
         }
 
         .dev-btn {
@@ -233,10 +235,42 @@
             display: none !important;
         }
 
+        /* Collapsible sections */
+        .collapsible-header {
+            cursor: pointer;
+            user-select: none;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .collapsible-header:hover {
+            opacity: 0.8;
+        }
+
+        .collapsible-toggle {
+            font-size: 12px;
+            transition: transform 0.2s;
+        }
+
+        .collapsible-toggle.collapsed {
+            transform: rotate(-90deg);
+        }
+
+        .collapsible-content {
+            max-height: 1000px;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
+
+        .collapsible-content.collapsed {
+            max-height: 0;
+        }
+
         /* Responsive */
         @media (max-width: 1600px) {
             #main-layout {
-                grid-template-columns: 220px 1fr 220px;
+                grid-template-columns: 200px 1fr 200px;
             }
         }
 
@@ -294,7 +328,11 @@
         <div id="left-panel">
             <!-- Keyboard Controls -->
             <div class="panel" id="keyboard-controls">
-                <h3>⌨️ KEYBOARD CONTROLS</h3>
+                <div class="collapsible-header" onclick="toggleCollapse('kb-content')">
+                    <h3>⌨️ KEYBOARD CONTROLS</h3>
+                    <span class="collapsible-toggle" id="kb-toggle">▼</span>
+                </div>
+                <div class="collapsible-content" id="kb-content">
                 <div class="control-item">
                     <span><span class="key">SPACE</span> <span class="key">↓</span></span>
                     <span>Release Spool (Drop)</span>
@@ -315,11 +353,16 @@
                     <span><span class="key">R</span></span>
                     <span>Reset to Surface</span>
                 </div>
+                </div>
             </div>
 
             <!-- Gamepad Controls -->
             <div class="panel" id="gamepad-controls" style="display: none;">
-                <h3>🎮 GAMEPAD CONTROLS</h3>
+                <div class="collapsible-header" onclick="toggleCollapse('gp-content')">
+                    <h3>🎮 GAMEPAD CONTROLS</h3>
+                    <span class="collapsible-toggle" id="gp-toggle">▼</span>
+                </div>
+                <div class="collapsible-content" id="gp-content">
                 <div style="font-weight: bold; color: var(--border-secondary); margin-bottom: 8px; font-size: 11px;">FISHING MODE</div>
                 <div class="control-item">
                     <span><span class="key">D-PAD ↓</span></span>
@@ -378,6 +421,7 @@
                     <span><span class="key">SQUARE (PS: □)</span></span>
                     <span>Drill New Hole</span>
                 </div>
+                </div>
             </div>
 
             <!-- Ice Fishing Drill Battery -->
@@ -403,38 +447,38 @@
 
         <!-- Game Info Panel (Above Game) -->
         <div id="game-info-panel" class="panel">
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; font-size: 13px;">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; font-size: 11px;">
                 <div>
-                    <div style="color: var(--text-muted); font-size: 10px;">SCORE</div>
-                    <div style="font-weight: bold; color: var(--text-primary);"><span id="ui-score">0</span></div>
+                    <div style="color: var(--text-muted); font-size: 9px;">SCORE</div>
+                    <div style="font-weight: bold; color: var(--text-primary); font-size: 12px;"><span id="ui-score">0</span></div>
                 </div>
                 <div>
-                    <div style="color: var(--text-muted); font-size: 10px;">CAUGHT / LOST</div>
-                    <div style="font-weight: bold;"><span id="ui-caught" style="color: var(--text-primary);">0</span> / <span id="ui-lost" style="color: #ff6666;">0</span></div>
+                    <div style="color: var(--text-muted); font-size: 9px;">CAUGHT/LOST</div>
+                    <div style="font-weight: bold; font-size: 12px;"><span id="ui-caught" style="color: var(--text-primary);">0</span>/<span id="ui-lost" style="color: #ff6666;">0</span></div>
                 </div>
                 <div>
-                    <div style="color: var(--text-muted); font-size: 10px;">LURE DEPTH</div>
-                    <div style="font-weight: bold; color: var(--border-secondary);"><span id="ui-depth">0</span> ft</div>
+                    <div style="color: var(--text-muted); font-size: 9px;">DEPTH</div>
+                    <div style="font-weight: bold; color: var(--border-secondary); font-size: 12px;"><span id="ui-depth">0</span>ft</div>
                 </div>
                 <div>
-                    <div style="color: var(--text-muted); font-size: 10px;">LURE STATE</div>
-                    <div style="font-weight: bold; color: var(--text-secondary);"><span id="ui-lure-state">SURFACE</span></div>
+                    <div style="color: var(--text-muted); font-size: 9px;">STATE</div>
+                    <div style="font-weight: bold; color: var(--text-secondary); font-size: 11px;"><span id="ui-lure-state">SURFACE</span></div>
                 </div>
                 <div>
-                    <div style="color: var(--text-muted); font-size: 10px;">RETRIEVE SPEED</div>
-                    <div style="font-weight: bold; color: var(--text-primary);"><span id="ui-speed">2.0</span></div>
+                    <div style="color: var(--text-muted); font-size: 9px;">SPEED</div>
+                    <div style="font-weight: bold; color: var(--text-primary); font-size: 12px;"><span id="ui-speed">2.0</span></div>
                 </div>
                 <div>
-                    <div style="color: var(--text-muted); font-size: 10px;">WATER TEMP</div>
-                    <div style="font-weight: bold; color: var(--border-secondary);"><span id="ui-temp">40</span>°F</div>
+                    <div style="color: var(--text-muted); font-size: 9px;">TEMP</div>
+                    <div style="font-weight: bold; color: var(--border-secondary); font-size: 12px;"><span id="ui-temp">40</span>°F</div>
                 </div>
                 <div>
-                    <div style="color: var(--text-muted); font-size: 10px;">TIME</div>
-                    <div style="font-weight: bold; color: var(--text-primary);"><span id="ui-time">0:00</span></div>
+                    <div style="color: var(--text-muted); font-size: 9px;">TIME</div>
+                    <div style="font-weight: bold; color: var(--text-primary); font-size: 12px;"><span id="ui-time">0:00</span></div>
                 </div>
                 <div>
-                    <div style="color: var(--text-muted); font-size: 10px;">ZONE</div>
-                    <div style="font-weight: bold;" id="ui-zone-text"><span id="ui-zone">Surface</span></div>
+                    <div style="color: var(--text-muted); font-size: 9px;">ZONE</div>
+                    <div style="font-weight: bold; font-size: 11px;" id="ui-zone-text"><span id="ui-zone">Surface</span></div>
                 </div>
             </div>
         </div>
@@ -501,6 +545,24 @@
 
     <!-- Load game modules -->
     <script type="module" src="src/index.js"></script>
+
+    <!-- Collapsible Section Controls -->
+    <script>
+        function toggleCollapse(contentId) {
+            const content = document.getElementById(contentId);
+            const toggle = document.getElementById(contentId.replace('-content', '-toggle'));
+
+            if (content.classList.contains('collapsed')) {
+                content.classList.remove('collapsed');
+                toggle.classList.remove('collapsed');
+                toggle.textContent = '▼';
+            } else {
+                content.classList.add('collapsed');
+                toggle.classList.add('collapsed');
+                toggle.textContent = '▶';
+            }
+        }
+    </script>
 
 
     <!-- Initialize Gamepad Manager and Test Button -->

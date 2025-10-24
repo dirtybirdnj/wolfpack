@@ -1,14 +1,14 @@
 // Game configuration and constants
 export const GameConfig = {
-    // Canvas settings - optimized for 13" screens
-    CANVAS_WIDTH: 800,
-    CANVAS_HEIGHT: 560,
+    // Canvas settings - optimized for 13" screens with improved visibility
+    CANVAS_WIDTH: 900,
+    CANVAS_HEIGHT: 630,
 
     // Sonar display settings
-    SONAR_SCROLL_SPEED: 1.2, // pixels per frame (scaled for smaller canvas)
-    GRID_SIZE: 20, // pixels between grid lines (scaled for smaller canvas)
+    SONAR_SCROLL_SPEED: 1.35, // pixels per frame (scaled for larger canvas)
+    GRID_SIZE: 22, // pixels between grid lines (scaled for larger canvas)
     MAX_DEPTH: 150, // feet
-    DEPTH_SCALE: 3.2, // pixels per foot (scaled for smaller canvas)
+    DEPTH_SCALE: 3.6, // pixels per foot (scaled for larger canvas)
 
     // Lure physics
     LURE_GRAVITY: 0.15, // acceleration when dropping
