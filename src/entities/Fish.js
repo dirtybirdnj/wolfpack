@@ -198,18 +198,18 @@ export class Fish {
                 const distToTarget = Math.sqrt(dx * dx + dy * dy);
                 if (distToTarget > 5) {
                     // Calculate target angle toward what the fish is chasing
-                    // Use actual dx (not abs) to get correct direction
-                    // Negate Y because canvas Y+ is down, but we want head to point up when chasing upward
-                    const targetAngleRaw = Math.atan2(-dy, dx);
+                    // Canvas Y+ is down, so positive dy = target below, negative dy = target above
+                    // Positive rotation = clockwise (fish points down)
+                    // Negative rotation = counter-clockwise (fish points up)
 
                     // Normalize angle to work with left/right flipping
                     // When moving left, we need to mirror the angle
                     if (dx < 0) {
                         // Moving left - flip the angle
-                        this.targetAngle = -Math.atan2(-dy, Math.abs(dx));
+                        this.targetAngle = -Math.atan2(dy, Math.abs(dx));
                     } else {
                         // Moving right - use angle as-is
-                        this.targetAngle = Math.atan2(-dy, Math.abs(dx));
+                        this.targetAngle = Math.atan2(dy, Math.abs(dx));
                     }
 
                     // Smoothly interpolate current angle to target angle for fluid motion
