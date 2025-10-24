@@ -6,9 +6,10 @@ import { Utils } from '../utils/Constants.js';
  * that baitfish feed on
  */
 export class Zooplankton {
-    constructor(scene, x, y) {
+    constructor(scene, worldX, y) {
         this.scene = scene;
-        this.x = x;
+        this.worldX = worldX; // World X coordinate (like fish)
+        this.x = worldX; // Screen X coordinate (calculated in update)
         this.y = y;
         this.depth = y / GameConfig.DEPTH_SCALE;
 
@@ -17,7 +18,7 @@ export class Zooplankton {
         this.speed = Utils.randomBetween(0.1, 0.3); // Very slow drift
 
         // Movement behavior - mostly drift, slight random movement
-        this.targetX = x;
+        this.targetWorldX = worldX;
         this.targetY = y;
         this.driftDirection = Math.random() * Math.PI * 2; // Random initial direction
         this.driftSpeed = Utils.randomBetween(0.05, 0.15);
@@ -56,18 +57,14 @@ export class Zooplankton {
             this.driftDirection += Utils.randomBetween(-0.5, 0.5);
         }
 
-        // Drift in current direction
-        this.x += Math.cos(this.driftDirection) * this.driftSpeed;
+        // Drift in current direction (use world coordinates)
+        this.worldX += Math.cos(this.driftDirection) * this.driftSpeed;
         this.y += Math.sin(this.driftDirection) * this.driftSpeed * 0.3; // Less vertical movement
 
-        // Get actual lake bottom depth at zooplankton's current position
+        // Get actual lake bottom depth at zooplankton's current world position
         let bottomDepth = GameConfig.MAX_DEPTH;
         if (this.scene.boatManager) {
-            // For boat/kayak modes, estimate world X from screen X
-            const playerWorldX = this.scene.boatManager.playerX;
-            const offsetFromCenter = this.x - (GameConfig.CANVAS_WIDTH / 2);
-            const estimatedWorldX = playerWorldX + offsetFromCenter;
-            bottomDepth = this.scene.boatManager.getDepthAtPosition(estimatedWorldX);
+            bottomDepth = this.scene.boatManager.getDepthAtPosition(this.worldX);
         } else if (this.scene.iceHoleManager) {
             // For ice fishing, get bottom from current hole's profile
             const currentHole = this.scene.iceHoleManager.getCurrentHole();
@@ -93,8 +90,23 @@ export class Zooplankton {
 
         this.depth = this.y / GameConfig.DEPTH_SCALE;
 
-        // Remove if off screen
-        if (this.x < -50 || this.x > GameConfig.CANVAS_WIDTH + 50) {
+        // Convert world position to screen position based on player position
+        let playerWorldX;
+        if (this.scene.iceHoleManager) {
+            const currentHole = this.scene.iceHoleManager.getCurrentHole();
+            playerWorldX = currentHole ? currentHole.x : this.worldX;
+        } else if (this.scene.boatManager) {
+            playerWorldX = this.scene.boatManager.playerX;
+        } else {
+            playerWorldX = this.worldX; // Fallback
+        }
+
+        const offsetFromPlayer = this.worldX - playerWorldX;
+        this.x = (GameConfig.CANVAS_WIDTH / 2) + offsetFromPlayer;
+
+        // Remove if too far from player in world coordinates
+        const distanceFromPlayer = Math.abs(this.worldX - playerWorldX);
+        if (distanceFromPlayer > 600) {
             this.visible = false;
         }
     }

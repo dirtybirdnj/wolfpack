@@ -3,10 +3,11 @@ import { Utils } from '../utils/Constants.js';
 import Baitfish from './Baitfish.js';
 
 export class BaitfishCloud {
-    constructor(scene, x, y, count) {
+    constructor(scene, worldX, y, count) {
         this.scene = scene;
         this.id = `cloud_${Date.now()}_${Math.random()}`;
-        this.centerX = x;
+        this.worldX = worldX; // World X coordinate (like fish)
+        this.centerX = worldX; // Screen X coordinate (calculated in update)
         this.centerY = y;
         this.depth = y / GameConfig.DEPTH_SCALE;
 
@@ -43,7 +44,7 @@ export class BaitfishCloud {
 
             const baitfish = new Baitfish(
                 this.scene,
-                this.centerX + offsetX,
+                this.worldX + offsetX,  // Use world coordinates
                 this.centerY + offsetY,
                 this.id
             );
@@ -105,20 +106,15 @@ export class BaitfishCloud {
             this.velocity.y = Math.max(-0.5, Math.min(0.5, this.velocity.y));
         }
 
-        // Update center position (cloud drifts or flees)
-        this.centerX += this.velocity.x;
+        // Update center position (cloud drifts or flees) - use world coordinates
+        this.worldX += this.velocity.x;
         this.centerY += this.velocity.y;
         this.depth = this.centerY / GameConfig.DEPTH_SCALE;
 
-        // Get lake bottom depth at cloud's current position
+        // Get lake bottom depth at cloud's current world position
         let bottomDepth = GameConfig.MAX_DEPTH;
         if (this.scene.boatManager) {
-            // For boat/kayak modes, we need to estimate world X from screen X
-            // Since baitfish use screen coordinates, we approximate based on player position
-            const playerWorldX = this.scene.boatManager.playerX;
-            const offsetFromCenter = this.centerX - (GameConfig.CANVAS_WIDTH / 2);
-            const estimatedWorldX = playerWorldX + offsetFromCenter;
-            bottomDepth = this.scene.boatManager.getDepthAtPosition(estimatedWorldX);
+            bottomDepth = this.scene.boatManager.getDepthAtPosition(this.worldX);
         } else if (this.scene.iceHoleManager) {
             // For ice fishing, get bottom from current hole's profile
             const currentHole = this.scene.iceHoleManager.getCurrentHole();
@@ -136,10 +132,24 @@ export class BaitfishCloud {
         // Keep cloud in bounds
         this.centerY = Math.max(30, Math.min(maxY, this.centerY));
 
+        // Convert world position to screen position based on player position
+        let playerWorldX;
+        if (this.scene.iceHoleManager) {
+            const currentHole = this.scene.iceHoleManager.getCurrentHole();
+            playerWorldX = currentHole ? currentHole.x : this.worldX;
+        } else if (this.scene.boatManager) {
+            playerWorldX = this.scene.boatManager.playerX;
+        } else {
+            playerWorldX = this.worldX; // Fallback
+        }
+
+        const offsetFromPlayer = this.worldX - playerWorldX;
+        this.centerX = (GameConfig.CANVAS_WIDTH / 2) + offsetFromPlayer;
+
         // Update all baitfish in the cloud
         this.baitfish = this.baitfish.filter(baitfish => {
             if (!baitfish.consumed && baitfish.visible) {
-                baitfish.update({ x: this.centerX, y: this.centerY }, lakersNearby, this.spreadMultiplier, this.scaredLevel, nearbyZooplankton);
+                baitfish.update({ worldX: this.worldX, x: this.centerX, y: this.centerY }, lakersNearby, this.spreadMultiplier, this.scaredLevel, nearbyZooplankton);
                 return true;
             } else if (baitfish.consumed) {
                 baitfish.destroy();
@@ -227,8 +237,19 @@ export class BaitfishCloud {
     }
 
     isOffScreen() {
-        // Check if cloud center is off screen
-        return this.centerX < -100 || this.centerX > GameConfig.CANVAS_WIDTH + 100;
+        // Check if cloud is too far from player in world coordinates
+        let playerWorldX;
+        if (this.scene.iceHoleManager) {
+            const currentHole = this.scene.iceHoleManager.getCurrentHole();
+            playerWorldX = currentHole ? currentHole.x : 0;
+        } else if (this.scene.boatManager) {
+            playerWorldX = this.scene.boatManager.playerX;
+        } else {
+            return false;
+        }
+
+        const distanceFromPlayer = Math.abs(this.worldX - playerWorldX);
+        return distanceFromPlayer > 600;
     }
 
     getInfo() {

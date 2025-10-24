@@ -2,9 +2,10 @@ import GameConfig from '../config/GameConfig.js';
 import { Constants, Utils } from '../utils/Constants.js';
 
 export class Baitfish {
-    constructor(scene, x, y, cloudId) {
+    constructor(scene, worldX, y, cloudId) {
         this.scene = scene;
-        this.x = x;
+        this.worldX = worldX; // World X coordinate (like fish)
+        this.x = worldX; // Screen X coordinate (calculated in update)
         this.y = y;
         this.cloudId = cloudId;
         this.depth = y / GameConfig.DEPTH_SCALE;
@@ -13,8 +14,8 @@ export class Baitfish {
         this.size = Utils.randomBetween(0.5, 1.5); // inches
         this.speed = Utils.randomBetween(0.8, 1.5);
 
-        // Movement behavior
-        this.targetX = x;
+        // Movement behavior (use world coordinates)
+        this.targetWorldX = worldX;
         this.targetY = y;
         this.schoolingOffset = {
             x: Utils.randomBetween(-8, 8),  // Reduced from -15,15 for tighter schooling
@@ -53,14 +54,10 @@ export class Baitfish {
 
         this.depth = this.y / GameConfig.DEPTH_SCALE;
 
-        // Get lake bottom depth at baitfish's current position
+        // Get lake bottom depth at baitfish's current world position
         let bottomDepth = GameConfig.MAX_DEPTH;
         if (this.scene.boatManager) {
-            // For boat/kayak modes, estimate world X from screen X
-            const playerWorldX = this.scene.boatManager.playerX;
-            const offsetFromCenter = this.x - (GameConfig.CANVAS_WIDTH / 2);
-            const estimatedWorldX = playerWorldX + offsetFromCenter;
-            bottomDepth = this.scene.boatManager.getDepthAtPosition(estimatedWorldX);
+            bottomDepth = this.scene.boatManager.getDepthAtPosition(this.worldX);
         } else if (this.scene.iceHoleManager) {
             // For ice fishing, get bottom from current hole's profile
             const currentHole = this.scene.iceHoleManager.getCurrentHole();
@@ -78,13 +75,28 @@ export class Baitfish {
         // Keep in bounds
         this.y = Math.max(10, Math.min(maxY, this.y));
 
-        // Update sonar trail
-        this.updateSonarTrail();
+        // Convert world position to screen position based on player position
+        let playerWorldX;
+        if (this.scene.iceHoleManager) {
+            const currentHole = this.scene.iceHoleManager.getCurrentHole();
+            playerWorldX = currentHole ? currentHole.x : this.worldX;
+        } else if (this.scene.boatManager) {
+            playerWorldX = this.scene.boatManager.playerX;
+        } else {
+            playerWorldX = this.worldX; // Fallback
+        }
 
-        // Remove if off screen
-        if (this.x < -100 || this.x > GameConfig.CANVAS_WIDTH + 100) {
+        const offsetFromPlayer = this.worldX - playerWorldX;
+        this.x = (GameConfig.CANVAS_WIDTH / 2) + offsetFromPlayer;
+
+        // Remove if too far from player in world coordinates
+        const distanceFromPlayer = Math.abs(this.worldX - playerWorldX);
+        if (distanceFromPlayer > 600) {
             this.visible = false;
         }
+
+        // Update sonar trail
+        this.updateSonarTrail();
 
         // Render
         this.render();
@@ -102,8 +114,8 @@ export class Baitfish {
         const maxOffsetX = 30 * spreadMultiplier;  // Reduced from 50 for tighter schooling
         const maxOffsetY = 20 * spreadMultiplier;  // Reduced from 30 for tighter schooling
 
-        // Schooling behavior - stay near cloud center with dynamic offset
-        this.targetX = cloudCenter.x + this.schoolingOffset.x * spreadMultiplier;
+        // Schooling behavior - stay near cloud center with dynamic offset (use world coordinates)
+        this.targetWorldX = cloudCenter.worldX + this.schoolingOffset.x * spreadMultiplier;
         this.targetY = cloudCenter.y + this.schoolingOffset.y * spreadMultiplier;
 
         // Add some random wandering (reduced for tighter schooling)
@@ -117,8 +129,8 @@ export class Baitfish {
             this.schoolingOffset.y = Math.max(-maxOffsetY, Math.min(maxOffsetY, this.schoolingOffset.y));
         }
 
-        // Move towards target with schooling behavior
-        const dx = this.targetX - this.x;
+        // Move towards target with schooling behavior (use world coordinates)
+        const dx = this.targetWorldX - this.worldX;
         const dy = this.targetY - this.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
 
@@ -126,7 +138,7 @@ export class Baitfish {
             const speedMultiplier = this.panicMode ? 2.5 : 1.2;  // Increased from 1.0 for tighter schooling
             const moveSpeed = this.speed * speedMultiplier;
 
-            this.x += (dx / distance) * moveSpeed;
+            this.worldX += (dx / distance) * moveSpeed;
             this.y += (dy / distance) * moveSpeed * 0.7; // Slower vertical movement
         }
 
@@ -162,11 +174,11 @@ export class Baitfish {
                 return;
             }
 
-            // Move towards the zooplankton
-            this.targetX = closestZooplankton.x;
+            // Move towards the zooplankton (use world coordinates)
+            this.targetWorldX = closestZooplankton.worldX;
             this.targetY = closestZooplankton.y;
 
-            const dx = this.targetX - this.x;
+            const dx = this.targetWorldX - this.worldX;
             const dy = this.targetY - this.y;
             const distance = Math.sqrt(dx * dx + dy * dy);
 
@@ -174,7 +186,7 @@ export class Baitfish {
                 // Hunt at normal speed
                 const moveSpeed = this.speed * 1.2;
 
-                this.x += (dx / distance) * moveSpeed;
+                this.worldX += (dx / distance) * moveSpeed;
                 this.y += (dy / distance) * moveSpeed;
             }
         }

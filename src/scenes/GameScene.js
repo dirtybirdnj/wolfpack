@@ -1037,15 +1037,27 @@ export class GameScene extends Phaser.Scene {
             depth = Utils.randomBetween(70, 100);
         }
 
-        // Spawn from left or right edge
+        // Get player world position
+        let playerWorldX;
+        if (this.iceHoleManager) {
+            const currentHole = this.iceHoleManager.getCurrentHole();
+            playerWorldX = currentHole ? currentHole.x : 0;
+        } else if (this.boatManager) {
+            playerWorldX = this.boatManager.playerX;
+        } else {
+            playerWorldX = 0;
+        }
+
+        // Spawn in world coordinates at a distance from player (200-400 units away)
+        const spawnDistance = Utils.randomBetween(200, 400);
         const fromLeft = Math.random() < 0.5;
-        const x = fromLeft ? -50 : GameConfig.CANVAS_WIDTH + 50;
+        const worldX = playerWorldX + (fromLeft ? -spawnDistance : spawnDistance);
         const y = depth * GameConfig.DEPTH_SCALE;
 
         // Create the baitfish cloud
-        const cloud = new BaitfishCloud(this, x, y, cloudSize);
+        const cloud = new BaitfishCloud(this, worldX, y, cloudSize);
 
-        // Set initial drift direction
+        // Set initial drift direction (drift toward and past player)
         cloud.velocity.x = fromLeft ? Utils.randomBetween(0.3, 0.8) : Utils.randomBetween(-0.8, -0.3);
 
         this.baitfishClouds.push(cloud);
@@ -1057,19 +1069,31 @@ export class GameScene extends Phaser.Scene {
             return;
         }
 
+        // Get player world position
+        let playerWorldX;
+        if (this.iceHoleManager) {
+            const currentHole = this.iceHoleManager.getCurrentHole();
+            playerWorldX = currentHole ? currentHole.x : 0;
+        } else if (this.boatManager) {
+            playerWorldX = this.boatManager.playerX;
+        } else {
+            playerWorldX = 0;
+        }
+
         // Spawn 1-3 zooplankton at a time
         const spawnCount = Math.floor(Utils.randomBetween(1, 3));
 
         for (let i = 0; i < spawnCount; i++) {
-            // Spawn at random position across the width, at the bottom
-            const x = Utils.randomBetween(0, GameConfig.CANVAS_WIDTH);
+            // Spawn at random position around player in world coordinates
+            const offsetX = Utils.randomBetween(-300, 300);
+            const worldX = playerWorldX + offsetX;
 
             // Spawn near the bottom (95-100 feet deep)
             const depth = Utils.randomBetween(95, 100);
             const y = depth * GameConfig.DEPTH_SCALE;
 
             // Create zooplankton
-            const zp = new Zooplankton(this, x, y);
+            const zp = new Zooplankton(this, worldX, y);
             this.zooplankton.push(zp);
         }
     }
