@@ -33,9 +33,9 @@ export class BaitfishCloud {
 
     spawnBaitfish(count) {
         for (let i = 0; i < count; i++) {
-            // Spawn in a loose cluster
-            const offsetX = Utils.randomBetween(-30, 30);
-            const offsetY = Utils.randomBetween(-20, 20);
+            // Spawn in a loose cluster - increased spread for larger dimensional clouds
+            const offsetX = Utils.randomBetween(-80, 80);
+            const offsetY = Utils.randomBetween(-50, 50);
 
             const baitfish = new Baitfish(
                 this.scene,
@@ -162,6 +162,40 @@ export class BaitfishCloud {
             lakersChasing: this.lakersChasing.length,
             position: { x: this.centerX, y: this.centerY }
         };
+    }
+
+    mergeWith(otherCloud) {
+        // Merge another cloud into this one
+        if (!otherCloud || !otherCloud.visible) return;
+
+        // Calculate new center position BEFORE merging (weighted average based on baitfish count)
+        const thisFishCount = this.baitfish.length;
+        const otherFishCount = otherCloud.baitfish.length;
+        const totalFish = thisFishCount + otherFishCount;
+
+        if (totalFish > 0) {
+            this.centerX = (this.centerX * thisFishCount + otherCloud.centerX * otherFishCount) / totalFish;
+            this.centerY = (this.centerY * thisFishCount + otherCloud.centerY * otherFishCount) / totalFish;
+            this.depth = this.centerY / GameConfig.DEPTH_SCALE;
+        }
+
+        // Transfer all baitfish from other cloud to this cloud
+        otherCloud.baitfish.forEach(baitfish => {
+            // Update the baitfish's cloud ID to point to this cloud
+            baitfish.cloudId = this.id;
+            this.baitfish.push(baitfish);
+        });
+
+        // Update consumed count
+        this.consumedCount += otherCloud.consumedCount;
+
+        // Average the velocities
+        this.velocity.x = (this.velocity.x + otherCloud.velocity.x) / 2;
+        this.velocity.y = (this.velocity.y + otherCloud.velocity.y) / 2;
+
+        // Clear the other cloud's baitfish array so destroy doesn't kill them
+        otherCloud.baitfish = [];
+        otherCloud.visible = false;
     }
 
     destroy() {

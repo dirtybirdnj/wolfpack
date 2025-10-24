@@ -47,7 +47,7 @@
 
         body {
             margin: 0;
-            padding: 0;
+            padding: 20px;
             min-height: 100vh;
             background: linear-gradient(135deg, var(--bg-gradient-1) 0%, var(--bg-gradient-2) 100%);
             font-family: 'Courier New', monospace;
@@ -55,72 +55,31 @@
             overflow-x: hidden;
         }
 
-        #header {
-            text-align: center;
-            padding: 20px;
-            position: relative;
-        }
-
-        h1 {
-            color: var(--text-primary);
-            text-shadow: 0 0 10px var(--text-primary);
-            font-size: 28px;
-            margin: 0 0 10px 0;
-        }
-
-        .subtitle {
-            color: var(--text-secondary);
-            font-size: 14px;
-            margin: 0;
-        }
-
-        #theme-toggle {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: var(--panel-bg);
-            border: 2px solid var(--border-primary);
-            color: var(--text-primary);
-            padding: 10px 20px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-family: 'Courier New', monospace;
-            font-size: 14px;
-            font-weight: bold;
-            transition: all 0.3s;
-        }
-
-        #theme-toggle:hover {
-            background: var(--border-primary);
-            color: var(--button-text);
-            transform: scale(1.05);
-        }
 
         #main-layout {
             display: grid;
-            grid-template-columns: 250px 1fr 250px;
-            grid-template-rows: auto auto 1fr auto;
-            gap: 20px;
+            grid-template-columns: 220px 1fr 220px;
+            grid-template-rows: auto 1fr auto;
+            gap: 15px;
             max-width: 1800px;
             margin: 0 auto;
-            padding: 0 20px 20px 20px;
             align-items: start;
         }
 
         #left-panel {
             display: flex;
             flex-direction: column;
-            gap: 15px;
+            gap: 12px;
             grid-column: 1;
-            grid-row: 1 / 4;
+            grid-row: 1 / 3;
         }
 
         #right-panel {
             display: flex;
             flex-direction: column;
-            gap: 15px;
+            gap: 12px;
             grid-column: 3;
-            grid-row: 1 / 4;
+            grid-row: 1 / 3;
         }
 
         #game-info-panel {
@@ -139,7 +98,7 @@
 
         #dev-toolbar {
             grid-column: 1 / 4;
-            grid-row: 4;
+            grid-row: 3;
             display: grid;
             grid-template-columns: 1fr 1fr 1fr;
             gap: 20px;
@@ -150,12 +109,12 @@
         }
 
         .panel {
-            padding: 15px;
+            padding: 12px;
             background: var(--panel-bg);
             border: 2px solid var(--border-primary);
             border-radius: 8px;
-            font-size: 12px;
-            line-height: 1.6;
+            font-size: 11px;
+            line-height: 1.5;
         }
 
         .panel.secondary {
@@ -167,9 +126,9 @@
         }
 
         .panel h3 {
-            margin: 0 0 10px 0;
+            margin: 0 0 8px 0;
             color: var(--text-primary);
-            font-size: 14px;
+            font-size: 13px;
         }
 
         .panel.secondary h3 {
@@ -183,8 +142,9 @@
         .control-item {
             display: flex;
             justify-content: space-between;
-            margin: 5px 0;
-            gap: 10px;
+            margin: 3px 0;
+            gap: 8px;
+            font-size: 10px;
         }
 
         .control-item > span:first-child {
@@ -198,12 +158,13 @@
         .key {
             background: var(--key-bg);
             color: var(--key-text);
-            padding: 2px 8px;
+            padding: 1px 6px;
             border-radius: 3px;
             font-weight: bold;
-            margin-right: 5px;
+            margin-right: 4px;
             display: inline-block;
             white-space: nowrap;
+            font-size: 9px;
         }
 
         .dev-btn {
@@ -244,10 +205,18 @@
         }
 
         #fish-status-container {
-            max-height: 400px;
+            flex: 1;
             overflow-y: auto;
             font-size: 10px;
             line-height: 1.4;
+            min-height: 0;
+        }
+
+        #right-panel .panel.warning {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            min-height: 0;
         }
 
         .status-value {
@@ -267,10 +236,42 @@
             display: none !important;
         }
 
+        /* Collapsible sections */
+        .collapsible-header {
+            cursor: pointer;
+            user-select: none;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .collapsible-header:hover {
+            opacity: 0.8;
+        }
+
+        .collapsible-toggle {
+            font-size: 12px;
+            transition: transform 0.2s;
+        }
+
+        .collapsible-toggle.collapsed {
+            transform: rotate(-90deg);
+        }
+
+        .collapsible-content {
+            max-height: 1000px;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
+
+        .collapsible-content.collapsed {
+            max-height: 0;
+        }
+
         /* Responsive */
         @media (max-width: 1600px) {
             #main-layout {
-                grid-template-columns: 220px 1fr 220px;
+                grid-template-columns: 200px 1fr 200px;
             }
         }
 
@@ -294,61 +295,51 @@
         }
 
         /* Scrollbar styling for dark theme */
-        :root[data-theme="dark"] #fish-status-container::-webkit-scrollbar {
-            width: 8px;
+        :root[data-theme="dark"] #fish-status-container::-webkit-scrollbar,
+        :root[data-theme="dark"] #fish-status-container div::-webkit-scrollbar {
+            width: 6px;
         }
 
-        :root[data-theme="dark"] #fish-status-container::-webkit-scrollbar-track {
+        :root[data-theme="dark"] #fish-status-container::-webkit-scrollbar-track,
+        :root[data-theme="dark"] #fish-status-container div::-webkit-scrollbar-track {
             background: rgba(0, 0, 0, 0.3);
         }
 
-        :root[data-theme="dark"] #fish-status-container::-webkit-scrollbar-thumb {
+        :root[data-theme="dark"] #fish-status-container::-webkit-scrollbar-thumb,
+        :root[data-theme="dark"] #fish-status-container div::-webkit-scrollbar-thumb {
             background: var(--border-primary);
-            border-radius: 4px;
+            border-radius: 3px;
         }
 
         /* Scrollbar styling for light theme */
-        :root[data-theme="light"] #fish-status-container::-webkit-scrollbar {
-            width: 8px;
+        :root[data-theme="light"] #fish-status-container::-webkit-scrollbar,
+        :root[data-theme="light"] #fish-status-container div::-webkit-scrollbar {
+            width: 6px;
         }
 
-        :root[data-theme="light"] #fish-status-container::-webkit-scrollbar-track {
+        :root[data-theme="light"] #fish-status-container::-webkit-scrollbar-track,
+        :root[data-theme="light"] #fish-status-container div::-webkit-scrollbar-track {
             background: rgba(0, 0, 0, 0.1);
         }
 
-        :root[data-theme="light"] #fish-status-container::-webkit-scrollbar-thumb {
+        :root[data-theme="light"] #fish-status-container::-webkit-scrollbar-thumb,
+        :root[data-theme="light"] #fish-status-container div::-webkit-scrollbar-thumb {
             background: var(--border-primary);
-            border-radius: 4px;
+            border-radius: 3px;
         }
     </style>
 </head>
 <body>
-    <div id="header">
-        <h1>🎣 LAKE CHAMPLAIN SONAR 🎣</h1>
-        <div class="subtitle">Ice Fishing Simulator • Lake Trout • 45°N, Between the Greens and Adirondacks</div>
-        <button id="theme-toggle" onclick="toggleTheme()">☀️ Light Mode</button>
-    </div>
-
     <div id="main-layout">
         <!-- Left Panel -->
         <div id="left-panel">
-            <!-- Controller Status -->
-            <div class="panel secondary" id="controller-status-panel">
-                <h3>🎮 CONTROLLER STATUS</h3>
-                <div style="margin: 10px 0;">
-                    <div>Status: <span id="controller-status" class="status-value status-disconnected">Waiting for Input</span></div>
-                    <div id="controller-name" style="color: var(--border-warning); font-size: 10px; margin-top: 5px; font-weight: bold;">Press any button on your controller</div>
-                    <div id="controller-help" style="color: var(--text-muted); font-size: 10px; margin-top: 8px; font-style: italic;">
-                        Browsers require a button press to detect gamepads
-                    </div>
-                </div>
-                <button id="test-controller-btn" class="dev-btn secondary" disabled>Test Controller</button>
-                <button id="check-gamepads-btn" class="dev-btn warning">Check Gamepads</button>
-            </div>
-
             <!-- Keyboard Controls -->
             <div class="panel" id="keyboard-controls">
-                <h3>⌨️ KEYBOARD CONTROLS</h3>
+                <div class="collapsible-header" onclick="toggleCollapse('kb-content')">
+                    <h3>⌨️ KEYBOARD CONTROLS</h3>
+                    <span class="collapsible-toggle" id="kb-toggle">▼</span>
+                </div>
+                <div class="collapsible-content" id="kb-content">
                 <div class="control-item">
                     <span><span class="key">SPACE</span> <span class="key">↓</span></span>
                     <span>Release Spool (Drop)</span>
@@ -369,14 +360,20 @@
                     <span><span class="key">R</span></span>
                     <span>Reset to Surface</span>
                 </div>
+                </div>
             </div>
 
             <!-- Gamepad Controls -->
             <div class="panel" id="gamepad-controls" style="display: none;">
-                <h3>🎮 GAMEPAD CONTROLS</h3>
+                <div class="collapsible-header" onclick="toggleCollapse('gp-content')">
+                    <h3>🎮 GAMEPAD CONTROLS</h3>
+                    <span class="collapsible-toggle" id="gp-toggle">▼</span>
+                </div>
+                <div class="collapsible-content" id="gp-content">
+                <div style="font-weight: bold; color: var(--border-secondary); margin-bottom: 8px; font-size: 11px;">FISHING MODE</div>
                 <div class="control-item">
                     <span><span class="key">D-PAD ↓</span></span>
-                    <span>Release Spool</span>
+                    <span>Release Spool (Drop)</span>
                 </div>
                 <div class="control-item">
                     <span><span class="key">D-PAD ↑</span></span>
@@ -384,23 +381,53 @@
                 </div>
                 <div class="control-item">
                     <span><span class="key">L-STICK</span></span>
-                    <span>Alt Movement</span>
+                    <span>Alt Up/Down/Speed</span>
                 </div>
                 <div class="control-item">
-                    <span><span class="key">L1/R1</span></span>
+                    <span><span class="key">R-STICK ↕</span></span>
+                    <span>Jigging (Fine Control)</span>
+                </div>
+                <div class="control-item">
+                    <span><span class="key">D-PAD ←→</span></span>
                     <span>Adjust Speed</span>
                 </div>
                 <div class="control-item">
-                    <span><span class="key">CIRCLE</span></span>
+                    <span><span class="key">L1/R1</span></span>
+                    <span>Adjust Speed (Alt)</span>
+                </div>
+                <div class="control-item">
+                    <span><span class="key">X (PS: ×)</span></span>
+                    <span>Toggle Drop/Retrieve</span>
+                </div>
+                <div class="control-item">
+                    <span><span class="key">CIRCLE (PS: ○)</span></span>
                     <span>Reset to Surface</span>
                 </div>
                 <div class="control-item">
-                    <span><span class="key">X</span></span>
-                    <span>Quick Toggle</span>
+                    <span><span class="key">SQUARE (PS: □)</span></span>
+                    <span>Toggle Debug Mode</span>
                 </div>
                 <div class="control-item">
                     <span><span class="key">R2</span></span>
-                    <span>Reel in Fish</span>
+                    <span>Reel in Fish (Fight)</span>
+                </div>
+                <div style="font-weight: bold; color: var(--border-warning); margin: 10px 0 8px 0; font-size: 11px; border-top: 1px solid var(--text-muted); padding-top: 8px;">MOVEMENT MODE</div>
+                <div class="control-item">
+                    <span><span class="key">TRIANGLE (PS: △)</span></span>
+                    <span>Toggle Move/Fish Mode</span>
+                </div>
+                <div class="control-item">
+                    <span><span class="key">D-PAD ←→</span></span>
+                    <span>Walk on Ice</span>
+                </div>
+                <div class="control-item">
+                    <span><span class="key">L-STICK ←→</span></span>
+                    <span>Walk on Ice (Alt)</span>
+                </div>
+                <div class="control-item">
+                    <span><span class="key">SQUARE (PS: □)</span></span>
+                    <span>Drill New Hole</span>
+                </div>
                 </div>
             </div>
 
@@ -411,18 +438,13 @@
                     <div style="margin-bottom: 8px;">
                         <strong>Battery:</strong> <span id="drill-charges" class="status-value" style="color: var(--text-primary);">4/4</span>
                     </div>
-                    <div style="display: flex; gap: 4px; margin-bottom: 8px;">
+                    <div style="display: flex; gap: 4px; margin-bottom: 12px;">
                         <div id="battery-bar-1" class="battery-bar" style="width: 25%; height: 20px; background: var(--border-primary); border-radius: 2px;"></div>
                         <div id="battery-bar-2" class="battery-bar" style="width: 25%; height: 20px; background: var(--border-primary); border-radius: 2px;"></div>
                         <div id="battery-bar-3" class="battery-bar" style="width: 25%; height: 20px; background: var(--border-primary); border-radius: 2px;"></div>
                         <div id="battery-bar-4" class="battery-bar" style="width: 25%; height: 20px; background: var(--border-primary); border-radius: 2px;"></div>
                     </div>
-                    <div style="font-size: 10px; color: var(--text-muted); font-style: italic;">
-                        Triangle: Move Mode<br>
-                        Square: Drill (costs 1 charge)<br>
-                        L/R: Walk on ice
-                    </div>
-                    <div style="margin-top: 8px; font-size: 11px;">
+                    <div style="font-size: 11px;">
                         <div>Current Hole: <span id="current-hole" class="status-value">#1</span></div>
                         <div>Hole Depth: <span id="hole-depth" class="status-value">140ft</span></div>
                     </div>
@@ -432,38 +454,38 @@
 
         <!-- Game Info Panel (Above Game) -->
         <div id="game-info-panel" class="panel">
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; font-size: 13px;">
+            <div style="display: grid; grid-template-columns: repeat(8, 1fr); gap: 8px; font-size: 10px;">
                 <div>
-                    <div style="color: var(--text-muted); font-size: 10px;">SCORE</div>
-                    <div style="font-weight: bold; color: var(--text-primary);"><span id="ui-score">0</span></div>
+                    <div style="color: var(--text-muted); font-size: 8px;">SCORE</div>
+                    <div style="font-weight: bold; color: var(--text-primary); font-size: 11px;"><span id="ui-score">0</span></div>
                 </div>
                 <div>
-                    <div style="color: var(--text-muted); font-size: 10px;">CAUGHT / LOST</div>
-                    <div style="font-weight: bold;"><span id="ui-caught" style="color: var(--text-primary);">0</span> / <span id="ui-lost" style="color: #ff6666;">0</span></div>
+                    <div style="color: var(--text-muted); font-size: 8px;">CAUGHT/LOST</div>
+                    <div style="font-weight: bold; font-size: 11px;"><span id="ui-caught" style="color: var(--text-primary);">0</span>/<span id="ui-lost" style="color: #ff6666;">0</span></div>
                 </div>
                 <div>
-                    <div style="color: var(--text-muted); font-size: 10px;">LURE DEPTH</div>
-                    <div style="font-weight: bold; color: var(--border-secondary);"><span id="ui-depth">0</span> ft</div>
+                    <div style="color: var(--text-muted); font-size: 8px;">DEPTH</div>
+                    <div style="font-weight: bold; color: var(--border-secondary); font-size: 11px;"><span id="ui-depth">0</span>ft</div>
                 </div>
                 <div>
-                    <div style="color: var(--text-muted); font-size: 10px;">LURE STATE</div>
-                    <div style="font-weight: bold; color: var(--text-secondary);"><span id="ui-lure-state">SURFACE</span></div>
+                    <div style="color: var(--text-muted); font-size: 8px;">STATE</div>
+                    <div style="font-weight: bold; color: var(--text-secondary); font-size: 10px;"><span id="ui-lure-state">SURFACE</span></div>
                 </div>
                 <div>
-                    <div style="color: var(--text-muted); font-size: 10px;">RETRIEVE SPEED</div>
-                    <div style="font-weight: bold; color: var(--text-primary);"><span id="ui-speed">2.0</span></div>
+                    <div style="color: var(--text-muted); font-size: 8px;">SPEED</div>
+                    <div style="font-weight: bold; color: var(--text-primary); font-size: 11px;"><span id="ui-speed">2.0</span></div>
                 </div>
                 <div>
-                    <div style="color: var(--text-muted); font-size: 10px;">WATER TEMP</div>
-                    <div style="font-weight: bold; color: var(--border-secondary);"><span id="ui-temp">40</span>°F</div>
+                    <div style="color: var(--text-muted); font-size: 8px;">TEMP</div>
+                    <div style="font-weight: bold; color: var(--border-secondary); font-size: 11px;"><span id="ui-temp">40</span>°F</div>
                 </div>
                 <div>
-                    <div style="color: var(--text-muted); font-size: 10px;">TIME</div>
-                    <div style="font-weight: bold; color: var(--text-primary);"><span id="ui-time">0:00</span></div>
+                    <div style="color: var(--text-muted); font-size: 8px;">TIME</div>
+                    <div style="font-weight: bold; color: var(--text-primary); font-size: 11px;"><span id="ui-time">0:00</span></div>
                 </div>
                 <div>
-                    <div style="color: var(--text-muted); font-size: 10px;">ZONE</div>
-                    <div style="font-weight: bold;" id="ui-zone-text"><span id="ui-zone">Surface</span></div>
+                    <div style="color: var(--text-muted); font-size: 8px;">ZONE</div>
+                    <div style="font-weight: bold; font-size: 10px;" id="ui-zone-text"><span id="ui-zone">Surface</span></div>
                 </div>
             </div>
         </div>
@@ -505,18 +527,21 @@
                 </div>
             </div>
 
-            <!-- Column 3: Info -->
-            <div class="panel warning">
-                <h3>ℹ️ DEV INFO</h3>
-                <div style="font-size: 11px; line-height: 1.6; color: var(--text-muted);">
-                    <div><strong>Build:</strong> v0.3.0-ice-fishing</div>
-                    <div><strong>Engine:</strong> Phaser 3.80.1</div>
-                    <div><strong>Target:</strong> Lake Trout</div>
-                    <div><strong>Location:</strong> Lake Champlain</div>
-                    <div style="margin-top: 8px; font-style: italic;">
-                        Use dev tools to test game mechanics<br>
-                        Debug mode shows AI state and ranges
+            <!-- Column 3: Controller & Info -->
+            <div class="panel secondary">
+                <h3>🎮 CONTROLLER</h3>
+                <div style="margin: 10px 0;">
+                    <div style="font-size: 11px;">Status: <span id="controller-status" class="status-value status-disconnected">Waiting</span></div>
+                    <div id="controller-name" style="color: var(--border-warning); font-size: 9px; margin-top: 5px; font-weight: bold;">Press any button</div>
+                    <div id="controller-help" style="color: var(--text-muted); font-size: 9px; margin-top: 5px; font-style: italic;">
+                        Press button to detect
                     </div>
+                </div>
+                <button id="test-controller-btn" class="dev-btn secondary" disabled style="font-size: 10px; padding: 6px 10px;">Test Controller</button>
+                <button id="check-gamepads-btn" class="dev-btn warning" style="font-size: 10px; padding: 6px 10px;">Check Gamepads</button>
+                <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border-secondary); font-size: 10px; line-height: 1.5; color: var(--text-muted);">
+                    <div><strong>Build:</strong> v0.3.0</div>
+                    <div><strong>Engine:</strong> Phaser 3.80.1</div>
                 </div>
             </div>
         </div>
@@ -528,30 +553,24 @@
     <!-- Load game modules -->
     <script type="module" src="src/index.js"></script>
 
-    <!-- Theme Toggle -->
+    <!-- Collapsible Section Controls -->
     <script>
-        function toggleTheme() {
-            const html = document.documentElement;
-            const currentTheme = html.getAttribute('data-theme');
-            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-            const button = document.getElementById('theme-toggle');
+        function toggleCollapse(contentId) {
+            const content = document.getElementById(contentId);
+            const toggle = document.getElementById(contentId.replace('-content', '-toggle'));
 
-            html.setAttribute('data-theme', newTheme);
-            localStorage.setItem('theme', newTheme);
-
-            button.textContent = newTheme === 'dark' ? '☀️ Light Mode' : '🌙 Dark Mode';
+            if (content.classList.contains('collapsed')) {
+                content.classList.remove('collapsed');
+                toggle.classList.remove('collapsed');
+                toggle.textContent = '▼';
+            } else {
+                content.classList.add('collapsed');
+                toggle.classList.add('collapsed');
+                toggle.textContent = '▶';
+            }
         }
-
-        // Load saved theme on page load
-        window.addEventListener('DOMContentLoaded', () => {
-            const savedTheme = localStorage.getItem('theme') || 'dark';
-            const html = document.documentElement;
-            const button = document.getElementById('theme-toggle');
-
-            html.setAttribute('data-theme', savedTheme);
-            button.textContent = savedTheme === 'dark' ? '☀️ Light Mode' : '🌙 Dark Mode';
-        });
     </script>
+
 
     <!-- Initialize Gamepad Manager and Test Button -->
     <script type="module">

@@ -248,7 +248,7 @@ export class SonarDisplay {
     createDepthMarkers() {
         // Create depth text objects once during initialization
         const textStyle = {
-            fontSize: '12px',
+            fontSize: '10px',
             fontFamily: 'Courier New',
             color: '#00ff00'
         };

@@ -8,7 +8,7 @@ export class FishAI {
         this.targetX = null;
         this.targetY = null;
         this.alertness = Math.random() * 0.5 + 0.5; // 0.5 to 1.0
-        this.baseAggressiveness = Math.random() * 0.7 + 0.3; // 0.3 to 1.0
+        this.baseAggressiveness = Math.random() * 0.5 + 0.5; // 0.5 to 1.0 (increased from 0.3-1.0)
         this.lastDecisionTime = 0;
         this.decisionCooldown = 500; // milliseconds
 
@@ -234,11 +234,16 @@ export class FishAI {
         // Decision threshold (varies by depth zone)
         const threshold = this.fish.depthZone.interestThreshold;
         if (interestScore > threshold) {
-            this.state = Constants.FISH_STATE.INTERESTED;
-            this.decisionCooldown = 300;
-
-            // Trigger visual feedback - fish just noticed the lure!
-            this.fish.triggerInterestFlash(0.5); // Medium intensity for initial interest
+            // If already very close, skip INTERESTED and go straight to CHASING
+            if (distance < GameConfig.DETECTION_RANGE * 0.4) {
+                this.state = Constants.FISH_STATE.CHASING;
+                this.decisionCooldown = 100;
+                this.fish.triggerInterestFlash(0.75); // High intensity - immediate chase!
+            } else {
+                this.state = Constants.FISH_STATE.INTERESTED;
+                this.decisionCooldown = 100; // Reduced from 300 for faster reaction
+                this.fish.triggerInterestFlash(0.5); // Medium intensity for initial interest
+            }
         }
     }
     
@@ -247,18 +252,19 @@ export class FishAI {
         this.targetX = lure.x - 20; // Stay slightly behind
         this.targetY = lure.y;
 
-        // Decide whether to chase or lose interest
-        const continueChase = Math.random() < this.aggressiveness;
+        // Decide whether to chase or lose interest - more likely to commit now
+        const chanceToChase = this.aggressiveness * 1.2; // Boosted from 1.0
+        const continueChase = Math.random() < chanceToChase;
 
-        if (distance < GameConfig.DETECTION_RANGE * 0.5 && continueChase) {
-            // Close enough and aggressive enough to chase
+        if (distance < GameConfig.DETECTION_RANGE * 0.6 && continueChase) {
+            // Close enough and aggressive enough to chase (increased from 0.5 to 0.6)
             this.state = Constants.FISH_STATE.CHASING;
-            this.decisionCooldown = 200;
+            this.decisionCooldown = 100; // Reduced from 200 for faster commitment
 
             // Trigger visual feedback - fish is committing to the chase!
             this.fish.triggerInterestFlash(0.75); // High intensity for chasing
-        } else if (distance > GameConfig.DETECTION_RANGE || !continueChase) {
-            // Lost interest
+        } else if (distance > GameConfig.DETECTION_RANGE * 1.2 || !continueChase) {
+            // Lost interest (increased threshold from 1.0 to 1.2 for more persistence)
             this.state = Constants.FISH_STATE.IDLE;
             this.targetX = null;
             this.targetY = null;
@@ -276,17 +282,23 @@ export class FishAI {
 
         // Check if close enough to strike
         if (distance < GameConfig.STRIKE_DISTANCE) {
+            // Reduce cooldown when close for immediate strike decision
+            this.decisionCooldown = 50; // Very short cooldown when in strike range
+
             // Higher strike chance if lure is in baitfish cloud (fish think it's real food)
-            const baseStrikeChance = this.aggressiveness * 0.7;
+            const baseStrikeChance = this.aggressiveness * 0.85; // Increased from 0.7
             const strikeChance = lureInBaitfishCloud ? baseStrikeChance * 1.5 : baseStrikeChance;
 
             if (Math.random() < strikeChance) {
                 this.state = Constants.FISH_STATE.STRIKING;
-                this.decisionCooldown = 100;
+                this.decisionCooldown = 50; // Quick reaction when striking
 
                 // Trigger visual feedback - fish is striking!
                 this.fish.triggerInterestFlash(1.0); // Maximum intensity for strike
             }
+        } else if (distance < GameConfig.STRIKE_DISTANCE * 1.5) {
+            // Getting close - reduce cooldown for quicker strike
+            this.decisionCooldown = 100;
         }
 
         // If lure leaves baitfish cloud, less hungry fish may lose interest
@@ -392,7 +404,7 @@ export class FishAI {
                 speedMultiplier = 2.0;
                 break;
             case Constants.FISH_STATE.INTERESTED:
-                speedMultiplier = 0.5;
+                speedMultiplier = 0.7; // Increased from 0.5 for less hesitation
                 break;
             case Constants.FISH_STATE.HUNTING_BAITFISH:
                 // Aggressive pursuit of baitfish
@@ -455,18 +467,18 @@ export class FishAI {
 
         // Check if other fish are hunting this cloud (frenzying)
         const otherFishHunting = cloudInfo.cloud.lakersChasing.length;
-        const frenzyBonus = Math.min(otherFishHunting * 0.2, 0.6); // Up to +60% if others are chasing
+        const frenzyBonus = Math.min(otherFishHunting * 0.3, 0.8); // Increased from 0.2/0.6 to 0.3/0.8
 
         const huntScore = (hungerFactor * 0.6) + (distanceFactor * 0.3) + frenzyBonus;
 
-        return huntScore > 0.5;
+        return huntScore > 0.35; // Lowered from 0.5 for more aggressive pursuit
     }
 
     startHuntingBaitfish(cloudInfo) {
         this.state = Constants.FISH_STATE.HUNTING_BAITFISH;
         this.targetBaitfishCloud = cloudInfo.cloud;
         this.isFrenzying = cloudInfo.cloud.lakersChasing.length > 0;
-        this.decisionCooldown = 300;
+        this.decisionCooldown = 150; // Reduced from 300 for faster pursuit reactions
     }
 
     huntingBaitfishBehavior(baitfishClouds, lure) {
@@ -491,12 +503,12 @@ export class FishAI {
             this.targetY = result.baitfish.y;
 
             // Check if we're close enough to eat the baitfish
-            if (result.distance < 8) {
+            if (result.distance < 10) { // Increased from 8 for easier catches
                 // Consume the baitfish!
                 this.targetBaitfishCloud.consumeBaitfish();
                 this.fish.feedOnBaitfish();
                 this.state = Constants.FISH_STATE.FEEDING;
-                this.decisionCooldown = 200;
+                this.decisionCooldown = 100; // Reduced from 200 for faster feeding cycle
                 return;
             }
         } else {
@@ -515,11 +527,11 @@ export class FishAI {
             );
 
             // Sometimes target the lure instead of baitfish (can't tell difference)
-            if (Math.random() < 0.4 || lureDistance < result.distance) {
+            if (Math.random() < 0.5 || lureDistance < result.distance) { // Increased from 0.4 to 0.5
                 this.state = Constants.FISH_STATE.CHASING;
                 this.targetX = lure.x;
                 this.targetY = lure.y;
-                this.decisionCooldown = 200;
+                this.decisionCooldown = 100; // Reduced from 200 for faster strike
             }
         }
     }
@@ -529,10 +541,10 @@ export class FishAI {
         if (this.targetBaitfishCloud &&
             this.targetBaitfishCloud.visible &&
             this.targetBaitfishCloud.baitfish.length > 0 &&
-            this.fish.hunger > 40) {
+            this.fish.hunger > 30) { // Lowered from 40 to keep hunting longer
             // Still hungry and food available, keep hunting
             this.state = Constants.FISH_STATE.HUNTING_BAITFISH;
-            this.decisionCooldown = 150;
+            this.decisionCooldown = 80; // Reduced from 150 for rapid consecutive strikes
         } else {
             // Satisfied or cloud depleted
             this.state = Constants.FISH_STATE.IDLE;

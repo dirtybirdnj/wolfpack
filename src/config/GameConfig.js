@@ -1,14 +1,14 @@
 // Game configuration and constants
 export const GameConfig = {
-    // Canvas settings - increased for widescreen layout
-    CANVAS_WIDTH: 1000,
-    CANVAS_HEIGHT: 700,
+    // Canvas settings - optimized for 13" screens with improved visibility
+    CANVAS_WIDTH: 900,
+    CANVAS_HEIGHT: 630,
 
     // Sonar display settings
-    SONAR_SCROLL_SPEED: 1.5, // pixels per frame
-    GRID_SIZE: 25, // pixels between grid lines
+    SONAR_SCROLL_SPEED: 1.35, // pixels per frame (scaled for larger canvas)
+    GRID_SIZE: 22, // pixels between grid lines (scaled for larger canvas)
     MAX_DEPTH: 150, // feet
-    DEPTH_SCALE: 4, // pixels per foot
+    DEPTH_SCALE: 3.6, // pixels per foot (scaled for larger canvas)
 
     // Lure physics
     LURE_GRAVITY: 0.15, // acceleration when dropping
@@ -24,13 +24,13 @@ export const GameConfig = {
     FISH_SPEED_MIN: 0.3,
     FISH_SPEED_MAX: 1.2,
 
-    // Fish AI
-    DETECTION_RANGE: 80, // pixels (horizontal)
-    VERTICAL_DETECTION_RANGE: 280, // pixels (40-70 feet = 160-280 pixels at 4px/ft)
+    // Fish AI - Improved detection ranges for 900px canvas
+    DETECTION_RANGE: 150, // pixels (horizontal) - increased from 80 for better gameplay
+    VERTICAL_DETECTION_RANGE: 280, // pixels (40-70 feet = 160-280 pixels at 3.6px/ft)
     OPTIMAL_LURE_SPEED: 2.0,
-    SPEED_TOLERANCE: 1.5,
+    SPEED_TOLERANCE: 2.0, // increased from 1.5 for more forgiving speed matching
     CHASE_SPEED_MULTIPLIER: 1.8,
-    STRIKE_DISTANCE: 15,
+    STRIKE_DISTANCE: 25, // increased from 15 pixels for easier hookups
 
     // Fish fight mechanics
     MAX_LINE_TENSION: 100,
@@ -69,30 +69,30 @@ export const GameConfig = {
     UI_FONT_SIZE: 14,
     UI_PADDING: 10,
 
-    // Baitfish settings
-    BAITFISH_CLOUD_SPAWN_CHANCE: 0.003, // per frame
-    BAITFISH_CLOUD_MIN_COUNT: 5,
-    BAITFISH_CLOUD_MAX_COUNT: 20,
-    BAITFISH_CLOUD_RADIUS: 40, // pixels - how close to be "in the cloud"
+    // Baitfish settings - Increased to sustain aggressive lake trout feeding
+    BAITFISH_CLOUD_SPAWN_CHANCE: 0.004, // Increased to keep up with hungry lakers
+    BAITFISH_CLOUD_MIN_COUNT: 5, // Minimum cloud size
+    BAITFISH_CLOUD_MAX_COUNT: 50, // Allows for massive schools
+    BAITFISH_CLOUD_RADIUS: 100, // pixels - increased for larger cloud dimensions
     COLOR_BAITFISH: 0x88ccff, // Light blue/silver for alewives
     COLOR_BAITFISH_PANIC: 0xccddff, // Brighter when panicking
 
-    // Baitfish pursuit mechanics (works with 0-100 hunger scale)
-    BAITFISH_DETECTION_RANGE: 150, // Pixels - fish can see baitfish from farther away
-    BAITFISH_PURSUIT_SPEED: 2.2, // Multiplier when chasing baitfish
-    BAITFISH_VERTICAL_PURSUIT_RANGE: 200, // Base vertical range in pixels
-    HUNGER_VERTICAL_SCALING: 0.01, // How hunger affects vertical range (0-100 scale)
+    // Baitfish pursuit mechanics (works with 0-100 hunger scale) - More aggressive pursuit
+    BAITFISH_DETECTION_RANGE: 140, // Reduced from 150 to balance with lure detection
+    BAITFISH_PURSUIT_SPEED: 2.8, // Increased from 2.2 for more aggressive hunting
+    BAITFISH_VERTICAL_PURSUIT_RANGE: 250, // Increased from 200 for better vertical pursuit
+    HUNGER_VERTICAL_SCALING: 0.015, // Increased from 0.01 for more aggressive vertical pursuit
     BAITFISH_CONSUMPTION_HUNGER_REDUCTION: 15, // Hunger reduced when eating baitfish
 
-    // Depth-based behavior zones
+    // Depth-based behavior zones - Improved thresholds for better gameplay
     DEPTH_ZONES: {
         SURFACE: {
             min: 0,
             max: 40,
             name: 'Surface',
             speedMultiplier: 1.3,      // Fast, active feeding
-            aggressivenessBonus: 0.3,  // More aggressive
-            interestThreshold: 30,      // Easier to interest
+            aggressivenessBonus: 0.35, // Increased from 0.3 - more aggressive
+            interestThreshold: 22,      // Lowered from 30 - easier to attract
             description: 'Active feeding zone - fast and aggressive'
         },
         MID_COLUMN: {
@@ -100,8 +100,8 @@ export const GameConfig = {
             max: 100,
             name: 'Mid-Column',
             speedMultiplier: 1.0,      // Normal activity
-            aggressivenessBonus: 0.0,  // Normal aggression
-            interestThreshold: 40,      // Standard interest
+            aggressivenessBonus: 0.1,  // Increased from 0.0 - slightly more aggressive
+            interestThreshold: 28,      // Lowered from 40 - more responsive
             description: 'Prime lake trout zone - balanced behavior'
         },
         BOTTOM: {
@@ -109,8 +109,8 @@ export const GameConfig = {
             max: 150,
             name: 'Bottom',
             speedMultiplier: 0.6,      // Slow cruising
-            aggressivenessBonus: -0.2, // Less aggressive
-            interestThreshold: 50,      // Harder to interest
+            aggressivenessBonus: -0.1, // Less negative from -0.2 - more responsive
+            interestThreshold: 35,      // Lowered from 50 - significantly easier
             description: 'Bottom feeding - slow and cautious'
         }
     }

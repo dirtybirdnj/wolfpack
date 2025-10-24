@@ -217,12 +217,17 @@ function updateFishStatus(gameScene) {
                            fish.health < 60 ? '#ffaa00' : '#00ff00';
         const frenzyColor = fish.inFrenzy ? '#ff6600' : '#666666';
         const frenzyText = fish.inFrenzy ? `🔥${info.frenzyIntensity}` : '---';
+        const genderIcon = info.gender === 'male' ? '♂' : '♀';
+        const genderColor = info.gender === 'male' ? '#66ccff' : '#ff99cc';
 
         return `
             <div style="border: 1px solid ${zoneColor}30; background: ${zoneColor}10; padding: 4px; margin: 3px 0; border-radius: 3px; font-size: 10px;">
-                <div style="font-weight: bold; color: ${zoneColor};">🐟 #${index + 1} - ${info.weight}</div>
-                <div style="display: flex; justify-content: space-between;">
-                    <span style="color: #aaa;">Depth:</span>
+                <div style="font-weight: bold; color: ${zoneColor}; display: flex; justify-content: space-between; align-items: center;">
+                    <span>🐟 ${info.name}</span>
+                    <span style="color: ${genderColor}; font-size: 12px;">${genderIcon}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 9px;">
+                    <span style="color: #aaa;">${info.weight}</span>
                     <span style="color: #00ff00;">${Math.floor(fish.depth)}ft</span>
                 </div>
                 <div style="display: flex; justify-content: space-between;">
@@ -242,35 +247,42 @@ function updateFishStatus(gameScene) {
     };
 
     // Render zones top to bottom (Surface -> Mid -> Bottom)
+    // Each zone has a fixed height to prevent UI jumping
     let html = '';
 
-    // Surface Zone (0-40ft)
+    // Surface Zone (0-40ft) - Fixed height
     html += `
         <div style="margin-bottom: 8px;">
             <div style="background: #ffff0020; border: 2px solid #ffff00; padding: 4px; font-weight: bold; font-size: 11px; color: #ffff00;">
                 ☀️ SURFACE (0-40ft) [${surfaceFish.length}]
             </div>
-            ${surfaceFish.length > 0 ? surfaceFish.map(renderFish).join('') : '<div style="color: #666; font-size: 9px; padding: 4px; font-style: italic;">No fish</div>'}
+            <div style="height: 150px; overflow-y: auto; overflow-x: hidden;">
+                ${surfaceFish.length > 0 ? surfaceFish.map(renderFish).join('') : ''}
+            </div>
         </div>
     `;
 
-    // Mid-Column Zone (40-100ft) - Prime lake trout zone
+    // Mid-Column Zone (40-100ft) - Prime lake trout zone - Fixed height (larger)
     html += `
         <div style="margin-bottom: 8px;">
             <div style="background: #00ff0020; border: 2px solid #00ff00; padding: 4px; font-weight: bold; font-size: 11px; color: #00ff00;">
                 🎯 MID-COLUMN (40-100ft) [${midColumnFish.length}]
             </div>
-            ${midColumnFish.length > 0 ? midColumnFish.map(renderFish).join('') : '<div style="color: #666; font-size: 9px; padding: 4px; font-style: italic;">No fish</div>'}
+            <div style="height: 240px; overflow-y: auto; overflow-x: hidden;">
+                ${midColumnFish.length > 0 ? midColumnFish.map(renderFish).join('') : ''}
+            </div>
         </div>
     `;
 
-    // Bottom Zone (100-150ft)
+    // Bottom Zone (100-150ft) - Fixed height
     html += `
         <div style="margin-bottom: 8px;">
             <div style="background: #88888820; border: 2px solid #888888; padding: 4px; font-weight: bold; font-size: 11px; color: #888888;">
                 ⚓ BOTTOM (100-150ft) [${bottomFish.length}]
             </div>
-            ${bottomFish.length > 0 ? bottomFish.map(renderFish).join('') : '<div style="color: #666; font-size: 9px; padding: 4px; font-style: italic;">No fish</div>'}
+            <div style="height: 150px; overflow-y: auto; overflow-x: hidden;">
+                ${bottomFish.length > 0 ? bottomFish.map(renderFish).join('') : ''}
+            </div>
         </div>
     `;
 
