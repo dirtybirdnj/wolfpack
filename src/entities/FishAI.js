@@ -1,5 +1,6 @@
 import GameConfig from '../config/GameConfig.js';
 import { Constants, Utils } from '../utils/Constants.js';
+import { calculateDietPreference } from '../config/SpeciesData.js';
 
 export class FishAI {
     constructor(fish, fishingType) {
@@ -680,9 +681,27 @@ export class FishAI {
 
         // Check if other fish are hunting this cloud (frenzying)
         const otherFishHunting = cloudInfo.cloud.lakersChasing.length;
-        const frenzyBonus = Math.min(otherFishHunting * 0.3, 0.8); // Increased from 0.2/0.6 to 0.3/0.8
+        const frenzyBonus = Math.min(otherFishHunting * 0.3, 0.8);
 
-        const huntScore = (hungerFactor * 0.6) + (distanceFactor * 0.3) + frenzyBonus;
+        // DIET PREFERENCE - Lake trout prefer certain prey species (based on real-world data)
+        const preySpecies = cloudInfo.cloud.speciesType;
+        const dietPreference = calculateDietPreference('lake_trout', preySpecies);
+        // Diet preferences: alewife 0.55, smelt 0.25, perch 0.08, sculpin 0.08, cisco 0.04
+
+        // Very hungry fish (>70%) are less picky about species
+        const pickyFactor = this.fish.hunger > 70 ? 0.3 : 1.0;
+        const dietBonus = dietPreference * pickyFactor * 0.4; // Can add up to 0.22 for preferred prey
+
+        // Base hunt score (hunger + distance + frenzy)
+        let huntScore = (hungerFactor * 0.6) + (distanceFactor * 0.3) + frenzyBonus;
+
+        // Apply diet preference bonus
+        huntScore += dietBonus;
+
+        // Rare species (cisco) get extra appeal bonus
+        if (preySpecies === 'cisco') {
+            huntScore += 0.15; // Rare delicacy!
+        }
 
         return huntScore > 0.35; // Lowered from 0.5 for more aggressive pursuit
     }
@@ -718,8 +737,9 @@ export class FishAI {
             // Check if we're close enough to eat the baitfish
             if (result.distance < 10) { // Increased from 8 for easier catches
                 // Consume the baitfish!
+                const preySpecies = this.targetBaitfishCloud.speciesType;
                 this.targetBaitfishCloud.consumeBaitfish();
-                this.fish.feedOnBaitfish();
+                this.fish.feedOnBaitfish(preySpecies); // Pass species for nutrition calculation
                 this.state = Constants.FISH_STATE.FEEDING;
                 this.decisionCooldown = 100; // Reduced from 200 for faster feeding cycle
                 return;

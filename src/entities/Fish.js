@@ -1,6 +1,7 @@
 import GameConfig from '../config/GameConfig.js';
 import { Constants, Utils } from '../utils/Constants.js';
 import FishAI from './FishAI.js';
+import { getBaitfishSpecies } from '../config/SpeciesData.js';
 
 // Fish name pools
 const MALE_NAMES = [
@@ -439,10 +440,23 @@ export class Fish {
         }, 500);
     }
 
-    feedOnBaitfish() {
-        // Fish has consumed a baitfish, reduce hunger
-        this.hunger = Math.max(0, this.hunger - GameConfig.BAITFISH_CONSUMPTION_HUNGER_REDUCTION);
+    feedOnBaitfish(preySpecies = 'alewife') {
+        // Fish has consumed a baitfish, reduce hunger based on prey nutrition value
+        const speciesData = getBaitfishSpecies(preySpecies);
+        const nutritionValue = speciesData.nutritionValue || 20; // Default to 20 if not specified
+
+        // Different species provide different nutrition:
+        // Cisco: 30 (large, nutritious)
+        // Smelt: 25 (high-fat content)
+        // Alewife: 20 (abundant, standard)
+        // Perch: 18 (moderate)
+        // Sculpin: 15 (small, less nutritious)
+
+        this.hunger = Math.max(0, this.hunger - nutritionValue);
         this.lastFed = this.frameAge;
+
+        // Log feeding for debugging (commented out for production)
+        // console.log(`${this.name} fed on ${preySpecies}, hunger reduced by ${nutritionValue} (now ${Math.floor(this.hunger)}%)`);
     }
 
     getInfo() {
