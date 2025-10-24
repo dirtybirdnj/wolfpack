@@ -360,6 +360,10 @@
                     <span><span class="key">R</span></span>
                     <span>Reset to Surface</span>
                 </div>
+                <div class="control-item">
+                    <span><span class="key">ESC</span> <span class="key">P</span></span>
+                    <span>Pause / Resume</span>
+                </div>
                 </div>
             </div>
 
@@ -410,6 +414,10 @@
                 <div class="control-item">
                     <span><span class="key">R2</span></span>
                     <span>Reel in Fish (Fight)</span>
+                </div>
+                <div class="control-item">
+                    <span><span class="key">START</span></span>
+                    <span>Pause / Resume</span>
                 </div>
                 <div style="font-weight: bold; color: var(--border-warning); margin: 10px 0 8px 0; font-size: 11px; border-top: 1px solid var(--text-muted); padding-top: 8px;">MOVEMENT MODE</div>
                 <div class="control-item">
@@ -493,6 +501,27 @@
         <!-- Center Panel (Game) -->
         <div id="game-container"></div>
 
+        <!-- Version Display (overlays bottom-right of game) -->
+        <div id="version-display" style="
+            position: absolute;
+            bottom: 5px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: 'Courier New', monospace;
+            font-size: 9px;
+            color: #888888;
+            cursor: pointer;
+            user-select: none;
+            z-index: 100;
+            padding: 3px 8px;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 3px;
+            border: 1px solid #444444;
+            transition: all 0.2s;
+        " title="Click to view commit history">
+            <span id="version-hash">loading...</span>
+        </div>
+
         <!-- Right Panel -->
         <div id="right-panel">
             <!-- Fish Status -->
@@ -515,15 +544,19 @@
                 <button id="toggle-debug-btn" class="dev-btn">Toggle Debug</button>
             </div>
 
-            <!-- Column 2: Stats -->
+            <!-- Column 2: Lure Weight -->
             <div class="panel warning">
-                <h3>📊 DEV STATS</h3>
-                <div style="font-size: 12px; line-height: 1.8;">
-                    <div>Active Fish: <span id="fish-count" class="status-value">0</span></div>
-                    <div>Score: <span id="dev-score" class="status-value">0</span></div>
-                    <div>Lure Depth: <span id="dev-depth" class="status-value">0</span> ft</div>
-                    <div>Lure State: <span id="dev-lure-state" class="status-value">SURFACE</span></div>
-                    <div>Game Time: <span id="dev-time" class="status-value">0:00</span></div>
+                <h3>🎣 LURE WEIGHT</h3>
+                <div style="font-size: 11px; margin-bottom: 8px;">
+                    Current: <span id="current-lure-weight" class="status-value">0.5oz</span>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px;">
+                    <button id="lure-weight-0.25" class="dev-btn" style="font-size: 10px; padding: 6px 4px;">1/4oz</button>
+                    <button id="lure-weight-0.5" class="dev-btn" style="font-size: 10px; padding: 6px 4px;">1/2oz</button>
+                    <button id="lure-weight-1" class="dev-btn" style="font-size: 10px; padding: 6px 4px;">1oz</button>
+                    <button id="lure-weight-2" class="dev-btn" style="font-size: 10px; padding: 6px 4px;">2oz</button>
+                    <button id="lure-weight-3" class="dev-btn" style="font-size: 10px; padding: 6px 4px;">3oz</button>
+                    <button id="lure-weight-4" class="dev-btn" style="font-size: 10px; padding: 6px 4px;">4oz</button>
                 </div>
             </div>
 
@@ -758,6 +791,148 @@
         console.log('🎮 Gamepad Manager initialized. Waiting for controller connection...');
         console.log('🎮 Press any button on your controller to connect it.');
         console.log('🎮 You can also click "Check Gamepads" to manually check for controllers.');
+    </script>
+
+    <!-- Commit Log Modal -->
+    <div id="commit-log-modal" style="
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.8);
+        z-index: 10000;
+        overflow-y: auto;
+    ">
+        <div style="
+            max-width: 900px;
+            margin: 40px auto;
+            background: var(--bg-primary);
+            border: 2px solid var(--border-primary);
+            border-radius: 8px;
+            padding: 20px;
+        ">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 style="color: var(--text-primary); margin: 0; font-family: 'Courier New', monospace;">
+                    📜 Git Commit History
+                </h2>
+                <button id="close-commit-log" style="
+                    background: var(--bg-danger);
+                    color: white;
+                    border: none;
+                    padding: 8px 16px;
+                    border-radius: 4px;
+                    cursor: pointer;
+                    font-family: 'Courier New', monospace;
+                    font-size: 14px;
+                ">Close</button>
+            </div>
+            <div id="commit-log-content" style="
+                font-family: 'Courier New', monospace;
+                font-size: 11px;
+                color: var(--text-muted);
+                white-space: pre-wrap;
+                max-height: 70vh;
+                overflow-y: auto;
+                background: rgba(0, 0, 0, 0.3);
+                padding: 15px;
+                border-radius: 4px;
+                border: 1px solid var(--border-secondary);
+                line-height: 1.6;
+            ">
+                Loading commit history...
+            </div>
+        </div>
+    </div>
+
+    <!-- Version Display and Commit Log Script -->
+    <script type="module">
+        // Fetch version info from a generated version.json file
+        async function loadVersionInfo() {
+            try {
+                const response = await fetch('/version.json');
+                const data = await response.json();
+
+                const versionEl = document.getElementById('version-hash');
+                if (versionEl) {
+                    versionEl.textContent = `v${data.version} (${data.commit})`;
+                }
+            } catch (error) {
+                console.warn('Could not load version info:', error);
+                const versionEl = document.getElementById('version-hash');
+                if (versionEl) {
+                    versionEl.textContent = 'dev';
+                }
+            }
+        }
+
+        // Fetch commit log
+        async function loadCommitLog() {
+            try {
+                const response = await fetch('/commits.txt');
+                const data = await response.text();
+
+                const contentEl = document.getElementById('commit-log-content');
+                if (contentEl && data) {
+                    contentEl.textContent = data;
+                } else {
+                    contentEl.textContent = 'Could not load commit history.';
+                }
+            } catch (error) {
+                console.error('Could not load commit log:', error);
+                const contentEl = document.getElementById('commit-log-content');
+                if (contentEl) {
+                    contentEl.textContent = 'Error loading commit history.\n\nThis feature requires the commits.txt file to be generated during deployment.';
+                }
+            }
+        }
+
+        // Setup version display click handler
+        const versionDisplay = document.getElementById('version-display');
+        const commitLogModal = document.getElementById('commit-log-modal');
+        const closeButton = document.getElementById('close-commit-log');
+
+        if (versionDisplay) {
+            // Hover effect
+            versionDisplay.addEventListener('mouseenter', () => {
+                versionDisplay.style.color = '#00ff00';
+                versionDisplay.style.borderColor = '#00ff00';
+            });
+            versionDisplay.addEventListener('mouseleave', () => {
+                versionDisplay.style.color = '#888888';
+                versionDisplay.style.borderColor = '#444444';
+            });
+
+            // Click to show commit log
+            versionDisplay.addEventListener('click', () => {
+                commitLogModal.style.display = 'block';
+                loadCommitLog();
+            });
+        }
+
+        if (closeButton) {
+            closeButton.addEventListener('click', () => {
+                commitLogModal.style.display = 'none';
+            });
+        }
+
+        // Close modal on escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && commitLogModal.style.display === 'block') {
+                commitLogModal.style.display = 'none';
+            }
+        });
+
+        // Close modal on background click
+        commitLogModal.addEventListener('click', (e) => {
+            if (e.target === commitLogModal) {
+                commitLogModal.style.display = 'none';
+            }
+        });
+
+        // Load version on page load
+        loadVersionInfo();
     </script>
 </body>
 </html>

@@ -145,7 +145,12 @@ export class Fish {
     }
     
     update(lure, allFish = [], baitfishClouds = []) {
-        if (this.caught) {
+        // During active fight, fish position is controlled by FishFight
+        // but we still want to render the fish normally
+        const inActiveFight = this.scene.currentFight && this.scene.currentFight.active && this.scene.currentFight.fish === this;
+
+        if (this.caught && !inActiveFight) {
+            // Fish was caught but fight is over - show caught animation
             this.handleCaught();
             return;
         }
@@ -160,43 +165,46 @@ export class Fish {
         this.depthZone = this.getDepthZone();
         this.speed = this.baseSpeed * this.depthZone.speedMultiplier;
 
-        // Update AI with info about other fish for frenzy detection AND baitfish for hunting
-        this.ai.update(lure, this.scene.time.now, allFish, baitfishClouds);
+        // During active fight, skip AI and movement updates (FishFight controls position)
+        if (!inActiveFight) {
+            // Update AI with info about other fish for frenzy detection AND baitfish for hunting
+            this.ai.update(lure, this.scene.time.now, allFish, baitfishClouds);
 
-        // Get movement from AI
-        const movement = this.ai.getMovementVector();
+            // Get movement from AI
+            const movement = this.ai.getMovementVector();
 
-        // Apply movement in world coordinates
-        this.worldX += movement.x;
-        this.y += movement.y;
-        this.depth = this.y / GameConfig.DEPTH_SCALE;
+            // Apply movement in world coordinates
+            this.worldX += movement.x;
+            this.y += movement.y;
+            this.depth = this.y / GameConfig.DEPTH_SCALE;
 
-        // Keep fish in depth bounds
-        this.y = Math.max(10, Math.min(GameConfig.MAX_DEPTH * GameConfig.DEPTH_SCALE - 10, this.y));
+            // Keep fish in depth bounds
+            this.y = Math.max(10, Math.min(GameConfig.MAX_DEPTH * GameConfig.DEPTH_SCALE - 10, this.y));
 
-        // Convert world position to screen position based on player's current hole
-        const currentHole = this.scene.iceHoleManager.getCurrentHole();
-        if (currentHole) {
-            const playerWorldX = currentHole.x;
-            const offsetFromPlayer = this.worldX - playerWorldX;
-            this.x = (GameConfig.CANVAS_WIDTH / 2) + offsetFromPlayer;
-        } else {
-            // Fallback if no hole exists
-            this.x = this.worldX;
-        }
+            // Convert world position to screen position based on player's current hole
+            const currentHole = this.scene.iceHoleManager.getCurrentHole();
+            if (currentHole) {
+                const playerWorldX = currentHole.x;
+                const offsetFromPlayer = this.worldX - playerWorldX;
+                this.x = (GameConfig.CANVAS_WIDTH / 2) + offsetFromPlayer;
+            } else {
+                // Fallback if no hole exists
+                this.x = this.worldX;
+            }
 
-        // Update sonar trail
-        this.updateSonarTrail();
+            // Update sonar trail
+            this.updateSonarTrail();
 
-        // Remove fish if too far from player in world coordinates (beyond ~500 units)
-        if (currentHole) {
-            const distanceFromPlayer = Math.abs(this.worldX - currentHole.x);
-            if (distanceFromPlayer > 500) {
-                this.visible = false;
+            // Remove fish if too far from player in world coordinates (beyond ~500 units)
+            if (currentHole) {
+                const distanceFromPlayer = Math.abs(this.worldX - currentHole.x);
+                if (distanceFromPlayer > 500) {
+                    this.visible = false;
+                }
             }
         }
-        
-        // Render
+
+        // Always render (whether in fight or not)
         this.render();
     }
     

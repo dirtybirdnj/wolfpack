@@ -9,7 +9,6 @@ export class FishFight {
         // Fight state
         this.active = true;
         this.lineTension = 20; // Start with some tension
-        this.fishTiredness = 0; // 0 = fresh, 100 = exhausted
         this.fishDistance = Math.abs(this.fish.y - 0); // Distance to surface
         this.initialDepth = this.fish.y; // Starting depth for visual tracking
 
@@ -17,13 +16,23 @@ export class FishFight {
         this.lastReelTime = 0;
         this.reelCount = 0;
 
-        // Fight properties based on fish
-        this.fishStrength = this.fish.weight / 5; // Bigger fish = stronger
+        // Fight properties based on fish biology
+        // High health + low hunger = strong, spirited fight
+        // Low health or high hunger = weak, easier fight
+        const healthFactor = this.fish.health / 100; // 0-1
+        const hungerFactor = 1 - (this.fish.hunger / 100); // 0-1 (low hunger = high fight)
+        const biologicalCondition = (healthFactor + hungerFactor) / 2; // Average of both
+
+        this.fishStrength = (this.fish.weight / 5) * biologicalCondition; // Biology affects strength
+        this.fishTiredness = (1 - biologicalCondition) * 30; // Poor condition = starts more tired
         this.fightTime = 0;
 
         // Thrashing animation
         this.thrashAmount = 0;
-        this.thrashSpeed = 0.15; // Speed of thrashing oscillation
+        this.thrashSpeed = 0.15 + (biologicalCondition * 0.1); // Healthier fish thrash faster
+
+        console.log(`Fish condition - Health: ${this.fish.health.toFixed(0)}%, Hunger: ${this.fish.hunger.toFixed(0)}%, Strength: ${this.fishStrength.toFixed(1)}, Initial Tiredness: ${this.fishTiredness.toFixed(1)}`);
+
 
         // Visual
         this.tensionBar = scene.add.graphics();
@@ -93,9 +102,24 @@ export class FishFight {
     applyFishPull() {
         // Fish fights back based on strength and tiredness
         const tirednessMultiplier = 1 - (this.fishTiredness / 100);
-        const pullStrength = GameConfig.FISH_PULL_BASE * this.fishStrength * tirednessMultiplier;
 
-        this.lineTension += pullStrength * 0.1; // Apply pull gradually
+        // Healthy, well-fed fish fight harder with more aggressive pulls
+        const healthFactor = this.fish.health / 100;
+        const energyFactor = 1 - (this.fish.hunger / 100); // Lower hunger = more energy
+
+        // Combine all factors for realistic fight behavior
+        const fightIntensity = tirednessMultiplier * healthFactor * energyFactor;
+
+        const pullStrength = GameConfig.FISH_PULL_BASE * this.fishStrength * fightIntensity;
+
+        // Strong, healthy fish can make sudden surges
+        if (fightIntensity > 0.7 && Math.random() < 0.05) {
+            // Surge! Extra tension
+            this.lineTension += pullStrength * 0.5;
+        } else {
+            this.lineTension += pullStrength * 0.1; // Apply pull gradually
+        }
+
         this.lineTension = Math.min(GameConfig.MAX_LINE_TENSION, this.lineTension);
     }
 
@@ -176,9 +200,12 @@ export class FishFight {
         tensionText.setOrigin(0.5, 0.5);
         tensionText.setDepth(501);
 
-        // Fish stats
+        // Fish stats with health/hunger
+        const healthColor = this.fish.health > 60 ? '#00ff00' : this.fish.health > 30 ? '#ffaa00' : '#ff6666';
+        const hungerColor = this.fish.hunger > 70 ? '#ff6666' : this.fish.hunger > 40 ? '#ffaa00' : '#00ff00';
+
         const statsText = this.scene.add.text(barX, barY + barHeight + 8,
-            `Fish: ${this.fish.weight.toFixed(1)} lbs | Tiredness: ${Math.floor(this.fishTiredness)}% | Distance: ${Math.floor(this.fishDistance / GameConfig.DEPTH_SCALE)} ft`,
+            `Fish: ${this.fish.weight.toFixed(1)} lbs | Tired: ${Math.floor(this.fishTiredness)}% | Dist: ${Math.floor(this.fishDistance / GameConfig.DEPTH_SCALE)} ft`,
             {
                 fontSize: '10px',
                 fontFamily: 'Courier New',
@@ -186,6 +213,17 @@ export class FishFight {
             }
         );
         statsText.setDepth(501);
+
+        // Condition stats
+        const conditionText = this.scene.add.text(barX, barY + barHeight + 21,
+            `Health: ${Math.floor(this.fish.health)}% | Hunger: ${Math.floor(this.fish.hunger)}%`,
+            {
+                fontSize: '9px',
+                fontFamily: 'Courier New',
+                color: '#888888'
+            }
+        );
+        conditionText.setDepth(501);
 
         // Instructions
         const instructText = this.scene.add.text(barX, barY - 20,
@@ -202,6 +240,7 @@ export class FishFight {
         this.scene.time.delayedCall(10, () => {
             tensionText.destroy();
             statsText.destroy();
+            conditionText.destroy();
             instructText.destroy();
         });
     }

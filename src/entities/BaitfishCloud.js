@@ -27,15 +27,19 @@ export class BaitfishCloud {
         this.beingFrenzyFed = false;
         this.consumedCount = 0;
 
+        // Dynamic schooling properties
+        this.scaredLevel = 0; // 0-1, how scared the cloud is
+        this.spreadMultiplier = 1.0; // 1.0 = normal, 0.5 = condensed, 2.0 = very spread out
+
         // Spawn the baitfish
         this.spawnBaitfish(count);
     }
 
     spawnBaitfish(count) {
         for (let i = 0; i < count; i++) {
-            // Spawn in a loose cluster - increased spread for larger dimensional clouds
-            const offsetX = Utils.randomBetween(-80, 80);
-            const offsetY = Utils.randomBetween(-50, 50);
+            // Spawn in a loose cluster - DOUBLED size (was -80 to 80, now -160 to 160)
+            const offsetX = Utils.randomBetween(-160, 160);
+            const offsetY = Utils.randomBetween(-100, 100);
 
             const baitfish = new Baitfish(
                 this.scene,
@@ -53,31 +57,63 @@ export class BaitfishCloud {
 
         this.age++;
 
-        // Update center position (cloud drifts slowly)
-        this.centerX += this.velocity.x;
-        this.centerY += this.velocity.y;
-        this.depth = this.centerY / GameConfig.DEPTH_SCALE;
+        // Check for nearby lakers first to determine behavior
+        const lakersNearby = this.checkForLakersNearby(lakers);
 
-        // Occasionally change direction slightly
-        if (Math.random() < 0.01) {
-            this.velocity.x += Utils.randomBetween(-0.2, 0.2);
-            this.velocity.y += Utils.randomBetween(-0.1, 0.1);
+        // Update scared level based on laker proximity
+        if (lakersNearby) {
+            // Get scared quickly when lakers approach
+            this.scaredLevel = Math.min(1.0, this.scaredLevel + 0.15);
+
+            // Scared clouds move faster and more erratically
+            const panicMultiplier = 1.5 + this.scaredLevel;
+            this.velocity.x *= panicMultiplier;
+            this.velocity.y *= panicMultiplier;
+
+            // Add erratic movement
+            this.velocity.x += Utils.randomBetween(-0.8, 0.8);
+            this.velocity.y += Utils.randomBetween(-0.5, 0.5);
+
+            // Keep velocity reasonable but allow faster panic movement
+            this.velocity.x = Math.max(-2.5, Math.min(2.5, this.velocity.x));
+            this.velocity.y = Math.max(-1.5, Math.min(1.5, this.velocity.y));
+
+            // Condense the school when scared (0.3 to 0.6 based on fear)
+            this.spreadMultiplier = Math.max(0.3, 1.0 - (this.scaredLevel * 0.7));
+        } else {
+            // Calm down slowly when no lakers nearby
+            this.scaredLevel = Math.max(0, this.scaredLevel - 0.02);
+
+            // Spread out when safe (1.5 to 2.0 multiplier)
+            this.spreadMultiplier = Math.min(2.0, 1.5 + (1 - this.scaredLevel) * 0.5);
+
+            // Normal gentle drift
+            if (Math.random() < 0.01) {
+                this.velocity.x += Utils.randomBetween(-0.2, 0.2);
+                this.velocity.y += Utils.randomBetween(-0.1, 0.1);
+            }
+
+            // Decay velocity when calm
+            this.velocity.x *= 0.95;
+            this.velocity.y *= 0.95;
 
             // Keep velocity reasonable
             this.velocity.x = Math.max(-1.0, Math.min(1.0, this.velocity.x));
             this.velocity.y = Math.max(-0.5, Math.min(0.5, this.velocity.y));
         }
 
+        // Update center position (cloud drifts or flees)
+        this.centerX += this.velocity.x;
+        this.centerY += this.velocity.y;
+        this.depth = this.centerY / GameConfig.DEPTH_SCALE;
+
         // Keep cloud in bounds
         this.centerY = Math.max(30, Math.min(GameConfig.MAX_DEPTH * GameConfig.DEPTH_SCALE - 30, this.centerY));
-
-        // Check for nearby lakers
-        const lakersNearby = this.checkForLakersNearby(lakers);
 
         // Update all baitfish in the cloud
         this.baitfish = this.baitfish.filter(baitfish => {
             if (!baitfish.consumed && baitfish.visible) {
-                baitfish.update({ x: this.centerX, y: this.centerY }, lakersNearby);
+                baitfish.update({ x: this.centerX, y: this.centerY }, lakersNearby, this.spreadMultiplier, this.scaredLevel);
                 return true;
             } else if (baitfish.consumed) {
                 baitfish.destroy();

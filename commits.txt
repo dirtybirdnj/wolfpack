@@ -1,0 +1,20 @@
+e16cbeb - 2025-10-24 - Add version display with clickable commit log
+e2238e7 - 2025-10-24 - Fix pause lag and add dynamic baitfish behavior
+d1e229d - 2025-10-24 - Add pause feature with Start button support
+e411d91 - 2025-10-24 - add wolfpack artwork, reference photos of vermont and new york mountain ranges. Several photos of crown point bridge between NY and VT
+ed97c09 - 2025-10-24 - Fix fish visibility during fight and landing crash
+f379c6c - 2025-10-24 - Fix console errors and reduce debug logging
+33374ae - 2025-10-24 - Improve fishing mechanics with dynamic gameplay and realistic fight behavior
+181ef0a - 2025-10-24 - Merge pull request #5 from dirtybirdnj/claude/project-overview-011CURammpNyYcyWXZ9hiTZB
+9ddac8b - 2025-10-24 - Add comprehensive project documentation
+cff772a - 2025-10-24 - Merge pull request #4 from dirtybirdnj/claude/improve-ui-13-inch-011CURSc6eG36X9vkNnsMksg
+7fd30bd - 2025-10-24 - Make baitfish clouds dimensionally larger with more spread
+4bcc287 - 2025-10-24 - Dramatically increase baitfish population to sustain hungry lake trout
+71ddccb - 2025-10-24 - Add baitfish cloud merging when clouds swim into each other
+8c89061 - 2025-10-24 - Make baitfish cloud sizes more variable and allow larger clouds
+f289dcd - 2025-10-24 - Add fish names, genders, and faster hunger metabolism
+5a77e02 - 2025-10-24 - Fix fish status panel to be 100% height on game load
+921a5be - 2025-10-24 - Add fixed-size zones to fish status panel to prevent UI jumping
+4baf28f - 2025-10-24 - Condense game info panel to single row
+7741bd7 - 2025-10-24 - Make lake trout aggressively pursue baitfish and fix lure strike delay
+6a7a52f - 2025-10-24 - Significantly improve fish detection and gameplay mechanics

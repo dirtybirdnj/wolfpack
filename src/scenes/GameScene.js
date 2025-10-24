@@ -6,6 +6,7 @@ import Fish from '../entities/Fish.js';
 import FishFight from '../entities/FishFight.js';
 import BaitfishCloud from '../entities/BaitfishCloud.js';
 import IceHoleManager from '../managers/IceHoleManager.js';
+import FishingLine from '../entities/FishingLine.js';
 
 export class GameScene extends Phaser.Scene {
     constructor() {
@@ -22,6 +23,8 @@ export class GameScene extends Phaser.Scene {
         this.currentFight = null; // Active fish fight
         this.controllerTestMode = false; // Controller test window active
         this.controllerTestUI = null; // Test UI elements
+        this.isPaused = false; // Pause state
+        this.pauseOverlay = null; // Pause UI overlay
     }
     
     create() {
@@ -33,6 +36,9 @@ export class GameScene extends Phaser.Scene {
 
         // Create the player's lure - start at better viewing depth
         this.lure = new Lure(this, GameConfig.CANVAS_WIDTH / 2, 100); // Centered, 25ft deep
+
+        // Create fishing line
+        this.fishingLine = new FishingLine(this);
 
         // Set up input handlers
         this.setupInput();
@@ -79,6 +85,8 @@ export class GameScene extends Phaser.Scene {
         this.cursors = this.input.keyboard.createCursorKeys();
         this.spaceKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
         this.rKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.R);
+        this.escKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ESC);
+        this.pKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.P);
 
         // Mouse/touch controls (optional enhancement)
         this.input.on('pointerdown', (pointer) => {
@@ -126,7 +134,8 @@ export class GameScene extends Phaser.Scene {
             lastA: false,
             lastB: false,
             lastX: false,
-            lastY: false // Triangle/Y button for movement mode
+            lastY: false, // Triangle/Y button for movement mode
+            lastStart: false // Start button for pause
         };
     }
 
@@ -149,6 +158,78 @@ export class GameScene extends Phaser.Scene {
             onComplete: () => text.destroy()
         });
     }
+
+    togglePause() {
+        this.isPaused = !this.isPaused;
+
+        if (this.isPaused) {
+            // Show pause overlay
+            this.createPauseOverlay();
+            console.log('Game paused');
+        } else {
+            // Hide pause overlay
+            this.destroyPauseOverlay();
+            console.log('Game resumed');
+        }
+    }
+
+    createPauseOverlay() {
+        if (this.pauseOverlay) return; // Already exists
+
+        // Semi-transparent black overlay
+        const overlay = this.add.graphics();
+        overlay.fillStyle(0x000000, 0.7);
+        overlay.fillRect(0, 0, GameConfig.CANVAS_WIDTH, GameConfig.CANVAS_HEIGHT);
+        overlay.setDepth(2000);
+
+        // PAUSED text
+        const pausedText = this.add.text(GameConfig.CANVAS_WIDTH / 2, GameConfig.CANVAS_HEIGHT / 2 - 40, 'PAUSED', {
+            fontSize: '48px',
+            fontFamily: 'Courier New',
+            color: '#00ff00',
+            fontStyle: 'bold',
+            stroke: '#000000',
+            strokeThickness: 4
+        });
+        pausedText.setOrigin(0.5, 0.5);
+        pausedText.setDepth(2001);
+
+        // Instructions
+        const instructText = this.add.text(GameConfig.CANVAS_WIDTH / 2, GameConfig.CANVAS_HEIGHT / 2 + 20,
+            'Press START, ESC, or P to resume', {
+            fontSize: '14px',
+            fontFamily: 'Courier New',
+            color: '#ffff00',
+            stroke: '#000000',
+            strokeThickness: 2
+        });
+        instructText.setOrigin(0.5, 0.5);
+        instructText.setDepth(2001);
+
+        // Pulsing effect on pause text
+        this.tweens.add({
+            targets: pausedText,
+            alpha: 0.6,
+            duration: 800,
+            yoyo: true,
+            repeat: -1
+        });
+
+        this.pauseOverlay = {
+            overlay,
+            pausedText,
+            instructText
+        };
+    }
+
+    destroyPauseOverlay() {
+        if (!this.pauseOverlay) return;
+
+        this.pauseOverlay.overlay.destroy();
+        this.pauseOverlay.pausedText.destroy();
+        this.pauseOverlay.instructText.destroy();
+        this.pauseOverlay = null;
+    }
     
     update(time, delta) {
         // Controller test mode - update test UI and block game inputs
@@ -157,7 +238,27 @@ export class GameScene extends Phaser.Scene {
             return; // Block all game logic
         }
 
-        // If fighting a fish, handle that instead of normal gameplay
+        // If paused, only check for unpause input
+        if (this.isPaused) {
+            // Check for unpause (keyboard)
+            if (Phaser.Input.Keyboard.JustDown(this.escKey) || Phaser.Input.Keyboard.JustDown(this.pKey)) {
+                this.togglePause();
+            }
+            // Check for unpause (gamepad)
+            if (window.gamepadManager && window.gamepadManager.isConnected()) {
+                const startBtn = window.gamepadManager.getButton('Start');
+                if (startBtn.pressed && !this.gamepadState.lastStart) {
+                    this.togglePause();
+                }
+                this.gamepadState.lastStart = startBtn.pressed;
+            }
+            return; // Skip all game updates
+        }
+
+        // Handle pause input only when not paused (moved to end of update for efficiency)
+        // This runs only once per frame when game is active
+
+        // If fighting a fish, handle fight updates
         if (this.currentFight && this.currentFight.active) {
             const spacePressed = Phaser.Input.Keyboard.JustDown(this.spaceKey);
 
@@ -177,9 +278,10 @@ export class GameScene extends Phaser.Scene {
             // Pass either keyboard or gamepad input to fish fight
             this.currentFight.update(time, spacePressed || r2Pressed);
 
-            // Check if fight is still active after update (fish might have been landed/lost)
+            // Check if fight is still active after update (might have ended)
             if (!this.currentFight || !this.currentFight.active) {
-                return; // Fight ended, continue to normal gameplay
+                // Fight ended during update - skip rumble and continue to normal gameplay
+                return;
             }
 
             // Add periodic rumble during fish fight based on line tension
@@ -199,7 +301,7 @@ export class GameScene extends Phaser.Scene {
                 }
             }
 
-            return;
+            // Don't block normal gameplay - fish and bait continue to move!
         }
 
         // Update ice hole manager (must be before input)
@@ -208,12 +310,20 @@ export class GameScene extends Phaser.Scene {
         // Update sonar display
         this.sonarDisplay.update();
 
-        // Handle input (keyboard + gamepad)
-        this.handleInput();
-        this.handleGamepadInput();
+        // Handle input (keyboard + gamepad) - only if not fighting
+        if (!this.currentFight || !this.currentFight.active) {
+            this.handleInput();
+            this.handleGamepadInput();
+        }
 
-        // Update lure
-        this.lure.update();
+        // Update lure - only if not fighting (fight controls lure position)
+        if (!this.currentFight || !this.currentFight.active) {
+            this.lure.update();
+        }
+
+        // Update fishing line (always - connects hole to lure or hooked fish)
+        const hookedFish = this.currentFight && this.currentFight.active ? this.currentFight.fish : null;
+        this.fishingLine.update(this.lure, hookedFish, this.iceHoleManager);
 
         // Continuously update lure info in UI
         this.updateSpeedDisplay();
@@ -291,6 +401,18 @@ export class GameScene extends Phaser.Scene {
             this.renderDebugInfo();
         } else if (this.debugGraphics) {
             this.debugGraphics.clear();
+        }
+
+        // Check for pause input at end of frame (after all game logic)
+        if (Phaser.Input.Keyboard.JustDown(this.escKey) || Phaser.Input.Keyboard.JustDown(this.pKey)) {
+            this.togglePause();
+        }
+        if (window.gamepadManager && window.gamepadManager.isConnected()) {
+            const startBtn = window.gamepadManager.getButton('Start');
+            if (startBtn.pressed && !this.gamepadState.lastStart) {
+                this.togglePause();
+            }
+            this.gamepadState.lastStart = startBtn.pressed;
         }
     }
     
@@ -928,10 +1050,14 @@ export class GameScene extends Phaser.Scene {
         this.fishes.forEach(fish => fish.destroy());
         this.baitfishClouds.forEach(cloud => cloud.destroy());
         this.lure.destroy();
+        this.fishingLine.destroy();
         this.sonarDisplay.destroy();
         this.iceHoleManager.destroy();
         if (this.debugGraphics) {
             this.debugGraphics.destroy();
+        }
+        if (this.pauseOverlay) {
+            this.destroyPauseOverlay();
         }
     }
 }
