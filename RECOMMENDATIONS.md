@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document provides recommendations for enhancing the Lake Trout Fishing Game based on analysis of the current codebase. Recommendations are categorized by priority and include both quick wins and longer-term enhancements.
+This document provides recommendations for enhancing Wolfpack based on analysis of the current codebase. Recommendations are categorized by priority and include both quick wins and longer-term enhancements.
 
 **Current State:** Well-architected game with sophisticated fish AI, full gamepad support, and realistic mechanics.
 
@@ -977,8 +977,8 @@ class PerformanceMonitor {
 ```javascript
 // Add manifest.json
 {
-  "name": "Lake Trout Fishing Game",
-  "short_name": "Ice Fishing",
+  "name": "Wolfpack",
+  "short_name": "Wolfpack",
   "description": "Lake Champlain ice fishing simulator",
   "start_url": "/",
   "display": "standalone",
@@ -1199,7 +1199,7 @@ If you have **2-3 hours**, do this:
 
 ## Summary
 
-The Lake Trout Fishing Game has an excellent foundation with sophisticated AI, realistic mechanics, and professional code structure. The recommendations focus on:
+Wolfpack has an excellent foundation with sophisticated AI, realistic mechanics, and professional code structure. The recommendations focus on:
 
 1. **Quick wins** - Sound and visual polish (immediate impact)
 2. **Progression** - Achievements, saves, goals (player retention)
