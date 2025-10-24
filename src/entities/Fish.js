@@ -78,6 +78,14 @@ export class Fish {
         // Movement angle for realistic rotation
         this.angle = 0; // Rotation angle in radians based on movement direction
         this.targetAngle = 0; // Target angle to smoothly interpolate to
+
+        // Chase mechanics
+        this.speedPreference = Utils.randomBetween(1.0, 4.0); // Preferred lure speed
+        this.swipeChances = 0; // Number of strike attempts remaining (set when engaged)
+        this.maxSwipeChances = 0; // Maximum swipes for this engagement
+        this.isEngaged = false; // Currently engaged in chase
+        this.engagementState = 'waiting'; // attacking, waiting, loitering
+        this.lastStateChange = 0; // Time of last state change
     }
     
     calculateSonarStrength() {
@@ -190,8 +198,19 @@ export class Fish {
                 const distToTarget = Math.sqrt(dx * dx + dy * dy);
                 if (distToTarget > 5) {
                     // Calculate target angle toward what the fish is chasing
+                    // Use actual dx (not abs) to get correct direction
                     // Negate Y because canvas Y+ is down, but we want head to point up when chasing upward
-                    this.targetAngle = Math.atan2(-dy, Math.abs(dx));
+                    const targetAngleRaw = Math.atan2(-dy, dx);
+
+                    // Normalize angle to work with left/right flipping
+                    // When moving left, we need to mirror the angle
+                    if (dx < 0) {
+                        // Moving left - flip the angle
+                        this.targetAngle = -Math.atan2(-dy, Math.abs(dx));
+                    } else {
+                        // Moving right - use angle as-is
+                        this.targetAngle = Math.atan2(-dy, Math.abs(dx));
+                    }
 
                     // Smoothly interpolate current angle to target angle for fluid motion
                     const angleDiff = this.targetAngle - this.angle;
@@ -421,6 +440,40 @@ export class Fish {
             this.graphics.fillStyle(GameConfig.COLOR_BAITFISH, 0.6);
             this.graphics.fillCircle(this.x + 5, this.y - 5, 3);
         }
+
+        // DEV: Show speed preference above fish
+        if (!this.scene.add.text) {
+            // Create text if it doesn't exist
+            if (!this.speedPrefText) {
+                this.speedPrefText = this.scene.add.text(this.x, this.y - 40,
+                    this.speedPreference.toFixed(1),
+                    {
+                        fontSize: '12px',
+                        fontFamily: 'Courier New',
+                        color: '#ffff00',
+                        stroke: '#000000',
+                        strokeThickness: 2
+                    }
+                );
+                this.speedPrefText.setOrigin(0.5, 0.5);
+                this.speedPrefText.setDepth(15);
+            }
+        }
+
+        // Update text position if it exists
+        if (this.speedPrefText) {
+            this.speedPrefText.setPosition(this.x, this.y - 40);
+        }
+
+        // Show swipe chances as green circles below fish (when engaged)
+        if (this.swipeChances > 0) {
+            const circleSpacing = 8;
+            const startX = this.x - (this.swipeChances * circleSpacing) / 2;
+            for (let i = 0; i < this.swipeChances; i++) {
+                this.graphics.fillStyle(0x00ff00, 0.8);
+                this.graphics.fillCircle(startX + (i * circleSpacing), this.y + 25, 3);
+            }
+        }
     }
     
     handleCaught() {
@@ -523,6 +576,9 @@ export class Fish {
 
     destroy() {
         this.graphics.destroy();
+        if (this.speedPrefText) {
+            this.speedPrefText.destroy();
+        }
     }
 }
 
