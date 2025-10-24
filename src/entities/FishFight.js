@@ -137,10 +137,6 @@ export class FishFight {
         // Move both lure and fish upward as fish is reeled in
         const targetY = this.initialDepth - (this.initialDepth * reelProgress);
 
-        // Update lure position (rises with fish)
-        this.lure.y = targetY;
-        this.lure.depth = this.lure.y / GameConfig.DEPTH_SCALE;
-
         // Fish thrashing animation - left/right oscillation
         this.thrashAmount = Math.sin(this.fightTime * this.thrashSpeed) * 15;
 
@@ -148,10 +144,17 @@ export class FishFight {
         const tirednessMultiplier = 1 - (this.fishTiredness / 100);
         const actualThrash = this.thrashAmount * tirednessMultiplier;
 
-        // Position fish at lure with thrashing offset
+        // Position fish at depth with thrashing
         this.fish.x = this.lure.x + actualThrash;
-        this.fish.y = this.lure.y;
+        this.fish.y = targetY;
         this.fish.depth = this.fish.y / GameConfig.DEPTH_SCALE;
+
+        // Position lure at fish's mouth (slightly offset for visual realism)
+        // Fish mouth is slightly forward, so offset lure by a few pixels in thrash direction
+        const mouthOffset = actualThrash > 0 ? 8 : -8; // Lure at mouth edge
+        this.lure.x = this.fish.x + mouthOffset;
+        this.lure.y = this.fish.y;
+        this.lure.depth = this.lure.y / GameConfig.DEPTH_SCALE;
     }
 
     renderTensionBar() {
@@ -321,11 +324,32 @@ export class FishFight {
             onComplete: () => text.destroy()
         });
 
+        // Store caught fish data for end screen
+        const fishData = {
+            name: info.name,
+            weight: info.weight,
+            weightValue: this.fish.weight,
+            points: this.fish.points,
+            size: info.size,
+            gender: info.gender,
+            health: this.fish.health,
+            hunger: this.fish.hunger,
+            depth: this.fish.depth,
+            depthZone: this.fish.depthZone.name,
+            reelCount: this.reelCount,
+            fightTime: this.fightTime,
+            isEmergencyFish: this.fish.isEmergencyFish || false
+        };
+        this.scene.caughtFishData.push(fishData);
+
         // Update score
         this.scene.score += this.fish.points;
         this.scene.fishCaught++;
         this.scene.events.emit('updateScore', { score: this.scene.score, caught: this.scene.fishCaught });
         this.scene.checkAchievements();
+
+        // Reset lure to surface
+        this.lure.reset();
 
         // Clean up
         this.endFight();

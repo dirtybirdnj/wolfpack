@@ -210,12 +210,16 @@ export class Lure {
     }
 
     reset() {
-        this.y = this.startY;
-        this.depth = this.startY / GameConfig.DEPTH_SCALE;
+        // Always reset to surface (y=0) after catching a fish
+        this.y = 0;
+        this.depth = 0;
         this.velocity = 0;
-        this.state = this.startY === 0 ? Constants.LURE_STATE.SURFACE : Constants.LURE_STATE.IDLE;
+        this.state = Constants.LURE_STATE.SURFACE;
         this.trail = [];
         this.timeInWater = 0;
+        this.baseY = 0;
+        this.jigOffset = 0;
+        this.isJigging = false;
     }
     
     getInfo() {
