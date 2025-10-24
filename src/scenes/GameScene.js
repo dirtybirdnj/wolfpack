@@ -956,17 +956,33 @@ export class GameScene extends Phaser.Scene {
             return; // No manager available
         }
 
-        // Determine fish spawn depth based on realistic lake trout behavior
+        // Select species based on Lake Champlain distribution
+        // Lake Trout: 70%, Northern Pike: 30%
+        let species = 'lake_trout';
+        const speciesRoll = Math.random();
+        if (speciesRoll < 0.70) {
+            species = 'lake_trout'; // Dominant coldwater predator
+        } else {
+            species = 'northern_pike'; // Aggressive shallow-water predator
+        }
+
+        // Determine fish spawn depth based on species-specific behavior
         let depth;
         const tempFactor = (this.waterTemp - 38) / 7; // 0 to 1 based on temp range
 
-        // Lake trout prefer different depths based on temperature
-        if (tempFactor < 0.3) {
-            // Cold water - fish can be shallower
-            depth = Utils.randomBetween(15, 80);
+        if (species === 'northern_pike') {
+            // Pike prefer shallow, structure-oriented water
+            // Always spawn in top 30 feet regardless of temperature
+            depth = Utils.randomBetween(8, 30);
         } else {
-            // Warmer water - fish go deeper
-            depth = Utils.randomBetween(30, 120);
+            // Lake trout prefer different depths based on temperature
+            if (tempFactor < 0.3) {
+                // Cold water - fish can be shallower
+                depth = Utils.randomBetween(15, 80);
+            } else {
+                // Warmer water - fish go deeper
+                depth = Utils.randomBetween(30, 120);
+            }
         }
 
         // Determine fish size
@@ -989,8 +1005,8 @@ export class GameScene extends Phaser.Scene {
         const worldX = playerWorldX + (fromLeft ? -spawnDistance : spawnDistance);
         const y = depth * GameConfig.DEPTH_SCALE;
 
-        // Create the fish (worldX will be used internally, x will be calculated for screen)
-        const fish = new Fish(this, worldX, y, size);
+        // Create the fish with species parameter (worldX will be used internally, x will be calculated for screen)
+        const fish = new Fish(this, worldX, y, size, this.fishingType, species);
 
         // Set initial movement direction - fish swim toward and past the player
         if (fromLeft) {
