@@ -181,7 +181,8 @@ export class Fish {
             // Only update angle if fish is actually moving
             if (Math.abs(movement.x) > 0.1 || Math.abs(movement.y) > 0.1) {
                 // Calculate target angle using atan2 (angle of movement vector)
-                this.targetAngle = Math.atan2(movement.y, Math.abs(movement.x));
+                // Negate Y because canvas Y+ is down, but we want head to point up when moving up
+                this.targetAngle = Math.atan2(-movement.y, Math.abs(movement.x));
 
                 // Smoothly interpolate current angle to target angle for fluid motion
                 const angleDiff = this.targetAngle - this.angle;
