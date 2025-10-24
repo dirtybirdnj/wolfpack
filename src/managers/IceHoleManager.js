@@ -138,6 +138,15 @@ export class IceHoleManager {
             // At a hole - enter fishing mode
             this.movementMode = false;
             this.currentHoleIndex = this.holes.indexOf(nearestHole);
+
+            // Position lure at center of screen (at the hole)
+            if (this.scene.lure) {
+                this.scene.lure.x = GameConfig.CANVAS_WIDTH / 2;
+                this.scene.lure.y = this.iceHeight; // Just below ice surface
+                this.scene.lure.depth = 0;
+                this.scene.lure.state = 'SURFACE';
+            }
+
             console.log(`🎣 Entering fishing mode at hole #${this.currentHoleIndex + 1}`);
             this.updateHoleUI();
             this.scene.showAchievement('Fishing Mode', `At hole #${this.currentHoleIndex + 1}`);
@@ -215,11 +224,9 @@ export class IceHoleManager {
     }
 
     drawHole(hole, index) {
-        // Calculate screen X position based on hole position and player position
-        // When fishing, player is centered, holes are offset from player
-        const screenX = this.movementMode ?
-            this.calculateScreenX(hole.x) :
-            GameConfig.CANVAS_WIDTH / 2;
+        // ALWAYS calculate screen position relative to player position
+        // This makes holes move around the stationary player
+        const screenX = this.calculateScreenX(hole.x);
 
         if (screenX < -50 || screenX > GameConfig.CANVAS_WIDTH + 50) return; // Off screen
 

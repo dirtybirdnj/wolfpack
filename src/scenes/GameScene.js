@@ -301,13 +301,14 @@ export class GameScene extends Phaser.Scene {
 
         // If in movement mode, different controls apply
         if (this.iceHoleManager.movementMode) {
-            // L/R movement on ice surface
-            const moveSpeed = 5;
+            // L/R movement on ice surface - slower, more sensitive
+            // Controls are inverted: left button moves holes left (player moves right in world)
+            const moveSpeed = 2;
             if (dpadLeftBtn.pressed || leftStickX < -DEAD_ZONE) {
-                this.iceHoleManager.movePlayer(-moveSpeed);
+                this.iceHoleManager.movePlayer(moveSpeed); // Move player right, holes appear to move left
             }
             if (dpadRightBtn.pressed || leftStickX > DEAD_ZONE) {
-                this.iceHoleManager.movePlayer(moveSpeed);
+                this.iceHoleManager.movePlayer(-moveSpeed); // Move player left, holes appear to move right
             }
 
             // Square/X button: Drill new hole
