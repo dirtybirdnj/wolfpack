@@ -42,7 +42,7 @@ export class Baitfish {
         this.flickerPhase = Math.random() * Math.PI * 2;
     }
 
-    update(cloudCenter, lakersNearby = false, spreadMultiplier = 1.0, scaredLevel = 0) {
+    update(cloudCenter, lakersNearby = false, spreadMultiplier = 1.0, scaredLevel = 0, lureFollowersCount = 0) {
         if (this.consumed || !this.visible) {
             return;
         }
@@ -59,7 +59,7 @@ export class Baitfish {
 
         // Handle confusion behavior
         if (this.confusionLevel > 0) {
-            this.handleConfusedBehavior(cloudCenter);
+            this.handleConfusedBehavior(cloudCenter, lureFollowersCount);
         } else {
             // Normal schooling behavior
             this.handleNormalBehavior(cloudCenter, lakersNearby, spreadMultiplier);
@@ -128,7 +128,9 @@ export class Baitfish {
         }
     }
 
-    handleConfusedBehavior(cloudCenter) {
+    handleConfusedBehavior(cloudCenter, lureFollowersCount = 0) {
+        const MAX_LURE_FOLLOWERS = 5;
+
         if (!this.hasLeftCloud) {
             // Swim away from the cloud
             const awayX = this.x > cloudCenter.x ? 1 : -1;
@@ -149,29 +151,39 @@ export class Baitfish {
             }
         }
 
-        // VERY confused baitfish seek the lure
+        // VERY confused baitfish seek the lure (but only if limit not reached)
         if (this.confusionLevel === 2 && this.hasLeftCloud) {
             // Get the lure from the scene
             const lure = this.scene.lure;
 
             if (lure && !this.loiteringNearLure) {
-                // Swim towards the lure
-                const distToLure = Math.sqrt(
-                    Math.pow(this.x - lure.x, 2) +
-                    Math.pow(this.y - lure.y, 2)
-                );
+                // Check if we can start following the lure
+                if (lureFollowersCount < MAX_LURE_FOLLOWERS) {
+                    // Swim towards the lure
+                    const distToLure = Math.sqrt(
+                        Math.pow(this.x - lure.x, 2) +
+                        Math.pow(this.y - lure.y, 2)
+                    );
 
-                if (distToLure < 30) {
-                    // Close enough - start loitering
-                    this.loiteringNearLure = true;
-                    this.lureTarget = { x: lure.x, y: lure.y };
-                    console.log('VERY confused baitfish now loitering near lure');
+                    if (distToLure < 30) {
+                        // Close enough - start loitering
+                        this.loiteringNearLure = true;
+                        this.lureTarget = { x: lure.x, y: lure.y };
+                        console.log(`VERY confused baitfish now loitering near lure (${lureFollowersCount + 1}/${MAX_LURE_FOLLOWERS})`);
+                    } else {
+                        // Move towards lure
+                        this.targetX = lure.x;
+                        this.targetY = lure.y;
+                    }
                 } else {
-                    // Move towards lure
-                    this.targetX = lure.x;
-                    this.targetY = lure.y;
+                    // Too many followers - just wander confused
+                    if (Math.random() < 0.02) {
+                        this.targetX = this.x + Utils.randomBetween(-50, 50);
+                        this.targetY = this.y + Utils.randomBetween(-30, 30);
+                    }
                 }
             } else if (this.loiteringNearLure && lure) {
+                // Already loitering - continue regardless of count
                 // Loiter near the lure with small random movements
                 const loiterRange = 25;
                 this.targetX = lure.x + Utils.randomBetween(-loiterRange, loiterRange);

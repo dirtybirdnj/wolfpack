@@ -351,10 +351,13 @@ export class GameScene extends Phaser.Scene {
         // Continuously update lure info in UI
         this.updateSpeedDisplay();
 
+        // Count how many baitfish are currently loitering near lure
+        const lureFollowersCount = this.countBaitfishLoiteringNearLure();
+
         // Update all baitfish clouds
         this.baitfishClouds = this.baitfishClouds.filter(cloud => {
             if (cloud.visible) {
-                cloud.update(this.fishes);
+                cloud.update(this.fishes, lureFollowersCount);
                 return true;
             } else {
                 cloud.destroy();
@@ -1176,6 +1179,19 @@ export class GameScene extends Phaser.Scene {
             delay: 1000,
             onComplete: () => text.destroy()
         });
+    }
+
+    countBaitfishLoiteringNearLure() {
+        // Count how many baitfish are currently loitering near the lure
+        let count = 0;
+        this.baitfishClouds.forEach(cloud => {
+            cloud.baitfish.forEach(baitfish => {
+                if (baitfish.loiteringNearLure) {
+                    count++;
+                }
+            });
+        });
+        return count;
     }
 
     updateEmergencyFish(fish) {

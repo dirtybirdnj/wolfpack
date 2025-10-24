@@ -52,7 +52,7 @@ export class BaitfishCloud {
         }
     }
 
-    update(lakers = []) {
+    update(lakers = [], lureFollowersCount = 0) {
         if (!this.visible) return;
 
         this.age++;
@@ -113,7 +113,7 @@ export class BaitfishCloud {
         // Update all baitfish in the cloud
         this.baitfish = this.baitfish.filter(baitfish => {
             if (!baitfish.consumed && baitfish.visible) {
-                baitfish.update({ x: this.centerX, y: this.centerY }, lakersNearby, this.spreadMultiplier, this.scaredLevel);
+                baitfish.update({ x: this.centerX, y: this.centerY }, lakersNearby, this.spreadMultiplier, this.scaredLevel, lureFollowersCount);
                 return true;
             } else if (baitfish.consumed) {
                 baitfish.destroy();
