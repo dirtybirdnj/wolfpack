@@ -30,6 +30,8 @@ export class Fish {
         // Fish properties
         this.size = Constants.FISH_SIZE[size];
         this.weight = Utils.randomBetween(this.size.min, this.size.max);
+        // Calculate length based on weight (lake trout: length in inches ≈ 10.5 * weight^0.31)
+        this.length = Math.round(10.5 * Math.pow(this.weight, 0.31));
         this.baseSpeed = Utils.randomBetween(GameConfig.FISH_SPEED_MIN, GameConfig.FISH_SPEED_MAX);
         this.points = this.size.points;
 
@@ -446,6 +448,7 @@ export class Fish {
             name: this.name,
             gender: this.gender,
             weight: this.weight.toFixed(1) + ' lbs',
+            length: this.length + ' in',
             depth: Math.floor(this.depth) + ' ft',
             state: this.ai.state,
             points: this.points,
@@ -455,7 +458,69 @@ export class Fish {
             frenzyIntensity: this.frenzyIntensity.toFixed(2)
         };
     }
-    
+
+    /**
+     * Render fish at a custom position and scale (for catch popup)
+     */
+    renderAtPosition(graphics, x, y, scale = 3) {
+        const bodySize = Math.max(8, this.weight / 2) * scale;
+
+        // Save graphics state and apply rotation for angling
+        graphics.save();
+        graphics.translateCanvas(x, y);
+        graphics.scaleCanvas(1, 1); // Always face right for popup
+        graphics.rotateCanvas(0); // Horizontal orientation
+
+        // Main body - grayish-olive color (top/back)
+        graphics.fillStyle(GameConfig.COLOR_FISH_BODY, 1.0);
+        graphics.fillEllipse(0, 0, bodySize * 2.5, bodySize * 0.8);
+
+        // Belly - cream/pinkish lighter color (bottom half)
+        graphics.fillStyle(GameConfig.COLOR_FISH_BELLY, 0.8);
+        graphics.fillEllipse(0, bodySize * 0.2, bodySize * 2.2, bodySize * 0.5);
+
+        // Tail fin - pale cream color
+        const tailSize = bodySize * 0.7;
+        const tailX = -bodySize * 1.25;
+        const tailY = 0;
+
+        graphics.fillStyle(GameConfig.COLOR_FISH_FINS, 0.9);
+        graphics.beginPath();
+        graphics.moveTo(tailX, tailY);
+        graphics.lineTo(tailX - tailSize, tailY - tailSize * 0.6);
+        graphics.lineTo(tailX - tailSize, tailY + tailSize * 0.6);
+        graphics.closePath();
+        graphics.fillPath();
+
+        // Dorsal and pectoral fins - pale cream
+        graphics.fillStyle(GameConfig.COLOR_FISH_FINS, 0.7);
+        // Dorsal fin (top)
+        graphics.fillTriangle(
+            0, -bodySize * 0.5,
+            -bodySize * 0.3, -bodySize * 1.2,
+            bodySize * 0.3, -bodySize * 1.2
+        );
+        // Pectoral fins (sides)
+        const finX = -bodySize * 0.3;
+        graphics.fillTriangle(
+            finX, 0,
+            finX - bodySize * 0.4, -bodySize * 0.3,
+            finX - bodySize * 0.4, bodySize * 0.3
+        );
+
+        // Light spots pattern - characteristic of lake trout
+        const numSpots = Math.floor(this.weight / 5) + 3;
+        for (let i = 0; i < numSpots; i++) {
+            const offsetX = (Math.random() - 0.5) * bodySize * 1.8;
+            const offsetY = (Math.random() - 0.5) * bodySize * 0.5;
+            graphics.fillStyle(GameConfig.COLOR_FISH_SPOTS, 0.6);
+            graphics.fillCircle(offsetX, offsetY, 2 * scale);
+        }
+
+        // Restore graphics state
+        graphics.restore();
+    }
+
     destroy() {
         this.graphics.destroy();
     }

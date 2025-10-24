@@ -528,29 +528,7 @@ export class FishFight {
     landFish() {
         console.log('Fish landed!');
 
-        // Show success message
         const info = this.fish.getInfo();
-        const text = this.scene.add.text(GameConfig.CANVAS_WIDTH / 2, 240,
-            `FISH LANDED!\n${info.weight}\n+${this.fish.points} points\nReels: ${this.reelCount}`,
-            {
-                fontSize: '22px',
-                fontFamily: 'Courier New',
-                color: '#00ff00',
-                align: 'center',
-                stroke: '#000000',
-                strokeThickness: 3
-            }
-        );
-        text.setOrigin(0.5, 0.5);
-        text.setDepth(1000);
-
-        this.scene.tweens.add({
-            targets: text,
-            y: 200,
-            alpha: 0,
-            duration: 3000,
-            onComplete: () => text.destroy()
-        });
 
         // Store caught fish data for end screen
         const fishData = {
@@ -576,13 +554,131 @@ export class FishFight {
         this.scene.events.emit('updateScore', { score: this.scene.score, caught: this.scene.fishCaught });
         this.scene.checkAchievements();
 
-        // Reset lure to surface
-        this.lure.reset();
+        // Show catch popup
+        this.showCatchPopup(info);
+    }
 
-        // Clean up
-        this.endFight();
-        this.fish.visible = false;
-        this.fish.destroy();
+    showCatchPopup(info) {
+        // Pause the game
+        this.scene.physics.pause();
+
+        // Create dark overlay
+        const overlay = this.scene.add.rectangle(
+            0, 0,
+            GameConfig.CANVAS_WIDTH, GameConfig.CANVAS_HEIGHT,
+            0x000000, 0.8
+        );
+        overlay.setOrigin(0, 0);
+        overlay.setDepth(2000);
+
+        // Create popup background
+        const popupWidth = 500;
+        const popupHeight = 400;
+        const popupX = GameConfig.CANVAS_WIDTH / 2;
+        const popupY = GameConfig.CANVAS_HEIGHT / 2;
+
+        const popupBg = this.scene.add.rectangle(
+            popupX, popupY,
+            popupWidth, popupHeight,
+            0x1a1a1a, 1
+        );
+        popupBg.setStrokeStyle(4, 0x00ff00);
+        popupBg.setDepth(2001);
+
+        // Title
+        const title = this.scene.add.text(popupX, popupY - 160,
+            'FISH CAUGHT!',
+            {
+                fontSize: '32px',
+                fontFamily: 'Courier New',
+                color: '#00ff00',
+                align: 'center',
+                stroke: '#000000',
+                strokeThickness: 4
+            }
+        );
+        title.setOrigin(0.5, 0.5);
+        title.setDepth(2002);
+
+        // Create graphics for fish rendering
+        const fishGraphics = this.scene.add.graphics();
+        fishGraphics.setDepth(2002);
+
+        // Render enlarged fish
+        this.fish.renderAtPosition(fishGraphics, popupX, popupY - 40, 4);
+
+        // Fish stats
+        const ageInSeconds = Math.floor(this.fish.age / 60);
+        const statsText = this.scene.add.text(popupX, popupY + 100,
+            `${info.name} (${info.gender})\n\n` +
+            `Weight: ${info.weight}\n` +
+            `Length: ${info.length}\n` +
+            `Age: ${ageInSeconds} seconds\n\n` +
+            `Points: +${this.fish.points}`,
+            {
+                fontSize: '20px',
+                fontFamily: 'Courier New',
+                color: '#ffffff',
+                align: 'center',
+                stroke: '#000000',
+                strokeThickness: 3,
+                lineSpacing: 5
+            }
+        );
+        statsText.setOrigin(0.5, 0.5);
+        statsText.setDepth(2002);
+
+        // Continue prompt
+        const continueText = this.scene.add.text(popupX, popupY + 180,
+            'Press any button to continue',
+            {
+                fontSize: '16px',
+                fontFamily: 'Courier New',
+                color: '#ffff00',
+                align: 'center'
+            }
+        );
+        continueText.setOrigin(0.5, 0.5);
+        continueText.setDepth(2002);
+
+        // Add blinking animation to continue text
+        this.scene.tweens.add({
+            targets: continueText,
+            alpha: 0.3,
+            duration: 800,
+            yoyo: true,
+            repeat: -1
+        });
+
+        // Input handler to dismiss popup
+        const dismissPopup = () => {
+            // Remove all popup elements
+            overlay.destroy();
+            popupBg.destroy();
+            title.destroy();
+            fishGraphics.destroy();
+            statsText.destroy();
+            continueText.destroy();
+
+            // Remove input listeners
+            this.scene.input.keyboard.off('keydown', dismissPopup);
+            this.scene.input.gamepad.off('down', dismissPopup);
+
+            // Resume game and finish cleanup
+            this.scene.physics.resume();
+            this.lure.reset();
+            this.endFight();
+            this.fish.visible = false;
+            this.fish.destroy();
+        };
+
+        // Listen for any keyboard input
+        this.scene.input.keyboard.once('keydown', dismissPopup);
+
+        // Listen for any gamepad button
+        if (this.scene.input.gamepad && this.scene.input.gamepad.total > 0) {
+            this.scene.input.gamepad.once('down', dismissPopup);
+        }
     }
 
     endFight() {
