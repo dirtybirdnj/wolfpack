@@ -74,27 +74,6 @@
             margin: 0;
         }
 
-        #theme-toggle {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: var(--panel-bg);
-            border: 2px solid var(--border-primary);
-            color: var(--text-primary);
-            padding: 10px 20px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-family: 'Courier New', monospace;
-            font-size: 14px;
-            font-weight: bold;
-            transition: all 0.3s;
-        }
-
-        #theme-toggle:hover {
-            background: var(--border-primary);
-            color: var(--button-text);
-            transform: scale(1.05);
-        }
 
         #main-layout {
             display: grid;
@@ -244,10 +223,17 @@
         }
 
         #fish-status-container {
-            max-height: 400px;
+            height: 100%;
             overflow-y: auto;
             font-size: 10px;
             line-height: 1.4;
+        }
+
+        #right-panel .panel.warning {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            min-height: 0;
         }
 
         .status-value {
@@ -326,26 +312,11 @@
     <div id="header">
         <h1>🎣 LAKE CHAMPLAIN SONAR 🎣</h1>
         <div class="subtitle">Ice Fishing Simulator • Lake Trout • 45°N, Between the Greens and Adirondacks</div>
-        <button id="theme-toggle" onclick="toggleTheme()">☀️ Light Mode</button>
     </div>
 
     <div id="main-layout">
         <!-- Left Panel -->
         <div id="left-panel">
-            <!-- Controller Status -->
-            <div class="panel secondary" id="controller-status-panel">
-                <h3>🎮 CONTROLLER STATUS</h3>
-                <div style="margin: 10px 0;">
-                    <div>Status: <span id="controller-status" class="status-value status-disconnected">Waiting for Input</span></div>
-                    <div id="controller-name" style="color: var(--border-warning); font-size: 10px; margin-top: 5px; font-weight: bold;">Press any button on your controller</div>
-                    <div id="controller-help" style="color: var(--text-muted); font-size: 10px; margin-top: 8px; font-style: italic;">
-                        Browsers require a button press to detect gamepads
-                    </div>
-                </div>
-                <button id="test-controller-btn" class="dev-btn secondary" disabled>Test Controller</button>
-                <button id="check-gamepads-btn" class="dev-btn warning">Check Gamepads</button>
-            </div>
-
             <!-- Keyboard Controls -->
             <div class="panel" id="keyboard-controls">
                 <h3>⌨️ KEYBOARD CONTROLS</h3>
@@ -505,18 +476,21 @@
                 </div>
             </div>
 
-            <!-- Column 3: Info -->
-            <div class="panel warning">
-                <h3>ℹ️ DEV INFO</h3>
-                <div style="font-size: 11px; line-height: 1.6; color: var(--text-muted);">
-                    <div><strong>Build:</strong> v0.3.0-ice-fishing</div>
-                    <div><strong>Engine:</strong> Phaser 3.80.1</div>
-                    <div><strong>Target:</strong> Lake Trout</div>
-                    <div><strong>Location:</strong> Lake Champlain</div>
-                    <div style="margin-top: 8px; font-style: italic;">
-                        Use dev tools to test game mechanics<br>
-                        Debug mode shows AI state and ranges
+            <!-- Column 3: Controller & Info -->
+            <div class="panel secondary">
+                <h3>🎮 CONTROLLER</h3>
+                <div style="margin: 10px 0;">
+                    <div style="font-size: 11px;">Status: <span id="controller-status" class="status-value status-disconnected">Waiting</span></div>
+                    <div id="controller-name" style="color: var(--border-warning); font-size: 9px; margin-top: 5px; font-weight: bold;">Press any button</div>
+                    <div id="controller-help" style="color: var(--text-muted); font-size: 9px; margin-top: 5px; font-style: italic;">
+                        Press button to detect
                     </div>
+                </div>
+                <button id="test-controller-btn" class="dev-btn secondary" disabled style="font-size: 10px; padding: 6px 10px;">Test Controller</button>
+                <button id="check-gamepads-btn" class="dev-btn warning" style="font-size: 10px; padding: 6px 10px;">Check Gamepads</button>
+                <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border-secondary); font-size: 10px; line-height: 1.5; color: var(--text-muted);">
+                    <div><strong>Build:</strong> v0.3.0</div>
+                    <div><strong>Engine:</strong> Phaser 3.80.1</div>
                 </div>
             </div>
         </div>
@@ -528,30 +502,6 @@
     <!-- Load game modules -->
     <script type="module" src="src/index.js"></script>
 
-    <!-- Theme Toggle -->
-    <script>
-        function toggleTheme() {
-            const html = document.documentElement;
-            const currentTheme = html.getAttribute('data-theme');
-            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-            const button = document.getElementById('theme-toggle');
-
-            html.setAttribute('data-theme', newTheme);
-            localStorage.setItem('theme', newTheme);
-
-            button.textContent = newTheme === 'dark' ? '☀️ Light Mode' : '🌙 Dark Mode';
-        }
-
-        // Load saved theme on page load
-        window.addEventListener('DOMContentLoaded', () => {
-            const savedTheme = localStorage.getItem('theme') || 'dark';
-            const html = document.documentElement;
-            const button = document.getElementById('theme-toggle');
-
-            html.setAttribute('data-theme', savedTheme);
-            button.textContent = savedTheme === 'dark' ? '☀️ Light Mode' : '🌙 Dark Mode';
-        });
-    </script>
 
     <!-- Initialize Gamepad Manager and Test Button -->
     <script type="module">
