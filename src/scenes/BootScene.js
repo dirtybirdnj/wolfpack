@@ -96,13 +96,13 @@ export class BootScene extends Phaser.Scene {
             align: 'center',
             lineSpacing: 10
         }).setOrigin(0.5, 0.5);
-        
+
         this.add.text(400, 250, 'Lake Trout Simulator', {
             fontSize: '18px',
             fontFamily: 'Courier New',
             color: '#88ff88'
         }).setOrigin(0.5, 0.5);
-        
+
         // Location text
         this.add.text(400, 320, '45°00\'N 73°15\'W\nBurlington, Vermont', {
             fontSize: '14px',
@@ -110,7 +110,7 @@ export class BootScene extends Phaser.Scene {
             color: '#66aa66',
             align: 'center'
         }).setOrigin(0.5, 0.5);
-        
+
         // Instructions
         const instructions = [
             'PRESS SPACE TO BEGIN',
@@ -120,7 +120,7 @@ export class BootScene extends Phaser.Scene {
             'Depth Range: 40-100 feet',
             'Water Temp: 38-42°F'
         ].join('\n');
-        
+
         const instructText = this.add.text(400, 450, instructions, {
             fontSize: '14px',
             fontFamily: 'Courier New',
@@ -128,16 +128,55 @@ export class BootScene extends Phaser.Scene {
             align: 'center',
             lineSpacing: 5
         }).setOrigin(0.5, 0.5);
-        
+
+        // Check for gamepad using native API
+        this.gamepadDetected = false;
+        if (window.gamepadManager) {
+            // Check if already connected
+            if (window.gamepadManager.isConnected()) {
+                const gamepad = window.gamepadManager.getGamepad();
+                this.gamepadDetected = true;
+                console.log('Gamepad already connected on boot:', gamepad.id);
+                instructText.setText(instructions.replace('PRESS SPACE', 'PRESS SPACE OR X'));
+                instructText.setColor('#00ffff');
+            }
+
+            // Listen for new connections
+            window.gamepadManager.on('connected', (gamepad) => {
+                this.gamepadDetected = true;
+                console.log('Gamepad connected on boot screen:', gamepad.id);
+
+                // Update instructions to include controller option
+                instructText.setText(instructions.replace('PRESS SPACE', 'PRESS SPACE OR X'));
+                instructText.setColor('#00ffff');
+            });
+        } else {
+            console.warn('Native gamepad manager not available');
+        }
+
         // Start game on spacebar
         this.input.keyboard.once('keydown-SPACE', () => {
             this.startGame();
         });
-        
+
         // Also allow click/tap to start
         this.input.once('pointerdown', () => {
             this.startGame();
         });
+
+        // Gamepad X button to start
+        this.checkGamepadStart = true;
+    }
+
+    update() {
+        // Check for gamepad X button press using native API
+        if (this.checkGamepadStart && window.gamepadManager && window.gamepadManager.isConnected()) {
+            const xButton = window.gamepadManager.getButton('X');
+            if (xButton.pressed) {
+                this.checkGamepadStart = false;
+                this.startGame();
+            }
+        }
     }
     
     startGame() {

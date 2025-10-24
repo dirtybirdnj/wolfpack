@@ -61,43 +61,10 @@ export class SonarDisplay {
     }
     
     update() {
-        // Scroll the grid
-        this.gridOffset -= GameConfig.SONAR_SCROLL_SPEED;
-        if (this.gridOffset <= -GameConfig.GRID_SIZE) {
-            this.gridOffset += GameConfig.GRID_SIZE;
-        }
-        
-        // Update scan line
-        this.scanLineX += 2;
-        if (this.scanLineX > GameConfig.CANVAS_WIDTH) {
-            this.scanLineX = 0;
-        }
-        
-        // Update noise particles
+        // No more scrolling - we're stationary at an ice hole!
+        // Just update noise particles for visual effect
         this.updateNoiseParticles();
-        
-        // Scroll bottom profile
-        this.bottomProfile.forEach(point => {
-            point.x -= GameConfig.SONAR_SCROLL_SPEED;
-        });
-        
-        // Add new bottom points as needed
-        if (this.bottomProfile[this.bottomProfile.length - 1].x < GameConfig.CANVAS_WIDTH + 100) {
-            const lastPoint = this.bottomProfile[this.bottomProfile.length - 1];
-            let depth = lastPoint.y / GameConfig.DEPTH_SCALE;
-            depth += (Math.random() - 0.5) * 3;
-            depth = Math.max(GameConfig.MAX_DEPTH - 20, Math.min(GameConfig.MAX_DEPTH - 5, depth));
-            
-            this.bottomProfile.push({
-                x: lastPoint.x + 20,
-                y: depth * GameConfig.DEPTH_SCALE,
-                type: Math.random() < 0.1 ? 'structure' : 'normal'
-            });
-        }
-        
-        // Remove off-screen bottom points
-        this.bottomProfile = this.bottomProfile.filter(point => point.x > -50);
-        
+
         this.render();
     }
     
@@ -131,12 +98,6 @@ export class SonarDisplay {
         // Draw bottom profile
         this.drawBottomProfile();
 
-        // Draw scan line effect
-        this.drawScanLine();
-
-        // Draw noise/interference
-        this.drawNoise();
-
         // Draw depth markers
         this.drawDepthMarkers();
 
@@ -145,11 +106,21 @@ export class SonarDisplay {
     }
     
     drawBackgroundGradient() {
-        // Subtle gradient to show depth
-        for (let y = 0; y < GameConfig.CANVAS_HEIGHT; y += 20) {
-            const alpha = y / GameConfig.CANVAS_HEIGHT * 0.3;
-            this.graphics.fillStyle(0x001100, alpha);
-            this.graphics.fillRect(0, y, GameConfig.CANVAS_WIDTH, 20);
+        // Realistic olive/army green water gradient - lighter at surface, darker at depth
+        // Based on Lake Champlain ice hole reference photos
+        for (let y = 0; y < GameConfig.CANVAS_HEIGHT; y += 10) {
+            const depthRatio = y / GameConfig.CANVAS_HEIGHT;
+
+            // Interpolate between surface (army green) and deep (olive green)
+            // Surface: #5a6f4a (90, 111, 74)
+            // Deep: #3a4f3a (58, 79, 58)
+            const r = Math.floor(90 - (90 - 58) * depthRatio);
+            const g = Math.floor(111 - (111 - 79) * depthRatio);
+            const b = Math.floor(74 - (74 - 58) * depthRatio);
+
+            const color = (r << 16) | (g << 8) | b;
+            this.graphics.fillStyle(color, 1.0);
+            this.graphics.fillRect(0, y, GameConfig.CANVAS_WIDTH, 10);
         }
     }
 
@@ -183,12 +154,12 @@ export class SonarDisplay {
     }
     
     drawDepthGrid() {
-        // Vertical lines (scrolling)
+        // Vertical lines (static - no scrolling)
         this.graphics.lineStyle(1, GameConfig.COLOR_GRID, 0.2);
-        for (let x = this.gridOffset; x < GameConfig.CANVAS_WIDTH; x += GameConfig.GRID_SIZE) {
+        for (let x = 0; x < GameConfig.CANVAS_WIDTH; x += GameConfig.GRID_SIZE) {
             this.graphics.lineBetween(x, 0, x, GameConfig.CANVAS_HEIGHT);
         }
-        
+
         // Horizontal lines (static - depth markers)
         for (let y = 0; y < GameConfig.CANVAS_HEIGHT; y += GameConfig.GRID_SIZE * 2) {
             const depth = y / GameConfig.DEPTH_SCALE;
