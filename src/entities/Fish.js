@@ -177,22 +177,30 @@ export class Fish {
             // Get movement from AI
             const movement = this.ai.getMovementVector();
 
-            // Calculate angle based on movement direction for realistic rotation
-            // Only update angle if fish is actually moving
-            if (Math.abs(movement.x) > 0.1 || Math.abs(movement.y) > 0.1) {
-                // Calculate target angle using atan2 (angle of movement vector)
-                // Negate Y because canvas Y+ is down, but we want head to point up when moving up
-                this.targetAngle = Math.atan2(-movement.y, Math.abs(movement.x));
+            // Calculate angle based on target direction (what fish is chasing)
+            // Fish should face toward their target, not based on velocity
+            if (this.ai.targetX !== null && this.ai.targetY !== null) {
+                // Calculate direction to target
+                const dx = this.ai.targetX - this.x;
+                const dy = this.ai.targetY - this.y;
 
-                // Smoothly interpolate current angle to target angle for fluid motion
-                const angleDiff = this.targetAngle - this.angle;
-                this.angle += angleDiff * 0.15; // Smooth interpolation factor
+                // Only update angle if target is meaningful distance away
+                const distToTarget = Math.sqrt(dx * dx + dy * dy);
+                if (distToTarget > 5) {
+                    // Calculate target angle toward what the fish is chasing
+                    // Negate Y because canvas Y+ is down, but we want head to point up when chasing upward
+                    this.targetAngle = Math.atan2(-dy, Math.abs(dx));
 
-                // Clamp angle to reasonable limits (-45 to +45 degrees = -π/4 to +π/4)
-                const maxAngle = Math.PI / 4;
-                this.angle = Math.max(-maxAngle, Math.min(maxAngle, this.angle));
+                    // Smoothly interpolate current angle to target angle for fluid motion
+                    const angleDiff = this.targetAngle - this.angle;
+                    this.angle += angleDiff * 0.15; // Smooth interpolation factor
+
+                    // Clamp angle to reasonable limits (-45 to +45 degrees = -π/4 to +π/4)
+                    const maxAngle = Math.PI / 4;
+                    this.angle = Math.max(-maxAngle, Math.min(maxAngle, this.angle));
+                }
             } else {
-                // When not moving, gradually return to horizontal
+                // When idle (no target), gradually return to horizontal
                 this.angle *= 0.9;
             }
 
