@@ -957,12 +957,14 @@ export class GameScene extends Phaser.Scene {
         }
 
         // Select species based on Lake Champlain distribution
-        // Lake Trout: 50%, Northern Pike: 25%, Smallmouth Bass: 25%
-        let species = 'lake_trout';
+        // Yellow Perch: 40%, Lake Trout: 30%, Northern Pike: 15%, Smallmouth Bass: 15%
+        let species = 'yellow_perch_large';
         const speciesRoll = Math.random();
-        if (speciesRoll < 0.50) {
+        if (speciesRoll < 0.40) {
+            species = 'yellow_perch_large'; // Abundant beginner-friendly species
+        } else if (speciesRoll < 0.70) {
             species = 'lake_trout'; // Dominant coldwater predator
-        } else if (speciesRoll < 0.75) {
+        } else if (speciesRoll < 0.85) {
             species = 'northern_pike'; // Aggressive shallow-water ambusher
         } else {
             species = 'smallmouth_bass'; // Structure-oriented fighter
@@ -972,7 +974,11 @@ export class GameScene extends Phaser.Scene {
         let depth;
         const tempFactor = (this.waterTemp - 38) / 7; // 0 to 1 based on temp range
 
-        if (species === 'northern_pike') {
+        if (species === 'yellow_perch_large') {
+            // Yellow perch shallow to moderate depth
+            // 5-25 feet, very accessible for beginners
+            depth = Utils.randomBetween(5, 25);
+        } else if (species === 'northern_pike') {
             // Pike prefer shallow, structure-oriented water
             // Always spawn in top 30 feet regardless of temperature
             depth = Utils.randomBetween(8, 30);
