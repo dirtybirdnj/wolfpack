@@ -335,23 +335,25 @@ export class FishFight {
         targetY = Math.max(0, Math.min(maxDepth, targetY));
 
         // Fish thrashing animation - more intense during thrashing state
+        // Keep horizontal movement smaller so fish stays closer to ice hole
         let thrashMultiplier = 1.0;
         if (this.fightState === 'thrashing') {
-            thrashMultiplier = 2.5; // Violent thrashing
+            thrashMultiplier = 1.8; // Violent thrashing (reduced from 2.5)
         } else if (this.fightState === 'giving_up') {
             thrashMultiplier = 0.3; // Weak thrashing
         } else if (this.fightState === 'hookset') {
-            thrashMultiplier = 1.8; // Strong initial fight
+            thrashMultiplier = 1.3; // Strong initial fight (reduced from 1.8)
         }
 
-        this.thrashAmount = Math.sin(this.fightTime * this.thrashSpeed) * 15 * thrashMultiplier;
+        // Reduced base thrash from 15 to 8 to keep fish closer to hole
+        this.thrashAmount = Math.sin(this.fightTime * this.thrashSpeed) * 8 * thrashMultiplier;
 
         // Energy affects thrashing intensity
         const energyMultiplier = this.fishEnergy / 100;
         const actualThrash = this.thrashAmount * energyMultiplier;
 
         // Add vertical thrashing component (fish also thrashes up/down)
-        const verticalThrash = Math.cos(this.fightTime * this.thrashSpeed * 1.3) * 8 * thrashMultiplier * energyMultiplier;
+        const verticalThrash = Math.cos(this.fightTime * this.thrashSpeed * 1.3) * 6 * thrashMultiplier * energyMultiplier;
 
         // Position fish at depth with thrashing
         this.fish.x = this.lure.x + actualThrash;

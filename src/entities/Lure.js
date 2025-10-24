@@ -258,7 +258,15 @@ export class Lure {
     }
 
     reset() {
-        // Always reset to surface (y=0) after catching a fish
+        // Always reset to surface (y=0) and center on current ice hole
+        const currentHole = this.scene.iceHoleManager.getCurrentHole();
+        if (currentHole) {
+            this.x = currentHole.x;
+        } else {
+            // Fallback to canvas center if no hole found
+            this.x = GameConfig.CANVAS_WIDTH / 2;
+        }
+
         this.y = 0;
         this.depth = 0;
         this.velocity = 0;
@@ -268,6 +276,8 @@ export class Lure {
         this.baseY = 0;
         this.jigOffset = 0;
         this.isJigging = false;
+        this.triggerControlActive = false;
+        this.currentTriggerSpeed = 0;
     }
     
     getInfo() {
