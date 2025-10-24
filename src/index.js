@@ -217,12 +217,17 @@ function updateFishStatus(gameScene) {
                            fish.health < 60 ? '#ffaa00' : '#00ff00';
         const frenzyColor = fish.inFrenzy ? '#ff6600' : '#666666';
         const frenzyText = fish.inFrenzy ? `🔥${info.frenzyIntensity}` : '---';
+        const genderIcon = info.gender === 'male' ? '♂' : '♀';
+        const genderColor = info.gender === 'male' ? '#66ccff' : '#ff99cc';
 
         return `
             <div style="border: 1px solid ${zoneColor}30; background: ${zoneColor}10; padding: 4px; margin: 3px 0; border-radius: 3px; font-size: 10px;">
-                <div style="font-weight: bold; color: ${zoneColor};">🐟 #${index + 1} - ${info.weight}</div>
-                <div style="display: flex; justify-content: space-between;">
-                    <span style="color: #aaa;">Depth:</span>
+                <div style="font-weight: bold; color: ${zoneColor}; display: flex; justify-content: space-between; align-items: center;">
+                    <span>🐟 ${info.name}</span>
+                    <span style="color: ${genderColor}; font-size: 12px;">${genderIcon}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 9px;">
+                    <span style="color: #aaa;">${info.weight}</span>
                     <span style="color: #00ff00;">${Math.floor(fish.depth)}ft</span>
                 </div>
                 <div style="display: flex; justify-content: space-between;">

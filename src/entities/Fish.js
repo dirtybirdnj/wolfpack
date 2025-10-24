@@ -2,6 +2,19 @@ import GameConfig from '../config/GameConfig.js';
 import { Constants, Utils } from '../utils/Constants.js';
 import FishAI from './FishAI.js';
 
+// Fish name pools
+const MALE_NAMES = [
+    'Dave', 'Bob', 'Steve', 'Mike', 'Tom', 'Jim', 'Frank', 'Bill', 'Joe', 'Dan',
+    'Rick', 'Gary', 'Larry', 'Barry', 'Jerry', 'Terry', 'Carl', 'Paul', 'Ron', 'Don',
+    'Mark', 'John', 'Jeff', 'Pete', 'Chad', 'Brad', 'Kyle', 'Jake', 'Sam', 'Max'
+];
+
+const FEMALE_NAMES = [
+    'Susan', 'Linda', 'Karen', 'Nancy', 'Betty', 'Lisa', 'Sarah', 'Emily', 'Mary', 'Anna',
+    'Ruth', 'Carol', 'Diane', 'Janet', 'Julie', 'Kelly', 'Laura', 'Marie', 'Alice', 'Rose',
+    'Grace', 'Helen', 'Donna', 'Joyce', 'Paula', 'Martha', 'Cindy', 'Sandy', 'Wendy', 'Pam'
+];
+
 export class Fish {
     constructor(scene, x, y, size = 'MEDIUM') {
         this.scene = scene;
@@ -13,12 +26,18 @@ export class Fish {
         this.x = x;
         this.y = y;
         this.depth = y / GameConfig.DEPTH_SCALE;
-        
+
         // Fish properties
         this.size = Constants.FISH_SIZE[size];
         this.weight = Utils.randomBetween(this.size.min, this.size.max);
         this.baseSpeed = Utils.randomBetween(GameConfig.FISH_SPEED_MIN, GameConfig.FISH_SPEED_MAX);
         this.points = this.size.points;
+
+        // Fish personality - name and gender
+        this.gender = Math.random() < 0.5 ? 'male' : 'female';
+        this.name = this.gender === 'male'
+            ? MALE_NAMES[Math.floor(Math.random() * MALE_NAMES.length)]
+            : FEMALE_NAMES[Math.floor(Math.random() * FEMALE_NAMES.length)];
 
         // Depth zone behavior
         this.depthZone = this.getDepthZone();
@@ -39,10 +58,11 @@ export class Fish {
         this.visible = true;
         this.age = 0;
 
-        // Biological properties
-        this.hunger = Utils.randomBetween(20, 80); // 0-100, higher = more hungry
+        // Biological properties - fish are hungrier and have faster metabolism
+        this.hunger = Utils.randomBetween(50, 90); // 0-100, higher = more hungry (increased from 20-80)
         this.health = Utils.randomBetween(60, 100); // 0-100, higher = healthier
         this.lastFed = 0; // Game time when last fed
+        this.metabolism = Utils.randomBetween(0.8, 1.2); // Individual metabolism rate
 
         // Frenzy behavior - lake trout get excited when they see others chasing
         this.inFrenzy = false;
@@ -62,19 +82,21 @@ export class Fish {
     }
 
     updateBiology() {
-        // Hunger increases slowly over time (every ~5 seconds at 60fps)
-        if (this.age % 300 === 0) {
-            this.hunger = Math.min(100, this.hunger + 1);
+        // Hunger increases based on metabolism (every ~2 seconds at 60fps, faster than before)
+        // Fish now get hungry much faster and need to keep feeding
+        if (this.age % 120 === 0) { // Changed from 300 to 120 (5 sec -> 2 sec)
+            const hungerIncrease = 1.5 * this.metabolism; // Base 1.5 per tick, modified by metabolism
+            this.hunger = Math.min(100, this.hunger + hungerIncrease);
         }
 
         // Health is affected by hunger levels
         if (this.hunger > 85) {
-            // Very hungry - health decreases
-            if (this.age % 600 === 0) {
-                this.health = Math.max(0, this.health - 0.5);
+            // Very hungry - health decreases faster
+            if (this.age % 300 === 0) { // Changed from 600 to 300 (twice as fast)
+                this.health = Math.max(0, this.health - 0.8);
             }
         } else if (this.hunger < 30) {
-            // Well fed - health increases slowly
+            // Well fed - health increases
             if (this.age % 600 === 0) {
                 this.health = Math.min(100, this.health + 0.5);
             }
@@ -372,6 +394,8 @@ export class Fish {
 
     getInfo() {
         return {
+            name: this.name,
+            gender: this.gender,
             weight: this.weight.toFixed(1) + ' lbs',
             depth: Math.floor(this.depth) + ' ft',
             state: this.ai.state,
