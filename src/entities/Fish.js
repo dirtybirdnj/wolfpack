@@ -48,6 +48,10 @@ export class Fish {
         this.inFrenzy = false;
         this.frenzyTimer = 0; // Time remaining in frenzy state
         this.frenzyIntensity = 0; // 0-1, increases with more frenzied fish nearby
+
+        // Visual feedback for player actions triggering fish interest
+        this.interestFlash = 0; // 0-1, fades over time to show interest level
+        this.interestFlashDecay = 0.02; // How fast the flash fades per frame
     }
     
     calculateSonarStrength() {
@@ -85,9 +89,25 @@ export class Fish {
             }
         }
 
+        // Decay interest flash over time
+        if (this.interestFlash > 0) {
+            this.interestFlash = Math.max(0, this.interestFlash - this.interestFlashDecay);
+        }
+
         // Clamp values
         this.hunger = Math.max(0, Math.min(100, this.hunger));
         this.health = Math.max(0, Math.min(100, this.health));
+    }
+
+    /**
+     * Trigger visual feedback when fish becomes interested
+     * Higher intensity = closer to striking
+     */
+    triggerInterestFlash(intensity = 0.5) {
+        // Set flash intensity (0-1 scale)
+        // 0.5 = just noticed lure
+        // 1.0 = about to strike
+        this.interestFlash = Math.max(this.interestFlash, intensity);
     }
 
     getDepthZone() {
@@ -289,6 +309,25 @@ export class Fish {
             const glowSize = bodySize * 2.5 + (Math.sin(this.age * 0.2) * 3);
             this.graphics.lineStyle(2, 0xff6600, 0.6 + (this.frenzyIntensity * 0.4));
             this.graphics.strokeCircle(this.x, this.y, glowSize);
+        }
+
+        // Interest flash - green circle that fades to show player triggered interest
+        if (this.interestFlash > 0) {
+            // Circle size based on how close to striking
+            // Starts large and contracts as fish gets closer to committing
+            const flashSize = bodySize * (2 + (1 - this.interestFlash) * 1.5);
+            const flashAlpha = this.interestFlash * 0.8; // Max alpha 0.8 for visibility
+
+            // Bright green for interest
+            this.graphics.lineStyle(3, 0x00ff00, flashAlpha);
+            this.graphics.strokeCircle(this.x, this.y, flashSize);
+
+            // Add pulsing effect for higher interest levels
+            if (this.interestFlash > 0.7) {
+                const pulseSize = flashSize + Math.sin(this.age * 0.3) * 4;
+                this.graphics.lineStyle(2, 0x00ff00, flashAlpha * 0.5);
+                this.graphics.strokeCircle(this.x, this.y, pulseSize);
+            }
         }
 
         // State indicator (for debugging/gameplay feedback)

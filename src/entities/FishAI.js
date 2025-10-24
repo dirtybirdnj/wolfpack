@@ -78,6 +78,9 @@ export class FishAI {
                 // Immediately become interested in the lure
                 this.state = Constants.FISH_STATE.INTERESTED;
                 this.decisionCooldown = 100; // Quick response during frenzy
+
+                // Trigger visual feedback - fish entered frenzy!
+                this.fish.triggerInterestFlash(0.8); // High intensity for frenzy
             }
         }
 
@@ -108,6 +111,9 @@ export class FishAI {
                     // Vertical strikers also get multiple attempts
                     this.maxStrikeAttempts = 2;
                     this.strikeAttempts = 0;
+
+                    // Trigger visual feedback - vertical strike incoming!
+                    this.fish.triggerInterestFlash(0.9); // Very high intensity for vertical strikes
                 }
             }
         }
@@ -230,6 +236,9 @@ export class FishAI {
         if (interestScore > threshold) {
             this.state = Constants.FISH_STATE.INTERESTED;
             this.decisionCooldown = 300;
+
+            // Trigger visual feedback - fish just noticed the lure!
+            this.fish.triggerInterestFlash(0.5); // Medium intensity for initial interest
         }
     }
     
@@ -245,6 +254,9 @@ export class FishAI {
             // Close enough and aggressive enough to chase
             this.state = Constants.FISH_STATE.CHASING;
             this.decisionCooldown = 200;
+
+            // Trigger visual feedback - fish is committing to the chase!
+            this.fish.triggerInterestFlash(0.75); // High intensity for chasing
         } else if (distance > GameConfig.DETECTION_RANGE || !continueChase) {
             // Lost interest
             this.state = Constants.FISH_STATE.IDLE;
@@ -271,6 +283,9 @@ export class FishAI {
             if (Math.random() < strikeChance) {
                 this.state = Constants.FISH_STATE.STRIKING;
                 this.decisionCooldown = 100;
+
+                // Trigger visual feedback - fish is striking!
+                this.fish.triggerInterestFlash(1.0); // Maximum intensity for strike
             }
         }
 

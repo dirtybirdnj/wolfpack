@@ -73,14 +73,6 @@ window.addEventListener('load', () => {
 });
 
 function setupDevTools(game) {
-    // Hide controller status panel once game starts
-    setTimeout(() => {
-        const controllerPanel = document.getElementById('controller-status-panel');
-        if (controllerPanel) {
-            controllerPanel.classList.add('controller-status-hidden');
-        }
-    }, 2000); // Hide after 2 seconds
-
     // Update UI stats every 100ms
     setInterval(() => {
         const gameScene = game.scene.getScene('GameScene');
@@ -186,14 +178,8 @@ function setupDevTools(game) {
         }
     });
 
-    // Test Controller Button
-    document.getElementById('test-controller-btn').addEventListener('click', () => {
-        const gameScene = game.scene.getScene('GameScene');
-        if (gameScene && gameScene.scene.isActive()) {
-            gameScene.showControllerTest();
-            console.log('Controller test opened');
-        }
-    });
+    // Note: Test Controller Button is handled in index.html
+    // to avoid duplicate event listeners that could interfere with game state
 }
 
 function updateFishStatus(gameScene) {

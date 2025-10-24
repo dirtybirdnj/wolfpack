@@ -32,15 +32,43 @@ class GamepadManager {
         console.log('🎮 GamepadManager: Checking for existing gamepads...');
         const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
         console.log('🎮 GamepadManager: navigator.getGamepads() returned:', gamepads);
+        console.log('🎮 GamepadManager: Array length:', gamepads.length);
 
+        // Log each slot in detail
+        for (let i = 0; i < gamepads.length; i++) {
+            if (gamepads[i] === null) {
+                console.log(`🎮 GamepadManager: Slot ${i}: null`);
+            } else if (gamepads[i] === undefined) {
+                console.log(`🎮 GamepadManager: Slot ${i}: undefined`);
+            } else {
+                console.log(`🎮 GamepadManager: Slot ${i}: GAMEPAD DETECTED!`, gamepads[i]);
+            }
+        }
+
+        let foundAny = false;
         for (let i = 0; i < gamepads.length; i++) {
             const gamepad = gamepads[i];
             if (gamepad) {
                 console.log('🎮 GamepadManager: Found existing gamepad!', gamepad.id, 'at index', i);
+                console.log('🎮 GamepadManager: Gamepad details:', {
+                    id: gamepad.id,
+                    index: gamepad.index,
+                    connected: gamepad.connected,
+                    buttons: gamepad.buttons.length,
+                    axes: gamepad.axes.length,
+                    mapping: gamepad.mapping
+                });
                 this.connectedGamepad = gamepad;
                 this.updateControllerStatus(true, gamepad.id);
                 this.notifyListeners('connected', gamepad);
+                foundAny = true;
             }
+        }
+
+        if (!foundAny) {
+            console.log('⚠️ GamepadManager: No gamepads found in array. Press any button on your controller!');
+            console.log('⚠️ Note: Some controllers (like 8BitDo) only appear after first button press.');
+            console.log('⚠️ Others (like DualShock) appear immediately when connected.');
         }
     }
 
@@ -51,6 +79,15 @@ class GamepadManager {
         window.addEventListener('gamepadconnected', (e) => {
             console.log('✅ Gamepad connected (native event):', e.gamepad.id);
             console.log('✅ Gamepad object:', e.gamepad);
+            console.log('✅ Gamepad details:', {
+                id: e.gamepad.id,
+                index: e.gamepad.index,
+                connected: e.gamepad.connected,
+                buttons: e.gamepad.buttons.length,
+                axes: e.gamepad.axes.length,
+                mapping: e.gamepad.mapping,
+                timestamp: e.gamepad.timestamp
+            });
             this.connectedGamepad = e.gamepad;
             this.updateGamepads();
             this.notifyListeners('connected', e.gamepad);
@@ -84,10 +121,30 @@ class GamepadManager {
         const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
         this.gamepads = Array.from(gamepads).filter(pad => pad !== null);
 
-        // Update connected gamepad reference
-        if (this.gamepads.length > 0 && !this.connectedGamepad) {
-            this.connectedGamepad = this.gamepads[0];
-            this.updateControllerStatus(true, this.connectedGamepad.id);
+        // Update connected gamepad reference with fresh data
+        // IMPORTANT: Must always update to get latest button/axis states from Gamepad API
+        if (this.gamepads.length > 0) {
+            // If we have a connected gamepad, update to its latest reference
+            if (this.connectedGamepad) {
+                // Find the same gamepad by index and update the reference
+                const updatedGamepad = this.gamepads.find(pad => pad.index === this.connectedGamepad.index);
+                if (updatedGamepad) {
+                    this.connectedGamepad = updatedGamepad;
+                } else {
+                    // Gamepad at that index no longer exists, use first available
+                    this.connectedGamepad = this.gamepads[0];
+                    this.updateControllerStatus(true, this.connectedGamepad.id);
+                }
+            } else {
+                // No gamepad connected yet, connect to first available
+                this.connectedGamepad = this.gamepads[0];
+                this.updateControllerStatus(true, this.connectedGamepad.id);
+            }
+        } else if (this.connectedGamepad) {
+            // No gamepads available but we still have a reference - clear it
+            // (This handles cases where gamepaddisconnected event might be missed)
+            this.connectedGamepad = null;
+            this.updateControllerStatus(false, 'No controller detected');
         }
     }
 
