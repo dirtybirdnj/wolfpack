@@ -294,31 +294,37 @@
         }
 
         /* Scrollbar styling for dark theme */
-        :root[data-theme="dark"] #fish-status-container::-webkit-scrollbar {
-            width: 8px;
+        :root[data-theme="dark"] #fish-status-container::-webkit-scrollbar,
+        :root[data-theme="dark"] #fish-status-container div::-webkit-scrollbar {
+            width: 6px;
         }
 
-        :root[data-theme="dark"] #fish-status-container::-webkit-scrollbar-track {
+        :root[data-theme="dark"] #fish-status-container::-webkit-scrollbar-track,
+        :root[data-theme="dark"] #fish-status-container div::-webkit-scrollbar-track {
             background: rgba(0, 0, 0, 0.3);
         }
 
-        :root[data-theme="dark"] #fish-status-container::-webkit-scrollbar-thumb {
+        :root[data-theme="dark"] #fish-status-container::-webkit-scrollbar-thumb,
+        :root[data-theme="dark"] #fish-status-container div::-webkit-scrollbar-thumb {
             background: var(--border-primary);
-            border-radius: 4px;
+            border-radius: 3px;
         }
 
         /* Scrollbar styling for light theme */
-        :root[data-theme="light"] #fish-status-container::-webkit-scrollbar {
-            width: 8px;
+        :root[data-theme="light"] #fish-status-container::-webkit-scrollbar,
+        :root[data-theme="light"] #fish-status-container div::-webkit-scrollbar {
+            width: 6px;
         }
 
-        :root[data-theme="light"] #fish-status-container::-webkit-scrollbar-track {
+        :root[data-theme="light"] #fish-status-container::-webkit-scrollbar-track,
+        :root[data-theme="light"] #fish-status-container div::-webkit-scrollbar-track {
             background: rgba(0, 0, 0, 0.1);
         }
 
-        :root[data-theme="light"] #fish-status-container::-webkit-scrollbar-thumb {
+        :root[data-theme="light"] #fish-status-container::-webkit-scrollbar-thumb,
+        :root[data-theme="light"] #fish-status-container div::-webkit-scrollbar-thumb {
             background: var(--border-primary);
-            border-radius: 4px;
+            border-radius: 3px;
         }
     </style>
 </head>

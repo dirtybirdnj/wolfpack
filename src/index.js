@@ -242,35 +242,42 @@ function updateFishStatus(gameScene) {
     };
 
     // Render zones top to bottom (Surface -> Mid -> Bottom)
+    // Each zone has a fixed height to prevent UI jumping
     let html = '';
 
-    // Surface Zone (0-40ft)
+    // Surface Zone (0-40ft) - Fixed height
     html += `
         <div style="margin-bottom: 8px;">
             <div style="background: #ffff0020; border: 2px solid #ffff00; padding: 4px; font-weight: bold; font-size: 11px; color: #ffff00;">
                 ☀️ SURFACE (0-40ft) [${surfaceFish.length}]
             </div>
-            ${surfaceFish.length > 0 ? surfaceFish.map(renderFish).join('') : ''}
+            <div style="height: 150px; overflow-y: auto; overflow-x: hidden;">
+                ${surfaceFish.length > 0 ? surfaceFish.map(renderFish).join('') : ''}
+            </div>
         </div>
     `;
 
-    // Mid-Column Zone (40-100ft) - Prime lake trout zone
+    // Mid-Column Zone (40-100ft) - Prime lake trout zone - Fixed height (larger)
     html += `
         <div style="margin-bottom: 8px;">
             <div style="background: #00ff0020; border: 2px solid #00ff00; padding: 4px; font-weight: bold; font-size: 11px; color: #00ff00;">
                 🎯 MID-COLUMN (40-100ft) [${midColumnFish.length}]
             </div>
-            ${midColumnFish.length > 0 ? midColumnFish.map(renderFish).join('') : ''}
+            <div style="height: 240px; overflow-y: auto; overflow-x: hidden;">
+                ${midColumnFish.length > 0 ? midColumnFish.map(renderFish).join('') : ''}
+            </div>
         </div>
     `;
 
-    // Bottom Zone (100-150ft)
+    // Bottom Zone (100-150ft) - Fixed height
     html += `
         <div style="margin-bottom: 8px;">
             <div style="background: #88888820; border: 2px solid #888888; padding: 4px; font-weight: bold; font-size: 11px; color: #888888;">
                 ⚓ BOTTOM (100-150ft) [${bottomFish.length}]
             </div>
-            ${bottomFish.length > 0 ? bottomFish.map(renderFish).join('') : ''}
+            <div style="height: 150px; overflow-y: auto; overflow-x: hidden;">
+                ${bottomFish.length > 0 ? bottomFish.map(renderFish).join('') : ''}
+            </div>
         </div>
     `;
 
