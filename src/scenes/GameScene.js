@@ -608,37 +608,39 @@ export class GameScene extends Phaser.Scene {
         const leftStickX = window.gamepadManager.getAxis(0); // Left stick X
         const leftStickY = window.gamepadManager.getAxis(1); // Left stick Y
 
-        // === ICE HOLE MOVEMENT MODE ===
-        // Triangle/Y button: Toggle movement mode (walk on ice)
-        if (yBtn.pressed && !this.gamepadState.lastY) {
+        // === ICE HOLE MOVEMENT MODE (Ice fishing only) ===
+        if (this.iceHoleManager) {
+            // Triangle/Y button: Toggle movement mode (walk on ice)
+            if (yBtn.pressed && !this.gamepadState.lastY) {
+                if (this.iceHoleManager.movementMode) {
+                    this.iceHoleManager.exitMovementMode();
+                } else {
+                    this.iceHoleManager.enterMovementMode();
+                }
+            }
+            this.gamepadState.lastY = yBtn.pressed;
+
+            // If in movement mode, different controls apply
             if (this.iceHoleManager.movementMode) {
-                this.iceHoleManager.exitMovementMode();
-            } else {
-                this.iceHoleManager.enterMovementMode();
-            }
-        }
-        this.gamepadState.lastY = yBtn.pressed;
+                // L/R movement on ice surface - slower, more sensitive
+                // Controls are inverted: left button moves holes left (player moves right in world)
+                const moveSpeed = 2;
+                if (dpadLeftBtn.pressed || leftStickX < -DEAD_ZONE) {
+                    this.iceHoleManager.movePlayer(moveSpeed); // Move player right, holes appear to move left
+                }
+                if (dpadRightBtn.pressed || leftStickX > DEAD_ZONE) {
+                    this.iceHoleManager.movePlayer(-moveSpeed); // Move player left, holes appear to move right
+                }
 
-        // If in movement mode, different controls apply
-        if (this.iceHoleManager.movementMode) {
-            // L/R movement on ice surface - slower, more sensitive
-            // Controls are inverted: left button moves holes left (player moves right in world)
-            const moveSpeed = 2;
-            if (dpadLeftBtn.pressed || leftStickX < -DEAD_ZONE) {
-                this.iceHoleManager.movePlayer(moveSpeed); // Move player right, holes appear to move left
-            }
-            if (dpadRightBtn.pressed || leftStickX > DEAD_ZONE) {
-                this.iceHoleManager.movePlayer(-moveSpeed); // Move player left, holes appear to move right
-            }
+                // Square/X button: Drill new hole
+                if (xBtn.pressed && !this.gamepadState.lastX) {
+                    this.iceHoleManager.drillNewHole();
+                }
+                this.gamepadState.lastX = xBtn.pressed;
 
-            // Square/X button: Drill new hole
-            if (xBtn.pressed && !this.gamepadState.lastX) {
-                this.iceHoleManager.drillNewHole();
+                // Exit early - don't process fishing controls
+                return;
             }
-            this.gamepadState.lastX = xBtn.pressed;
-
-            // Exit early - don't process fishing controls
-            return;
         }
 
         // === FISHING MODE (normal controls) ===
@@ -894,11 +896,17 @@ export class GameScene extends Phaser.Scene {
             return;
         }
 
-        // Get current hole position in world coordinates
-        const currentHole = this.iceHoleManager.getCurrentHole();
-        if (!currentHole) return;
-
-        const playerWorldX = currentHole.x;
+        // Get player position in world coordinates (depends on fishing type)
+        let playerWorldX;
+        if (this.iceHoleManager) {
+            const currentHole = this.iceHoleManager.getCurrentHole();
+            if (!currentHole) return;
+            playerWorldX = currentHole.x;
+        } else if (this.boatManager) {
+            playerWorldX = this.boatManager.playerX;
+        } else {
+            return; // No manager available
+        }
 
         // Determine fish spawn depth based on realistic lake trout behavior
         let depth;
@@ -1233,10 +1241,17 @@ export class GameScene extends Phaser.Scene {
     spawnEmergencyFish() {
         console.log('Spawning emergency fish!');
 
-        const currentHole = this.iceHoleManager.getCurrentHole();
-        if (!currentHole) return;
-
-        const playerWorldX = currentHole.x;
+        // Get player position in world coordinates (depends on fishing type)
+        let playerWorldX;
+        if (this.iceHoleManager) {
+            const currentHole = this.iceHoleManager.getCurrentHole();
+            if (!currentHole) return;
+            playerWorldX = currentHole.x;
+        } else if (this.boatManager) {
+            playerWorldX = this.boatManager.playerX;
+        } else {
+            return; // No manager available
+        }
 
         // Spawn from random side using world coordinates
         const fromLeft = Math.random() < 0.5;
@@ -1414,7 +1429,12 @@ export class GameScene extends Phaser.Scene {
         this.lure.destroy();
         this.fishingLine.destroy();
         this.sonarDisplay.destroy();
-        this.iceHoleManager.destroy();
+        if (this.iceHoleManager) {
+            this.iceHoleManager.destroy();
+        }
+        if (this.boatManager) {
+            this.boatManager.destroy();
+        }
         if (this.debugGraphics) {
             this.debugGraphics.destroy();
         }

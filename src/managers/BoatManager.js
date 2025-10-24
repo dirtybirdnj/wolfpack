@@ -8,6 +8,9 @@ export class BoatManager {
         this.scene = scene;
         this.fishingType = fishingType;
 
+        // Lake bed depth variation (for different positions) - MUST be first!
+        this.lakeBedProfile = this.generateLakeBedProfile();
+
         // Player position on water (horizontal, in game units)
         this.playerX = this.getStartingPosition();
 
@@ -26,9 +29,6 @@ export class BoatManager {
 
         // Water surface height (in pixels from top)
         this.waterHeight = 0; // No ice, water starts at top
-
-        // Lake bed depth variation (for different positions)
-        this.lakeBedProfile = this.generateLakeBedProfile();
 
         // Initialize UI
         this.updateUI();
