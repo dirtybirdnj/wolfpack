@@ -515,15 +515,19 @@
                 <button id="toggle-debug-btn" class="dev-btn">Toggle Debug</button>
             </div>
 
-            <!-- Column 2: Stats -->
+            <!-- Column 2: Lure Weight -->
             <div class="panel warning">
-                <h3>📊 DEV STATS</h3>
-                <div style="font-size: 12px; line-height: 1.8;">
-                    <div>Active Fish: <span id="fish-count" class="status-value">0</span></div>
-                    <div>Score: <span id="dev-score" class="status-value">0</span></div>
-                    <div>Lure Depth: <span id="dev-depth" class="status-value">0</span> ft</div>
-                    <div>Lure State: <span id="dev-lure-state" class="status-value">SURFACE</span></div>
-                    <div>Game Time: <span id="dev-time" class="status-value">0:00</span></div>
+                <h3>🎣 LURE WEIGHT</h3>
+                <div style="font-size: 11px; margin-bottom: 8px;">
+                    Current: <span id="current-lure-weight" class="status-value">0.5oz</span>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px;">
+                    <button id="lure-weight-0.25" class="dev-btn" style="font-size: 10px; padding: 6px 4px;">1/4oz</button>
+                    <button id="lure-weight-0.5" class="dev-btn" style="font-size: 10px; padding: 6px 4px;">1/2oz</button>
+                    <button id="lure-weight-1" class="dev-btn" style="font-size: 10px; padding: 6px 4px;">1oz</button>
+                    <button id="lure-weight-2" class="dev-btn" style="font-size: 10px; padding: 6px 4px;">2oz</button>
+                    <button id="lure-weight-3" class="dev-btn" style="font-size: 10px; padding: 6px 4px;">3oz</button>
+                    <button id="lure-weight-4" class="dev-btn" style="font-size: 10px; padding: 6px 4px;">4oz</button>
                 </div>
             </div>
 

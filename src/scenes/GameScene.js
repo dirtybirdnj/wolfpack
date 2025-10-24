@@ -6,6 +6,7 @@ import Fish from '../entities/Fish.js';
 import FishFight from '../entities/FishFight.js';
 import BaitfishCloud from '../entities/BaitfishCloud.js';
 import IceHoleManager from '../managers/IceHoleManager.js';
+import FishingLine from '../entities/FishingLine.js';
 
 export class GameScene extends Phaser.Scene {
     constructor() {
@@ -33,6 +34,9 @@ export class GameScene extends Phaser.Scene {
 
         // Create the player's lure - start at better viewing depth
         this.lure = new Lure(this, GameConfig.CANVAS_WIDTH / 2, 100); // Centered, 25ft deep
+
+        // Create fishing line
+        this.fishingLine = new FishingLine(this);
 
         // Set up input handlers
         this.setupInput();
@@ -157,7 +161,7 @@ export class GameScene extends Phaser.Scene {
             return; // Block all game logic
         }
 
-        // If fighting a fish, handle that instead of normal gameplay
+        // If fighting a fish, handle fight updates
         if (this.currentFight && this.currentFight.active) {
             const spacePressed = Phaser.Input.Keyboard.JustDown(this.spaceKey);
 
@@ -177,11 +181,6 @@ export class GameScene extends Phaser.Scene {
             // Pass either keyboard or gamepad input to fish fight
             this.currentFight.update(time, spacePressed || r2Pressed);
 
-            // Check if fight is still active after update (fish might have been landed/lost)
-            if (!this.currentFight || !this.currentFight.active) {
-                return; // Fight ended, continue to normal gameplay
-            }
-
             // Add periodic rumble during fish fight based on line tension
             if (window.gamepadManager && window.gamepadManager.isConnected()) {
                 const tension = this.currentFight.lineTension / 100; // 0-1 value
@@ -199,7 +198,7 @@ export class GameScene extends Phaser.Scene {
                 }
             }
 
-            return;
+            // Don't block normal gameplay - fish and bait continue to move!
         }
 
         // Update ice hole manager (must be before input)
@@ -208,12 +207,20 @@ export class GameScene extends Phaser.Scene {
         // Update sonar display
         this.sonarDisplay.update();
 
-        // Handle input (keyboard + gamepad)
-        this.handleInput();
-        this.handleGamepadInput();
+        // Handle input (keyboard + gamepad) - only if not fighting
+        if (!this.currentFight || !this.currentFight.active) {
+            this.handleInput();
+            this.handleGamepadInput();
+        }
 
-        // Update lure
-        this.lure.update();
+        // Update lure - only if not fighting (fight controls lure position)
+        if (!this.currentFight || !this.currentFight.active) {
+            this.lure.update();
+        }
+
+        // Update fishing line (always - connects hole to lure or hooked fish)
+        const hookedFish = this.currentFight && this.currentFight.active ? this.currentFight.fish : null;
+        this.fishingLine.update(this.lure, hookedFish, this.iceHoleManager);
 
         // Continuously update lure info in UI
         this.updateSpeedDisplay();
@@ -928,6 +935,7 @@ export class GameScene extends Phaser.Scene {
         this.fishes.forEach(fish => fish.destroy());
         this.baitfishClouds.forEach(cloud => cloud.destroy());
         this.lure.destroy();
+        this.fishingLine.destroy();
         this.sonarDisplay.destroy();
         this.iceHoleManager.destroy();
         if (this.debugGraphics) {

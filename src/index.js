@@ -178,6 +178,43 @@ function setupDevTools(game) {
         }
     });
 
+    // Lure Weight Buttons
+    const lureWeights = [0.25, 0.5, 1, 2, 3, 4];
+    lureWeights.forEach(weight => {
+        const btn = document.getElementById(`lure-weight-${weight}`);
+        if (btn) {
+            btn.addEventListener('click', () => {
+                const gameScene = game.scene.getScene('GameScene');
+                if (gameScene && gameScene.scene.isActive() && gameScene.lure) {
+                    gameScene.lure.weight = weight;
+                    document.getElementById('current-lure-weight').textContent = `${weight}oz`;
+                    console.log(`Lure weight changed to ${weight}oz`);
+
+                    // Visual feedback - highlight selected button
+                    lureWeights.forEach(w => {
+                        const b = document.getElementById(`lure-weight-${w}`);
+                        if (b) {
+                            b.style.background = w === weight ? '#ffaa00' : '';
+                        }
+                    });
+                }
+            });
+        }
+    });
+
+    // Set initial lure weight display
+    setTimeout(() => {
+        const gameScene = game.scene.getScene('GameScene');
+        if (gameScene && gameScene.scene.isActive() && gameScene.lure) {
+            document.getElementById('current-lure-weight').textContent = `${gameScene.lure.weight}oz`;
+            // Highlight default weight button
+            const defaultBtn = document.getElementById(`lure-weight-${gameScene.lure.weight}`);
+            if (defaultBtn) {
+                defaultBtn.style.background = '#ffaa00';
+            }
+        }
+    }, 500);
+
     // Note: Test Controller Button is handled in index.html
     // to avoid duplicate event listeners that could interfere with game state
 }
