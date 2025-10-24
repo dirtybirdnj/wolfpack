@@ -73,7 +73,7 @@ export const GameConfig = {
     BAITFISH_CLOUD_SPAWN_CHANCE: 0.004, // Increased to keep up with hungry lakers
     BAITFISH_CLOUD_MIN_COUNT: 5, // Minimum cloud size
     BAITFISH_CLOUD_MAX_COUNT: 50, // Allows for massive schools
-    BAITFISH_CLOUD_RADIUS: 40, // pixels - how close to be "in the cloud"
+    BAITFISH_CLOUD_RADIUS: 100, // pixels - increased for larger cloud dimensions
     COLOR_BAITFISH: 0x88ccff, // Light blue/silver for alewives
     COLOR_BAITFISH_PANIC: 0xccddff, // Brighter when panicking
 

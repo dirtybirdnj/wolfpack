@@ -33,9 +33,9 @@ export class BaitfishCloud {
 
     spawnBaitfish(count) {
         for (let i = 0; i < count; i++) {
-            // Spawn in a loose cluster
-            const offsetX = Utils.randomBetween(-30, 30);
-            const offsetY = Utils.randomBetween(-20, 20);
+            // Spawn in a loose cluster - increased spread for larger dimensional clouds
+            const offsetX = Utils.randomBetween(-80, 80);
+            const offsetY = Utils.randomBetween(-50, 50);
 
             const baitfish = new Baitfish(
                 this.scene,
