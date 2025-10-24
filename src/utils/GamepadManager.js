@@ -32,6 +32,18 @@ class GamepadManager {
         console.log('🎮 GamepadManager: Checking for existing gamepads...');
         const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
         console.log('🎮 GamepadManager: navigator.getGamepads() returned:', gamepads);
+        console.log('🎮 GamepadManager: Array length:', gamepads.length);
+
+        // Log each slot in detail
+        for (let i = 0; i < gamepads.length; i++) {
+            if (gamepads[i] === null) {
+                console.log(`🎮 GamepadManager: Slot ${i}: null`);
+            } else if (gamepads[i] === undefined) {
+                console.log(`🎮 GamepadManager: Slot ${i}: undefined`);
+            } else {
+                console.log(`🎮 GamepadManager: Slot ${i}: GAMEPAD DETECTED!`, gamepads[i]);
+            }
+        }
 
         let foundAny = false;
         for (let i = 0; i < gamepads.length; i++) {
@@ -55,6 +67,8 @@ class GamepadManager {
 
         if (!foundAny) {
             console.log('⚠️ GamepadManager: No gamepads found in array. Press any button on your controller!');
+            console.log('⚠️ Note: Some controllers (like 8BitDo) only appear after first button press.');
+            console.log('⚠️ Others (like DualShock) appear immediately when connected.');
         }
     }
 
