@@ -8,6 +8,7 @@ export class FishFight {
 
         // Fight state
         this.active = true;
+        this.hasLanded = false; // Prevent duplicate scoring
         this.lineTension = 20; // Start with some tension
         this.fishDistance = Math.abs(this.fish.y - 0); // Distance to surface
         this.initialDepth = this.fish.y; // Starting depth for visual tracking
@@ -526,6 +527,12 @@ export class FishFight {
     }
 
     landFish() {
+        // Prevent duplicate scoring - only land the fish once
+        if (this.hasLanded) {
+            return;
+        }
+        this.hasLanded = true;
+
         console.log('Fish landed!');
 
         const info = this.fish.getInfo();

@@ -575,25 +575,33 @@ export class FishAI {
 
         // IDLE fish cruise horizontally without a specific target
         if (this.state === Constants.FISH_STATE.IDLE || !this.targetX || !this.targetY) {
-            // Northern Pike: ambush behavior - patrol slowly near ambush position
+            // Northern Pike: ambush behavior - stay near ambush position
             if (this.isAmbushPredator) {
                 const dx = this.ambushPosition.x - this.fish.worldX;
                 const dy = this.ambushPosition.y - this.fish.y;
                 const distanceFromAmbush = Math.sqrt(dx * dx + dy * dy);
 
-                // If too far from ambush position, slowly return
-                if (distanceFromAmbush > this.ambushRadius) {
-                    const returnSpeed = this.fish.speed * 0.4; // Very slow return
-                    const dist = Math.sqrt(dx * dx + dy * dy);
+                // Dead zone: if very close to ambush position, stop completely
+                if (distanceFromAmbush < 10) {
                     return {
-                        x: (dx / dist) * returnSpeed,
-                        y: (dy / dist) * returnSpeed * 0.7
+                        x: 0, // Completely still horizontally
+                        y: Math.sin(this.fish.frameAge * 0.02) * 0.08 // Very subtle hovering
                     };
-                } else {
-                    // Near ambush position - minimal movement (ambush!)
+                }
+                // If outside ambush radius, slowly drift back
+                else if (distanceFromAmbush > this.ambushRadius) {
+                    const returnSpeed = this.fish.speed * 0.3; // Very slow return
                     return {
-                        x: this.fish.speed * this.idleDirection * 0.15, // Almost stationary
-                        y: Math.sin(this.fish.frameAge * 0.01) * 0.05 // Subtle hovering
+                        x: (dx / distanceFromAmbush) * returnSpeed,
+                        y: (dy / distanceFromAmbush) * returnSpeed * 0.6
+                    };
+                }
+                // Within ambush radius but not in dead zone - very slow drift toward center
+                else {
+                    const returnSpeed = this.fish.speed * 0.1; // Minimal drift
+                    return {
+                        x: (dx / distanceFromAmbush) * returnSpeed,
+                        y: (dy / distanceFromAmbush) * returnSpeed * 0.5 + Math.sin(this.fish.frameAge * 0.02) * 0.08
                     };
                 }
             }
