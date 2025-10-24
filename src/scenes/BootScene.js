@@ -12,13 +12,13 @@ export class BootScene extends Phaser.Scene {
                 color: GameConfig.COLOR_TEXT
             }
         });
-        
+
         const loadingBox = this.add.graphics({
             fillStyle: {
                 color: 0x222222
             }
         });
-        
+
         loadingBox.fillRect(120, 200, 400, 40);
 
         // Loading text
@@ -39,22 +39,29 @@ export class BootScene extends Phaser.Scene {
             wordWrap: { width: 480 }
         });
         factText.setOrigin(0.5, 0.5);
-        
+
         // Progress handling
         this.load.on('progress', (value) => {
             loadingBar.clear();
             loadingBar.fillStyle(GameConfig.COLOR_TEXT, 1);
             loadingBar.fillRect(124, 204, 392 * value, 32);
         });
-        
+
         this.load.on('complete', () => {
             loadingBar.destroy();
             loadingBox.destroy();
             loadingText.destroy();
             factText.destroy();
         });
-        
-        // Since we're not loading external assets, we can create some programmatic assets
+
+        // Load sample images for theming
+        this.load.image('logo-wolfpack', 'samples/snes-wolfpack.jpg');
+        this.load.image('bg-ice', 'samples/adirondacks-chunky-ice.jpg');
+        this.load.image('bg-sunset', 'samples/tip-up-sunrise.jpg');
+        this.load.image('bg-rod', 'samples/rod-box-drill-hole-bridge.jpg');
+        this.load.image('fish-trophy', 'samples/20220310_120329.jpg');
+
+        // Create programmatic assets
         this.createAssets();
     }
     
@@ -180,11 +187,10 @@ export class BootScene extends Phaser.Scene {
     }
     
     startGame() {
-        // Fade out and start game
+        // Fade out and start menu
         this.cameras.main.fadeOut(500);
         this.cameras.main.once('camerafadeoutcomplete', () => {
-            this.scene.start('GameScene');
-            this.scene.start('UIScene');
+            this.scene.start('MenuScene');
         });
     }
 }

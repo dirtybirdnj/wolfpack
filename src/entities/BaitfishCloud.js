@@ -37,9 +37,9 @@ export class BaitfishCloud {
 
     spawnBaitfish(count) {
         for (let i = 0; i < count; i++) {
-            // Spawn in a loose cluster - DOUBLED size (was -80 to 80, now -160 to 160)
-            const offsetX = Utils.randomBetween(-160, 160);
-            const offsetY = Utils.randomBetween(-100, 100);
+            // Spawn in a tight cluster for better schooling
+            const offsetX = Utils.randomBetween(-60, 60);  // Reduced from -160,160 for tighter schools
+            const offsetY = Utils.randomBetween(-40, 40);  // Reduced from -100,100 for tighter schools
 
             const baitfish = new Baitfish(
                 this.scene,
@@ -216,6 +216,44 @@ export class BaitfishCloud {
             lakersChasing: this.lakersChasing.length,
             position: { x: this.centerX, y: this.centerY }
         };
+    }
+
+    split() {
+        // Split this cloud in half, return the new cloud
+        if (this.baitfish.length < 4) {
+            // Too small to split
+            return null;
+        }
+
+        // Split baitfish array in half
+        const halfIndex = Math.floor(this.baitfish.length / 2);
+        const newCloudBaitfish = this.baitfish.splice(halfIndex);
+
+        // Create new cloud slightly offset
+        const offsetDirection = Math.random() < 0.5 ? 1 : -1;
+        const newCloud = new BaitfishCloud(
+            this.scene,
+            this.centerX + (offsetDirection * 40),
+            this.centerY,
+            0 // Don't spawn new fish, we'll add the split ones
+        );
+
+        // Clear the auto-spawned baitfish and add our split ones
+        newCloud.baitfish.forEach(b => b.destroy());
+        newCloud.baitfish = newCloudBaitfish;
+
+        // Update cloudId for the split baitfish
+        newCloudBaitfish.forEach(baitfish => {
+            baitfish.cloudId = newCloud.id;
+        });
+
+        // Give clouds opposite velocities to separate
+        this.velocity.x = -offsetDirection * 1.5;
+        newCloud.velocity.x = offsetDirection * 1.5;
+
+        console.log(`Cloud split! ${this.baitfish.length} + ${newCloud.baitfish.length} baitfish`);
+
+        return newCloud;
     }
 
     mergeWith(otherCloud) {

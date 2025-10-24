@@ -28,9 +28,29 @@ export class GameScene extends Phaser.Scene {
         this.controllerTestUI = null; // Test UI elements
         this.isPaused = false; // Pause state
         this.pauseOverlay = null; // Pause UI overlay
+
+        // Game mode specific
+        this.gameMode = null; // 'arcade' or 'unlimited'
+        this.timeRemaining = 0; // For arcade mode countdown
+        this.emergencyFishSpawned = false; // For arcade emergency fish
+        this.caughtFishData = []; // Store caught fish for end screen
+        this.gameOver = false; // Track if game has ended
     }
     
     create() {
+        // Get game mode from registry (set by MenuScene)
+        this.gameMode = this.registry.get('gameMode') || GameConfig.GAME_MODE_UNLIMITED;
+        console.log(`Starting game in ${this.gameMode} mode`);
+
+        // Initialize timer based on game mode
+        if (this.gameMode === GameConfig.GAME_MODE_ARCADE) {
+            this.timeRemaining = GameConfig.ARCADE_TIME_LIMIT;
+            this.gameTime = 0;
+        } else {
+            this.timeRemaining = 0;
+            this.gameTime = 0;
+        }
+
         // Set up ice hole manager (must be first!)
         this.iceHoleManager = new IceHoleManager(this);
 
@@ -48,13 +68,13 @@ export class GameScene extends Phaser.Scene {
 
         // Set up input handlers
         this.setupInput();
-        
+
         // Set water temperature (affects fish behavior)
         this.waterTemp = Utils.randomBetween(GameConfig.WATER_TEMP_MIN, GameConfig.WATER_TEMP_MAX);
-        
+
         // Event listeners
         this.events.on('fishCaught', this.handleFishCaught, this);
-        
+
         // Start spawning fish
         this.time.addEvent({
             delay: 1000,
@@ -82,16 +102,19 @@ export class GameScene extends Phaser.Scene {
         // Fade in
         this.cameras.main.fadeIn(500);
 
-        // Ambient game timer
+        // Game timer
         this.time.addEvent({
             delay: 1000,
             callback: () => {
-                this.gameTime++;
+                this.updateGameTime();
                 this.updateGameStats();
             },
             callbackScope: this,
             loop: true
         });
+
+        // Show game mode notification
+        this.showGameModeNotification();
     }
     
     setupInput() {
@@ -365,6 +388,41 @@ export class GameScene extends Phaser.Scene {
             }
         });
 
+        // Check for cloud splitting when lure passes through
+        if (this.lure.state === Constants.LURE_STATE.DROPPING) {
+            const newClouds = []; // Store new clouds created from splits
+
+            for (const cloud of this.baitfishClouds) {
+                // Check if lure is within the cloud
+                const distance = Math.sqrt(
+                    Math.pow(this.lure.x - cloud.centerX, 2) +
+                    Math.pow(this.lure.y - cloud.centerY, 2)
+                );
+
+                // If lure passes through cloud, 50% chance to split
+                if (distance < GameConfig.BAITFISH_CLOUD_RADIUS) {
+                    // Only split if we haven't already split this cloud this frame
+                    // and if random chance succeeds
+                    if (!cloud.splitThisFrame && Math.random() < 0.5) {
+                        const newCloud = cloud.split();
+                        if (newCloud) {
+                            newClouds.push(newCloud);
+                            cloud.splitThisFrame = true; // Mark to prevent re-splitting
+                            console.log('Lure split baitfish cloud!');
+                        }
+                    }
+                }
+            }
+
+            // Add new split clouds to the array
+            this.baitfishClouds.push(...newClouds);
+        }
+
+        // Reset split flags for next frame
+        this.baitfishClouds.forEach(cloud => {
+            cloud.splitThisFrame = false;
+        });
+
         // Check for cloud merging - clouds that swim close together should combine
         if (this.baitfishClouds.length > 1) {
             const mergeDistance = 80; // pixels - clouds within this distance will merge
@@ -403,6 +461,11 @@ export class GameScene extends Phaser.Scene {
 
         // Update all fish - pass baitfish clouds for hunting behavior
         this.fishes.forEach((fish, index) => {
+            // Handle emergency fish special behavior
+            if (fish.isEmergencyFish && !fish.caught) {
+                this.updateEmergencyFish(fish);
+            }
+
             fish.update(this.lure, this.fishes, this.baitfishClouds);
 
             // Remove fish that are no longer visible or caught
@@ -1103,6 +1166,236 @@ export class GameScene extends Phaser.Scene {
             // Draw fish detection circle
             this.debugGraphics.lineStyle(1, color, 0.2);
             this.debugGraphics.strokeCircle(fish.x, fish.y, GameConfig.DETECTION_RANGE);
+        });
+    }
+
+    showGameModeNotification() {
+        const modeText = this.gameMode === GameConfig.GAME_MODE_ARCADE ?
+            'ARCADE MODE\n2 Minutes - Catch as many as you can!' :
+            'UNLIMITED MODE\nRelax and fish at your own pace';
+
+        const text = this.add.text(GameConfig.CANVAS_WIDTH / 2, 120, modeText, {
+            fontSize: '18px',
+            fontFamily: 'Courier New',
+            color: '#00ffff',
+            align: 'center',
+            stroke: '#000000',
+            strokeThickness: 3
+        });
+        text.setOrigin(0.5, 0.5);
+        text.setDepth(1000);
+
+        this.tweens.add({
+            targets: text,
+            alpha: 0,
+            duration: 3000,
+            delay: 1000,
+            onComplete: () => text.destroy()
+        });
+    }
+
+    updateGameTime() {
+        if (this.gameOver) return;
+
+        if (this.gameMode === GameConfig.GAME_MODE_ARCADE) {
+            // Countdown timer for arcade
+            this.timeRemaining--;
+            this.gameTime++;
+
+            // Check if we need to spawn emergency fish
+            if (this.timeRemaining < GameConfig.ARCADE_EMERGENCY_SPAWN_TIME &&
+                !this.emergencyFishSpawned &&
+                this.fishCaught === 0) {
+                this.spawnEmergencyFish();
+                this.emergencyFishSpawned = true;
+            }
+
+            // Check if time is up
+            if (this.timeRemaining <= 0) {
+                this.endGame();
+            }
+        } else {
+            // Count up timer for unlimited
+            this.gameTime++;
+        }
+    }
+
+    spawnEmergencyFish() {
+        console.log('Spawning emergency fish!');
+
+        const currentHole = this.iceHoleManager.getCurrentHole();
+        if (!currentHole) return;
+
+        const playerWorldX = currentHole.x;
+
+        // Spawn from random side
+        const fromLeft = Math.random() < 0.5;
+        const x = fromLeft ? -100 : GameConfig.CANVAS_WIDTH + 100;
+
+        // Spawn at mid-column depth (preferred lake trout zone)
+        const y = Utils.randomBetween(
+            GameConfig.DEPTH_ZONES.MID_COLUMN.min * GameConfig.DEPTH_SCALE,
+            GameConfig.DEPTH_ZONES.MID_COLUMN.max * GameConfig.DEPTH_SCALE
+        );
+
+        // Create fish with max hunger and 30 health
+        const fish = new Fish(this, x, y);
+        fish.hunger = 100; // Max hunger - very motivated!
+        fish.health = 30; // Low health makes it easier to catch
+        fish.isEmergencyFish = true; // Mark as emergency fish
+
+        // Set initial velocity toward player
+        const direction = fromLeft ? 1 : -1;
+        fish.velocity.x = direction * 0.8;
+
+        this.fishes.push(fish);
+
+        // Show notification
+        const text = this.add.text(GameConfig.CANVAS_WIDTH / 2, 200,
+            'HUNGRY FISH APPEARED!',
+            {
+                fontSize: '20px',
+                fontFamily: 'Courier New',
+                color: '#ff6600',
+                align: 'center',
+                stroke: '#000000',
+                strokeThickness: 3
+            }
+        );
+        text.setOrigin(0.5, 0.5);
+        text.setDepth(1000);
+
+        this.tweens.add({
+            targets: text,
+            alpha: 0,
+            duration: 2000,
+            delay: 1000,
+            onComplete: () => text.destroy()
+        });
+    }
+
+    updateEmergencyFish(fish) {
+        // Emergency fish moves between bait clouds
+        // If no target or target is gone, find a new bait cloud
+        if (!fish.emergencyTarget || !this.baitfishClouds.includes(fish.emergencyTarget)) {
+            // Find nearest bait cloud
+            if (this.baitfishClouds.length > 0) {
+                let nearestCloud = null;
+                let nearestDist = Infinity;
+
+                this.baitfishClouds.forEach(cloud => {
+                    const dist = Utils.calculateDistance(fish.x, fish.y, cloud.centerX, cloud.centerY);
+                    if (dist < nearestDist) {
+                        nearestDist = dist;
+                        nearestCloud = cloud;
+                    }
+                });
+
+                fish.emergencyTarget = nearestCloud;
+            }
+        }
+
+        // Move toward target bait cloud
+        if (fish.emergencyTarget) {
+            const targetX = fish.emergencyTarget.centerX;
+            const targetY = fish.emergencyTarget.centerY;
+
+            const dx = targetX - fish.x;
+            const dy = targetY - fish.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            if (dist > 20) {
+                // Move toward target
+                fish.velocity.x = (dx / dist) * 1.2;
+                fish.velocity.y = (dy / dist) * 0.6;
+            }
+
+            // Check if passing near the lure - trigger frenzy!
+            const lureDist = Utils.calculateDistance(fish.x, fish.y, this.lure.x, this.lure.y);
+            if (lureDist < GameConfig.DETECTION_RANGE * 1.5 && !fish.hasTriggeredFrenzy) {
+                this.triggerEmergencyFrenzy(fish);
+                fish.hasTriggeredFrenzy = true;
+            }
+        }
+    }
+
+    triggerEmergencyFrenzy(emergencyFish) {
+        console.log('Emergency fish passing lure - TRIGGERING FRENZY!');
+
+        // Show notification
+        const text = this.add.text(GameConfig.CANVAS_WIDTH / 2, 180,
+            'FEEDING FRENZY!',
+            {
+                fontSize: '24px',
+                fontFamily: 'Courier New',
+                color: '#ff0000',
+                align: 'center',
+                stroke: '#000000',
+                strokeThickness: 4
+            }
+        );
+        text.setOrigin(0.5, 0.5);
+        text.setDepth(1000);
+
+        this.tweens.add({
+            targets: text,
+            alpha: 0,
+            scale: 1.5,
+            duration: 2000,
+            onComplete: () => text.destroy()
+        });
+
+        // Trigger frenzy in all fish within emergency fish's vision range
+        this.fishes.forEach(fish => {
+            if (fish === emergencyFish) return;
+            if (fish.caught) return;
+
+            const dist = Utils.calculateDistance(fish.x, fish.y, emergencyFish.x, emergencyFish.y);
+
+            // Use double the normal detection range for frenzy trigger
+            if (dist < GameConfig.DETECTION_RANGE * 2) {
+                // Force frenzy state
+                fish.inFrenzy = true;
+                fish.frenzyTimer = 600; // 10 seconds of frenzy
+                fish.frenzyIntensity = 1.0; // Maximum intensity
+
+                // Give fish multiple strike attempts
+                fish.ai.maxStrikeAttempts = 3;
+                fish.ai.strikeAttempts = 0;
+
+                // Make them immediately interested in the lure
+                if (fish.ai.state === Constants.FISH_STATE.IDLE) {
+                    fish.ai.state = Constants.FISH_STATE.INTERESTED;
+                    fish.ai.decisionCooldown = 50; // Very quick response
+                }
+
+                // Visual feedback
+                fish.triggerInterestFlash(1.0);
+
+                console.log(`Fish ${fish.getInfo().name} entered feeding frenzy!`);
+            }
+        });
+    }
+
+    endGame() {
+        if (this.gameOver) return;
+
+        this.gameOver = true;
+        console.log('Game over!');
+
+        // Store final game data in registry
+        this.registry.set('finalScore', this.score);
+        this.registry.set('finalFishCaught', this.fishCaught);
+        this.registry.set('finalFishLost', this.fishLost);
+        this.registry.set('finalGameTime', this.gameTime);
+        this.registry.set('caughtFishData', this.caughtFishData);
+        this.registry.set('gameMode', this.gameMode);
+
+        // Fade out and go to game over scene
+        this.cameras.main.fadeOut(1000);
+        this.cameras.main.once('camerafadeoutcomplete', () => {
+            this.scene.stop('UIScene');
+            this.scene.start('GameOverScene');
         });
     }
 

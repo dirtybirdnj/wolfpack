@@ -1,5 +1,11 @@
 // Game configuration and constants
 export const GameConfig = {
+    // Game modes
+    GAME_MODE_ARCADE: 'arcade',
+    GAME_MODE_UNLIMITED: 'unlimited',
+    ARCADE_TIME_LIMIT: 120, // 2 minutes in seconds
+    ARCADE_EMERGENCY_SPAWN_TIME: 30, // spawn emergency fish when < 30 seconds left
+
     // Canvas settings - optimized for 13" screens with improved visibility
     CANVAS_WIDTH: 900,
     CANVAS_HEIGHT: 630,
