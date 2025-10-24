@@ -49,7 +49,7 @@ export class Baitfish {
         this.flickerPhase = Math.random() * Math.PI * 2;
     }
 
-    update(cloudCenter, lakersNearby = false, spreadMultiplier = 1.0, scaredLevel = 0, nearbyZooplankton = []) {
+    update(cloudCenter, lakersNearby = false, spreadMultiplier = 1.0, scaredLevel = 0, nearbyZooplankton = [], otherBaitfish = []) {
         if (this.consumed || !this.visible) {
             return;
         }
@@ -61,7 +61,7 @@ export class Baitfish {
             this.handleHuntingBehavior(nearbyZooplankton);
         } else {
             // Normal schooling behavior (confused behavior removed in main)
-            this.handleNormalBehavior(cloudCenter, lakersNearby, spreadMultiplier);
+            this.handleNormalBehavior(cloudCenter, lakersNearby, spreadMultiplier, otherBaitfish);
         }
 
         this.depth = this.y / GameConfig.DEPTH_SCALE;
@@ -114,7 +114,7 @@ export class Baitfish {
         this.render();
     }
 
-    handleNormalBehavior(cloudCenter, lakersNearby, spreadMultiplier) {
+    handleNormalBehavior(cloudCenter, lakersNearby, spreadMultiplier, otherBaitfish = []) {
         // Check if lakers are nearby - if so, panic!
         if (lakersNearby) {
             this.panicMode = true;
@@ -122,13 +122,45 @@ export class Baitfish {
 
         // Apply spread multiplier to schooling offset range
         // When safe: larger spread (spreadMultiplier ~2.0)
-        // When scared: condensed (spreadMultiplier ~0.3-0.6)
-        const maxOffsetX = 30 * spreadMultiplier;  // Reduced from 50 for tighter schooling
-        const maxOffsetY = 20 * spreadMultiplier;  // Reduced from 30 for tighter schooling
+        // When scared: condensed but maintain minimum separation
+        const minOffsetX = 25; // Minimum horizontal spread to prevent concentration
+        const minOffsetY = 15; // Minimum vertical spread
+        const maxOffsetX = Math.max(minOffsetX, 30 * spreadMultiplier);
+        const maxOffsetY = Math.max(minOffsetY, 20 * spreadMultiplier);
 
         // Schooling behavior - stay near cloud center with dynamic offset (use world coordinates)
         this.targetWorldX = cloudCenter.worldX + this.schoolingOffset.x * spreadMultiplier;
         this.targetY = cloudCenter.y + this.schoolingOffset.y * spreadMultiplier;
+
+        // SEPARATION LOGIC - prevent baitfish from overlapping (maintain cloud shape)
+        // Check for nearby baitfish and add repulsion force
+        let separationX = 0;
+        let separationY = 0;
+        let nearbyCount = 0;
+        const separationRadius = 8; // pixels - minimum distance between fish
+
+        otherBaitfish.forEach(other => {
+            if (other === this || !other.visible || other.consumed) return;
+
+            const dx = this.worldX - other.worldX;
+            const dy = this.y - other.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+
+            // If too close, add separation force
+            if (distance < separationRadius && distance > 0) {
+                // Stronger separation when very close
+                const strength = (separationRadius - distance) / separationRadius;
+                separationX += (dx / distance) * strength * 5;
+                separationY += (dy / distance) * strength * 5;
+                nearbyCount++;
+            }
+        });
+
+        // Apply separation forces to target position
+        if (nearbyCount > 0) {
+            this.targetWorldX += separationX;
+            this.targetY += separationY;
+        }
 
         // Add some random wandering (reduced for tighter schooling)
         if (Math.random() < 0.015) {  // Reduced from 0.02

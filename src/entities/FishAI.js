@@ -58,33 +58,36 @@ export class FishAI {
     }
 
     detectFrenzy(lure, allFish) {
-        // Lake trout get excited when they see others chasing
-        // Count other fish that are interested/chasing/striking
+        // Lake trout get excited when they see others chasing OR feeding on baitfish
+        // Count other fish that are actively engaged (lure or baitfish)
         const excitedFish = allFish.filter(otherFish => {
             if (otherFish === this.fish) return false; // Don't count self
 
+            // Include HUNTING_BAITFISH and FEEDING states - makes frenzy much more likely!
             const isExcited = otherFish.ai.state === Constants.FISH_STATE.INTERESTED ||
                             otherFish.ai.state === Constants.FISH_STATE.CHASING ||
-                            otherFish.ai.state === Constants.FISH_STATE.STRIKING;
+                            otherFish.ai.state === Constants.FISH_STATE.STRIKING ||
+                            otherFish.ai.state === Constants.FISH_STATE.HUNTING_BAITFISH ||
+                            otherFish.ai.state === Constants.FISH_STATE.FEEDING;
 
-            // Only count fish within visual range
+            // INCREASED visual range - fish can see feeding activity from farther away
             const dist = Utils.calculateDistance(this.fish.x, this.fish.y, otherFish.x, otherFish.y);
-            return isExcited && dist < GameConfig.DETECTION_RANGE * 2;
+            return isExcited && dist < GameConfig.DETECTION_RANGE * 3; // Increased from 2x to 3x
         });
 
-        // If other fish are excited, 50% chance to join frenzy
+        // If other fish are excited, HIGHER chance to join frenzy (75% instead of 50%)
         if (excitedFish.length > 0 && this.state === Constants.FISH_STATE.IDLE) {
-            if (Math.random() < 0.5) {
+            if (Math.random() < 0.75) { // Increased from 0.5
                 // Enter frenzy state!
                 this.fish.inFrenzy = true;
 
                 // Duration scales with number of frenzied fish (base 300 frames = 5 sec)
                 const baseDuration = 300;
-                const scaledDuration = baseDuration * (1 + excitedFish.length * 0.3);
+                const scaledDuration = baseDuration * (1 + excitedFish.length * 0.4); // Increased from 0.3
                 this.fish.frenzyTimer = Math.floor(scaledDuration);
 
-                // Intensity based on number of excited fish
-                this.fish.frenzyIntensity = Math.min(1.0, excitedFish.length * 0.25);
+                // Intensity based on number of excited fish (stronger now)
+                this.fish.frenzyIntensity = Math.min(1.0, excitedFish.length * 0.3); // Increased from 0.25
 
                 // Frenzying fish get multiple strike attempts (2-3 swipes)
                 this.maxStrikeAttempts = Math.floor(Math.random() * 2) + 2; // 2 or 3 attempts
@@ -680,8 +683,9 @@ export class FishAI {
         const distanceFactor = 1 - (cloudInfo.distance / GameConfig.BAITFISH_DETECTION_RANGE);
 
         // Check if other fish are hunting this cloud (frenzying)
+        // INCREASED bonus for feeding activity - makes frenzy more likely!
         const otherFishHunting = cloudInfo.cloud.lakersChasing.length;
-        const frenzyBonus = Math.min(otherFishHunting * 0.3, 0.8);
+        const frenzyBonus = Math.min(otherFishHunting * 0.5, 1.2); // Increased from 0.3/0.8 to 0.5/1.2
 
         // DIET PREFERENCE - Lake trout prefer certain prey species (based on real-world data)
         const preySpecies = cloudInfo.cloud.speciesType;

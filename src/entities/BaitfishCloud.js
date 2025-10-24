@@ -181,7 +181,15 @@ export class BaitfishCloud {
         // Update all baitfish in the cloud
         this.baitfish = this.baitfish.filter(baitfish => {
             if (!baitfish.consumed && baitfish.visible) {
-                baitfish.update({ worldX: this.worldX, x: this.centerX, y: this.centerY }, lakersNearby, this.spreadMultiplier, this.scaredLevel, nearbyZooplankton);
+                // Pass other baitfish in cloud for separation logic
+                baitfish.update(
+                    { worldX: this.worldX, x: this.centerX, y: this.centerY },
+                    lakersNearby,
+                    this.spreadMultiplier,
+                    this.scaredLevel,
+                    nearbyZooplankton,
+                    this.baitfish // Pass all baitfish for separation
+                );
                 return true;
             } else if (baitfish.consumed) {
                 baitfish.destroy();
