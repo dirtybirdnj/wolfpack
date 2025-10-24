@@ -99,6 +99,7 @@
         #main-layout {
             display: grid;
             grid-template-columns: 250px 1fr 250px;
+            grid-template-rows: auto auto 1fr auto;
             gap: 20px;
             max-width: 1800px;
             margin: 0 auto;
@@ -106,10 +107,25 @@
             align-items: start;
         }
 
-        #left-panel, #right-panel {
+        #left-panel {
             display: flex;
             flex-direction: column;
             gap: 15px;
+            grid-column: 1;
+            grid-row: 1 / 4;
+        }
+
+        #right-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            grid-column: 3;
+            grid-row: 1 / 4;
+        }
+
+        #game-info-panel {
+            grid-column: 2;
+            grid-row: 1;
         }
 
         #game-container {
@@ -117,6 +133,20 @@
             box-shadow: 0 0 20px var(--shadow-color);
             position: relative;
             margin: 0 auto;
+            grid-column: 2;
+            grid-row: 2;
+        }
+
+        #dev-toolbar {
+            grid-column: 1 / 4;
+            grid-row: 4;
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 20px;
+        }
+
+        .controller-status-hidden {
+            display: none !important;
         }
 
         .panel {
@@ -303,7 +333,7 @@
         <!-- Left Panel -->
         <div id="left-panel">
             <!-- Controller Status -->
-            <div class="panel secondary">
+            <div class="panel secondary" id="controller-status-panel">
                 <h3>🎮 CONTROLLER STATUS</h3>
                 <div style="margin: 10px 0;">
                     <div>Status: <span id="controller-status" class="status-value status-disconnected">Not Connected</span></div>
@@ -398,20 +428,42 @@
                     </div>
                 </div>
             </div>
+        </div>
 
-            <!-- Dev Tools -->
-            <div class="panel warning">
-                <h3>🔧 DEV TOOLS</h3>
-                <button id="spawn-fish-btn" class="dev-btn">Spawn Fish</button>
-                <button id="spawn-5-fish-btn" class="dev-btn">Spawn 5 Fish</button>
-                <button id="reset-game-btn" class="dev-btn">Reset Game</button>
-                <button id="toggle-debug-btn" class="dev-btn">Toggle Debug</button>
-                <div style="margin-top: 10px; font-size: 11px; line-height: 1.8;">
-                    <div>Fish: <span id="fish-count" class="status-value">0</span></div>
-                    <div>Score: <span id="dev-score" class="status-value">0</span></div>
-                    <div>Depth: <span id="dev-depth" class="status-value">0</span> ft</div>
-                    <div>State: <span id="dev-lure-state" class="status-value">SURFACE</span></div>
-                    <div>Time: <span id="dev-time" class="status-value">0:00</span></div>
+        <!-- Game Info Panel (Above Game) -->
+        <div id="game-info-panel" class="panel">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; font-size: 13px;">
+                <div>
+                    <div style="color: var(--text-muted); font-size: 10px;">SCORE</div>
+                    <div style="font-weight: bold; color: var(--text-primary);"><span id="ui-score">0</span></div>
+                </div>
+                <div>
+                    <div style="color: var(--text-muted); font-size: 10px;">CAUGHT / LOST</div>
+                    <div style="font-weight: bold;"><span id="ui-caught" style="color: var(--text-primary);">0</span> / <span id="ui-lost" style="color: #ff6666;">0</span></div>
+                </div>
+                <div>
+                    <div style="color: var(--text-muted); font-size: 10px;">LURE DEPTH</div>
+                    <div style="font-weight: bold; color: var(--border-secondary);"><span id="ui-depth">0</span> ft</div>
+                </div>
+                <div>
+                    <div style="color: var(--text-muted); font-size: 10px;">LURE STATE</div>
+                    <div style="font-weight: bold; color: var(--text-secondary);"><span id="ui-lure-state">SURFACE</span></div>
+                </div>
+                <div>
+                    <div style="color: var(--text-muted); font-size: 10px;">RETRIEVE SPEED</div>
+                    <div style="font-weight: bold; color: var(--text-primary);"><span id="ui-speed">2.0</span></div>
+                </div>
+                <div>
+                    <div style="color: var(--text-muted); font-size: 10px;">WATER TEMP</div>
+                    <div style="font-weight: bold; color: var(--border-secondary);"><span id="ui-temp">40</span>°F</div>
+                </div>
+                <div>
+                    <div style="color: var(--text-muted); font-size: 10px;">TIME</div>
+                    <div style="font-weight: bold; color: var(--text-primary);"><span id="ui-time">0:00</span></div>
+                </div>
+                <div>
+                    <div style="color: var(--text-muted); font-size: 10px;">ZONE</div>
+                    <div style="font-weight: bold;" id="ui-zone-text"><span id="ui-zone">Surface</span></div>
                 </div>
             </div>
         </div>
@@ -426,6 +478,45 @@
                 <h3>🐟 FISH STATUS</h3>
                 <div id="fish-status-container">
                     <div style="color: var(--text-muted); font-style: italic;">No fish spawned</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dev Toolbar (Bottom) -->
+        <div id="dev-toolbar">
+            <!-- Column 1: Actions -->
+            <div class="panel warning">
+                <h3>🔧 DEV ACTIONS</h3>
+                <button id="spawn-fish-btn" class="dev-btn">Spawn Fish</button>
+                <button id="spawn-5-fish-btn" class="dev-btn">Spawn 5 Fish</button>
+                <button id="reset-game-btn" class="dev-btn">Reset Game</button>
+                <button id="toggle-debug-btn" class="dev-btn">Toggle Debug</button>
+            </div>
+
+            <!-- Column 2: Stats -->
+            <div class="panel warning">
+                <h3>📊 DEV STATS</h3>
+                <div style="font-size: 12px; line-height: 1.8;">
+                    <div>Active Fish: <span id="fish-count" class="status-value">0</span></div>
+                    <div>Score: <span id="dev-score" class="status-value">0</span></div>
+                    <div>Lure Depth: <span id="dev-depth" class="status-value">0</span> ft</div>
+                    <div>Lure State: <span id="dev-lure-state" class="status-value">SURFACE</span></div>
+                    <div>Game Time: <span id="dev-time" class="status-value">0:00</span></div>
+                </div>
+            </div>
+
+            <!-- Column 3: Info -->
+            <div class="panel warning">
+                <h3>ℹ️ DEV INFO</h3>
+                <div style="font-size: 11px; line-height: 1.6; color: var(--text-muted);">
+                    <div><strong>Build:</strong> v0.3.0-ice-fishing</div>
+                    <div><strong>Engine:</strong> Phaser 3.80.1</div>
+                    <div><strong>Target:</strong> Lake Trout</div>
+                    <div><strong>Location:</strong> Lake Champlain</div>
+                    <div style="margin-top: 8px; font-style: italic;">
+                        Use dev tools to test game mechanics<br>
+                        Debug mode shows AI state and ranges
+                    </div>
                 </div>
             </div>
         </div>

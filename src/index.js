@@ -73,22 +73,68 @@ window.addEventListener('load', () => {
 });
 
 function setupDevTools(game) {
-    // Update dev stats every 100ms
+    // Hide controller status panel once game starts
+    setTimeout(() => {
+        const controllerPanel = document.getElementById('controller-status-panel');
+        if (controllerPanel) {
+            controllerPanel.classList.add('controller-status-hidden');
+        }
+    }, 2000); // Hide after 2 seconds
+
+    // Update UI stats every 100ms
     setInterval(() => {
         const gameScene = game.scene.getScene('GameScene');
         if (gameScene && gameScene.scene.isActive()) {
+            // Dev toolbar stats
             document.getElementById('fish-count').textContent = gameScene.fishes ? gameScene.fishes.length : 0;
             document.getElementById('dev-score').textContent = gameScene.score || 0;
 
+            // Game info panel - Score & fish
+            document.getElementById('ui-score').textContent = gameScene.score || 0;
+            document.getElementById('ui-caught').textContent = gameScene.fishCaught || 0;
+            document.getElementById('ui-lost').textContent = gameScene.fishLost || 0;
+
             if (gameScene.lure) {
                 const lureInfo = gameScene.lure.getInfo();
+
+                // Dev toolbar
                 document.getElementById('dev-depth').textContent = lureInfo.depth;
                 document.getElementById('dev-lure-state').textContent = lureInfo.state;
+
+                // Game info panel
+                document.getElementById('ui-depth').textContent = lureInfo.depth;
+                document.getElementById('ui-lure-state').textContent = lureInfo.state;
+                document.getElementById('ui-speed').textContent = lureInfo.retrieveSpeed || '2.0';
+
+                // Update zone color
+                const depth = parseFloat(lureInfo.depth);
+                const zoneText = document.getElementById('ui-zone-text');
+                let zone = 'Surface';
+                let zoneColor = '#ffff00';
+
+                if (depth >= 100) {
+                    zone = 'Bottom';
+                    zoneColor = '#888888';
+                } else if (depth >= 40) {
+                    zone = 'Mid-Column';
+                    zoneColor = '#00ff00';
+                }
+
+                document.getElementById('ui-zone').textContent = zone;
+                if (zoneText) {
+                    zoneText.style.color = zoneColor;
+                }
             }
 
+            // Time
             const minutes = Math.floor(gameScene.gameTime / 60);
             const secs = gameScene.gameTime % 60;
-            document.getElementById('dev-time').textContent = `${minutes}:${secs.toString().padStart(2, '0')}`;
+            const timeStr = `${minutes}:${secs.toString().padStart(2, '0')}`;
+            document.getElementById('dev-time').textContent = timeStr;
+            document.getElementById('ui-time').textContent = timeStr;
+
+            // Water temp
+            document.getElementById('ui-temp').textContent = Math.floor(gameScene.waterTemp || 40);
 
             // Update fish status panel
             updateFishStatus(gameScene);
