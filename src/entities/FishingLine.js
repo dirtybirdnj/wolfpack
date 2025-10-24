@@ -48,12 +48,7 @@ export class FishingLine {
 
         // Only draw line if lure is below ice surface
         if (endY > this.iceHoleY) {
-            // Draw the fishing line
-            this.graphics.lineStyle(this.lineWidth, this.lineColor, this.lineAlpha);
-            this.graphics.lineBetween(iceHoleX, this.iceHoleY, endX, endY);
-
-            // Add slight curve/sag to the line for realism
-            // Calculate midpoint with sag
+            // Draw the fishing line with slight curve for realism
             const midX = (iceHoleX + endX) / 2;
             const midY = (this.iceHoleY + endY) / 2;
             const lineLength = Math.sqrt(
@@ -64,11 +59,15 @@ export class FishingLine {
             // Sag amount based on line length (more length = more sag)
             const sagAmount = Math.min(lineLength * 0.05, 15);
 
-            // Draw curved line using quadratic curve
-            this.graphics.beginPath();
-            this.graphics.moveTo(iceHoleX, this.iceHoleY);
-            this.graphics.quadraticCurveTo(midX, midY + sagAmount, endX, endY);
-            this.graphics.strokePath();
+            // Draw curved line using Phaser's path system
+            const curve = new Phaser.Curves.QuadraticBezier(
+                new Phaser.Math.Vector2(iceHoleX, this.iceHoleY),
+                new Phaser.Math.Vector2(midX, midY + sagAmount),
+                new Phaser.Math.Vector2(endX, endY)
+            );
+
+            this.graphics.lineStyle(this.lineWidth, this.lineColor, this.lineAlpha);
+            curve.draw(this.graphics, 32); // 32 points for smooth curve
         }
     }
 

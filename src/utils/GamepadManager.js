@@ -5,9 +5,6 @@
 
 class GamepadManager {
     constructor() {
-        console.log('🎮 GamepadManager: Initializing...');
-        console.log('🎮 GamepadManager: navigator.getGamepads available?', !!navigator.getGamepads);
-
         this.gamepads = [];
         this.connectedGamepad = null;
         this.listeners = {
@@ -29,65 +26,24 @@ class GamepadManager {
     }
 
     checkExistingGamepads() {
-        console.log('🎮 GamepadManager: Checking for existing gamepads...');
         const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
-        console.log('🎮 GamepadManager: navigator.getGamepads() returned:', gamepads);
-        console.log('🎮 GamepadManager: Array length:', gamepads.length);
 
-        // Log each slot in detail
-        for (let i = 0; i < gamepads.length; i++) {
-            if (gamepads[i] === null) {
-                console.log(`🎮 GamepadManager: Slot ${i}: null`);
-            } else if (gamepads[i] === undefined) {
-                console.log(`🎮 GamepadManager: Slot ${i}: undefined`);
-            } else {
-                console.log(`🎮 GamepadManager: Slot ${i}: GAMEPAD DETECTED!`, gamepads[i]);
-            }
-        }
-
-        let foundAny = false;
         for (let i = 0; i < gamepads.length; i++) {
             const gamepad = gamepads[i];
             if (gamepad) {
-                console.log('🎮 GamepadManager: Found existing gamepad!', gamepad.id, 'at index', i);
-                console.log('🎮 GamepadManager: Gamepad details:', {
-                    id: gamepad.id,
-                    index: gamepad.index,
-                    connected: gamepad.connected,
-                    buttons: gamepad.buttons.length,
-                    axes: gamepad.axes.length,
-                    mapping: gamepad.mapping
-                });
+                console.log('🎮 Found existing gamepad:', gamepad.id);
                 this.connectedGamepad = gamepad;
                 this.updateControllerStatus(true, gamepad.id);
                 this.notifyListeners('connected', gamepad);
-                foundAny = true;
+                return;
             }
-        }
-
-        if (!foundAny) {
-            console.log('⚠️ GamepadManager: No gamepads found in array. Press any button on your controller!');
-            console.log('⚠️ Note: Some controllers (like 8BitDo) only appear after first button press.');
-            console.log('⚠️ Others (like DualShock) appear immediately when connected.');
         }
     }
 
     setupNativeListeners() {
-        console.log('🎮 GamepadManager: Setting up native event listeners...');
-
         // Listen for gamepad connection using native browser API
         window.addEventListener('gamepadconnected', (e) => {
-            console.log('✅ Gamepad connected (native event):', e.gamepad.id);
-            console.log('✅ Gamepad object:', e.gamepad);
-            console.log('✅ Gamepad details:', {
-                id: e.gamepad.id,
-                index: e.gamepad.index,
-                connected: e.gamepad.connected,
-                buttons: e.gamepad.buttons.length,
-                axes: e.gamepad.axes.length,
-                mapping: e.gamepad.mapping,
-                timestamp: e.gamepad.timestamp
-            });
+            console.log('🎮 Gamepad connected:', e.gamepad.id);
             this.connectedGamepad = e.gamepad;
             this.updateGamepads();
             this.notifyListeners('connected', e.gamepad);
@@ -95,7 +51,7 @@ class GamepadManager {
         });
 
         window.addEventListener('gamepaddisconnected', (e) => {
-            console.log('❌ Gamepad disconnected (native event):', e.gamepad.id);
+            console.log('🎮 Gamepad disconnected:', e.gamepad.id);
             if (this.connectedGamepad && this.connectedGamepad.index === e.gamepad.index) {
                 this.connectedGamepad = null;
             }
@@ -193,8 +149,6 @@ class GamepadManager {
         const keyboardControls = document.getElementById('keyboard-controls');
         const gamepadControls = document.getElementById('gamepad-controls');
 
-        console.log('🎮 GamepadManager: Updating UI - connected:', connected, 'name:', name);
-
         if (statusEl) {
             statusEl.textContent = connected ? 'Connected' : 'Not Connected';
             statusEl.className = connected ? 'status-value status-connected' : 'status-value status-disconnected';
@@ -223,12 +177,10 @@ class GamepadManager {
                 // Show gamepad controls, hide keyboard controls
                 keyboardControls.style.display = 'none';
                 gamepadControls.style.display = 'block';
-                console.log('🎮 GamepadManager: Switched to gamepad controls display');
             } else {
                 // Show keyboard controls, hide gamepad controls
                 keyboardControls.style.display = 'block';
                 gamepadControls.style.display = 'none';
-                console.log('🎮 GamepadManager: Switched to keyboard controls display');
             }
         }
     }

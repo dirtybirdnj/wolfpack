@@ -77,30 +77,31 @@ function setupDevTools(game) {
     setInterval(() => {
         const gameScene = game.scene.getScene('GameScene');
         if (gameScene && gameScene.scene.isActive()) {
-            // Dev toolbar stats
-            document.getElementById('fish-count').textContent = gameScene.fishes ? gameScene.fishes.length : 0;
-            document.getElementById('dev-score').textContent = gameScene.score || 0;
-
             // Game info panel - Score & fish
-            document.getElementById('ui-score').textContent = gameScene.score || 0;
-            document.getElementById('ui-caught').textContent = gameScene.fishCaught || 0;
-            document.getElementById('ui-lost').textContent = gameScene.fishLost || 0;
+            const uiScore = document.getElementById('ui-score');
+            const uiCaught = document.getElementById('ui-caught');
+            const uiLost = document.getElementById('ui-lost');
+
+            if (uiScore) uiScore.textContent = gameScene.score || 0;
+            if (uiCaught) uiCaught.textContent = gameScene.fishCaught || 0;
+            if (uiLost) uiLost.textContent = gameScene.fishLost || 0;
 
             if (gameScene.lure) {
                 const lureInfo = gameScene.lure.getInfo();
 
-                // Dev toolbar
-                document.getElementById('dev-depth').textContent = lureInfo.depth;
-                document.getElementById('dev-lure-state').textContent = lureInfo.state;
-
                 // Game info panel
-                document.getElementById('ui-depth').textContent = lureInfo.depth;
-                document.getElementById('ui-lure-state').textContent = lureInfo.state;
-                document.getElementById('ui-speed').textContent = lureInfo.retrieveSpeed || '2.0';
+                const uiDepth = document.getElementById('ui-depth');
+                const uiState = document.getElementById('ui-lure-state');
+                const uiSpeed = document.getElementById('ui-speed');
+
+                if (uiDepth) uiDepth.textContent = lureInfo.depth;
+                if (uiState) uiState.textContent = lureInfo.state;
+                if (uiSpeed) uiSpeed.textContent = lureInfo.retrieveSpeed || '2.0';
 
                 // Update zone color
                 const depth = parseFloat(lureInfo.depth);
                 const zoneText = document.getElementById('ui-zone-text');
+                const uiZone = document.getElementById('ui-zone');
                 let zone = 'Surface';
                 let zoneColor = '#ffff00';
 
@@ -112,7 +113,7 @@ function setupDevTools(game) {
                     zoneColor = '#00ff00';
                 }
 
-                document.getElementById('ui-zone').textContent = zone;
+                if (uiZone) uiZone.textContent = zone;
                 if (zoneText) {
                     zoneText.style.color = zoneColor;
                 }
@@ -122,11 +123,12 @@ function setupDevTools(game) {
             const minutes = Math.floor(gameScene.gameTime / 60);
             const secs = gameScene.gameTime % 60;
             const timeStr = `${minutes}:${secs.toString().padStart(2, '0')}`;
-            document.getElementById('dev-time').textContent = timeStr;
-            document.getElementById('ui-time').textContent = timeStr;
+            const uiTime = document.getElementById('ui-time');
+            if (uiTime) uiTime.textContent = timeStr;
 
             // Water temp
-            document.getElementById('ui-temp').textContent = Math.floor(gameScene.waterTemp || 40);
+            const uiTemp = document.getElementById('ui-temp');
+            if (uiTemp) uiTemp.textContent = Math.floor(gameScene.waterTemp || 40);
 
             // Update fish status panel
             updateFishStatus(gameScene);
