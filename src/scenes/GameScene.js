@@ -1262,20 +1262,12 @@ export class GameScene extends Phaser.Scene {
             }
         }
 
-        // Move toward target bait cloud
+        // Move toward target bait cloud using AI system
         if (fish.emergencyTarget) {
-            const targetX = fish.emergencyTarget.centerX;
-            const targetY = fish.emergencyTarget.centerY;
-
-            const dx = targetX - fish.x;
-            const dy = targetY - fish.y;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-
-            if (dist > 20) {
-                // Move toward target
-                fish.velocity.x = (dx / dist) * 1.2;
-                fish.velocity.y = (dy / dist) * 0.6;
-            }
+            // Set AI target to the bait cloud
+            fish.ai.targetX = fish.emergencyTarget.centerX;
+            fish.ai.targetY = fish.emergencyTarget.centerY;
+            fish.ai.state = Constants.FISH_STATE.CHASING;
 
             // Check if passing near the lure - trigger frenzy!
             const lureDist = Utils.calculateDistance(fish.x, fish.y, this.lure.x, this.lure.y);
