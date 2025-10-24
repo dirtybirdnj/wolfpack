@@ -233,8 +233,26 @@ export class Fish {
             this.y += movement.y;
             this.depth = this.y / GameConfig.DEPTH_SCALE;
 
+            // Get lake bottom depth at fish's current position
+            let bottomDepth = GameConfig.MAX_DEPTH;
+            if (this.scene.boatManager) {
+                bottomDepth = this.scene.boatManager.getDepthAtPosition(this.worldX);
+            } else if (this.scene.iceHoleManager) {
+                // For ice fishing, get bottom from current hole's profile
+                const currentHole = this.scene.iceHoleManager.getCurrentHole();
+                if (currentHole && currentHole.bottomProfile) {
+                    const closest = currentHole.bottomProfile.reduce((prev, curr) =>
+                        Math.abs(curr.x - this.x) < Math.abs(prev.x - this.x) ? curr : prev
+                    );
+                    bottomDepth = closest.y / GameConfig.DEPTH_SCALE;
+                }
+            }
+
+            // Keep fish above lake bottom (with 5 feet buffer)
+            const maxY = (bottomDepth - 5) * GameConfig.DEPTH_SCALE;
+
             // Keep fish in depth bounds
-            this.y = Math.max(10, Math.min(GameConfig.MAX_DEPTH * GameConfig.DEPTH_SCALE - 10, this.y));
+            this.y = Math.max(10, Math.min(maxY, this.y));
 
             // Convert world position to screen position based on player position
             let playerWorldX;

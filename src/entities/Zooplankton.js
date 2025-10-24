@@ -60,10 +60,29 @@ export class Zooplankton {
         this.x += Math.cos(this.driftDirection) * this.driftSpeed;
         this.y += Math.sin(this.driftDirection) * this.driftSpeed * 0.3; // Less vertical movement
 
-        // Stay near the bottom (within 5-10 feet of bottom)
-        const bottomY = GameConfig.MAX_DEPTH * GameConfig.DEPTH_SCALE;
+        // Get actual lake bottom depth at zooplankton's current position
+        let bottomDepth = GameConfig.MAX_DEPTH;
+        if (this.scene.boatManager) {
+            // For boat/kayak modes, estimate world X from screen X
+            const playerWorldX = this.scene.boatManager.playerX;
+            const offsetFromCenter = this.x - (GameConfig.CANVAS_WIDTH / 2);
+            const estimatedWorldX = playerWorldX + offsetFromCenter;
+            bottomDepth = this.scene.boatManager.getDepthAtPosition(estimatedWorldX);
+        } else if (this.scene.iceHoleManager) {
+            // For ice fishing, get bottom from current hole's profile
+            const currentHole = this.scene.iceHoleManager.getCurrentHole();
+            if (currentHole && currentHole.bottomProfile) {
+                const closest = currentHole.bottomProfile.reduce((prev, curr) =>
+                    Math.abs(curr.x - this.x) < Math.abs(prev.x - this.x) ? curr : prev
+                );
+                bottomDepth = closest.y / GameConfig.DEPTH_SCALE;
+            }
+        }
+
+        // Stay near the bottom (within 5-10 feet of actual bottom)
+        const bottomY = bottomDepth * GameConfig.DEPTH_SCALE;
         const minY = bottomY - (10 * GameConfig.DEPTH_SCALE); // 10 feet from bottom
-        const maxY = bottomY - (5 * GameConfig.DEPTH_SCALE); // 5 feet from bottom
+        const maxY = bottomY - (2 * GameConfig.DEPTH_SCALE); // 2 feet from bottom (don't go below!)
 
         // Gently push back towards bottom zone
         if (this.y < minY) {

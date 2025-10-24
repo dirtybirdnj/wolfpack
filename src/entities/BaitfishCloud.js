@@ -110,8 +110,31 @@ export class BaitfishCloud {
         this.centerY += this.velocity.y;
         this.depth = this.centerY / GameConfig.DEPTH_SCALE;
 
+        // Get lake bottom depth at cloud's current position
+        let bottomDepth = GameConfig.MAX_DEPTH;
+        if (this.scene.boatManager) {
+            // For boat/kayak modes, we need to estimate world X from screen X
+            // Since baitfish use screen coordinates, we approximate based on player position
+            const playerWorldX = this.scene.boatManager.playerX;
+            const offsetFromCenter = this.centerX - (GameConfig.CANVAS_WIDTH / 2);
+            const estimatedWorldX = playerWorldX + offsetFromCenter;
+            bottomDepth = this.scene.boatManager.getDepthAtPosition(estimatedWorldX);
+        } else if (this.scene.iceHoleManager) {
+            // For ice fishing, get bottom from current hole's profile
+            const currentHole = this.scene.iceHoleManager.getCurrentHole();
+            if (currentHole && currentHole.bottomProfile) {
+                const closest = currentHole.bottomProfile.reduce((prev, curr) =>
+                    Math.abs(curr.x - this.centerX) < Math.abs(prev.x - this.centerX) ? curr : prev
+                );
+                bottomDepth = closest.y / GameConfig.DEPTH_SCALE;
+            }
+        }
+
+        // Keep cloud above lake bottom (with 10 feet buffer)
+        const maxY = (bottomDepth - 10) * GameConfig.DEPTH_SCALE;
+
         // Keep cloud in bounds
-        this.centerY = Math.max(30, Math.min(GameConfig.MAX_DEPTH * GameConfig.DEPTH_SCALE - 30, this.centerY));
+        this.centerY = Math.max(30, Math.min(maxY, this.centerY));
 
         // Update all baitfish in the cloud
         this.baitfish = this.baitfish.filter(baitfish => {

@@ -53,8 +53,30 @@ export class Baitfish {
 
         this.depth = this.y / GameConfig.DEPTH_SCALE;
 
+        // Get lake bottom depth at baitfish's current position
+        let bottomDepth = GameConfig.MAX_DEPTH;
+        if (this.scene.boatManager) {
+            // For boat/kayak modes, estimate world X from screen X
+            const playerWorldX = this.scene.boatManager.playerX;
+            const offsetFromCenter = this.x - (GameConfig.CANVAS_WIDTH / 2);
+            const estimatedWorldX = playerWorldX + offsetFromCenter;
+            bottomDepth = this.scene.boatManager.getDepthAtPosition(estimatedWorldX);
+        } else if (this.scene.iceHoleManager) {
+            // For ice fishing, get bottom from current hole's profile
+            const currentHole = this.scene.iceHoleManager.getCurrentHole();
+            if (currentHole && currentHole.bottomProfile) {
+                const closest = currentHole.bottomProfile.reduce((prev, curr) =>
+                    Math.abs(curr.x - this.x) < Math.abs(prev.x - this.x) ? curr : prev
+                );
+                bottomDepth = closest.y / GameConfig.DEPTH_SCALE;
+            }
+        }
+
+        // Keep above lake bottom (with 5 feet buffer)
+        const maxY = (bottomDepth - 5) * GameConfig.DEPTH_SCALE;
+
         // Keep in bounds
-        this.y = Math.max(10, Math.min(GameConfig.MAX_DEPTH * GameConfig.DEPTH_SCALE - 10, this.y));
+        this.y = Math.max(10, Math.min(maxY, this.y));
 
         // Update sonar trail
         this.updateSonarTrail();
