@@ -1,4 +1,5 @@
 import GameConfig from '../config/GameConfig.js';
+import { BAITFISH_SPECIES } from '../config/SpeciesData.js';
 
 export class SonarDisplay {
     constructor(scene, fishingType) {
@@ -98,6 +99,9 @@ export class SonarDisplay {
 
         // Draw bottom profile
         this.drawBottomProfile();
+
+        // Draw species legend
+        this.drawSpeciesLegend();
 
         // Draw depth markers
         this.drawDepthMarkers();
@@ -410,6 +414,59 @@ export class SonarDisplay {
         }
     }
     
+    drawSpeciesLegend() {
+        // Draw a legend showing baitfish species colors
+        const legendX = GameConfig.CANVAS_WIDTH - 140;
+        const legendY = 10;
+        const lineHeight = 14;
+
+        // Semi-transparent background
+        this.graphics.fillStyle(0x000000, 0.7);
+        this.graphics.fillRect(legendX - 5, legendY - 5, 135, 90);
+        this.graphics.lineStyle(1, 0x00ff00, 0.5);
+        this.graphics.strokeRect(legendX - 5, legendY - 5, 135, 90);
+
+        // Title
+        const titleStyle = {
+            fontSize: '10px',
+            fontFamily: 'Courier New',
+            color: '#00ff00',
+            fontStyle: 'bold'
+        };
+        const title = this.scene.add.text(legendX, legendY, 'Baitfish:', titleStyle);
+        title.setDepth(100);
+        this.scene.time.delayedCall(50, () => title.destroy());
+
+        // Species entries
+        const species = [
+            { name: 'Alewife', color: BAITFISH_SPECIES.alewife.color, rarity: '' },
+            { name: 'Smelt', color: BAITFISH_SPECIES.rainbow_smelt.color, rarity: '' },
+            { name: 'Perch', color: BAITFISH_SPECIES.yellow_perch.color, rarity: '' },
+            { name: 'Sculpin', color: BAITFISH_SPECIES.sculpin.color, rarity: '' },
+            { name: 'Cisco', color: BAITFISH_SPECIES.cisco.color, rarity: ' (rare)' }
+        ];
+
+        species.forEach((sp, index) => {
+            const y = legendY + lineHeight + (index * lineHeight);
+
+            // Color indicator (circle)
+            this.graphics.fillStyle(sp.color, 0.8);
+            this.graphics.fillCircle(legendX + 4, y + 4, 4);
+            this.graphics.lineStyle(1, sp.color, 0.9);
+            this.graphics.strokeCircle(legendX + 4, y + 4, 4);
+
+            // Species name
+            const textStyle = {
+                fontSize: '9px',
+                fontFamily: 'Courier New',
+                color: '#00ff00'
+            };
+            const text = this.scene.add.text(legendX + 12, y, sp.name + sp.rarity, textStyle);
+            text.setDepth(100);
+            this.scene.time.delayedCall(50, () => text.destroy());
+        });
+    }
+
     destroy() {
         this.graphics.destroy();
         // Clean up depth marker texts

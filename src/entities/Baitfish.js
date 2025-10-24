@@ -147,14 +147,23 @@ export class Baitfish {
         const distance = Math.sqrt(dx * dx + dy * dy);
 
         if (distance > 1) {
-            // Use species-specific panic speed
-            const panicSpeedMultiplier = this.panicMode
-                ? (this.speciesData.speed.panic / this.speciesData.speed.base)
-                : 1.2;
-            const moveSpeed = this.speed * panicSpeedMultiplier;
+            // Use species-specific panic speed - but cap it to prevent line formation
+            let speedMultiplier = 1.2; // Base multiplier for normal schooling
+
+            if (this.panicMode) {
+                // Reduce panic multiplier to prevent fish from catching up too fast
+                // This was causing line formation when cloud fled
+                const rawPanicMultiplier = this.speciesData.speed.panic / this.speciesData.speed.base;
+                speedMultiplier = Math.min(1.8, rawPanicMultiplier); // Cap at 1.8x (was 2.5x+)
+            }
+
+            const moveSpeed = this.speed * speedMultiplier;
+
+            // When panicking, match vertical and horizontal speed better to maintain cloud shape
+            const verticalMultiplier = this.panicMode ? 0.9 : 0.7; // Faster vertical when panicking
 
             this.worldX += (dx / distance) * moveSpeed;
-            this.y += (dy / distance) * moveSpeed * 0.7; // Slower vertical movement
+            this.y += (dy / distance) * moveSpeed * verticalMultiplier;
         }
 
         // Reset panic after a while
