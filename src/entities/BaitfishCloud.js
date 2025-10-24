@@ -37,9 +37,9 @@ export class BaitfishCloud {
 
     spawnBaitfish(count) {
         for (let i = 0; i < count; i++) {
-            // Spawn in a loose cluster - DOUBLED size (was -80 to 80, now -160 to 160)
-            const offsetX = Utils.randomBetween(-160, 160);
-            const offsetY = Utils.randomBetween(-100, 100);
+            // Spawn in a tight cluster for better schooling
+            const offsetX = Utils.randomBetween(-60, 60);  // Reduced from -160,160 for tighter schools
+            const offsetY = Utils.randomBetween(-40, 40);  // Reduced from -100,100 for tighter schools
 
             const baitfish = new Baitfish(
                 this.scene,

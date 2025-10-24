@@ -17,8 +17,8 @@ export class Baitfish {
         this.targetX = x;
         this.targetY = y;
         this.schoolingOffset = {
-            x: Utils.randomBetween(-15, 15),
-            y: Utils.randomBetween(-10, 10)
+            x: Utils.randomBetween(-8, 8),  // Reduced from -15,15 for tighter schooling
+            y: Utils.randomBetween(-5, 5)   // Reduced from -10,10 for tighter schooling
         };
 
         // Visual properties for sonar display
@@ -49,17 +49,29 @@ export class Baitfish {
 
         this.age++;
 
-        // Occasionally get confused (1% chance per frame, more likely when scared)
-        const confusionChance = 0.001 + (scaredLevel * 0.002);
+        // Occasionally get confused (reduced chance for better schooling)
+        const confusionChance = 0.0003 + (scaredLevel * 0.0008);  // Reduced from 0.001 and 0.002
         if (this.confusionLevel === 0 && Math.random() < confusionChance) {
             // Get confused!
-            this.confusionLevel = Math.random() < 0.3 ? 2 : 1; // 30% chance of VERY confused
+            this.confusionLevel = Math.random() < 0.15 ? 2 : 1; // 15% chance of VERY confused (reduced from 30%)
             console.log(`Baitfish got ${this.confusionLevel === 2 ? 'VERY' : ''} confused!`);
         }
 
         // Handle confusion behavior
         if (this.confusionLevel > 0) {
-            this.handleConfusedBehavior(cloudCenter, lureFollowersCount);
+            // Confused fish have a chance to recover and rejoin the school
+            // Level 1 confusion (regular confused) recovers faster than level 2 (VERY confused)
+            const recoveryChance = this.confusionLevel === 1 ? 0.002 : 0.0005;  // Level 1: 0.2%, Level 2: 0.05%
+
+            // Don't recover if loitering near lure (they're committed)
+            if (!this.loiteringNearLure && Math.random() < recoveryChance) {
+                console.log(`Baitfish recovered from confusion and rejoining school`);
+                this.confusionLevel = 0;
+                this.hasLeftCloud = false;
+                this.loiteringNearLure = false;
+            } else {
+                this.handleConfusedBehavior(cloudCenter, lureFollowersCount);
+            }
         } else {
             // Normal schooling behavior
             this.handleNormalBehavior(cloudCenter, lakersNearby, spreadMultiplier);
@@ -91,16 +103,16 @@ export class Baitfish {
         // Apply spread multiplier to schooling offset range
         // When safe: larger spread (spreadMultiplier ~2.0)
         // When scared: condensed (spreadMultiplier ~0.3-0.6)
-        const maxOffsetX = 50 * spreadMultiplier;
-        const maxOffsetY = 30 * spreadMultiplier;
+        const maxOffsetX = 30 * spreadMultiplier;  // Reduced from 50 for tighter schooling
+        const maxOffsetY = 20 * spreadMultiplier;  // Reduced from 30 for tighter schooling
 
         // Schooling behavior - stay near cloud center with dynamic offset
         this.targetX = cloudCenter.x + this.schoolingOffset.x * spreadMultiplier;
         this.targetY = cloudCenter.y + this.schoolingOffset.y * spreadMultiplier;
 
-        // Add some random wandering (less when scared/condensed)
-        if (Math.random() < 0.02) {
-            const wanderAmount = spreadMultiplier > 1.0 ? 5 : 2;
+        // Add some random wandering (reduced for tighter schooling)
+        if (Math.random() < 0.015) {  // Reduced from 0.02
+            const wanderAmount = spreadMultiplier > 1.0 ? 3 : 1.5;  // Reduced from 5 and 2
             this.schoolingOffset.x += Utils.randomBetween(-wanderAmount, wanderAmount);
             this.schoolingOffset.y += Utils.randomBetween(-wanderAmount * 0.6, wanderAmount * 0.6);
 
@@ -115,7 +127,7 @@ export class Baitfish {
         const distance = Math.sqrt(dx * dx + dy * dy);
 
         if (distance > 1) {
-            const speedMultiplier = this.panicMode ? 2.5 : 1.0;
+            const speedMultiplier = this.panicMode ? 2.5 : 1.2;  // Increased from 1.0 for tighter schooling
             const moveSpeed = this.speed * speedMultiplier;
 
             this.x += (dx / distance) * moveSpeed;
