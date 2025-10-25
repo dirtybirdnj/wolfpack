@@ -135,6 +135,32 @@ export class NavigationScene extends Phaser.Scene {
             { label: 'Fish Whistle', action: 'fishWhistle' }
         ];
 
+        // Sub-menu states
+        this.subMenuActive = null; // 'navMap', 'tackleBox', 'tips', null
+        this.navMapCursorX = this.playerWorldX;
+        this.navMapCursorY = this.playerWorldY;
+        this.tackleBoxTab = 0; // 0=lure, 1=line, 2=rod, 3=reel
+        this.tackleBoxSelected = { lure: 0, line: 0, rod: 0, reel: 0 };
+
+        // Fishing tips pool
+        this.fishingTips = [
+            "Fish are most active during dawn and dusk periods.",
+            "Match your lure size to the baitfish in the area.",
+            "Lake trout prefer cooler water - try fishing deeper.",
+            "Drop-offs and ledges are excellent structure for predators.",
+            "Perch often school in large numbers over rocky bottoms.",
+            "Slow down your retrieve when water temperature drops.",
+            "Pike ambush from cover - try fishing near weed beds.",
+            "Use lighter line in clear water for more bites.",
+            "Watch your sonar for baitfish clouds - predators follow.",
+            "Smallmouth bass love rocky points and underwater humps.",
+            "Vary your retrieve speed until you find what works.",
+            "Heavier lures sink faster to reach deep fish quickly.",
+            "In thermoclines, fish often suspend just above or below.",
+            "Use your fishfinder to identify bottom structure.",
+            "Trophy fish are often alone - look away from schools."
+        ];
+
         // Gamepad support - check for already connected gamepad
         if (this.input.gamepad.total > 0) {
             this.gamepad = this.input.gamepad.getPad(0);
@@ -152,7 +178,9 @@ export class NavigationScene extends Phaser.Scene {
             x: false,
             select: false,
             up: false,
-            down: false
+            down: false,
+            left: false,
+            right: false
         };
     }
 
@@ -162,8 +190,19 @@ export class NavigationScene extends Phaser.Scene {
 
         // If menu is open, handle menu input instead
         if (this.menuOpen) {
-            this.handleMenuInput();
-            this.renderMenu();
+            if (this.subMenuActive === 'navMap') {
+                this.handleNavMapInput();
+                this.renderNavMap();
+            } else if (this.subMenuActive === 'tackleBox') {
+                this.handleTackleBoxInput();
+                this.renderTackleBox();
+            } else if (this.subMenuActive === 'tips') {
+                this.handleTipsInput();
+                this.renderTips();
+            } else {
+                this.handleMenuInput();
+                this.renderMenu();
+            }
             return; // Skip normal game updates
         }
 
@@ -971,27 +1010,40 @@ export class NavigationScene extends Phaser.Scene {
 
         switch (action) {
             case 'navigationMap':
-                this.showInstruction('Navigation Map - Full bay view (Coming Soon)');
-                this.menuOpen = false;
+                this.subMenuActive = 'navMap';
+                this.navMapCursorX = this.playerWorldX;
+                this.navMapCursorY = this.playerWorldY;
                 break;
 
             case 'tackleBox':
-                this.showInstruction('Tackle Box - Change lures & gear (Coming Soon)');
-                this.menuOpen = false;
+                this.subMenuActive = 'tackleBox';
+                this.tackleBoxTab = 0;
                 break;
 
             case 'textHelp':
-                this.showInstruction('📱 Texting for help... "Send coordinates!"');
-                this.menuOpen = false;
-                // Could add actual help message or GPS coordinates later
+                this.subMenuActive = 'tips';
+                this.selectedTips = this.getRandomTips(5);
                 break;
 
             case 'fishWhistle':
-                this.showInstruction('🎵 *WHISTLE* Attracting fish nearby...');
+                this.activateFishWhistle();
                 this.menuOpen = false;
-                // Could trigger fish spawn or attraction mechanic later
+                this.subMenuActive = null;
                 break;
         }
+    }
+
+    getRandomTips(count) {
+        const shuffled = [...this.fishingTips].sort(() => Math.random() - 0.5);
+        return shuffled.slice(0, count);
+    }
+
+    activateFishWhistle() {
+        console.log('🎵 Fish whistle activated!');
+        this.showInstruction('🎵 *WHISTLE* Attracting fish nearby...');
+        // TODO: Play whistle sound here when audio is implemented
+        // For now, just show a message and note that fish will spawn in GameScene
+        // This feature will need to interface with GameScene's spawning system
     }
 
     renderMenu() {
@@ -1062,6 +1114,415 @@ export class NavigationScene extends Phaser.Scene {
         // Controls hint
         const hintText = this.add.text(menuX + menuWidth / 2, menuY + menuHeight - 30, '↑↓: Navigate | X: Select | TAB: Close', {
             fontSize: '12px',
+            fontFamily: 'Courier New',
+            color: '#888888'
+        });
+        hintText.setOrigin(0.5, 0.5);
+        hintText.setDepth(1001);
+        this.time.delayedCall(50, () => hintText.destroy());
+    }
+
+    handleNavMapInput() {
+        /**
+         * Handle navigation map cursor movement and fast travel
+         */
+
+        const moveSpeed = 100; // Units per frame
+        let moved = false;
+
+        // Arrow keys or D-pad for cursor movement
+        if (this.keys.left.isDown || (this.gamepad && this.gamepad.left)) {
+            this.navMapCursorX -= moveSpeed;
+            moved = true;
+        }
+        if (this.keys.right.isDown || (this.gamepad && this.gamepad.right)) {
+            this.navMapCursorX += moveSpeed;
+            moved = true;
+        }
+        if (this.keys.up.isDown || (this.gamepad && this.gamepad.up)) {
+            this.navMapCursorY -= moveSpeed;
+            moved = true;
+        }
+        if (this.keys.down.isDown || (this.gamepad && this.gamepad.down)) {
+            this.navMapCursorY += moveSpeed;
+            moved = true;
+        }
+
+        // Clamp cursor to map bounds
+        this.navMapCursorX = Math.max(0, Math.min(10000, this.navMapCursorX));
+        this.navMapCursorY = Math.max(0, Math.min(10000, this.navMapCursorY));
+
+        // X button (B on 8bitdo) to fast travel
+        let confirmPressed = false;
+        if (Phaser.Input.Keyboard.JustDown(this.keys.x)) {
+            confirmPressed = true;
+        }
+        if (this.gamepad) {
+            const xButton = this.gamepad.buttons[0];
+            const xButtonPressed = xButton && xButton.pressed;
+            if (xButtonPressed && !this.buttonStates.x) {
+                confirmPressed = true;
+            }
+            this.buttonStates.x = xButtonPressed;
+        }
+
+        if (confirmPressed) {
+            // Fast travel to cursor position
+            this.playerWorldX = this.navMapCursorX;
+            this.playerWorldY = this.navMapCursorY;
+            console.log(`⚡ Fast traveled to (${this.playerWorldX}, ${this.playerWorldY})`);
+            this.showInstruction(`Fast Traveled! Depth: ${this.bathyData.getDepthAtPosition(this.playerWorldX, this.playerWorldY).toFixed(0)}ft`);
+            this.menuOpen = false;
+            this.subMenuActive = null;
+        }
+
+        // Select/TAB to close
+        if (Phaser.Input.Keyboard.JustDown(this.keys.select)) {
+            this.subMenuActive = null;
+        }
+        if (this.gamepad) {
+            const selectButton = this.gamepad.buttons[8];
+            const selectButtonPressed = selectButton && selectButton.pressed;
+            if (selectButtonPressed && !this.buttonStates.select) {
+                this.subMenuActive = null;
+            }
+            this.buttonStates.select = selectButtonPressed;
+        }
+    }
+
+    renderNavMap() {
+        /**
+         * Render full Burlington Bay navigation map with cursor
+         */
+
+        // Clear previous UI graphics
+        this.uiGraphics.clear();
+
+        // Semi-transparent overlay
+        this.uiGraphics.fillStyle(0x000000, 0.9);
+        this.uiGraphics.fillRect(0, 0, this.viewportWidth, this.viewportHeight);
+
+        // Map panel - larger, centered
+        const mapWidth = 600;
+        const mapHeight = 500;
+        const mapX = (this.viewportWidth - mapWidth) / 2;
+        const mapY = (this.viewportHeight - mapHeight) / 2;
+
+        // Panel background
+        this.uiGraphics.fillStyle(0x0a1a2a, 1.0);
+        this.uiGraphics.fillRoundedRect(mapX, mapY, mapWidth, mapHeight, 12);
+
+        // Panel border
+        this.uiGraphics.lineStyle(3, 0x00ff00, 1.0);
+        this.uiGraphics.strokeRoundedRect(mapX, mapY, mapWidth, mapHeight, 12);
+
+        // Title
+        const titleText = this.add.text(mapX + mapWidth / 2, mapY + 25, 'BURLINGTON BAY - NAVIGATION MAP', {
+            fontSize: '20px',
+            fontFamily: 'Courier New',
+            color: '#00ff00',
+            fontStyle: 'bold'
+        });
+        titleText.setOrigin(0.5, 0.5);
+        titleText.setDepth(1001);
+        this.time.delayedCall(50, () => titleText.destroy());
+
+        // Map area
+        const chartX = mapX + 40;
+        const chartY = mapY + 60;
+        const chartWidth = mapWidth - 80;
+        const chartHeight = mapHeight - 120;
+
+        // Draw depth zones
+        const zones = [
+            { start: 0, end: 0.15, color: 0x88ccff },      // Shore
+            { start: 0.15, end: 0.35, color: 0x6699cc },   // Shelf
+            { start: 0.35, end: 0.60, color: 0x4466aa },   // Drop
+            { start: 0.60, end: 1.0, color: 0x223388 }     // Deep
+        ];
+
+        zones.forEach(zone => {
+            const zoneX = chartX + zone.start * chartWidth;
+            const zoneWidth = (zone.end - zone.start) * chartWidth;
+            this.uiGraphics.fillStyle(zone.color, 0.8);
+            this.uiGraphics.fillRect(zoneX, chartY, zoneWidth, chartHeight);
+        });
+
+        // Draw shoreline
+        this.uiGraphics.lineStyle(4, 0x00ff00, 1.0);
+        this.uiGraphics.lineBetween(chartX, chartY, chartX, chartY + chartHeight);
+
+        // Draw player current position
+        const playerXNorm = this.playerWorldX / 10000;
+        const playerYNorm = this.playerWorldY / 10000;
+        const playerScreenX = chartX + playerXNorm * chartWidth;
+        const playerScreenY = chartY + playerYNorm * chartHeight;
+
+        this.uiGraphics.fillStyle(0xffff00, 1.0);
+        this.uiGraphics.fillCircle(playerScreenX, playerScreenY, 6);
+        this.uiGraphics.lineStyle(2, 0xffff00, 1.0);
+        this.uiGraphics.strokeCircle(playerScreenX, playerScreenY, 10);
+
+        // Draw cursor position
+        const cursorXNorm = this.navMapCursorX / 10000;
+        const cursorYNorm = this.navMapCursorY / 10000;
+        const cursorScreenX = chartX + cursorXNorm * chartWidth;
+        const cursorScreenY = chartY + cursorYNorm * chartHeight;
+
+        this.uiGraphics.fillStyle(0xff0000, 1.0);
+        this.uiGraphics.fillCircle(cursorScreenX, cursorScreenY, 8);
+        this.uiGraphics.lineStyle(3, 0xff0000, 1.0);
+        this.uiGraphics.strokeCircle(cursorScreenX, cursorScreenY, 15);
+
+        // Cursor depth
+        const cursorDepth = this.bathyData.getDepthAtPosition(this.navMapCursorX, this.navMapCursorY);
+        const cursorText = this.add.text(cursorScreenX, cursorScreenY - 30, `${cursorDepth.toFixed(0)}ft`, {
+            fontSize: '14px',
+            fontFamily: 'Courier New',
+            color: '#ff0000',
+            backgroundColor: '#000000',
+            padding: { x: 4, y: 2 }
+        });
+        cursorText.setOrigin(0.5, 0.5);
+        cursorText.setDepth(1001);
+        this.time.delayedCall(50, () => cursorText.destroy());
+
+        // Controls hint
+        const hintText = this.add.text(mapX + mapWidth / 2, mapY + mapHeight - 30, 'Arrow Keys: Move Cursor | X: Fast Travel | TAB: Cancel', {
+            fontSize: '13px',
+            fontFamily: 'Courier New',
+            color: '#aaaaaa'
+        });
+        hintText.setOrigin(0.5, 0.5);
+        hintText.setDepth(1001);
+        this.time.delayedCall(50, () => hintText.destroy());
+    }
+
+    handleTackleBoxInput() {
+        /**
+         * Handle tackle box navigation
+         */
+
+        // TAB to close
+        if (Phaser.Input.Keyboard.JustDown(this.keys.select)) {
+            this.subMenuActive = null;
+        }
+        if (this.gamepad) {
+            const selectButton = this.gamepad.buttons[8];
+            const selectButtonPressed = selectButton && selectButton.pressed;
+            if (selectButtonPressed && !this.buttonStates.select) {
+                this.subMenuActive = null;
+            }
+            this.buttonStates.select = selectButtonPressed;
+        }
+
+        // Left/Right to change tabs
+        let leftPressed = false;
+        let rightPressed = false;
+
+        if (Phaser.Input.Keyboard.JustDown(this.keys.left)) leftPressed = true;
+        if (Phaser.Input.Keyboard.JustDown(this.keys.right)) rightPressed = true;
+
+        if (this.gamepad) {
+            const dpadLeft = this.gamepad.buttons[14] && this.gamepad.buttons[14].pressed;
+            const dpadRight = this.gamepad.buttons[15] && this.gamepad.buttons[15].pressed;
+
+            if (dpadLeft && !this.buttonStates.left) leftPressed = true;
+            if (dpadRight && !this.buttonStates.right) rightPressed = true;
+
+            this.buttonStates.left = dpadLeft;
+            this.buttonStates.right = dpadRight;
+        }
+
+        if (leftPressed) {
+            this.tackleBoxTab--;
+            if (this.tackleBoxTab < 0) this.tackleBoxTab = 3;
+        }
+        if (rightPressed) {
+            this.tackleBoxTab++;
+            if (this.tackleBoxTab > 3) this.tackleBoxTab = 0;
+        }
+    }
+
+    renderTackleBox() {
+        /**
+         * Render tackle box selection screen
+         */
+
+        // Clear previous UI graphics
+        this.uiGraphics.clear();
+
+        // Semi-transparent overlay
+        this.uiGraphics.fillStyle(0x000000, 0.9);
+        this.uiGraphics.fillRect(0, 0, this.viewportWidth, this.viewportHeight);
+
+        // Panel
+        const panelWidth = 600;
+        const panelHeight = 450;
+        const panelX = (this.viewportWidth - panelWidth) / 2;
+        const panelY = (this.viewportHeight - panelHeight) / 2;
+
+        // Panel background
+        this.uiGraphics.fillStyle(0x1a2a1a, 1.0);
+        this.uiGraphics.fillRoundedRect(panelX, panelY, panelWidth, panelHeight, 12);
+
+        // Panel border
+        this.uiGraphics.lineStyle(3, 0x00ff00, 1.0);
+        this.uiGraphics.strokeRoundedRect(panelX, panelY, panelWidth, panelHeight, 12);
+
+        // Title
+        const titleText = this.add.text(panelX + panelWidth / 2, panelY + 25, 'TACKLE BOX', {
+            fontSize: '24px',
+            fontFamily: 'Courier New',
+            color: '#00ff00',
+            fontStyle: 'bold'
+        });
+        titleText.setOrigin(0.5, 0.5);
+        titleText.setDepth(1001);
+        this.time.delayedCall(50, () => titleText.destroy());
+
+        // Tab headers
+        const tabs = ['LURE', 'LINE', 'ROD', 'REEL'];
+        const tabWidth = (panelWidth - 80) / 4;
+        const tabY = panelY + 60;
+
+        tabs.forEach((tab, index) => {
+            const tabX = panelX + 40 + index * tabWidth;
+            const isActive = index === this.tackleBoxTab;
+
+            if (isActive) {
+                this.uiGraphics.fillStyle(0x3a5a3a, 1.0);
+                this.uiGraphics.fillRoundedRect(tabX, tabY, tabWidth - 10, 40, 6);
+                this.uiGraphics.lineStyle(2, 0x00ffff, 1.0);
+                this.uiGraphics.strokeRoundedRect(tabX, tabY, tabWidth - 10, 40, 6);
+            }
+
+            const tabText = this.add.text(tabX + (tabWidth - 10) / 2, tabY + 20, tab, {
+                fontSize: isActive ? '16px' : '14px',
+                fontFamily: 'Courier New',
+                color: isActive ? '#00ffff' : '#88aa88',
+                fontStyle: isActive ? 'bold' : 'normal'
+            });
+            tabText.setOrigin(0.5, 0.5);
+            tabText.setDepth(1001);
+            this.time.delayedCall(50, () => tabText.destroy());
+        });
+
+        // Content area
+        const contentText = this.add.text(panelX + panelWidth / 2, panelY + 200, 'Gear selection coming soon!\n\nChoose your lures, lines,\nrods, and reels.', {
+            fontSize: '18px',
+            fontFamily: 'Courier New',
+            color: '#aaffaa',
+            align: 'center'
+        });
+        contentText.setOrigin(0.5, 0.5);
+        contentText.setDepth(1001);
+        this.time.delayedCall(50, () => contentText.destroy());
+
+        // Controls hint
+        const hintText = this.add.text(panelX + panelWidth / 2, panelY + panelHeight - 30, '← →: Change Tab | TAB: Close', {
+            fontSize: '13px',
+            fontFamily: 'Courier New',
+            color: '#888888'
+        });
+        hintText.setOrigin(0.5, 0.5);
+        hintText.setDepth(1001);
+        this.time.delayedCall(50, () => hintText.destroy());
+    }
+
+    handleTipsInput() {
+        /**
+         * Handle fishing tips screen input
+         */
+
+        // Any button to close
+        if (Phaser.Input.Keyboard.JustDown(this.keys.x) || Phaser.Input.Keyboard.JustDown(this.keys.select)) {
+            this.subMenuActive = null;
+        }
+
+        if (this.gamepad) {
+            const xButton = this.gamepad.buttons[0];
+            const selectButton = this.gamepad.buttons[8];
+            const xButtonPressed = xButton && xButton.pressed;
+            const selectButtonPressed = selectButton && selectButton.pressed;
+
+            if ((xButtonPressed && !this.buttonStates.x) || (selectButtonPressed && !this.buttonStates.select)) {
+                this.subMenuActive = null;
+            }
+
+            this.buttonStates.x = xButtonPressed;
+            this.buttonStates.select = selectButtonPressed;
+        }
+    }
+
+    renderTips() {
+        /**
+         * Render fishing tips screen
+         */
+
+        // Clear previous UI graphics
+        this.uiGraphics.clear();
+
+        // Semi-transparent overlay
+        this.uiGraphics.fillStyle(0x000000, 0.9);
+        this.uiGraphics.fillRect(0, 0, this.viewportWidth, this.viewportHeight);
+
+        // Panel
+        const panelWidth = 600;
+        const panelHeight = 500;
+        const panelX = (this.viewportWidth - panelWidth) / 2;
+        const panelY = (this.viewportHeight - panelHeight) / 2;
+
+        // Panel background
+        this.uiGraphics.fillStyle(0x1a1a2a, 1.0);
+        this.uiGraphics.fillRoundedRect(panelX, panelY, panelWidth, panelHeight, 12);
+
+        // Panel border
+        this.uiGraphics.lineStyle(3, 0x00ff00, 1.0);
+        this.uiGraphics.strokeRoundedRect(panelX, panelY, panelWidth, panelHeight, 12);
+
+        // Title
+        const titleText = this.add.text(panelX + panelWidth / 2, panelY + 30, '📱 FISHING TIPS', {
+            fontSize: '24px',
+            fontFamily: 'Courier New',
+            color: '#00ffff',
+            fontStyle: 'bold'
+        });
+        titleText.setOrigin(0.5, 0.5);
+        titleText.setDepth(1001);
+        this.time.delayedCall(50, () => titleText.destroy());
+
+        // Display 5 tips
+        const tipStartY = panelY + 80;
+        const tipSpacing = 70;
+
+        this.selectedTips.forEach((tip, index) => {
+            const tipY = tipStartY + index * tipSpacing;
+
+            // Tip number
+            const numberText = this.add.text(panelX + 50, tipY, `${index + 1}.`, {
+                fontSize: '18px',
+                fontFamily: 'Courier New',
+                color: '#ffaa00',
+                fontStyle: 'bold'
+            });
+            numberText.setDepth(1001);
+            this.time.delayedCall(50, () => numberText.destroy());
+
+            // Tip text
+            const tipText = this.add.text(panelX + 80, tipY, tip, {
+                fontSize: '14px',
+                fontFamily: 'Courier New',
+                color: '#aaffaa',
+                wordWrap: { width: panelWidth - 140 }
+            });
+            tipText.setDepth(1001);
+            this.time.delayedCall(50, () => tipText.destroy());
+        });
+
+        // Controls hint
+        const hintText = this.add.text(panelX + panelWidth / 2, panelY + panelHeight - 30, 'X or TAB: Close', {
+            fontSize: '13px',
             fontFamily: 'Courier New',
             color: '#888888'
         });
