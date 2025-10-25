@@ -119,6 +119,12 @@ export class GameScene extends Phaser.Scene {
             // Show game mode notification
             this.notificationSystem.showGameModeNotification();
 
+            // Check for fish whistle activation from NavigationScene
+            if (this.registry.get('fishWhistleActive')) {
+                this.spawnFishWhistleFish();
+                this.registry.set('fishWhistleActive', false);
+            }
+
         } catch (error) {
             console.error('Failed to initialize GameScene:', error);
             // Fallback to boot scene
@@ -273,6 +279,83 @@ export class GameScene extends Phaser.Scene {
         if (this.spawningSystem) {
             this.spawningSystem.trySpawnFish();
         }
+    }
+
+    /**
+     * Fish whistle - spawn trophy fish of each species + large bait clouds
+     */
+    spawnFishWhistleFish() {
+        console.log('🎵 Fish whistle: Spawning trophy fish and large bait clouds...');
+
+        // Get player position
+        let playerWorldX;
+        if (this.iceHoleManager) {
+            const currentHole = this.iceHoleManager.getCurrentHole();
+            if (!currentHole) return;
+            playerWorldX = currentHole.x;
+        } else if (this.boatManager) {
+            playerWorldX = this.boatManager.playerX;
+        } else {
+            return;
+        }
+
+        // Spawn 1 trophy fish of each species
+        const species = ['yellow_perch', 'lake_trout', 'northern_pike', 'smallmouth_bass'];
+
+        species.forEach((speciesName, index) => {
+            // Space them out around the player
+            const angle = (index / species.length) * Math.PI * 2;
+            const distance = 300 + Math.random() * 100;
+            const worldX = playerWorldX + Math.cos(angle) * distance;
+
+            // Depth based on species preference
+            let depth;
+            if (speciesName === 'yellow_perch') {
+                depth = Utils.randomBetween(15, 35); // Shallow-mid
+            } else if (speciesName === 'northern_pike') {
+                depth = Utils.randomBetween(10, 25); // Shallow
+            } else if (speciesName === 'smallmouth_bass') {
+                depth = Utils.randomBetween(20, 40); // Mid
+            } else { // lake_trout
+                depth = Utils.randomBetween(50, 90); // Deep
+            }
+
+            const y = depth * GameConfig.DEPTH_SCALE;
+
+            // All TROPHY size
+            const fish = new Fish(this, worldX, y, 'TROPHY', this.fishingType, speciesName);
+
+            // Set movement direction
+            fish.ai.idleDirection = Math.random() < 0.5 ? -1 : 1;
+
+            this.fishes.push(fish);
+            console.log(`  Spawned trophy ${speciesName} at ${depth}ft`);
+        });
+
+        // Spawn 2 extra large bait clouds
+        for (let i = 0; i < 2; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const distance = 200 + Math.random() * 200;
+            const worldX = playerWorldX + Math.cos(angle) * distance;
+
+            // Random depth between 20-70 feet
+            const depth = Utils.randomBetween(20, 70);
+            const y = depth * GameConfig.DEPTH_SCALE;
+
+            // Large cloud size (80-120 fish)
+            const cloudSize = Math.floor(Utils.randomBetween(80, 120));
+
+            // Random baitfish species
+            const baitSpecies = ['alewife', 'rainbow_smelt', 'yellow_perch'][Math.floor(Math.random() * 3)];
+
+            const cloud = new BaitfishCloud(this, worldX, y, cloudSize, this.fishingType, baitSpecies);
+
+            this.baitfishClouds.push(cloud);
+            console.log(`  Spawned large ${baitSpecies} cloud (${cloudSize} fish) at ${depth}ft`);
+        }
+
+        // Show notification
+        this.notificationSystem.showMessage('Fish Whistle!', 'Trophy fish attracted to the area!');
     }
 
     /**

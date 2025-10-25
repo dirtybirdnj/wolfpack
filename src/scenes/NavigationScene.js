@@ -1041,9 +1041,11 @@ export class NavigationScene extends Phaser.Scene {
     activateFishWhistle() {
         console.log('🎵 Fish whistle activated!');
         this.showInstruction('🎵 *WHISTLE* Attracting fish nearby...');
+
+        // Set registry flag for GameScene to spawn trophy fish and bait clouds
+        this.registry.set('fishWhistleActive', true);
+
         // TODO: Play whistle sound here when audio is implemented
-        // For now, just show a message and note that fish will spawn in GameScene
-        // This feature will need to interface with GameScene's spawning system
     }
 
     renderMenu() {
