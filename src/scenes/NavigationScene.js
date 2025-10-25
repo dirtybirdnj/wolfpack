@@ -122,7 +122,18 @@ export class NavigationScene extends Phaser.Scene {
             triangle: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.W),
             square: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.A),
             circle: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D),
+            select: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.TAB),
         };
+
+        // Menu system
+        this.menuOpen = false;
+        this.menuSelectedIndex = 0;
+        this.menuItems = [
+            { label: 'Navigation Map', action: 'navigationMap' },
+            { label: 'Tackle Box', action: 'tackleBox' },
+            { label: 'Text for Help', action: 'textHelp' },
+            { label: 'Fish Whistle', action: 'fishWhistle' }
+        ];
 
         // Gamepad support - check for already connected gamepad
         if (this.input.gamepad.total > 0) {
@@ -138,11 +149,24 @@ export class NavigationScene extends Phaser.Scene {
         // Track button states for "JustDown" detection
         this.buttonStates = {
             triangle: false,
-            x: false
+            x: false,
+            select: false,
+            up: false,
+            down: false
         };
     }
 
     update(time, delta) {
+        // Check for menu toggle
+        this.handleMenuToggle();
+
+        // If menu is open, handle menu input instead
+        if (this.menuOpen) {
+            this.handleMenuInput();
+            this.renderMenu();
+            return; // Skip normal game updates
+        }
+
         // Handle input
         this.handleInput();
 
@@ -833,6 +857,217 @@ export class NavigationScene extends Phaser.Scene {
         this.time.delayedCall(3000, () => {
             this.instructionText.setText('');
         });
+    }
+
+    handleMenuToggle() {
+        /**
+         * Check if Select button was pressed to toggle menu
+         */
+
+        let selectPressed = false;
+
+        // Keyboard
+        if (Phaser.Input.Keyboard.JustDown(this.keys.select)) {
+            selectPressed = true;
+        }
+
+        // Gamepad - Select button (button 8 on most controllers)
+        if (this.gamepad) {
+            const selectButton = this.gamepad.buttons[8];
+            const selectButtonPressed = selectButton && selectButton.pressed;
+
+            if (selectButtonPressed && !this.buttonStates.select) {
+                selectPressed = true;
+            }
+
+            this.buttonStates.select = selectButtonPressed;
+        }
+
+        if (selectPressed) {
+            this.menuOpen = !this.menuOpen;
+            if (this.menuOpen) {
+                this.menuSelectedIndex = 0; // Reset selection
+                console.log('📋 Menu opened');
+            } else {
+                console.log('📋 Menu closed');
+            }
+        }
+    }
+
+    handleMenuInput() {
+        /**
+         * Handle menu navigation input
+         */
+
+        let upPressed = false;
+        let downPressed = false;
+        let confirmPressed = false;
+
+        // Keyboard
+        if (Phaser.Input.Keyboard.JustDown(this.keys.up)) {
+            upPressed = true;
+        }
+        if (Phaser.Input.Keyboard.JustDown(this.keys.down)) {
+            downPressed = true;
+        }
+        if (Phaser.Input.Keyboard.JustDown(this.keys.x)) {
+            confirmPressed = true;
+        }
+
+        // Gamepad
+        if (this.gamepad) {
+            // D-pad up/down
+            const dpadUp = this.gamepad.buttons[12] && this.gamepad.buttons[12].pressed;
+            const dpadDown = this.gamepad.buttons[13] && this.gamepad.buttons[13].pressed;
+
+            if (dpadUp && !this.buttonStates.up) {
+                upPressed = true;
+            }
+            if (dpadDown && !this.buttonStates.down) {
+                downPressed = true;
+            }
+
+            this.buttonStates.up = dpadUp;
+            this.buttonStates.down = dpadDown;
+
+            // X button (Cross on PlayStation, A on Xbox) - button index 0
+            const xButton = this.gamepad.buttons[0];
+            const xButtonPressed = xButton && xButton.pressed;
+
+            if (xButtonPressed && !this.buttonStates.x) {
+                confirmPressed = true;
+            }
+
+            this.buttonStates.x = xButtonPressed;
+        }
+
+        // Navigate menu
+        if (upPressed) {
+            this.menuSelectedIndex--;
+            if (this.menuSelectedIndex < 0) {
+                this.menuSelectedIndex = this.menuItems.length - 1;
+            }
+        }
+
+        if (downPressed) {
+            this.menuSelectedIndex++;
+            if (this.menuSelectedIndex >= this.menuItems.length) {
+                this.menuSelectedIndex = 0;
+            }
+        }
+
+        // Confirm selection
+        if (confirmPressed) {
+            this.executeMenuAction(this.menuItems[this.menuSelectedIndex].action);
+        }
+    }
+
+    executeMenuAction(action) {
+        /**
+         * Execute the selected menu action
+         */
+
+        console.log(`🎯 Menu action: ${action}`);
+
+        switch (action) {
+            case 'navigationMap':
+                this.showInstruction('Navigation Map - Full bay view (Coming Soon)');
+                this.menuOpen = false;
+                break;
+
+            case 'tackleBox':
+                this.showInstruction('Tackle Box - Change lures & gear (Coming Soon)');
+                this.menuOpen = false;
+                break;
+
+            case 'textHelp':
+                this.showInstruction('📱 Texting for help... "Send coordinates!"');
+                this.menuOpen = false;
+                // Could add actual help message or GPS coordinates later
+                break;
+
+            case 'fishWhistle':
+                this.showInstruction('🎵 *WHISTLE* Attracting fish nearby...');
+                this.menuOpen = false;
+                // Could trigger fish spawn or attraction mechanic later
+                break;
+        }
+    }
+
+    renderMenu() {
+        /**
+         * Draw the menu overlay
+         */
+
+        // Clear previous UI graphics
+        this.uiGraphics.clear();
+
+        // Semi-transparent overlay
+        this.uiGraphics.fillStyle(0x000000, 0.85);
+        this.uiGraphics.fillRect(0, 0, this.viewportWidth, this.viewportHeight);
+
+        // Menu panel
+        const menuWidth = 400;
+        const menuHeight = 350;
+        const menuX = (this.viewportWidth - menuWidth) / 2;
+        const menuY = (this.viewportHeight - menuHeight) / 2;
+
+        // Panel background
+        this.uiGraphics.fillStyle(0x1a2a3a, 1.0);
+        this.uiGraphics.fillRoundedRect(menuX, menuY, menuWidth, menuHeight, 12);
+
+        // Panel border
+        this.uiGraphics.lineStyle(3, 0x00ff00, 1.0);
+        this.uiGraphics.strokeRoundedRect(menuX, menuY, menuWidth, menuHeight, 12);
+
+        // Title
+        const titleText = this.add.text(menuX + menuWidth / 2, menuY + 30, 'PAUSE MENU', {
+            fontSize: '24px',
+            fontFamily: 'Courier New',
+            color: '#00ff00',
+            fontStyle: 'bold'
+        });
+        titleText.setOrigin(0.5, 0.5);
+        titleText.setDepth(1001);
+        this.time.delayedCall(50, () => titleText.destroy());
+
+        // Menu items
+        const itemStartY = menuY + 80;
+        const itemHeight = 50;
+
+        this.menuItems.forEach((item, index) => {
+            const itemY = itemStartY + index * itemHeight;
+            const isSelected = index === this.menuSelectedIndex;
+
+            // Item background (highlight if selected)
+            if (isSelected) {
+                this.uiGraphics.fillStyle(0x3a5a4a, 1.0);
+                this.uiGraphics.fillRoundedRect(menuX + 20, itemY - 20, menuWidth - 40, 45, 8);
+                this.uiGraphics.lineStyle(2, 0x00ffff, 1.0);
+                this.uiGraphics.strokeRoundedRect(menuX + 20, itemY - 20, menuWidth - 40, 45, 8);
+            }
+
+            // Item text
+            const itemText = this.add.text(menuX + menuWidth / 2, itemY, item.label, {
+                fontSize: isSelected ? '20px' : '18px',
+                fontFamily: 'Courier New',
+                color: isSelected ? '#00ffff' : '#aaffaa',
+                fontStyle: isSelected ? 'bold' : 'normal'
+            });
+            itemText.setOrigin(0.5, 0.5);
+            itemText.setDepth(1001);
+            this.time.delayedCall(50, () => itemText.destroy());
+        });
+
+        // Controls hint
+        const hintText = this.add.text(menuX + menuWidth / 2, menuY + menuHeight - 30, '↑↓: Navigate | X: Select | TAB: Close', {
+            fontSize: '12px',
+            fontFamily: 'Courier New',
+            color: '#888888'
+        });
+        hintText.setOrigin(0.5, 0.5);
+        hintText.setDepth(1001);
+        this.time.delayedCall(50, () => hintText.destroy());
     }
 
     startFishing() {
