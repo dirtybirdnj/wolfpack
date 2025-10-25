@@ -365,6 +365,17 @@ export class Fish {
             const offsetFromPlayer = this.worldX - playerWorldX;
             this.x = (GameConfig.CANVAS_WIDTH / 2) + offsetFromPlayer;
 
+            // Clamp screen position to keep fish visible on screen
+            // Add margins to ensure fish don't swim off visible area
+            const screenMargin = 30; // pixels from edge
+            this.x = Math.max(screenMargin, Math.min(GameConfig.CANVAS_WIDTH - screenMargin, this.x));
+
+            // If fish hit screen boundary, also adjust world position to match
+            // This prevents fish from "sticking" to screen edge while trying to swim off
+            if (this.x <= screenMargin || this.x >= GameConfig.CANVAS_WIDTH - screenMargin) {
+                this.worldX = playerWorldX + (this.x - (GameConfig.CANVAS_WIDTH / 2));
+            }
+
             // Update sonar trail
             this.updateSonarTrail();
 

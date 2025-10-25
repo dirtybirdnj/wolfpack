@@ -320,7 +320,7 @@ export class BoatManager {
 
     updateUI() {
         if (this.fishingType === GameConfig.FISHING_TYPE_KAYAK) {
-            // Update tiredness meter
+            // Update tiredness meter (legacy bottom panel)
             const tirednessEl = document.getElementById('kayak-tiredness');
             if (tirednessEl) {
                 tirednessEl.textContent = `${Math.floor(this.tiredness)}%`;
@@ -338,8 +338,20 @@ export class BoatManager {
                     tirednessFillEl.style.background = 'var(--border-primary)';
                 }
             }
+
+            // Update top status bar stamina display
+            const staminaEl = document.getElementById('ui-kayak-stamina');
+            if (staminaEl) {
+                staminaEl.textContent = Math.floor(100 - this.tiredness); // Convert tiredness to stamina
+            }
+
+            // Show kayak status, hide boat status
+            const kayakStatusEl = document.getElementById('ui-kayak-status');
+            const boatStatusEl = document.getElementById('ui-boat-status');
+            if (kayakStatusEl) kayakStatusEl.style.display = 'block';
+            if (boatStatusEl) boatStatusEl.style.display = 'none';
         } else {
-            // Update gas meter
+            // Update gas meter (legacy bottom panel)
             const gasEl = document.getElementById('motorboat-gas');
             if (gasEl) {
                 gasEl.textContent = `${Math.floor(this.gasLevel)}%`;
@@ -364,6 +376,18 @@ export class BoatManager {
                 const distanceToDocks = Math.abs(this.playerX - GameConfig.MOTORBOAT_DOCK_POSITION);
                 distanceEl.textContent = `${Math.floor(distanceToDocks / 10)}ft`;
             }
+
+            // Update top status bar fuel display
+            const fuelEl = document.getElementById('ui-boat-fuel');
+            if (fuelEl) {
+                fuelEl.textContent = Math.floor(this.gasLevel);
+            }
+
+            // Show boat status, hide kayak status
+            const kayakStatusEl = document.getElementById('ui-kayak-status');
+            const boatStatusEl = document.getElementById('ui-boat-status');
+            if (kayakStatusEl) kayakStatusEl.style.display = 'none';
+            if (boatStatusEl) boatStatusEl.style.display = 'block';
         }
     }
 

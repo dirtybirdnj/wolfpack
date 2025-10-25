@@ -273,6 +273,7 @@ export class GameScene extends Phaser.Scene {
         this.collisionSystem.update(time, delta);
         this.debugSystem.update(time, delta);
         this.scoreSystem.update(time, delta);
+        this.notificationSystem.update(time, delta);
 
         // Check for emergency fish spawn (arcade mode)
         this.spawningSystem.checkEmergencySpawn();
