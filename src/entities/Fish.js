@@ -430,12 +430,6 @@ export class Fish {
 
             // Update sonar trail
             this.updateSonarTrail();
-
-            // Remove fish if too far from player in world coordinates (beyond ~500 units)
-            const distanceFromPlayer = Math.abs(this.worldX - playerWorldX);
-            if (distanceFromPlayer > 500) {
-                this.visible = false;
-            }
         }
 
         // Always render (whether in fight or not)
