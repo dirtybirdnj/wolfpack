@@ -113,9 +113,10 @@ export class BaitfishCloud {
             this.velocity.x = Math.max(-1.5, Math.min(1.5, this.velocity.x));
             this.velocity.y = Math.max(-1.0, Math.min(1.0, this.velocity.y));
 
-            // Condense the school when scared BUT not too tight (0.4 to 0.7 instead of 0.3-0.6)
-            // This prevents fish from bunching into a single-file line
-            this.spreadMultiplier = Math.max(0.4, 1.0 - (this.scaredLevel * 0.6));
+            // Condense the school when scared BUT maintain larger minimum size
+            // Changed from 0.4-0.7 to 0.8-1.0 to keep clouds looser when frenzying
+            // This prevents fish from bunching into a tight ball
+            this.spreadMultiplier = Math.max(0.8, 1.0 - (this.scaredLevel * 0.2));
         } else {
             // Calm down slowly when no lakers nearby
             this.scaredLevel = Math.max(0, this.scaredLevel - 0.02);

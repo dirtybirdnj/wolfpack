@@ -122,11 +122,11 @@ export class Baitfish {
 
         // Apply spread multiplier to schooling offset range
         // When safe: larger spread (spreadMultiplier ~2.0)
-        // When scared: condensed but maintain minimum separation
-        const minOffsetX = 25; // Minimum horizontal spread to prevent concentration
-        const minOffsetY = 15; // Minimum vertical spread
-        const maxOffsetX = Math.max(minOffsetX, 30 * spreadMultiplier);
-        const maxOffsetY = Math.max(minOffsetY, 20 * spreadMultiplier);
+        // When scared: maintain larger minimum size to prevent compression
+        const minOffsetX = 40; // Increased from 25 - minimum horizontal spread
+        const minOffsetY = 25; // Increased from 15 - minimum vertical spread
+        const maxOffsetX = Math.max(minOffsetX, 50 * spreadMultiplier); // Increased from 30
+        const maxOffsetY = Math.max(minOffsetY, 30 * spreadMultiplier); // Increased from 20
 
         // Schooling behavior - stay near cloud center with dynamic offset (use world coordinates)
         this.targetWorldX = cloudCenter.worldX + this.schoolingOffset.x * spreadMultiplier;
@@ -137,7 +137,7 @@ export class Baitfish {
         let separationX = 0;
         let separationY = 0;
         let nearbyCount = 0;
-        const separationRadius = 8; // pixels - minimum distance between fish
+        const separationRadius = 12; // Increased from 8 - minimum distance between fish
 
         otherBaitfish.forEach(other => {
             if (other === this || !other.visible || other.consumed) return;
