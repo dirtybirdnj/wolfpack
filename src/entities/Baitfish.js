@@ -191,19 +191,24 @@ export class Baitfish {
             this.targetWorldX += separationX;
             this.targetY += separationY;
 
+            // BOUNDARY DETECTION: Reduce cohesion/alignment near surface to prevent adhesion
+            const surfaceLimit = 50; // Within 50px (~14 feet) of surface
+            const nearSurface = this.y <= surfaceLimit;
+            const boundaryPenalty = nearSurface ? 0.3 : 1.0; // 70% reduction near surface
+
             // Rule 2: COHESION - steer towards average position of neighbors
             const avgNeighborX = cohesionX / neighborCount;
             const avgNeighborY = cohesionY / neighborCount;
-            const cohesionForceX = (avgNeighborX - this.worldX) * 0.05; // Gentle pull towards center
-            const cohesionForceY = (avgNeighborY - this.y) * 0.05;
+            const cohesionForceX = (avgNeighborX - this.worldX) * 0.05 * boundaryPenalty;
+            const cohesionForceY = (avgNeighborY - this.y) * 0.05 * boundaryPenalty;
             this.targetWorldX += cohesionForceX;
             this.targetY += cohesionForceY;
 
             // Rule 3: ALIGNMENT - match average velocity of neighbors
             const avgVelocityX = alignmentX / neighborCount;
             const avgVelocityY = alignmentY / neighborCount;
-            const alignmentForceX = (avgVelocityX - this.velocityX) * 0.1; // Moderate alignment
-            const alignmentForceY = (avgVelocityY - this.velocityY) * 0.1;
+            const alignmentForceX = (avgVelocityX - this.velocityX) * 0.1 * boundaryPenalty;
+            const alignmentForceY = (avgVelocityY - this.velocityY) * 0.1 * boundaryPenalty;
             this.targetWorldX += alignmentForceX;
             this.targetY += alignmentForceY;
         }
@@ -430,19 +435,24 @@ export class Baitfish {
                 this.targetWorldX += separationX;
                 this.targetY += separationY;
 
+                // BOUNDARY DETECTION: Reduce cohesion/alignment near surface
+                const surfaceLimit = 50;
+                const nearSurface = this.y <= surfaceLimit;
+                const boundaryPenalty = nearSurface ? 0.3 : 1.0;
+
                 // Rule 2: COHESION - steer towards neighbors (weaker during hunting)
                 const avgNeighborX = cohesionX / neighborCount;
                 const avgNeighborY = cohesionY / neighborCount;
-                const cohesionForceX = (avgNeighborX - this.worldX) * 0.03; // Weaker than normal
-                const cohesionForceY = (avgNeighborY - this.y) * 0.03;
+                const cohesionForceX = (avgNeighborX - this.worldX) * 0.03 * boundaryPenalty;
+                const cohesionForceY = (avgNeighborY - this.y) * 0.03 * boundaryPenalty;
                 this.targetWorldX += cohesionForceX;
                 this.targetY += cohesionForceY;
 
                 // Rule 3: ALIGNMENT - match velocity
                 const avgVelocityX = alignmentX / neighborCount;
                 const avgVelocityY = alignmentY / neighborCount;
-                const alignmentForceX = (avgVelocityX - this.velocityX) * 0.08;
-                const alignmentForceY = (avgVelocityY - this.velocityY) * 0.08;
+                const alignmentForceX = (avgVelocityX - this.velocityX) * 0.08 * boundaryPenalty;
+                const alignmentForceY = (avgVelocityY - this.velocityY) * 0.08 * boundaryPenalty;
                 this.targetWorldX += alignmentForceX;
                 this.targetY += alignmentForceY;
             }
