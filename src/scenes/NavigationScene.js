@@ -23,7 +23,7 @@ export class NavigationScene extends Phaser.Scene {
 
         // Player position in world coordinates
         this.playerWorldX = 0;
-        this.playerWorldY = 5000; // Middle of map north-south
+        this.playerWorldY = 30000; // Middle of map north-south (full lake: 0-60000)
 
         // Set starting position based on game mode
         this.setStartingPosition();
@@ -85,8 +85,8 @@ export class NavigationScene extends Phaser.Scene {
     setStartingPosition() {
         /**
          * Set player starting position based on game mode
-         * New coordinate system: 20000 x 30000 (covers Cumberland Head to Four Brothers)
-         * Burlington is on east shore (x=0-2000), mid-lake vertically (y=12000-18000)
+         * New coordinate system: 20000 x 60000 (full Lake Champlain, Whitehall to Canadian border)
+         * Burlington is on east shore (x=0-2000), at y=32000-42000
          */
         if (this.gameMode === GameConfig.GAME_MODE_ARCADE) {
             // Arcade mode: Start in a good spot with moderate depth (perch territory)
@@ -99,12 +99,12 @@ export class NavigationScene extends Phaser.Scene {
             } else {
                 // Fallback - off Burlington waterfront
                 this.playerWorldX = 2500;
-                this.playerWorldY = 15000; // Mid-lake
+                this.playerWorldY = 37000; // Burlington area
             }
         } else {
             // Unlimited mode: Start near Burlington waterfront
             this.playerWorldX = 1000; // Just off Burlington shore
-            this.playerWorldY = 15000; // Mid-lake vertically (Burlington area)
+            this.playerWorldY = 37000; // Burlington area (central lake)
             console.log('🏖️ Unlimited mode: Starting near Burlington shore - explore the lake');
         }
     }
@@ -338,9 +338,9 @@ export class NavigationScene extends Phaser.Scene {
             this.playerWorldX += this.velocity.x;
             this.playerWorldY += this.velocity.y;
 
-            // Keep player in bounds
-            this.playerWorldX = Math.max(0, Math.min(10000, this.playerWorldX));
-            this.playerWorldY = Math.max(0, Math.min(10000, this.playerWorldY));
+            // Keep player in bounds (full lake: 20000 x 60000)
+            this.playerWorldX = Math.max(0, Math.min(20000, this.playerWorldX));
+            this.playerWorldY = Math.max(0, Math.min(60000, this.playerWorldY));
         }
     }
 
@@ -454,7 +454,7 @@ export class NavigationScene extends Phaser.Scene {
                 const worldX = this.playerWorldX + dx;
                 const worldY = this.playerWorldY + dy;
 
-                if (worldX < 0 || worldX >= 10000 || worldY < 0 || worldY >= 10000) continue;
+                if (worldX < 0 || worldX >= 20000 || worldY < 0 || worldY >= 60000) continue;
 
                 const depth = this.bathyData.getDepthAtPosition(worldX, worldY);
 
@@ -690,11 +690,11 @@ export class NavigationScene extends Phaser.Scene {
     renderOverviewMap() {
         /**
          * Draw overview map in bottom-right corner
-         * Shows player position in Burlington Bay
+         * Shows player position in full Lake Champlain
          */
 
         const mapWidth = 200;
-        const mapHeight = 150;
+        const mapHeight = 300; // Taller to show full lake
         const mapX = this.viewportWidth - mapWidth - 20;
         const mapY = this.viewportHeight - mapHeight - 20;
 
@@ -713,7 +713,7 @@ export class NavigationScene extends Phaser.Scene {
             color: '#00ff00',
             fontStyle: 'bold'
         };
-        const title = this.add.text(mapX + 10, mapY + 8, 'BURLINGTON BAY', titleStyle);
+        const title = this.add.text(mapX + 10, mapY + 8, 'LAKE CHAMPLAIN', titleStyle);
         title.setDepth(1000);
         this.time.delayedCall(50, () => title.destroy());
 
@@ -723,29 +723,18 @@ export class NavigationScene extends Phaser.Scene {
         const chartWidth = mapWidth - 30;
         const chartHeight = mapHeight - 38;
 
-        // Draw depth zones as colored areas
-        // East (shallow) to West (deep)
-        const zones = [
-            { start: 0, end: 0.15, color: 0x88ccff, name: 'Shore' },      // 0-1500: Very shallow (10-25ft)
-            { start: 0.15, end: 0.35, color: 0x6699cc, name: 'Shelf' },   // 1500-3500: Shelf (25-50ft)
-            { start: 0.35, end: 0.60, color: 0x4466aa, name: 'Drop' },    // 3500-6000: Transitional (50-90ft)
-            { start: 0.60, end: 1.0, color: 0x223388, name: 'Deep' }      // 6000-10000: Deep (90-150ft)
-        ];
+        // Draw simple depth gradient (darker = deeper)
+        this.uiGraphics.fillStyle(0x4488aa, 0.6);
+        this.uiGraphics.fillRect(chartX, chartY, chartWidth, chartHeight);
 
-        zones.forEach(zone => {
-            const zoneX = chartX + zone.start * chartWidth;
-            const zoneWidth = (zone.end - zone.start) * chartWidth;
-            this.uiGraphics.fillStyle(zone.color, 0.6);
-            this.uiGraphics.fillRect(zoneX, chartY, zoneWidth, chartHeight);
-        });
+        // Draw shorelines (both sides - lake is narrow)
+        this.uiGraphics.lineStyle(2, 0x88ff88, 0.8);
+        this.uiGraphics.lineBetween(chartX, chartY, chartX, chartY + chartHeight); // Vermont (east)
+        this.uiGraphics.lineBetween(chartX + chartWidth, chartY, chartX + chartWidth, chartY + chartHeight); // NY (west)
 
-        // Draw shoreline (left edge - Burlington waterfront)
-        this.uiGraphics.lineStyle(3, 0x00ff00, 0.8);
-        this.uiGraphics.lineBetween(chartX, chartY, chartX, chartY + chartHeight);
-
-        // Draw player position (expanded map)
+        // Draw player position (full lake map)
         const playerXNorm = this.playerWorldX / 20000; // Normalize 0-1
-        const playerYNorm = this.playerWorldY / 30000;
+        const playerYNorm = this.playerWorldY / 60000; // Full lake
 
         const playerScreenX = chartX + playerXNorm * chartWidth;
         const playerScreenY = chartY + playerYNorm * chartHeight;
@@ -763,12 +752,38 @@ export class NavigationScene extends Phaser.Scene {
         this.uiGraphics.lineStyle(2, 0x00ff00, 1.0);
         this.uiGraphics.lineBetween(playerScreenX, playerScreenY, arrowX, arrowY);
 
+        // Add city markers
+        const cities = [
+            { name: 'Whitehall', y: 0.05 },
+            { name: 'Ticonderoga', y: 0.22 },
+            { name: 'Crown Point', y: 0.30 },
+            { name: 'Four Brothers', y: 0.50 },
+            { name: 'Burlington', y: 0.62 },
+            { name: 'Plattsburgh', y: 0.77 },
+            { name: 'Grand Isle', y: 0.90 }
+        ];
+
+        cities.forEach(city => {
+            const cityY = chartY + city.y * chartHeight;
+            this.uiGraphics.fillStyle(0xffff00, 0.8);
+            this.uiGraphics.fillCircle(chartX + 2, cityY, 2);
+
+            const cityLabel = this.add.text(chartX + 6, cityY, city.name, {
+                fontSize: '7px',
+                fontFamily: 'Courier New',
+                color: '#ffff88'
+            });
+            cityLabel.setOrigin(0, 0.5);
+            cityLabel.setDepth(1000);
+            this.time.delayedCall(50, () => cityLabel.destroy());
+        });
+
         // Distance from Vermont shore
         const distFromShore = this.playerWorldX; // Units from Vermont shore
-        const distMiles = (distFromShore / 1000 * 0.6).toFixed(1); // Rough conversion (20000 units ~ 12km)
+        const distMiles = (distFromShore / 1000 * 0.6).toFixed(1); // Rough conversion
 
-        const distText = this.add.text(mapX + mapWidth / 2, mapY + mapHeight - 8, `${distMiles}mi from shore`, {
-            fontSize: '9px',
+        const distText = this.add.text(mapX + mapWidth / 2, mapY + mapHeight - 8, `${distMiles}mi from VT`, {
+            fontSize: '8px',
             fontFamily: 'Courier New',
             color: '#88ff88'
         });
@@ -1152,9 +1167,9 @@ export class NavigationScene extends Phaser.Scene {
             moved = true;
         }
 
-        // Clamp cursor to map bounds (expanded map: 20000 x 30000)
+        // Clamp cursor to map bounds (full lake: 20000 x 60000)
         this.navMapCursorX = Math.max(0, Math.min(20000, this.navMapCursorX));
-        this.navMapCursorY = Math.max(0, Math.min(30000, this.navMapCursorY));
+        this.navMapCursorY = Math.max(0, Math.min(60000, this.navMapCursorY));
 
         // X button (B on 8bitdo) to fast travel
         let confirmPressed = false;
@@ -1221,7 +1236,7 @@ export class NavigationScene extends Phaser.Scene {
         this.uiGraphics.strokeRoundedRect(mapX, mapY, mapWidth, mapHeight, 12);
 
         // Title
-        const titleText = this.add.text(mapX + mapWidth / 2, mapY + 25, 'LAKE CHAMPLAIN - NOAA CHART 14782', {
+        const titleText = this.add.text(mapX + mapWidth / 2, mapY + 25, 'LAKE CHAMPLAIN - FULL COVERAGE', {
             fontSize: '18px',
             fontFamily: 'Courier New',
             color: '#00ff00',
@@ -1232,8 +1247,8 @@ export class NavigationScene extends Phaser.Scene {
         this.time.delayedCall(50, () => titleText.destroy());
 
         // Subtitle
-        const subtitleText = this.add.text(mapX + mapWidth / 2, mapY + 45, 'Cumberland Head to Four Brothers Islands', {
-            fontSize: '12px',
+        const subtitleText = this.add.text(mapX + mapWidth / 2, mapY + 45, 'NOAA Charts 14781-14784 • Whitehall to Canadian Border', {
+            fontSize: '11px',
             fontFamily: 'Courier New',
             color: '#88ff88'
         });
@@ -1247,23 +1262,21 @@ export class NavigationScene extends Phaser.Scene {
         const chartWidth = mapWidth - 120;
         const chartHeight = mapHeight - 130;
 
-        // Draw depth zones for expanded map
-        // Simulates depth gradient from NOAA chart
-        const zones = [
-            { start: 0, end: 0.10, color: 0xaaddff, label: 'VT Shore' },      // Vermont nearshore 10-30ft
-            { start: 0.10, end: 0.25, color: 0x88bbee, label: 'VT Shelf' },   // VT shelf 30-60ft
-            { start: 0.25, end: 0.45, color: 0x6699dd, label: 'Mid-Lake' },   // Transitional 60-100ft
-            { start: 0.45, end: 0.55, color: 0x3366aa, label: 'Channel' },    // Deep channel 100-200ft
-            { start: 0.55, end: 0.75, color: 0x5588cc, label: 'Mid-Lake' },   // Transitional
-            { start: 0.75, end: 0.90, color: 0x7799dd, label: 'NY Shelf' },   // NY shelf
-            { start: 0.90, end: 1.0, color: 0x99bbee, label: 'NY Shore' }     // NY nearshore
+        // Draw depth gradient (simple vertical gradient showing lake deepening from south to north)
+        const depthGradient = [
+            { yStart: 0.00, yEnd: 0.13, color: 0xaaddff }, // Whitehall - shallow
+            { yStart: 0.13, yEnd: 0.30, color: 0x88bbee }, // Ticonderoga - moderate
+            { yStart: 0.30, yEnd: 0.53, color: 0x6699dd }, // Widening - deeper
+            { yStart: 0.53, yEnd: 0.70, color: 0x4466aa }, // Burlington - deepest
+            { yStart: 0.70, yEnd: 0.83, color: 0x5588cc }, // Plattsburgh - deep
+            { yStart: 0.83, yEnd: 1.00, color: 0x7799dd }  // Northern islands - moderate
         ];
 
-        zones.forEach(zone => {
-            const zoneX = chartX + zone.start * chartWidth;
-            const zoneWidth = (zone.end - zone.start) * chartWidth;
+        depthGradient.forEach(zone => {
+            const zoneY = chartY + zone.yStart * chartHeight;
+            const zoneHeight = (zone.yEnd - zone.yStart) * chartHeight;
             this.uiGraphics.fillStyle(zone.color, 0.7);
-            this.uiGraphics.fillRect(zoneX, chartY, zoneWidth, chartHeight);
+            this.uiGraphics.fillRect(chartX, zoneY, chartWidth, zoneHeight);
         });
 
         // Draw Vermont shoreline (left/east)
@@ -1274,34 +1287,55 @@ export class NavigationScene extends Phaser.Scene {
         this.uiGraphics.lineStyle(3, 0x88ff88, 1.0);
         this.uiGraphics.lineBetween(chartX + chartWidth, chartY, chartX + chartWidth, chartY + chartHeight);
 
-        // Draw Burlington marker
-        const burlingtonY = chartY + (15000 / 30000) * chartHeight; // Mid-map
-        this.uiGraphics.fillStyle(0xffff00, 1.0);
-        this.uiGraphics.fillCircle(chartX + 5, burlingtonY, 4);
-        const burlingtonLabel = this.add.text(chartX + 12, burlingtonY, 'Burlington', {
-            fontSize: '10px',
-            fontFamily: 'Courier New',
-            color: '#ffff00'
-        });
-        burlingtonLabel.setDepth(1001);
-        this.time.delayedCall(50, () => burlingtonLabel.destroy());
+        // Draw city markers along the lake
+        const landmarks = [
+            { name: 'Whitehall', y: 3000, side: 'west' },
+            { name: 'Ticonderoga', y: 13000, side: 'west' },
+            { name: 'Crown Point', y: 18000, side: 'west' },
+            { name: 'Split Rock', y: 23000, side: 'west' },
+            { name: 'Four Brothers', y: 30000, side: 'center' },
+            { name: 'Burlington', y: 37000, side: 'east' },
+            { name: 'Plattsburgh', y: 46000, side: 'west' },
+            { name: 'Grand Isle', y: 52000, side: 'center' },
+            { name: 'South Hero', y: 56000, side: 'east' }
+        ];
 
-        // Draw Plattsburgh marker
-        const plattsburghY = chartY + (25000 / 30000) * chartHeight; // Northern section
-        this.uiGraphics.fillStyle(0xffff00, 1.0);
-        this.uiGraphics.fillCircle(chartX + chartWidth - 5, plattsburghY, 4);
-        const plattsburghLabel = this.add.text(chartX + chartWidth - 70, plattsburghY, 'Plattsburgh', {
-            fontSize: '10px',
-            fontFamily: 'Courier New',
-            color: '#ffff00'
-        });
-        plattsburghLabel.setOrigin(1, 0.5);
-        plattsburghLabel.setDepth(1001);
-        this.time.delayedCall(50, () => plattsburghLabel.destroy());
+        landmarks.forEach(landmark => {
+            const landmarkY = chartY + (landmark.y / 60000) * chartHeight;
+            let landmarkX;
+            let labelX;
+            let labelOrigin;
 
-        // Draw player current position (expanded coordinates)
+            if (landmark.side === 'east') {
+                landmarkX = chartX + 5;
+                labelX = chartX + 12;
+                labelOrigin = 0;
+            } else if (landmark.side === 'west') {
+                landmarkX = chartX + chartWidth - 5;
+                labelX = chartX + chartWidth - 12;
+                labelOrigin = 1;
+            } else {
+                landmarkX = chartX + chartWidth / 2;
+                labelX = chartX + chartWidth / 2;
+                labelOrigin = 0.5;
+            }
+
+            this.uiGraphics.fillStyle(0xffff00, 1.0);
+            this.uiGraphics.fillCircle(landmarkX, landmarkY, 4);
+
+            const label = this.add.text(labelX, landmarkY, landmark.name, {
+                fontSize: '9px',
+                fontFamily: 'Courier New',
+                color: '#ffff00'
+            });
+            label.setOrigin(labelOrigin, 0.5);
+            label.setDepth(1001);
+            this.time.delayedCall(50, () => label.destroy());
+        });
+
+        // Draw player current position (full lake coordinates)
         const playerXNorm = this.playerWorldX / 20000;
-        const playerYNorm = this.playerWorldY / 30000;
+        const playerYNorm = this.playerWorldY / 60000;
         const playerScreenX = chartX + playerXNorm * chartWidth;
         const playerScreenY = chartY + playerYNorm * chartHeight;
 
@@ -1310,9 +1344,9 @@ export class NavigationScene extends Phaser.Scene {
         this.uiGraphics.lineStyle(2, 0x00ff00, 1.0);
         this.uiGraphics.strokeCircle(playerScreenX, playerScreenY, 12);
 
-        // Draw cursor position (expanded coordinates)
+        // Draw cursor position (full lake coordinates)
         const cursorXNorm = this.navMapCursorX / 20000;
-        const cursorYNorm = this.navMapCursorY / 30000;
+        const cursorYNorm = this.navMapCursorY / 60000;
         const cursorScreenX = chartX + cursorXNorm * chartWidth;
         const cursorScreenY = chartY + cursorYNorm * chartHeight;
 
