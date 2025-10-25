@@ -158,50 +158,64 @@ function setupDevTools(game) {
         }
     }, 100);
 
-    // Spawn Fish Button
-    document.getElementById('spawn-fish-btn').addEventListener('click', () => {
-        const gameScene = game.scene.getScene('GameScene');
-        if (gameScene && gameScene.scene.isActive()) {
-            gameScene.trySpawnFish();
-            console.log('Spawned 1 fish');
-        }
-    });
-
-    // Spawn 5 Fish Button
-    document.getElementById('spawn-5-fish-btn').addEventListener('click', () => {
-        const gameScene = game.scene.getScene('GameScene');
-        if (gameScene && gameScene.scene.isActive()) {
-            for (let i = 0; i < 5; i++) {
+    // Spawn Fish Button (dev controls - may not exist in production)
+    const spawnFishBtn = document.getElementById('spawn-fish-btn');
+    if (spawnFishBtn) {
+        spawnFishBtn.addEventListener('click', () => {
+            const gameScene = game.scene.getScene('GameScene');
+            if (gameScene && gameScene.scene.isActive()) {
                 gameScene.trySpawnFish();
+                console.log('Spawned 1 fish');
             }
-            console.log('Spawned 5 fish');
-        }
-    });
+        });
+    }
 
-    // Reset Game Button
-    document.getElementById('reset-game-btn').addEventListener('click', () => {
-        const gameScene = game.scene.getScene('GameScene');
-        if (gameScene && gameScene.scene.isActive()) {
-            gameScene.scene.restart();
-            console.log('Game reset');
-        }
-    });
+    // Spawn 5 Fish Button (dev controls - may not exist in production)
+    const spawn5FishBtn = document.getElementById('spawn-5-fish-btn');
+    if (spawn5FishBtn) {
+        spawn5FishBtn.addEventListener('click', () => {
+            const gameScene = game.scene.getScene('GameScene');
+            if (gameScene && gameScene.scene.isActive()) {
+                for (let i = 0; i < 5; i++) {
+                    gameScene.trySpawnFish();
+                }
+                console.log('Spawned 5 fish');
+            }
+        });
+    }
 
-    // Toggle Debug Info Button
+    // Reset Game Button (dev controls - may not exist in production)
+    const resetGameBtn = document.getElementById('reset-game-btn');
+    if (resetGameBtn) {
+        resetGameBtn.addEventListener('click', () => {
+            const gameScene = game.scene.getScene('GameScene');
+            if (gameScene && gameScene.scene.isActive()) {
+                gameScene.scene.restart();
+                console.log('Game reset');
+            }
+        });
+    }
+
+    // Toggle Debug Info Button (dev controls - may not exist in production)
     let debugMode = false;
-    document.getElementById('toggle-debug-btn').addEventListener('click', () => {
-        const gameScene = game.scene.getScene('GameScene');
-        if (gameScene && gameScene.scene.isActive()) {
-            debugMode = !debugMode;
-            gameScene.debugMode = debugMode;
-            console.log('Debug mode:', debugMode ? 'ON' : 'OFF');
+    const toggleDebugBtn = document.getElementById('toggle-debug-btn');
+    if (toggleDebugBtn) {
+        toggleDebugBtn.addEventListener('click', () => {
+            const gameScene = game.scene.getScene('GameScene');
+            if (gameScene && gameScene.scene.isActive()) {
+                debugMode = !debugMode;
+                gameScene.debugMode = debugMode;
+                console.log('Debug mode:', debugMode ? 'ON' : 'OFF');
 
-            // Visual feedback
-            const btn = document.getElementById('toggle-debug-btn');
-            btn.textContent = debugMode ? 'Debug: ON' : 'Toggle Debug Info';
-            btn.style.background = debugMode ? '#ffaa00' : '#00ff00';
-        }
-    });
+                // Visual feedback
+                const btn = document.getElementById('toggle-debug-btn');
+                if (btn) {
+                    btn.textContent = debugMode ? 'Debug: ON' : 'Toggle Debug Info';
+                    btn.style.background = debugMode ? '#ffaa00' : '#00ff00';
+                }
+            }
+        });
+    }
 
     // Lure Weight Buttons
     const lureWeights = [0.25, 0.5, 1, 2, 3, 4];
@@ -212,7 +226,10 @@ function setupDevTools(game) {
                 const gameScene = game.scene.getScene('GameScene');
                 if (gameScene && gameScene.scene.isActive() && gameScene.lure) {
                     gameScene.lure.weight = weight;
-                    document.getElementById('current-lure-weight').textContent = `${weight}oz`;
+                    const currentWeightEl = document.getElementById('current-lure-weight');
+                    if (currentWeightEl) {
+                        currentWeightEl.textContent = `${weight}oz`;
+                    }
                     console.log(`Lure weight changed to ${weight}oz`);
 
                     // Visual feedback - highlight selected button
@@ -231,7 +248,10 @@ function setupDevTools(game) {
     setTimeout(() => {
         const gameScene = game.scene.getScene('GameScene');
         if (gameScene && gameScene.scene.isActive() && gameScene.lure) {
-            document.getElementById('current-lure-weight').textContent = `${gameScene.lure.weight}oz`;
+            const currentWeightEl = document.getElementById('current-lure-weight');
+            if (currentWeightEl) {
+                currentWeightEl.textContent = `${gameScene.lure.weight}oz`;
+            }
             // Highlight default weight button
             const defaultBtn = document.getElementById(`lure-weight-${gameScene.lure.weight}`);
             if (defaultBtn) {
@@ -255,7 +275,10 @@ function setupDevTools(game) {
                 const gameScene = game.scene.getScene('GameScene');
                 if (gameScene && gameScene.scene.isActive() && gameScene.fishingLineModel) {
                     gameScene.fishingLineModel.setLineType(lineType);
-                    document.getElementById('current-line-type').textContent = lineTypeLabels[lineType];
+                    const currentLineTypeEl = document.getElementById('current-line-type');
+                    if (currentLineTypeEl) {
+                        currentLineTypeEl.textContent = lineTypeLabels[lineType];
+                    }
                     console.log(`Fishing line changed to ${lineTypeLabels[lineType]}`);
 
                     // Visual feedback - highlight selected button
@@ -292,7 +315,10 @@ function setupDevTools(game) {
                 const gameScene = game.scene.getScene('GameScene');
                 if (gameScene && gameScene.scene.isActive() && gameScene.fishingLineModel) {
                     gameScene.fishingLineModel.setBraidColor(color);
-                    document.getElementById('current-braid-color').textContent = braidColorLabels[color];
+                    const currentBraidColorEl = document.getElementById('current-braid-color');
+                    if (currentBraidColorEl) {
+                        currentBraidColorEl.textContent = braidColorLabels[color];
+                    }
                     console.log(`Braid color changed to ${braidColorLabels[color]}`);
 
                     // Visual feedback - highlight selected button
@@ -314,8 +340,15 @@ function setupDevTools(game) {
             const lineType = gameScene.fishingLineModel.lineType;
             const braidColor = gameScene.fishingLineModel.braidColor;
 
-            document.getElementById('current-line-type').textContent = gameScene.fishingLineModel.getDisplayName();
-            document.getElementById('current-braid-color').textContent = gameScene.fishingLineModel.getBraidColorDisplayName();
+            const currentLineTypeEl = document.getElementById('current-line-type');
+            if (currentLineTypeEl) {
+                currentLineTypeEl.textContent = gameScene.fishingLineModel.getDisplayName();
+            }
+
+            const currentBraidColorEl = document.getElementById('current-braid-color');
+            if (currentBraidColorEl) {
+                currentBraidColorEl.textContent = gameScene.fishingLineModel.getBraidColorDisplayName();
+            }
 
             // Highlight default line type button
             const defaultLineBtn = document.getElementById(`line-type-${lineType}`);

@@ -10,6 +10,10 @@ export class SonarDisplay {
         this.gridOffset = 0;
         this.scanLineX = 0;
 
+        // Cached max depth (updated dynamically)
+        this.cachedMaxDepth = GameConfig.MAX_DEPTH;
+        this.cachedDepthScale = GameConfig.DEPTH_SCALE;
+
         // Noise and interference patterns
         this.noiseParticles = [];
         this.initNoiseParticles();
@@ -27,6 +31,37 @@ export class SonarDisplay {
         // Create depth marker texts once
         this.depthTexts = [];
         this.createDepthMarkers();
+    }
+
+    getActualMaxDepth() {
+        /**
+         * Get the actual maximum depth based on fishing type and location
+         * @returns {number} Maximum depth in feet
+         */
+        if (this.scene.boatManager) {
+            // Boat/kayak mode: get depth at player's current position
+            return this.scene.boatManager.getDepthAtPosition(this.scene.boatManager.playerX);
+        } else if (this.scene.iceHoleManager) {
+            // Ice fishing mode: get maximum depth from current hole's bottom profile
+            const currentHole = this.scene.iceHoleManager.getCurrentHole();
+            if (currentHole && currentHole.bottomProfile) {
+                const maxPoint = currentHole.bottomProfile.reduce((max, curr) =>
+                    curr.y > max.y ? curr : max
+                );
+                return maxPoint.y / GameConfig.DEPTH_SCALE;
+            }
+        }
+        return GameConfig.MAX_DEPTH; // Fallback
+    }
+
+    getDepthScale() {
+        /**
+         * Calculate pixels per foot based on actual max depth
+         * This ensures the sonar display scales proportionally
+         * @returns {number} Pixels per foot of depth
+         */
+        const maxDepth = this.getActualMaxDepth();
+        return GameConfig.CANVAS_HEIGHT / maxDepth;
     }
     
     initNoiseParticles() {
@@ -264,8 +299,8 @@ export class SonarDisplay {
 
         this.graphics.strokePath();
 
-        // Fill below bottom
-        this.graphics.fillStyle(0x222222, 0.3);
+        // Fill below bottom with solid ground
+        this.graphics.fillStyle(0x8b7355, 1.0); // Solid brown earth color
         if (this.bottomProfile.length > 0) {
             this.graphics.beginPath();
             this.graphics.moveTo(this.bottomProfile[0].x, this.bottomProfile[0].y);
@@ -310,8 +345,9 @@ export class SonarDisplay {
         }
         this.graphics.strokePath();
 
-        // Fill below bottom - ensure proper polygon closure
-        this.graphics.fillStyle(0x222222, 0.3);
+        // Fill below bottom with solid ground - ensure proper polygon closure
+        // Use brown/tan earth tone to show solid lake bottom
+        this.graphics.fillStyle(0x8b7355, 1.0); // Solid brown earth color
         this.graphics.beginPath();
 
         // Start from bottom-left corner

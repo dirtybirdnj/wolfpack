@@ -144,6 +144,34 @@ export class NavigationScene extends Phaser.Scene {
         this.tackleBoxTab = 0; // 0=lure, 1=line, 2=rod, 3=reel
         this.tackleBoxSelected = { lure: 0, line: 0, rod: 0, reel: 0 };
 
+        // Tackle box gear options
+        this.tackleBoxGear = {
+            lureWeights: [
+                { label: '1/4 oz', value: 0.25, desc: 'Ultralight - slow sink' },
+                { label: '1/2 oz', value: 0.5, desc: 'Light - versatile' },
+                { label: '1 oz', value: 1.0, desc: 'Medium - good depth' },
+                { label: '2 oz', value: 2.0, desc: 'Heavy - fast sink' },
+                { label: '3 oz', value: 3.0, desc: 'Very heavy - deep water' },
+                { label: '4 oz', value: 4.0, desc: 'Extreme - deepest water' }
+            ],
+            lineTypes: [
+                { label: 'Braided', value: 'braid', desc: 'No stretch, high visibility' },
+                { label: 'Monofilament', value: 'monofilament', desc: 'Stretchy, invisible' },
+                { label: 'Fluorocarbon', value: 'fluorocarbon', desc: 'Low visibility, abrasion resistant' }
+            ],
+            braidColors: [
+                { label: 'Neon Green', value: 'neon-green', color: 0x00ff00 },
+                { label: 'Yellow', value: 'yellow', color: 0xffff00 },
+                { label: 'Moss Green', value: 'moss-green', color: 0x4a7c59 },
+                { label: 'White', value: 'white', color: 0xffffff }
+            ]
+        };
+
+        // Default to 1/2 oz lure and braided line
+        this.currentLureWeight = 0.5;
+        this.currentLineType = 'braid';
+        this.currentBraidColor = 'neon-green';
+
         // Fishing tips pool
         this.fishingTips = [
             "Fish are most active during dawn and dusk periods.",
@@ -376,16 +404,26 @@ export class NavigationScene extends Phaser.Scene {
                 this.gasLevel = Math.max(0, this.gasLevel);
 
                 if (this.gasLevel <= 0) {
-                    this.maxSpeed = 0;
-                    this.showInstruction('Out of gas! Game over');
-                    this.time.delayedCall(2000, () => {
-                        this.scene.start('GameOverScene');
-                    });
+                    // Out of gas - force slow speed like kayak tiredness
+                    this.maxSpeed = 1.0;
+                    if (Math.random() < 0.02) {
+                        this.showInstruction('Out of gas! Stop to refuel');
+                    }
+                } else if (this.gasLevel <= 20) {
+                    // Low gas warning
+                    if (Math.random() < 0.01) {
+                        this.showInstruction('Low on gas! Slow down to conserve fuel');
+                    }
                 }
             } else {
-                // Regenerate gas slowly when idle
-                this.gasLevel += 0.05;
+                // Regenerate gas when idle or moving slowly
+                this.gasLevel += GameConfig.MOTORBOAT_GAS_REGENERATION || 0.1;
                 this.gasLevel = Math.min(100, this.gasLevel);
+
+                // Restore max speed when refueled
+                if (this.gasLevel > 20) {
+                    this.maxSpeed = 8.0;
+                }
             }
         }
     }
@@ -723,21 +761,61 @@ export class NavigationScene extends Phaser.Scene {
         const chartWidth = mapWidth - 30;
         const chartHeight = mapHeight - 38;
 
-        // Draw simple depth gradient (darker = deeper)
-        this.uiGraphics.fillStyle(0x4488aa, 0.6);
-        this.uiGraphics.fillRect(chartX, chartY, chartWidth, chartHeight);
+        // Draw depth-based shading by sampling bathymetric data
+        const gridSizeX = 4; // Sample every 4 pixels horizontally (increased detail)
+        const gridSizeY = 6; // Sample every 6 pixels vertically (increased detail)
+
+        for (let screenY = 0; screenY < chartHeight; screenY += gridSizeY) {
+            for (let screenX = 0; screenX < chartWidth; screenX += gridSizeX) {
+                // Convert screen position to world coordinates
+                // Flip X: left = NY (west), right = VT (east)
+                const worldXNorm = 1 - (screenX / chartWidth);
+                // Flip Y: top = north, bottom = south
+                const worldYNorm = 1 - (screenY / chartHeight);
+
+                const worldX = worldXNorm * 20000;
+                const worldY = worldYNorm * 60000;
+
+                // Sample depth at this position
+                const depth = this.bathyData.getDepthAtPosition(worldX, worldY);
+
+                // Color based on depth (lighter = shallow, darker = deep)
+                let color, alpha;
+                if (depth < 30) {
+                    color = 0xaaddff; // Very light blue - shallow
+                    alpha = 0.8;
+                } else if (depth < 60) {
+                    color = 0x88bbee; // Light blue
+                    alpha = 0.8;
+                } else if (depth < 100) {
+                    color = 0x6699dd; // Medium blue
+                    alpha = 0.8;
+                } else if (depth < 150) {
+                    color = 0x4477bb; // Dark blue
+                    alpha = 0.8;
+                } else {
+                    color = 0x2255aa; // Very dark blue - deep
+                    alpha = 0.8;
+                }
+
+                this.uiGraphics.fillStyle(color, alpha);
+                this.uiGraphics.fillRect(chartX + screenX, chartY + screenY, gridSizeX, gridSizeY);
+            }
+        }
 
         // Draw shorelines (both sides - lake is narrow)
         this.uiGraphics.lineStyle(2, 0x88ff88, 0.8);
-        this.uiGraphics.lineBetween(chartX, chartY, chartX, chartY + chartHeight); // Vermont (east)
-        this.uiGraphics.lineBetween(chartX + chartWidth, chartY, chartX + chartWidth, chartY + chartHeight); // NY (west)
+        this.uiGraphics.lineBetween(chartX, chartY, chartX, chartY + chartHeight); // NY (west)
+        this.uiGraphics.lineBetween(chartX + chartWidth, chartY, chartX + chartWidth, chartY + chartHeight); // Vermont (east)
 
         // Draw player position (full lake map)
         const playerXNorm = this.playerWorldX / 20000; // Normalize 0-1
         const playerYNorm = this.playerWorldY / 60000; // Full lake
 
-        const playerScreenX = chartX + playerXNorm * chartWidth;
-        const playerScreenY = chartY + playerYNorm * chartHeight;
+        // Flip X coordinate: X=0 (VT/east) at right, X=20000 (NY/west) at left
+        const playerScreenX = chartX + (1 - playerXNorm) * chartWidth;
+        // Flip Y coordinate: Y=0 (Whitehall/south) at bottom, Y=60000 (Canadian border/north) at top
+        const playerScreenY = chartY + (1 - playerYNorm) * chartHeight;
 
         // Player dot
         this.uiGraphics.fillStyle(0x00ff00, 1.0);
@@ -746,13 +824,15 @@ export class NavigationScene extends Phaser.Scene {
         // Player heading indicator
         const headingRad = (this.heading - 90) * (Math.PI / 180);
         const arrowLength = 10;
-        const arrowX = playerScreenX + Math.cos(headingRad) * arrowLength;
-        const arrowY = playerScreenY + Math.sin(headingRad) * arrowLength;
+        // Flip X component because we flipped the X coordinate system (west is left)
+        const arrowX = playerScreenX - Math.cos(headingRad) * arrowLength;
+        // Flip Y component because we flipped the Y coordinate system (north is up)
+        const arrowY = playerScreenY - Math.sin(headingRad) * arrowLength;
 
         this.uiGraphics.lineStyle(2, 0x00ff00, 1.0);
         this.uiGraphics.lineBetween(playerScreenX, playerScreenY, arrowX, arrowY);
 
-        // Add city markers
+        // Add city markers (Y=0 at south/Whitehall, Y=1 at north/Canadian border)
         const cities = [
             { name: 'Whitehall', y: 0.05 },
             { name: 'Ticonderoga', y: 0.22 },
@@ -764,7 +844,8 @@ export class NavigationScene extends Phaser.Scene {
         ];
 
         cities.forEach(city => {
-            const cityY = chartY + city.y * chartHeight;
+            // Flip Y coordinate: south (0) at bottom, north (1) at top
+            const cityY = chartY + (1 - city.y) * chartHeight;
             this.uiGraphics.fillStyle(0xffff00, 0.8);
             this.uiGraphics.fillCircle(chartX + 2, cityY, 2);
 
@@ -918,7 +999,13 @@ export class NavigationScene extends Phaser.Scene {
     handleMenuToggle() {
         /**
          * Check if Select button was pressed to toggle menu
+         * Only toggle if we're not in a submenu (submenus handle select themselves)
          */
+
+        // Don't toggle main menu if a submenu is active
+        if (this.subMenuActive) {
+            return;
+        }
 
         let selectPressed = false;
 
@@ -1146,10 +1233,28 @@ export class NavigationScene extends Phaser.Scene {
          * Handle navigation map cursor movement and fast travel
          */
 
-        const moveSpeed = 100; // Units per frame
+        const moveSpeed = 100; // Units per frame for digital input
+        const analogMoveSpeed = 150; // Units per frame for analog stick (faster for smooth control)
         let moved = false;
 
-        // Arrow keys or D-pad for cursor movement
+        // Left stick analog input (smooth movement)
+        if (this.gamepad) {
+            const leftStickX = this.gamepad.axes[0] ? this.gamepad.axes[0].getValue() : 0;
+            const leftStickY = this.gamepad.axes[1] ? this.gamepad.axes[1].getValue() : 0;
+
+            // Apply deadzone
+            const deadzone = 0.15;
+            if (Math.abs(leftStickX) > deadzone) {
+                this.navMapCursorX += leftStickX * analogMoveSpeed;
+                moved = true;
+            }
+            if (Math.abs(leftStickY) > deadzone) {
+                this.navMapCursorY += leftStickY * analogMoveSpeed;
+                moved = true;
+            }
+        }
+
+        // Arrow keys or D-pad for cursor movement (digital input)
         if (this.keys.left.isDown || (this.gamepad && this.gamepad.left)) {
             this.navMapCursorX -= moveSpeed;
             moved = true;
@@ -1262,58 +1367,139 @@ export class NavigationScene extends Phaser.Scene {
         const chartWidth = mapWidth - 120;
         const chartHeight = mapHeight - 130;
 
-        // Draw depth gradient (simple vertical gradient showing lake deepening from south to north)
-        const depthGradient = [
-            { yStart: 0.00, yEnd: 0.13, color: 0xaaddff }, // Whitehall - shallow
-            { yStart: 0.13, yEnd: 0.30, color: 0x88bbee }, // Ticonderoga - moderate
-            { yStart: 0.30, yEnd: 0.53, color: 0x6699dd }, // Widening - deeper
-            { yStart: 0.53, yEnd: 0.70, color: 0x4466aa }, // Burlington - deepest
-            { yStart: 0.70, yEnd: 0.83, color: 0x5588cc }, // Plattsburgh - deep
-            { yStart: 0.83, yEnd: 1.00, color: 0x7799dd }  // Northern islands - moderate
-        ];
+        // Draw detailed depth-based shading by sampling bathymetric data
+        const navGridSizeX = 3; // Sample every 3 pixels (very high detail for navigation map)
+        const navGridSizeY = 4; // Sample every 4 pixels
 
-        depthGradient.forEach(zone => {
-            const zoneY = chartY + zone.yStart * chartHeight;
-            const zoneHeight = (zone.yEnd - zone.yStart) * chartHeight;
-            this.uiGraphics.fillStyle(zone.color, 0.7);
-            this.uiGraphics.fillRect(chartX, zoneY, chartWidth, zoneHeight);
+        // Store depth samples for contour line drawing
+        const depthSamples = [];
+
+        for (let screenY = 0; screenY < chartHeight; screenY += navGridSizeY) {
+            depthSamples[screenY] = [];
+            for (let screenX = 0; screenX < chartWidth; screenX += navGridSizeX) {
+                // Convert screen position to world coordinates
+                // Flip X: left = NY (west), right = VT (east)
+                const worldXNorm = 1 - (screenX / chartWidth);
+                // Flip Y: top = north, bottom = south
+                const worldYNorm = 1 - (screenY / chartHeight);
+
+                const worldX = worldXNorm * 20000;
+                const worldY = worldYNorm * 60000;
+
+                // Sample depth at this position
+                const depth = this.bathyData.getDepthAtPosition(worldX, worldY);
+                depthSamples[screenY][screenX] = depth;
+
+                // Color based on depth with more granular zones
+                let color, alpha;
+                if (depth < 20) {
+                    color = 0xcceeFF; // Very shallow - lightest blue
+                    alpha = 0.9;
+                } else if (depth < 40) {
+                    color = 0xaaddff; // Shallow - very light blue
+                    alpha = 0.9;
+                } else if (depth < 60) {
+                    color = 0x88bbee; // Light blue
+                    alpha = 0.9;
+                } else if (depth < 80) {
+                    color = 0x6699dd; // Medium-light blue
+                    alpha = 0.9;
+                } else if (depth < 100) {
+                    color = 0x5588cc; // Medium blue
+                    alpha = 0.9;
+                } else if (depth < 120) {
+                    color = 0x4477bb; // Medium-dark blue
+                    alpha = 0.9;
+                } else if (depth < 150) {
+                    color = 0x3366aa; // Dark blue
+                    alpha = 0.9;
+                } else {
+                    color = 0x225599; // Very dark blue - deepest
+                    alpha = 0.9;
+                }
+
+                this.uiGraphics.fillStyle(color, alpha);
+                this.uiGraphics.fillRect(chartX + screenX, chartY + screenY, navGridSizeX, navGridSizeY);
+            }
+        }
+
+        // Draw depth contour lines at specific depths
+        const contourDepths = [50, 100, 150]; // Draw contours at these depths
+        contourDepths.forEach(targetDepth => {
+            this.uiGraphics.lineStyle(1, 0x88ffaa, 0.3);
+
+            for (let screenY = 0; screenY < chartHeight - navGridSizeY; screenY += navGridSizeY) {
+                for (let screenX = 0; screenX < chartWidth - navGridSizeX; screenX += navGridSizeX) {
+                    if (!depthSamples[screenY] || !depthSamples[screenY][screenX]) continue;
+
+                    const depth = depthSamples[screenY][screenX];
+                    const depthRight = depthSamples[screenY][screenX + navGridSizeX];
+                    const depthDown = depthSamples[screenY + navGridSizeY] ? depthSamples[screenY + navGridSizeY][screenX] : null;
+
+                    // Check if contour line crosses this cell
+                    if (depthRight && ((depth <= targetDepth && depthRight >= targetDepth) || (depth >= targetDepth && depthRight <= targetDepth))) {
+                        this.uiGraphics.lineBetween(chartX + screenX + navGridSizeX / 2, chartY + screenY,
+                                                     chartX + screenX + navGridSizeX / 2, chartY + screenY + navGridSizeY);
+                    }
+                    if (depthDown && ((depth <= targetDepth && depthDown >= targetDepth) || (depth >= targetDepth && depthDown <= targetDepth))) {
+                        this.uiGraphics.lineBetween(chartX + screenX, chartY + screenY + navGridSizeY / 2,
+                                                     chartX + screenX + navGridSizeX, chartY + screenY + navGridSizeY / 2);
+                    }
+                }
+            }
         });
 
-        // Draw Vermont shoreline (left/east)
+        // Draw NY shoreline (left/west)
         this.uiGraphics.lineStyle(3, 0x88ff88, 1.0);
         this.uiGraphics.lineBetween(chartX, chartY, chartX, chartY + chartHeight);
 
-        // Draw NY shoreline (right/west)
+        // Draw Vermont shoreline (right/east)
         this.uiGraphics.lineStyle(3, 0x88ff88, 1.0);
         this.uiGraphics.lineBetween(chartX + chartWidth, chartY, chartX + chartWidth, chartY + chartHeight);
 
-        // Draw city markers along the lake
+        // Draw city markers along the lake (more detailed)
         const landmarks = [
             { name: 'Whitehall', y: 3000, side: 'west' },
+            { name: 'Putnam', y: 7000, side: 'west' },
             { name: 'Ticonderoga', y: 13000, side: 'west' },
+            { name: 'Port Henry', y: 15500, side: 'west' },
             { name: 'Crown Point', y: 18000, side: 'west' },
+            { name: 'Chimney Point', y: 18500, side: 'east' },
+            { name: 'Essex', y: 20500, side: 'west' },
             { name: 'Split Rock', y: 23000, side: 'west' },
+            { name: 'Westport', y: 25000, side: 'west' },
+            { name: 'Basin Harbor', y: 28000, side: 'east' },
             { name: 'Four Brothers', y: 30000, side: 'center' },
+            { name: 'Willsboro', y: 32000, side: 'west' },
+            { name: 'Shelburne', y: 35000, side: 'east' },
             { name: 'Burlington', y: 37000, side: 'east' },
+            { name: 'Port Kent', y: 39000, side: 'west' },
+            { name: 'Colchester', y: 41000, side: 'east' },
+            { name: 'Valcour Island', y: 43000, side: 'center' },
             { name: 'Plattsburgh', y: 46000, side: 'west' },
+            { name: 'Cumberland Head', y: 48000, side: 'west' },
             { name: 'Grand Isle', y: 52000, side: 'center' },
-            { name: 'South Hero', y: 56000, side: 'east' }
+            { name: 'Isle La Motte', y: 54000, side: 'center' },
+            { name: 'South Hero', y: 56000, side: 'east' },
+            { name: 'Alburgh', y: 58000, side: 'west' }
         ];
 
         landmarks.forEach(landmark => {
-            const landmarkY = chartY + (landmark.y / 60000) * chartHeight;
+            // Flip Y coordinate: Y=0 (south/Whitehall) at bottom, Y=60000 (north) at top
+            const landmarkY = chartY + (1 - landmark.y / 60000) * chartHeight;
             let landmarkX;
             let labelX;
             let labelOrigin;
 
+            // After X-axis flip: west side is on left, east side is on right
             if (landmark.side === 'east') {
-                landmarkX = chartX + 5;
-                labelX = chartX + 12;
-                labelOrigin = 0;
-            } else if (landmark.side === 'west') {
                 landmarkX = chartX + chartWidth - 5;
                 labelX = chartX + chartWidth - 12;
                 labelOrigin = 1;
+            } else if (landmark.side === 'west') {
+                landmarkX = chartX + 5;
+                labelX = chartX + 12;
+                labelOrigin = 0;
             } else {
                 landmarkX = chartX + chartWidth / 2;
                 labelX = chartX + chartWidth / 2;
@@ -1336,8 +1522,10 @@ export class NavigationScene extends Phaser.Scene {
         // Draw player current position (full lake coordinates)
         const playerXNorm = this.playerWorldX / 20000;
         const playerYNorm = this.playerWorldY / 60000;
-        const playerScreenX = chartX + playerXNorm * chartWidth;
-        const playerScreenY = chartY + playerYNorm * chartHeight;
+        // Flip X coordinate: X=0 (VT/east) at right, X=20000 (NY/west) at left
+        const playerScreenX = chartX + (1 - playerXNorm) * chartWidth;
+        // Flip Y coordinate: Y=0 (Whitehall/south) at bottom, Y=60000 (Canadian border/north) at top
+        const playerScreenY = chartY + (1 - playerYNorm) * chartHeight;
 
         this.uiGraphics.fillStyle(0x00ff00, 1.0);
         this.uiGraphics.fillCircle(playerScreenX, playerScreenY, 6);
@@ -1347,8 +1535,10 @@ export class NavigationScene extends Phaser.Scene {
         // Draw cursor position (full lake coordinates)
         const cursorXNorm = this.navMapCursorX / 20000;
         const cursorYNorm = this.navMapCursorY / 60000;
-        const cursorScreenX = chartX + cursorXNorm * chartWidth;
-        const cursorScreenY = chartY + cursorYNorm * chartHeight;
+        // Flip X coordinate: X=0 (VT/east) at right, X=20000 (NY/west) at left
+        const cursorScreenX = chartX + (1 - cursorXNorm) * chartWidth;
+        // Flip Y coordinate: Y=0 (Whitehall/south) at bottom, Y=60000 (Canadian border/north) at top
+        const cursorScreenY = chartY + (1 - cursorYNorm) * chartHeight;
 
         this.uiGraphics.fillStyle(0xff0000, 1.0);
         this.uiGraphics.fillCircle(cursorScreenX, cursorScreenY, 8);
@@ -1368,8 +1558,68 @@ export class NavigationScene extends Phaser.Scene {
         cursorText.setDepth(1001);
         this.time.delayedCall(50, () => cursorText.destroy());
 
+        // Depth legend (top-right corner)
+        const legendX = mapX + mapWidth - 15;
+        const legendY = mapY + 75;
+        const legendWidth = 100;
+
+        // Legend title
+        const legendTitle = this.add.text(legendX, legendY, 'DEPTH', {
+            fontSize: '10px',
+            fontFamily: 'Courier New',
+            color: '#00ff00',
+            fontStyle: 'bold'
+        });
+        legendTitle.setOrigin(1, 0);
+        legendTitle.setDepth(1001);
+        this.time.delayedCall(50, () => legendTitle.destroy());
+
+        // Legend entries
+        const legendEntries = [
+            { depth: '0-20ft', color: 0xcceeFF },
+            { depth: '20-40ft', color: 0xaaddff },
+            { depth: '40-60ft', color: 0x88bbee },
+            { depth: '60-80ft', color: 0x6699dd },
+            { depth: '80-100ft', color: 0x5588cc },
+            { depth: '100-120ft', color: 0x4477bb },
+            { depth: '120-150ft', color: 0x3366aa },
+            { depth: '150+ft', color: 0x225599 }
+        ];
+
+        legendEntries.forEach((entry, index) => {
+            const entryY = legendY + 15 + (index * 14);
+
+            // Color swatch
+            this.uiGraphics.fillStyle(entry.color, 0.9);
+            this.uiGraphics.fillRect(legendX - legendWidth, entryY, 12, 10);
+
+            // Depth label
+            const entryText = this.add.text(legendX - legendWidth + 16, entryY + 5, entry.depth, {
+                fontSize: '8px',
+                fontFamily: 'Courier New',
+                color: '#88ff88'
+            });
+            entryText.setOrigin(0, 0.5);
+            entryText.setDepth(1001);
+            this.time.delayedCall(50, () => entryText.destroy());
+        });
+
+        // Contour lines legend
+        const contourLegendY = legendY + 15 + (legendEntries.length * 14) + 8;
+        this.uiGraphics.lineStyle(2, 0x88ffaa, 0.5);
+        this.uiGraphics.lineBetween(legendX - legendWidth, contourLegendY, legendX - legendWidth + 12, contourLegendY);
+
+        const contourLabel = this.add.text(legendX - legendWidth + 16, contourLegendY, 'Contours', {
+            fontSize: '8px',
+            fontFamily: 'Courier New',
+            color: '#88ff88'
+        });
+        contourLabel.setOrigin(0, 0.5);
+        contourLabel.setDepth(1001);
+        this.time.delayedCall(50, () => contourLabel.destroy());
+
         // Controls hint
-        const hintText = this.add.text(mapX + mapWidth / 2, mapY + mapHeight - 30, 'Arrow Keys: Move Cursor | X: Fast Travel | TAB: Cancel', {
+        const hintText = this.add.text(mapX + mapWidth / 2, mapY + mapHeight - 30, 'Left Stick/Arrows/D-Pad: Move Cursor | X: Fast Travel | TAB: Cancel', {
             fontSize: '13px',
             fontFamily: 'Courier New',
             color: '#aaaaaa'
@@ -1400,19 +1650,37 @@ export class NavigationScene extends Phaser.Scene {
         // Left/Right to change tabs
         let leftPressed = false;
         let rightPressed = false;
+        let upPressed = false;
+        let downPressed = false;
+        let confirmPressed = false;
 
         if (Phaser.Input.Keyboard.JustDown(this.keys.left)) leftPressed = true;
         if (Phaser.Input.Keyboard.JustDown(this.keys.right)) rightPressed = true;
+        if (Phaser.Input.Keyboard.JustDown(this.keys.up)) upPressed = true;
+        if (Phaser.Input.Keyboard.JustDown(this.keys.down)) downPressed = true;
+        if (Phaser.Input.Keyboard.JustDown(this.keys.x)) confirmPressed = true;
 
         if (this.gamepad) {
             const dpadLeft = this.gamepad.buttons[14] && this.gamepad.buttons[14].pressed;
             const dpadRight = this.gamepad.buttons[15] && this.gamepad.buttons[15].pressed;
+            const dpadUp = this.gamepad.buttons[12] && this.gamepad.buttons[12].pressed;
+            const dpadDown = this.gamepad.buttons[13] && this.gamepad.buttons[13].pressed;
 
             if (dpadLeft && !this.buttonStates.left) leftPressed = true;
             if (dpadRight && !this.buttonStates.right) rightPressed = true;
+            if (dpadUp && !this.buttonStates.up) upPressed = true;
+            if (dpadDown && !this.buttonStates.down) downPressed = true;
 
             this.buttonStates.left = dpadLeft;
             this.buttonStates.right = dpadRight;
+            this.buttonStates.up = dpadUp;
+            this.buttonStates.down = dpadDown;
+
+            // X button to confirm
+            const xButton = this.gamepad.buttons[0];
+            const xButtonPressed = xButton && xButton.pressed;
+            if (xButtonPressed && !this.buttonStates.x) confirmPressed = true;
+            this.buttonStates.x = xButtonPressed;
         }
 
         if (leftPressed) {
@@ -1422,6 +1690,45 @@ export class NavigationScene extends Phaser.Scene {
         if (rightPressed) {
             this.tackleBoxTab++;
             if (this.tackleBoxTab > 3) this.tackleBoxTab = 0;
+        }
+
+        // Up/Down to navigate within current tab
+        if (this.tackleBoxTab === 0) {
+            // LURE tab - navigate lure weights
+            const maxIndex = this.tackleBoxGear.lureWeights.length - 1;
+            if (upPressed) {
+                this.tackleBoxSelected.lure--;
+                if (this.tackleBoxSelected.lure < 0) this.tackleBoxSelected.lure = maxIndex;
+            }
+            if (downPressed) {
+                this.tackleBoxSelected.lure++;
+                if (this.tackleBoxSelected.lure > maxIndex) this.tackleBoxSelected.lure = 0;
+            }
+            if (confirmPressed) {
+                // Apply lure weight selection
+                const selected = this.tackleBoxGear.lureWeights[this.tackleBoxSelected.lure];
+                this.currentLureWeight = selected.value;
+                this.showInstruction(`Lure weight: ${selected.label}`);
+                console.log(`🎣 Lure weight changed to ${selected.label}`);
+            }
+        } else if (this.tackleBoxTab === 1) {
+            // LINE tab - navigate line types (and braid colors if braid selected)
+            const maxIndex = this.tackleBoxGear.lineTypes.length - 1;
+            if (upPressed) {
+                this.tackleBoxSelected.line--;
+                if (this.tackleBoxSelected.line < 0) this.tackleBoxSelected.line = maxIndex;
+            }
+            if (downPressed) {
+                this.tackleBoxSelected.line++;
+                if (this.tackleBoxSelected.line > maxIndex) this.tackleBoxSelected.line = 0;
+            }
+            if (confirmPressed) {
+                // Apply line type selection
+                const selected = this.tackleBoxGear.lineTypes[this.tackleBoxSelected.line];
+                this.currentLineType = selected.value;
+                this.showInstruction(`Line type: ${selected.label}`);
+                console.log(`🧵 Line type changed to ${selected.label}`);
+            }
         }
     }
 
@@ -1489,19 +1796,185 @@ export class NavigationScene extends Phaser.Scene {
             this.time.delayedCall(50, () => tabText.destroy());
         });
 
-        // Content area
-        const contentText = this.add.text(panelX + panelWidth / 2, panelY + 200, 'Gear selection coming soon!\n\nChoose your lures, lines,\nrods, and reels.', {
-            fontSize: '18px',
-            fontFamily: 'Courier New',
-            color: '#aaffaa',
-            align: 'center'
-        });
-        contentText.setOrigin(0.5, 0.5);
-        contentText.setDepth(1001);
-        this.time.delayedCall(50, () => contentText.destroy());
+        // Content area - show current tab content
+        const contentY = panelY + 130;
+        const contentX = panelX + 60;
+
+        if (this.tackleBoxTab === 0) {
+            // LURE tab - show lure weights
+            const titleText = this.add.text(panelX + panelWidth / 2, contentY - 20, 'SELECT LURE WEIGHT', {
+                fontSize: '16px',
+                fontFamily: 'Courier New',
+                color: '#00ff00',
+                fontStyle: 'bold'
+            });
+            titleText.setOrigin(0.5, 0.5);
+            titleText.setDepth(1001);
+            this.time.delayedCall(50, () => titleText.destroy());
+
+            this.tackleBoxGear.lureWeights.forEach((lure, index) => {
+                const itemY = contentY + 20 + (index * 45);
+                const isSelected = index === this.tackleBoxSelected.lure;
+
+                // Background for selected item
+                if (isSelected) {
+                    this.uiGraphics.fillStyle(0x2a4a3a, 1.0);
+                    this.uiGraphics.fillRoundedRect(contentX - 10, itemY - 18, panelWidth - 120, 40, 5);
+                    this.uiGraphics.lineStyle(2, 0x00ffff, 1.0);
+                    this.uiGraphics.strokeRoundedRect(contentX - 10, itemY - 18, panelWidth - 120, 40, 5);
+                }
+
+                // Lure weight label
+                const labelText = this.add.text(contentX, itemY, lure.label, {
+                    fontSize: isSelected ? '16px' : '14px',
+                    fontFamily: 'Courier New',
+                    color: isSelected ? '#00ffff' : '#88ff88',
+                    fontStyle: isSelected ? 'bold' : 'normal'
+                });
+                labelText.setDepth(1001);
+                this.time.delayedCall(50, () => labelText.destroy());
+
+                // Description
+                const descText = this.add.text(contentX + 150, itemY, lure.desc, {
+                    fontSize: '11px',
+                    fontFamily: 'Courier New',
+                    color: isSelected ? '#aaffaa' : '#666666'
+                });
+                descText.setDepth(1001);
+                this.time.delayedCall(50, () => descText.destroy());
+
+                // Current indicator
+                if (this.currentLureWeight === lure.value) {
+                    const currentText = this.add.text(contentX + 400, itemY, '✓ EQUIPPED', {
+                        fontSize: '10px',
+                        fontFamily: 'Courier New',
+                        color: '#00ff00',
+                        fontStyle: 'bold'
+                    });
+                    currentText.setDepth(1001);
+                    this.time.delayedCall(50, () => currentText.destroy());
+                }
+            });
+
+        } else if (this.tackleBoxTab === 1) {
+            // LINE tab - show line types
+            const titleText = this.add.text(panelX + panelWidth / 2, contentY - 20, 'SELECT FISHING LINE', {
+                fontSize: '16px',
+                fontFamily: 'Courier New',
+                color: '#00ff00',
+                fontStyle: 'bold'
+            });
+            titleText.setOrigin(0.5, 0.5);
+            titleText.setDepth(1001);
+            this.time.delayedCall(50, () => titleText.destroy());
+
+            this.tackleBoxGear.lineTypes.forEach((line, index) => {
+                const itemY = contentY + 20 + (index * 50);
+                const isSelected = index === this.tackleBoxSelected.line;
+
+                // Background for selected item
+                if (isSelected) {
+                    this.uiGraphics.fillStyle(0x2a4a3a, 1.0);
+                    this.uiGraphics.fillRoundedRect(contentX - 10, itemY - 18, panelWidth - 120, 45, 5);
+                    this.uiGraphics.lineStyle(2, 0x00ffff, 1.0);
+                    this.uiGraphics.strokeRoundedRect(contentX - 10, itemY - 18, panelWidth - 120, 45, 5);
+                }
+
+                // Line type label
+                const labelText = this.add.text(contentX, itemY, line.label, {
+                    fontSize: isSelected ? '16px' : '14px',
+                    fontFamily: 'Courier New',
+                    color: isSelected ? '#00ffff' : '#88ff88',
+                    fontStyle: isSelected ? 'bold' : 'normal'
+                });
+                labelText.setDepth(1001);
+                this.time.delayedCall(50, () => labelText.destroy());
+
+                // Description
+                const descText = this.add.text(contentX + 150, itemY, line.desc, {
+                    fontSize: '11px',
+                    fontFamily: 'Courier New',
+                    color: isSelected ? '#aaffaa' : '#666666'
+                });
+                descText.setDepth(1001);
+                this.time.delayedCall(50, () => descText.destroy());
+
+                // Current indicator
+                if (this.currentLineType === line.value) {
+                    const currentText = this.add.text(contentX + 400, itemY, '✓ EQUIPPED', {
+                        fontSize: '10px',
+                        fontFamily: 'Courier New',
+                        color: '#00ff00',
+                        fontStyle: 'bold'
+                    });
+                    currentText.setDepth(1001);
+                    this.time.delayedCall(50, () => currentText.destroy());
+                }
+            });
+
+            // Show braid color options if braid is selected
+            if (this.currentLineType === 'braid') {
+                const colorTitleY = contentY + 180;
+                const colorTitle = this.add.text(panelX + panelWidth / 2, colorTitleY, 'BRAID COLOR', {
+                    fontSize: '13px',
+                    fontFamily: 'Courier New',
+                    color: '#ffaa00',
+                    fontStyle: 'bold'
+                });
+                colorTitle.setOrigin(0.5, 0.5);
+                colorTitle.setDepth(1001);
+                this.time.delayedCall(50, () => colorTitle.destroy());
+
+                this.tackleBoxGear.braidColors.forEach((color, index) => {
+                    const colorX = contentX + (index * 110);
+                    const colorY = colorTitleY + 30;
+
+                    // Color swatch
+                    this.uiGraphics.fillStyle(color.color, 1.0);
+                    this.uiGraphics.fillRect(colorX, colorY, 20, 20);
+                    this.uiGraphics.lineStyle(1, 0xffffff, 0.5);
+                    this.uiGraphics.strokeRect(colorX, colorY, 20, 20);
+
+                    // Label
+                    const colorText = this.add.text(colorX + 25, colorY + 10, color.label, {
+                        fontSize: '10px',
+                        fontFamily: 'Courier New',
+                        color: this.currentBraidColor === color.value ? '#00ff00' : '#888888',
+                        fontStyle: this.currentBraidColor === color.value ? 'bold' : 'normal'
+                    });
+                    colorText.setOrigin(0, 0.5);
+                    colorText.setDepth(1001);
+                    this.time.delayedCall(50, () => colorText.destroy());
+                });
+            }
+
+        } else if (this.tackleBoxTab === 2) {
+            // ROD tab - coming soon
+            const comingSoonText = this.add.text(panelX + panelWidth / 2, panelY + 250, 'ROD SELECTION\nComing Soon!', {
+                fontSize: '18px',
+                fontFamily: 'Courier New',
+                color: '#666666',
+                align: 'center'
+            });
+            comingSoonText.setOrigin(0.5, 0.5);
+            comingSoonText.setDepth(1001);
+            this.time.delayedCall(50, () => comingSoonText.destroy());
+
+        } else if (this.tackleBoxTab === 3) {
+            // REEL tab - coming soon
+            const comingSoonText = this.add.text(panelX + panelWidth / 2, panelY + 250, 'REEL SELECTION\nComing Soon!', {
+                fontSize: '18px',
+                fontFamily: 'Courier New',
+                color: '#666666',
+                align: 'center'
+            });
+            comingSoonText.setOrigin(0.5, 0.5);
+            comingSoonText.setDepth(1001);
+            this.time.delayedCall(50, () => comingSoonText.destroy());
+        }
 
         // Controls hint
-        const hintText = this.add.text(panelX + panelWidth / 2, panelY + panelHeight - 30, '← →: Change Tab | TAB: Close', {
+        const hintText = this.add.text(panelX + panelWidth / 2, panelY + panelHeight - 30, '← →: Change Tab | ↑ ↓: Select | X: Equip | TAB: Close', {
             fontSize: '13px',
             fontFamily: 'Courier New',
             color: '#888888'
@@ -1624,10 +2097,16 @@ export class NavigationScene extends Phaser.Scene {
         this.registry.set('fishingWorldX', this.playerWorldX);
         this.registry.set('fishingWorldY', this.playerWorldY);
 
+        // Store tackle selections in registry
+        this.registry.set('lureWeight', this.currentLureWeight);
+        this.registry.set('lineType', this.currentLineType);
+        this.registry.set('braidColor', this.currentBraidColor);
+
         // Get current depth
         const depth = this.bathyData.getDepthAtPosition(this.playerWorldX, this.playerWorldY);
         console.log(`   Position: (${this.playerWorldX}, ${this.playerWorldY})`);
         console.log(`   Depth: ${depth.toFixed(1)}ft`);
+        console.log(`   Lure: ${this.currentLureWeight}oz | Line: ${this.currentLineType}`);
 
         // Fade out and transition to GameScene
         this.cameras.main.fadeOut(500);

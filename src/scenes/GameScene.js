@@ -100,8 +100,23 @@ export class GameScene extends Phaser.Scene {
             // Create the player's lure - start at surface (0 feet)
             this.lure = new Lure(this, GameConfig.CANVAS_WIDTH / 2, 0);
 
+            // Apply lure weight from tackle box selection
+            const lureWeight = this.registry.get('lureWeight');
+            if (lureWeight !== undefined) {
+                this.lure.weight = lureWeight;
+                console.log(`🎣 Lure weight set to ${lureWeight}oz`);
+            }
+
             // Create fishing line
             this.fishingLine = new FishingLine(this);
+
+            // Apply line type from tackle box selection
+            const lineType = this.registry.get('lineType');
+            const braidColor = this.registry.get('braidColor');
+            if (lineType !== undefined) {
+                this.fishingLine.setLineType(lineType, braidColor);
+                console.log(`🧵 Line type set to ${lineType}${lineType === 'braid' ? ' (' + braidColor + ')' : ''}`);
+            }
 
             // Initialize fishing line model
             this.fishingLineModel = new FishingLineModel();
@@ -214,6 +229,9 @@ export class GameScene extends Phaser.Scene {
             this.notificationSystem.togglePause();
         }
 
+        // Always update notification system (handles pause menu input)
+        this.notificationSystem.update(time, delta);
+
         // If paused, skip all game updates
         if (this.notificationSystem.isPausedState()) {
             return;
@@ -296,7 +314,7 @@ export class GameScene extends Phaser.Scene {
             if (!currentHole) return;
             playerWorldX = currentHole.x;
         } else if (this.boatManager) {
-            playerWorldX = this.boatManager.playerX;
+            playerWorldX = this.boatManager.getPlayerWorldX();
         } else {
             return;
         }

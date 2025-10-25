@@ -96,7 +96,7 @@ export class Zooplankton {
             const currentHole = this.scene.iceHoleManager.getCurrentHole();
             playerWorldX = currentHole ? currentHole.x : this.worldX;
         } else if (this.scene.boatManager) {
-            playerWorldX = this.scene.boatManager.playerX;
+            playerWorldX = this.scene.boatManager.getPlayerWorldX();
         } else {
             playerWorldX = this.worldX; // Fallback
         }

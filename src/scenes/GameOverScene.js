@@ -6,6 +6,28 @@ export class GameOverScene extends Phaser.Scene {
     }
 
     create() {
+        // Button selection state
+        this.selectedButtonIndex = 0; // 0 = Play Again, 1 = Main Menu
+        this.buttons = [];
+
+        // Track gamepad button states for "JustDown" detection
+        this.buttonStates = {
+            left: false,
+            right: false,
+            x: false
+        };
+
+        // Set up gamepad
+        if (this.input.gamepad.total > 0) {
+            this.gamepad = this.input.gamepad.getPad(0);
+            console.log('🎮 Using existing gamepad for game over menu');
+        }
+
+        this.input.gamepad.once('connected', (pad) => {
+            console.log('🎮 Gamepad connected for game over menu');
+            this.gamepad = pad;
+        });
+
         const { width, height } = this.cameras.main;
 
         // Get game data from registry
@@ -111,16 +133,18 @@ export class GameOverScene extends Phaser.Scene {
 
         // Buttons
         const buttonY = height - 60;
-        this.createButton(width / 2 - 120, buttonY, 'PLAY AGAIN', () => {
+        const playAgainButton = this.createButton(width / 2 - 120, buttonY, 'PLAY AGAIN', () => {
             this.restartGame();
         });
+        this.buttons.push(playAgainButton);
 
-        this.createButton(width / 2 + 120, buttonY, 'MAIN MENU', () => {
+        const mainMenuButton = this.createButton(width / 2 + 120, buttonY, 'MAIN MENU', () => {
             this.goToMenu();
         });
+        this.buttons.push(mainMenuButton);
 
         // Controls hint
-        this.add.text(width / 2, height - 20, 'ESC - Return to Menu', {
+        this.add.text(width / 2, height - 20, 'D-Pad/Arrows: Select | X/Enter: Confirm | ESC: Menu', {
             fontSize: '11px',
             fontFamily: 'Courier New',
             color: '#88ff88'
@@ -131,8 +155,123 @@ export class GameOverScene extends Phaser.Scene {
             this.goToMenu();
         });
 
+        // Highlight the first button initially
+        this.updateButtonHighlight();
+
         // Fade in
         this.cameras.main.fadeIn(500);
+    }
+
+    update() {
+        // Handle gamepad/keyboard input for button navigation
+        this.handleMenuInput();
+    }
+
+    handleMenuInput() {
+        /**
+         * Handle gamepad and keyboard input for button navigation
+         */
+
+        let leftPressed = false;
+        let rightPressed = false;
+        let confirmPressed = false;
+
+        // Keyboard input
+        if (Phaser.Input.Keyboard.JustDown(this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.LEFT))) {
+            leftPressed = true;
+        }
+        if (Phaser.Input.Keyboard.JustDown(this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.RIGHT))) {
+            rightPressed = true;
+        }
+        if (Phaser.Input.Keyboard.JustDown(this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER)) ||
+            Phaser.Input.Keyboard.JustDown(this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.X))) {
+            confirmPressed = true;
+        }
+
+        // Gamepad input
+        if (this.gamepad) {
+            // D-pad left/right
+            const dpadLeft = this.gamepad.buttons[14] && this.gamepad.buttons[14].pressed;
+            const dpadRight = this.gamepad.buttons[15] && this.gamepad.buttons[15].pressed;
+
+            // Left stick
+            const leftStickX = this.gamepad.axes[0] ? this.gamepad.axes[0].getValue() : 0;
+
+            if ((dpadLeft || leftStickX < -0.5) && !this.buttonStates.left) {
+                leftPressed = true;
+            }
+            if ((dpadRight || leftStickX > 0.5) && !this.buttonStates.right) {
+                rightPressed = true;
+            }
+
+            this.buttonStates.left = dpadLeft || leftStickX < -0.5;
+            this.buttonStates.right = dpadRight || leftStickX > 0.5;
+
+            // X button (Cross on PlayStation, A on Xbox) - button index 0
+            const xButton = this.gamepad.buttons[0];
+            const xButtonPressed = xButton && xButton.pressed;
+
+            if (xButtonPressed && !this.buttonStates.x) {
+                confirmPressed = true;
+            }
+
+            this.buttonStates.x = xButtonPressed;
+        }
+
+        // Navigate buttons
+        if (leftPressed) {
+            this.selectedButtonIndex--;
+            if (this.selectedButtonIndex < 0) {
+                this.selectedButtonIndex = this.buttons.length - 1;
+            }
+            this.updateButtonHighlight();
+        }
+
+        if (rightPressed) {
+            this.selectedButtonIndex++;
+            if (this.selectedButtonIndex >= this.buttons.length) {
+                this.selectedButtonIndex = 0;
+            }
+            this.updateButtonHighlight();
+        }
+
+        // Confirm selection
+        if (confirmPressed) {
+            const selectedButton = this.buttons[this.selectedButtonIndex];
+            if (selectedButton && selectedButton.callback) {
+                selectedButton.callback();
+            }
+        }
+    }
+
+    updateButtonHighlight() {
+        /**
+         * Update visual highlight for selected button
+         */
+
+        this.buttons.forEach((button, index) => {
+            const isSelected = index === this.selectedButtonIndex;
+
+            button.bg.clear();
+
+            if (isSelected) {
+                // Highlight selected button
+                button.bg.fillStyle(0x3a5a4a, 1);
+                button.bg.lineStyle(3, 0x00ffff, 1);
+                button.bg.fillRoundedRect(-80, -20, 160, 40, 8);
+                button.bg.strokeRoundedRect(-80, -20, 160, 40, 8);
+                button.text.setColor('#00ffff');
+                button.text.setFontSize('16px');
+            } else {
+                // Normal button appearance
+                button.bg.fillStyle(0x2a4a3a, 1);
+                button.bg.lineStyle(2, 0x00ff00, 1);
+                button.bg.fillRoundedRect(-80, -20, 160, 40, 8);
+                button.bg.strokeRoundedRect(-80, -20, 160, 40, 8);
+                button.text.setColor('#00ff00');
+                button.text.setFontSize('14px');
+            }
+        });
     }
 
     createFishCard(x, y, fish, number) {
@@ -193,26 +332,23 @@ export class GameOverScene extends Phaser.Scene {
         container.setInteractive(hitArea, Phaser.Geom.Rectangle.Contains);
 
         container.on('pointerover', () => {
-            bg.clear();
-            bg.fillStyle(0x3a5a4a, 1);
-            bg.lineStyle(2, 0x00ffff, 1);
-            bg.fillRoundedRect(-80, -20, 160, 40, 8);
-            bg.strokeRoundedRect(-80, -20, 160, 40, 8);
-            buttonText.setColor('#00ffff');
-        });
-
-        container.on('pointerout', () => {
-            bg.clear();
-            bg.fillStyle(0x2a4a3a, 1);
-            bg.lineStyle(2, 0x00ff00, 1);
-            bg.fillRoundedRect(-80, -20, 160, 40, 8);
-            bg.strokeRoundedRect(-80, -20, 160, 40, 8);
-            buttonText.setColor('#00ff00');
+            // Update selected index when hovering with mouse
+            const buttonIndex = this.buttons.findIndex(btn => btn.container === container);
+            if (buttonIndex !== -1) {
+                this.selectedButtonIndex = buttonIndex;
+                this.updateButtonHighlight();
+            }
         });
 
         container.on('pointerdown', callback);
 
-        return container;
+        // Return button data structure
+        return {
+            container: container,
+            bg: bg,
+            text: buttonText,
+            callback: callback
+        };
     }
 
     restartGame() {

@@ -46,6 +46,14 @@ export class BoatManager {
     }
 
     getStartingPosition() {
+        // If we have a world position from navigation map, start at center of game area
+        // This ensures the player is fishing at the depth they selected
+        if (this.worldX !== null) {
+            console.log(`🎯 Starting at center of game area (x=5000) for selected navigation position`);
+            return 5000; // Center of game coordinates maps to selected world position
+        }
+
+        // Legacy behavior when starting without navigation (e.g., from menu)
         if (this.fishingType === GameConfig.FISHING_TYPE_KAYAK) {
             // Kayak: Start in middle of lake at depth between 70-120 feet
             // Find a position with the right depth
@@ -108,11 +116,27 @@ export class BoatManager {
     }
 
     getDepthAtPosition(x) {
-        // Get lake bottom depth at specific X position
+        // Get lake bottom depth at specific X position (game coordinates)
         const closest = this.lakeBedProfile.reduce((prev, curr) =>
             Math.abs(curr.x - x) < Math.abs(prev.x - x) ? curr : prev
         );
         return closest.depth;
+    }
+
+    getPlayerWorldX() {
+        /**
+         * Get player's current position in world coordinates
+         * @returns {number} World X coordinate
+         */
+        if (this.worldX === null) {
+            // No world position set, return game coordinate as fallback
+            return this.playerX;
+        }
+
+        // Convert game coordinate to world coordinate
+        // Game x=5000 (center) maps to this.worldX
+        const offsetFromCenter = this.playerX - 5000;
+        return this.worldX + offsetFromCenter;
     }
 
     movePlayer(direction) {
@@ -250,37 +274,38 @@ export class BoatManager {
 
     drawBoat() {
         const screenX = GameConfig.CANVAS_WIDTH / 2; // Boat always centered
+        const waterSurfaceY = 0; // Water surface is at y=0
 
         if (this.fishingType === GameConfig.FISHING_TYPE_KAYAK) {
-            // Draw kayak
+            // Draw kayak - positioned above water surface
             this.graphics.fillStyle(0xff6600, 1.0);
-            // Kayak body (elongated ellipse)
-            this.graphics.fillEllipse(screenX, 10, 30, 8);
+            // Kayak body (elongated ellipse) - floating on water
+            this.graphics.fillEllipse(screenX, waterSurfaceY - 5, 30, 8);
             // Paddle
             if (this.isPaddling) {
                 const paddleOffset = Math.sin(Date.now() * 0.01) * 15;
                 this.graphics.lineStyle(2, 0x8b4513, 1.0);
-                this.graphics.lineBetween(screenX - 10 + paddleOffset, 5, screenX - 15 + paddleOffset, 0);
+                this.graphics.lineBetween(screenX - 10 + paddleOffset, waterSurfaceY - 10, screenX - 15 + paddleOffset, waterSurfaceY - 15);
             }
         } else {
-            // Draw motor boat
+            // Draw motor boat - positioned above water surface
             this.graphics.fillStyle(0xffffff, 1.0);
-            // Boat body (larger)
-            this.graphics.fillRoundedRect(screenX - 25, 5, 50, 12, 5);
+            // Boat body (larger) - floating on water
+            this.graphics.fillRoundedRect(screenX - 25, waterSurfaceY - 12, 50, 12, 5);
             // Motor
             this.graphics.fillStyle(0x666666, 1.0);
-            this.graphics.fillRect(screenX + 20, 12, 8, 6);
+            this.graphics.fillRect(screenX + 20, waterSurfaceY - 5, 8, 6);
             // Wake if moving
             if (this.isMoving) {
                 this.graphics.lineStyle(2, 0xffffff, 0.5);
-                this.graphics.lineBetween(screenX - 30, 15, screenX - 40, 20);
-                this.graphics.lineBetween(screenX - 30, 15, screenX - 40, 10);
+                this.graphics.lineBetween(screenX - 30, waterSurfaceY + 2, screenX - 40, waterSurfaceY + 7);
+                this.graphics.lineBetween(screenX - 30, waterSurfaceY + 2, screenX - 40, waterSurfaceY - 3);
             }
         }
 
-        // Position indicator below boat
+        // Position indicator below boat (in the water)
         const depthHere = this.getDepthAtPosition(this.playerX);
-        const text = this.scene.add.text(screenX, 25, `Depth: ${depthHere.toFixed(0)}ft`, {
+        const text = this.scene.add.text(screenX, waterSurfaceY + 12, `Depth: ${depthHere.toFixed(0)}ft`, {
             fontSize: '8px',
             fontFamily: 'Courier New',
             color: '#ffff00',
@@ -295,7 +320,7 @@ export class BoatManager {
 
     updateUI() {
         if (this.fishingType === GameConfig.FISHING_TYPE_KAYAK) {
-            // Update tiredness meter
+            // Update tiredness meter (legacy bottom panel)
             const tirednessEl = document.getElementById('kayak-tiredness');
             if (tirednessEl) {
                 tirednessEl.textContent = `${Math.floor(this.tiredness)}%`;
@@ -313,8 +338,20 @@ export class BoatManager {
                     tirednessFillEl.style.background = 'var(--border-primary)';
                 }
             }
+
+            // Update top status bar stamina display
+            const staminaEl = document.getElementById('ui-kayak-stamina');
+            if (staminaEl) {
+                staminaEl.textContent = Math.floor(100 - this.tiredness); // Convert tiredness to stamina
+            }
+
+            // Show kayak status, hide boat status
+            const kayakStatusEl = document.getElementById('ui-kayak-status');
+            const boatStatusEl = document.getElementById('ui-boat-status');
+            if (kayakStatusEl) kayakStatusEl.style.display = 'block';
+            if (boatStatusEl) boatStatusEl.style.display = 'none';
         } else {
-            // Update gas meter
+            // Update gas meter (legacy bottom panel)
             const gasEl = document.getElementById('motorboat-gas');
             if (gasEl) {
                 gasEl.textContent = `${Math.floor(this.gasLevel)}%`;
@@ -339,6 +376,18 @@ export class BoatManager {
                 const distanceToDocks = Math.abs(this.playerX - GameConfig.MOTORBOAT_DOCK_POSITION);
                 distanceEl.textContent = `${Math.floor(distanceToDocks / 10)}ft`;
             }
+
+            // Update top status bar fuel display
+            const fuelEl = document.getElementById('ui-boat-fuel');
+            if (fuelEl) {
+                fuelEl.textContent = Math.floor(this.gasLevel);
+            }
+
+            // Show boat status, hide kayak status
+            const kayakStatusEl = document.getElementById('ui-kayak-status');
+            const boatStatusEl = document.getElementById('ui-boat-status');
+            if (kayakStatusEl) kayakStatusEl.style.display = 'none';
+            if (boatStatusEl) boatStatusEl.style.display = 'block';
         }
     }
 

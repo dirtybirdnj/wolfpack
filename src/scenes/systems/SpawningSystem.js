@@ -76,7 +76,8 @@ export class SpawningSystem {
             if (!currentHole) return null;
             playerWorldX = currentHole.x;
         } else if (this.scene.boatManager) {
-            playerWorldX = this.scene.boatManager.playerX;
+            // Use getPlayerWorldX() to get actual world coordinates, not game coordinates
+            playerWorldX = this.scene.boatManager.getPlayerWorldX();
         } else {
             return null; // No manager available
         }
@@ -233,7 +234,8 @@ export class SpawningSystem {
             const currentHole = this.scene.iceHoleManager.getCurrentHole();
             playerWorldX = currentHole ? currentHole.x : 0;
         } else if (this.scene.boatManager) {
-            playerWorldX = this.scene.boatManager.playerX;
+            // Use getPlayerWorldX() to get actual world coordinates, not game coordinates
+            playerWorldX = this.scene.boatManager.getPlayerWorldX();
         } else {
             playerWorldX = 0;
         }
@@ -276,7 +278,8 @@ export class SpawningSystem {
             const currentHole = this.scene.iceHoleManager.getCurrentHole();
             playerWorldX = currentHole ? currentHole.x : 0;
         } else if (this.scene.boatManager) {
-            playerWorldX = this.scene.boatManager.playerX;
+            // Use getPlayerWorldX() to get actual world coordinates, not game coordinates
+            playerWorldX = this.scene.boatManager.getPlayerWorldX();
         } else {
             playerWorldX = 0;
         }
@@ -315,7 +318,8 @@ export class SpawningSystem {
             if (!currentHole) return null;
             playerWorldX = currentHole.x;
         } else if (this.scene.boatManager) {
-            playerWorldX = this.scene.boatManager.playerX;
+            // Use getPlayerWorldX() to get actual world coordinates, not game coordinates
+            playerWorldX = this.scene.boatManager.getPlayerWorldX();
         } else {
             return null; // No manager available
         }

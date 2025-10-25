@@ -58,7 +58,7 @@
 
         #main-layout {
             display: grid;
-            grid-template-columns: 220px 1fr 220px;
+            grid-template-columns: 1fr 220px;
             grid-template-rows: auto 1fr auto;
             gap: 15px;
             max-width: 1800px;
@@ -66,24 +66,16 @@
             align-items: start;
         }
 
-        #left-panel {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            grid-column: 1;
-            grid-row: 1 / 3;
-        }
-
         #right-panel {
             display: flex;
             flex-direction: column;
             gap: 12px;
-            grid-column: 3;
+            grid-column: 2;
             grid-row: 1 / 3;
         }
 
         #game-info-panel {
-            grid-column: 2;
+            grid-column: 1;
             grid-row: 1;
         }
 
@@ -92,16 +84,18 @@
             box-shadow: 0 0 20px var(--shadow-color);
             position: relative;
             margin: 0 auto;
-            grid-column: 2;
+            grid-column: 1;
             grid-row: 2;
         }
 
         #dev-toolbar {
-            grid-column: 1 / 4;
+            grid-column: 1 / 3;
             grid-row: 3;
             display: grid;
-            grid-template-columns: 1fr 1fr 1fr 1fr;
+            grid-template-columns: 1fr;
             gap: 20px;
+            max-width: 300px;
+            margin: 0 auto;
         }
 
         .controller-status-hidden {
@@ -271,7 +265,7 @@
         /* Responsive */
         @media (max-width: 1600px) {
             #main-layout {
-                grid-template-columns: 200px 1fr 200px;
+                grid-template-columns: 1fr 200px;
             }
         }
 
@@ -281,16 +275,12 @@
                 max-width: 900px;
             }
 
-            #left-panel {
-                order: 2;
-            }
-
             #game-container {
                 order: 1;
             }
 
             #right-panel {
-                order: 3;
+                order: 2;
             }
         }
 
@@ -331,167 +321,6 @@
 </head>
 <body>
     <div id="main-layout">
-        <!-- Left Panel -->
-        <div id="left-panel">
-            <!-- Keyboard Controls -->
-            <div class="panel" id="keyboard-controls">
-                <div class="collapsible-header" onclick="toggleCollapse('kb-content')">
-                    <h3>⌨️ KEYBOARD CONTROLS</h3>
-                    <span class="collapsible-toggle" id="kb-toggle">▼</span>
-                </div>
-                <div class="collapsible-content" id="kb-content">
-                <div class="control-item">
-                    <span><span class="key">SPACE</span> <span class="key">↓</span></span>
-                    <span>Release Spool (Drop)</span>
-                </div>
-                <div class="control-item">
-                    <span><span class="key">↑</span></span>
-                    <span>Engage Clutch & Retrieve</span>
-                </div>
-                <div class="control-item">
-                    <span>Release <span class="key">↑</span></span>
-                    <span>Hold Position</span>
-                </div>
-                <div class="control-item">
-                    <span><span class="key">←</span> <span class="key">→</span></span>
-                    <span>Adjust Speed</span>
-                </div>
-                <div class="control-item">
-                    <span><span class="key">R</span></span>
-                    <span>Reset to Surface</span>
-                </div>
-                <div class="control-item">
-                    <span><span class="key">ESC</span> <span class="key">P</span></span>
-                    <span>Pause / Resume</span>
-                </div>
-                </div>
-            </div>
-
-            <!-- Gamepad Controls -->
-            <div class="panel" id="gamepad-controls" style="display: none;">
-                <div class="collapsible-header" onclick="toggleCollapse('gp-content')">
-                    <h3>🎮 GAMEPAD CONTROLS</h3>
-                    <span class="collapsible-toggle" id="gp-toggle">▼</span>
-                </div>
-                <div class="collapsible-content" id="gp-content">
-                <div style="font-weight: bold; color: var(--border-secondary); margin-bottom: 8px; font-size: 11px;">FISHING MODE</div>
-                <div class="control-item">
-                    <span><span class="key">X (PS: ×)</span></span>
-                    <span>Release Spool (Drop)</span>
-                </div>
-                <div class="control-item">
-                    <span><span class="key">D-PAD ↓</span></span>
-                    <span>Release Spool (Alt)</span>
-                </div>
-                <div class="control-item">
-                    <span><span class="key">R2</span></span>
-                    <span>Reel (Speed = Pressure)</span>
-                </div>
-                <div class="control-item" style="margin-left: 10px; font-size: 9px; color: var(--text-muted);">
-                    <span>↳ Light = Slow</span>
-                    <span>Full = Fast</span>
-                </div>
-                <div class="control-item" style="margin-left: 10px; font-size: 9px; color: var(--text-muted);">
-                    <span>↳ Tap R2 while dropping</span>
-                    <span>Engage clutch</span>
-                </div>
-                <div class="control-item">
-                    <span><span class="key">D-PAD ↑</span></span>
-                    <span>Reel (Fixed Speed)</span>
-                </div>
-                <div class="control-item">
-                    <span><span class="key">R-STICK ↕</span></span>
-                    <span>Jigging (Fine Control)</span>
-                </div>
-                <div class="control-item">
-                    <span><span class="key">CIRCLE (PS: ○)</span></span>
-                    <span>Reset to Surface</span>
-                </div>
-                <div class="control-item">
-                    <span><span class="key">SQUARE (PS: □)</span></span>
-                    <span>Toggle Debug Mode</span>
-                </div>
-                <div class="control-item">
-                    <span><span class="key">R2</span></span>
-                    <span>Reel In (Fight Mode)</span>
-                </div>
-                <div class="control-item">
-                    <span><span class="key">START</span></span>
-                    <span>Pause / Resume</span>
-                </div>
-                <div style="font-weight: bold; color: var(--border-warning); margin: 10px 0 8px 0; font-size: 11px; border-top: 1px solid var(--text-muted); padding-top: 8px;">MOVEMENT MODE</div>
-                <div class="control-item">
-                    <span><span class="key">TRIANGLE (PS: △)</span></span>
-                    <span>Toggle Move/Fish Mode</span>
-                </div>
-                <div class="control-item">
-                    <span><span class="key">D-PAD ←→</span></span>
-                    <span>Walk on Ice</span>
-                </div>
-                <div class="control-item">
-                    <span><span class="key">L-STICK ←→</span></span>
-                    <span>Walk on Ice (Alt)</span>
-                </div>
-                <div class="control-item">
-                    <span><span class="key">SQUARE (PS: □)</span></span>
-                    <span>Drill New Hole</span>
-                </div>
-                </div>
-            </div>
-
-            <!-- Ice Fishing Drill Battery -->
-            <div id="ice-drill-panel" class="panel secondary">
-                <h3>⛏️ ICE DRILL</h3>
-                <div style="margin: 10px 0; font-size: 12px;">
-                    <div style="margin-bottom: 8px;">
-                        <strong>Battery:</strong> <span id="drill-charges" class="status-value" style="color: var(--text-primary);">4/4</span>
-                    </div>
-                    <div style="display: flex; gap: 4px; margin-bottom: 12px;">
-                        <div id="battery-bar-1" class="battery-bar" style="width: 25%; height: 20px; background: var(--border-primary); border-radius: 2px;"></div>
-                        <div id="battery-bar-2" class="battery-bar" style="width: 25%; height: 20px; background: var(--border-primary); border-radius: 2px;"></div>
-                        <div id="battery-bar-3" class="battery-bar" style="width: 25%; height: 20px; background: var(--border-primary); border-radius: 2px;"></div>
-                        <div id="battery-bar-4" class="battery-bar" style="width: 25%; height: 20px; background: var(--border-primary); border-radius: 2px;"></div>
-                    </div>
-                    <div style="font-size: 11px;">
-                        <div>Current Hole: <span id="current-hole" class="status-value">#1</span></div>
-                        <div>Hole Depth: <span id="hole-depth" class="status-value">140ft</span></div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Kayak Tiredness -->
-            <div id="kayak-tiredness-panel" class="panel secondary" style="display: none;">
-                <h3>🛶 KAYAK STATUS</h3>
-                <div style="margin: 10px 0; font-size: 12px;">
-                    <div style="margin-bottom: 8px;">
-                        <strong>Tiredness:</strong> <span id="kayak-tiredness" class="status-value" style="color: var(--text-primary);">0%</span>
-                    </div>
-                    <div style="background: var(--bg-tertiary); height: 20px; border-radius: 2px; overflow: hidden; margin-bottom: 8px;">
-                        <div id="kayak-tiredness-fill" style="width: 0%; height: 100%; background: var(--border-primary); transition: width 0.3s, background 0.3s;"></div>
-                    </div>
-                    <div style="font-size: 10px; color: var(--text-muted);">
-                        Stop paddling to rest and recover
-                    </div>
-                </div>
-            </div>
-
-            <!-- Motorboat Gas -->
-            <div id="motorboat-gas-panel" class="panel secondary" style="display: none;">
-                <h3>⛵ BOAT STATUS</h3>
-                <div style="margin: 10px 0; font-size: 12px;">
-                    <div style="margin-bottom: 8px;">
-                        <strong>Fuel:</strong> <span id="motorboat-gas" class="status-value" style="color: var(--text-primary);">100%</span>
-                    </div>
-                    <div style="background: var(--bg-tertiary); height: 20px; border-radius: 2px; overflow: hidden; margin-bottom: 8px;">
-                        <div id="motorboat-gas-fill" style="width: 100%; height: 100%; background: var(--border-primary); transition: width 0.3s, background 0.3s;"></div>
-                    </div>
-                    <div style="font-size: 10px; color: var(--text-muted);">
-                        Fuel regenerates when stationary
-                    </div>
-                </div>
-            </div>
-        </div>
-
         <!-- Game Info Panel (Above Game) -->
         <div id="game-info-panel" class="panel">
             <div style="display: grid; grid-template-columns: repeat(9, 1fr); gap: 8px; font-size: 10px;">
@@ -506,10 +335,6 @@
                 <div>
                     <div style="color: var(--text-muted); font-size: 8px;">DEPTH</div>
                     <div style="font-weight: bold; color: var(--border-secondary); font-size: 11px;"><span id="ui-depth">0</span>ft</div>
-                </div>
-                <div>
-                    <div style="color: var(--text-muted); font-size: 8px;">STATE</div>
-                    <div style="font-weight: bold; color: var(--text-secondary); font-size: 10px;"><span id="ui-lure-state">SURFACE</span></div>
                 </div>
                 <div>
                     <div style="color: var(--text-muted); font-size: 8px;">SPEED</div>
@@ -534,9 +359,15 @@
                     <div style="color: var(--text-muted); font-size: 8px;">TIME</div>
                     <div style="font-weight: bold; color: var(--text-primary); font-size: 11px;"><span id="ui-time">0:00</span></div>
                 </div>
-                <div>
-                    <div style="color: var(--text-muted); font-size: 8px;">ZONE</div>
-                    <div style="font-weight: bold; font-size: 10px;" id="ui-zone-text"><span id="ui-zone">Surface</span></div>
+                <!-- Kayak Tiredness (shown when in kayak mode) -->
+                <div id="ui-kayak-status" style="display: none;">
+                    <div style="color: var(--text-muted); font-size: 8px;">STAMINA</div>
+                    <div style="font-weight: bold; color: var(--text-primary); font-size: 11px;"><span id="ui-kayak-stamina">100</span>%</div>
+                </div>
+                <!-- Motorboat Gas (shown when in motorboat mode) -->
+                <div id="ui-boat-status" style="display: none;">
+                    <div style="color: var(--text-muted); font-size: 8px;">FUEL</div>
+                    <div style="font-weight: bold; color: var(--text-primary); font-size: 11px;"><span id="ui-boat-fuel">100</span>%</div>
                 </div>
             </div>
         </div>
@@ -578,56 +409,7 @@
 
         <!-- Dev Toolbar (Bottom) -->
         <div id="dev-toolbar">
-            <!-- Column 1: Actions -->
-            <div class="panel warning">
-                <h3>🔧 DEV ACTIONS</h3>
-                <button id="spawn-fish-btn" class="dev-btn">Spawn Fish</button>
-                <button id="spawn-5-fish-btn" class="dev-btn">Spawn 5 Fish</button>
-                <button id="reset-game-btn" class="dev-btn">Reset Game</button>
-                <button id="toggle-debug-btn" class="dev-btn">Toggle Debug</button>
-            </div>
-
-            <!-- Column 2: Lure Weight -->
-            <div class="panel warning">
-                <h3>🎣 LURE WEIGHT</h3>
-                <div style="font-size: 11px; margin-bottom: 8px;">
-                    Current: <span id="current-lure-weight" class="status-value">0.5oz</span>
-                </div>
-                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px;">
-                    <button id="lure-weight-0.25" class="dev-btn" style="font-size: 10px; padding: 6px 4px;">1/4oz</button>
-                    <button id="lure-weight-0.5" class="dev-btn" style="font-size: 10px; padding: 6px 4px;">1/2oz</button>
-                    <button id="lure-weight-1" class="dev-btn" style="font-size: 10px; padding: 6px 4px;">1oz</button>
-                    <button id="lure-weight-2" class="dev-btn" style="font-size: 10px; padding: 6px 4px;">2oz</button>
-                    <button id="lure-weight-3" class="dev-btn" style="font-size: 10px; padding: 6px 4px;">3oz</button>
-                    <button id="lure-weight-4" class="dev-btn" style="font-size: 10px; padding: 6px 4px;">4oz</button>
-                </div>
-            </div>
-
-            <!-- Column 3: Fishing Line -->
-            <div class="panel warning">
-                <h3>🧵 FISHING LINE</h3>
-                <div style="font-size: 11px; margin-bottom: 8px;">
-                    Type: <span id="current-line-type" class="status-value">Braided</span>
-                </div>
-                <div style="display: grid; grid-template-columns: 1fr; gap: 4px; margin-bottom: 8px;">
-                    <button id="line-type-braid" class="dev-btn" style="font-size: 10px; padding: 6px 4px;">Braid</button>
-                    <button id="line-type-monofilament" class="dev-btn" style="font-size: 10px; padding: 6px 4px;">Mono</button>
-                    <button id="line-type-fluorocarbon" class="dev-btn" style="font-size: 10px; padding: 6px 4px;">Fluoro</button>
-                </div>
-                <div id="braid-color-section" style="border-top: 1px solid var(--text-muted); padding-top: 8px;">
-                    <div style="font-size: 11px; margin-bottom: 6px;">
-                        Color: <span id="current-braid-color" class="status-value">Neon Green</span>
-                    </div>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px;">
-                        <button id="braid-color-neon-green" class="dev-btn" style="font-size: 9px; padding: 4px 2px;">Neon</button>
-                        <button id="braid-color-yellow" class="dev-btn" style="font-size: 9px; padding: 4px 2px;">Yellow</button>
-                        <button id="braid-color-moss-green" class="dev-btn" style="font-size: 9px; padding: 4px 2px;">Moss</button>
-                        <button id="braid-color-white" class="dev-btn" style="font-size: 9px; padding: 4px 2px;">White</button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Column 4: Controller & Info -->
+            <!-- Column 1: Controller & Info -->
             <div class="panel secondary">
                 <h3>🎮 CONTROLLER</h3>
                 <div style="margin: 10px 0;">

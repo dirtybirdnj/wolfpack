@@ -29,7 +29,9 @@ export class Fish {
         this.worldX = x;
 
         // Screen coordinates (for rendering - calculated based on player position)
-        this.x = x;
+        // Initialize screen X relative to player - will be properly calculated in first update
+        // For now, set to a default center position to avoid issues
+        this.x = GameConfig.CANVAS_WIDTH / 2;
         this.y = y;
         this.depth = y / GameConfig.DEPTH_SCALE;
 
@@ -320,6 +322,26 @@ export class Fish {
             this.y += movement.y;
             this.depth = this.y / GameConfig.DEPTH_SCALE;
 
+            // Get player's world position
+            let playerWorldX;
+            if (this.scene.iceHoleManager) {
+                const currentHole = this.scene.iceHoleManager.getCurrentHole();
+                playerWorldX = currentHole ? currentHole.x : this.worldX;
+            } else if (this.scene.boatManager) {
+                playerWorldX = this.scene.boatManager.getPlayerWorldX();
+            } else {
+                playerWorldX = this.worldX; // Fallback
+            }
+
+            // Keep fish within reasonable bounds of player in world coordinates
+            // This prevents fish from swimming off screen indefinitely
+            const maxDistanceFromPlayer = 450; // Maximum world units from player
+            const minWorldX = playerWorldX - maxDistanceFromPlayer;
+            const maxWorldX = playerWorldX + maxDistanceFromPlayer;
+
+            // Clamp worldX to prevent fish from going too far
+            this.worldX = Math.max(minWorldX, Math.min(maxWorldX, this.worldX));
+
             // Get lake bottom depth at fish's current position
             let bottomDepth = GameConfig.MAX_DEPTH;
             if (this.scene.boatManager) {
@@ -342,18 +364,19 @@ export class Fish {
             this.y = Math.max(10, Math.min(maxY, this.y));
 
             // Convert world position to screen position based on player position
-            let playerWorldX;
-            if (this.scene.iceHoleManager) {
-                const currentHole = this.scene.iceHoleManager.getCurrentHole();
-                playerWorldX = currentHole ? currentHole.x : this.worldX;
-            } else if (this.scene.boatManager) {
-                playerWorldX = this.scene.boatManager.playerX;
-            } else {
-                playerWorldX = this.worldX; // Fallback
-            }
-
             const offsetFromPlayer = this.worldX - playerWorldX;
             this.x = (GameConfig.CANVAS_WIDTH / 2) + offsetFromPlayer;
+
+            // Clamp screen position to keep fish visible on screen
+            // Add margins to ensure fish don't swim off visible area
+            const screenMargin = 30; // pixels from edge
+            this.x = Math.max(screenMargin, Math.min(GameConfig.CANVAS_WIDTH - screenMargin, this.x));
+
+            // If fish hit screen boundary, also adjust world position to match
+            // This prevents fish from "sticking" to screen edge while trying to swim off
+            if (this.x <= screenMargin || this.x >= GameConfig.CANVAS_WIDTH - screenMargin) {
+                this.worldX = playerWorldX + (this.x - (GameConfig.CANVAS_WIDTH / 2));
+            }
 
             // Update sonar trail
             this.updateSonarTrail();
