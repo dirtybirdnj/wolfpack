@@ -250,14 +250,13 @@ export class BaitfishCloud {
             this.visible = false;
         }
 
-        // SURFACE COMPRESSION DETECTION - Split cloud if compressed against surface
-        // This prevents the horizontal line bug
+        // HORIZONTAL LINE DETECTION - Despawn cloud if compressed into unrealistic formation
+        // This simulates natural cloud dispersal behavior
         const surfaceDepthLimit = 15; // Feet from surface
         const surfaceYLimit = surfaceDepthLimit * GameConfig.DEPTH_SCALE;
 
         if (this.centerY <= surfaceYLimit && this.baitfish.length >= 8) {
-            // Cloud is near surface and has enough fish to split
-            // Check if fish are compressed horizontally (measure spread)
+            // Cloud is near surface - check if compressed into horizontal line
             let minY = Infinity;
             let maxY = -Infinity;
             let minX = Infinity;
@@ -277,16 +276,10 @@ export class BaitfishCloud {
             const compressionRatio = horizontalSpread / (verticalSpread + 1);
 
             if (compressionRatio > 3.5) {
-                // Cloud is compressed into a horizontal line, split it!
-                console.log(`Cloud compressed (ratio: ${compressionRatio.toFixed(2)}), splitting...`);
-                const newCloud = this.split();
-
-                // Give the new cloud a downward velocity to move away from surface
-                if (newCloud) {
-                    newCloud.velocity.y = 1.0; // Move down
-                    this.velocity.y = 0.5; // Original cloud also drifts down slightly
-                    return newCloud; // Return the new cloud to be added
-                }
+                // Cloud compressed into horizontal line - despawn it!
+                console.log(`Cloud compressed (ratio: ${compressionRatio.toFixed(2)}) - dispersing naturally`);
+                this.visible = false; // Cloud disperses
+                return null;
             }
         }
 
