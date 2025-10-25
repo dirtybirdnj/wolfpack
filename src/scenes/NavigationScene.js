@@ -556,11 +556,34 @@ export class NavigationScene extends Phaser.Scene {
         });
         this.resourceText.setDepth(1000);
 
-        // Instruction text
-        this.instructionText = this.add.text(this.viewportWidth / 2, this.viewportHeight - 30, '', {
-            fontSize: '11px',
+        // Persistent controls hint
+        this.controlsText = this.add.text(this.viewportWidth / 2, this.viewportHeight - 60, 'X: Move  |  D-Pad: Steer', {
+            fontSize: '12px',
+            fontFamily: 'Courier New',
+            color: '#88ff88',
+            backgroundColor: '#000000aa',
+            padding: { x: 10, y: 5 }
+        });
+        this.controlsText.setOrigin(0.5, 0);
+        this.controlsText.setDepth(1000);
+
+        // Fishing action hint (changes based on speed)
+        this.actionText = this.add.text(this.viewportWidth / 2, this.viewportHeight - 30, '', {
+            fontSize: '14px',
             fontFamily: 'Courier New',
             color: '#ffff00',
+            backgroundColor: '#000000',
+            padding: { x: 12, y: 6 },
+            fontStyle: 'bold'
+        });
+        this.actionText.setOrigin(0.5, 0);
+        this.actionText.setDepth(1001);
+
+        // Instruction text (for temporary messages)
+        this.instructionText = this.add.text(this.viewportWidth / 2, this.viewportHeight - 95, '', {
+            fontSize: '11px',
+            fontFamily: 'Courier New',
+            color: '#00ffff',
             backgroundColor: '#000000',
             padding: { x: 8, y: 4 }
         });
@@ -591,6 +614,21 @@ export class NavigationScene extends Phaser.Scene {
             const color = this.gasLevel <= 20 ? '#ff0000' : '#00ff00';
             this.resourceText.setText(`Gas: ${Math.floor(this.gasLevel)}%`);
             this.resourceText.setColor(color);
+        }
+
+        // Action hint - changes based on speed
+        if (this.speed < 0.5) {
+            // Stopped - ready to fish!
+            this.actionText.setText('▲ TRIANGLE: START FISHING');
+            this.actionText.setColor('#00ff00');
+            // Make it flash
+            const alpha = 0.7 + Math.sin(Date.now() * 0.005) * 0.3;
+            this.actionText.setAlpha(alpha);
+        } else {
+            // Moving - need to stop first
+            this.actionText.setText('Release X to stop, then Triangle to fish');
+            this.actionText.setColor('#ffaa00');
+            this.actionText.setAlpha(1.0);
         }
     }
 
@@ -636,6 +674,8 @@ export class NavigationScene extends Phaser.Scene {
         if (this.speedText) this.speedText.destroy();
         if (this.headingText) this.headingText.destroy();
         if (this.resourceText) this.resourceText.destroy();
+        if (this.controlsText) this.controlsText.destroy();
+        if (this.actionText) this.actionText.destroy();
         if (this.instructionText) this.instructionText.destroy();
     }
 }
