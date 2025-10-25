@@ -46,6 +46,14 @@ export class BoatManager {
     }
 
     getStartingPosition() {
+        // If we have a world position from navigation map, start at center of game area
+        // This ensures the player is fishing at the depth they selected
+        if (this.worldX !== null) {
+            console.log(`🎯 Starting at center of game area (x=5000) for selected navigation position`);
+            return 5000; // Center of game coordinates maps to selected world position
+        }
+
+        // Legacy behavior when starting without navigation (e.g., from menu)
         if (this.fishingType === GameConfig.FISHING_TYPE_KAYAK) {
             // Kayak: Start in middle of lake at depth between 70-120 feet
             // Find a position with the right depth
@@ -108,11 +116,27 @@ export class BoatManager {
     }
 
     getDepthAtPosition(x) {
-        // Get lake bottom depth at specific X position
+        // Get lake bottom depth at specific X position (game coordinates)
         const closest = this.lakeBedProfile.reduce((prev, curr) =>
             Math.abs(curr.x - x) < Math.abs(prev.x - x) ? curr : prev
         );
         return closest.depth;
+    }
+
+    getPlayerWorldX() {
+        /**
+         * Get player's current position in world coordinates
+         * @returns {number} World X coordinate
+         */
+        if (this.worldX === null) {
+            // No world position set, return game coordinate as fallback
+            return this.playerX;
+        }
+
+        // Convert game coordinate to world coordinate
+        // Game x=5000 (center) maps to this.worldX
+        const offsetFromCenter = this.playerX - 5000;
+        return this.worldX + offsetFromCenter;
     }
 
     movePlayer(direction) {

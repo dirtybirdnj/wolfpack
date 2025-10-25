@@ -296,7 +296,7 @@ export class GameScene extends Phaser.Scene {
             if (!currentHole) return;
             playerWorldX = currentHole.x;
         } else if (this.boatManager) {
-            playerWorldX = this.boatManager.playerX;
+            playerWorldX = this.boatManager.getPlayerWorldX();
         } else {
             return;
         }
