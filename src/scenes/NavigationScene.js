@@ -737,7 +737,8 @@ export class NavigationScene extends Phaser.Scene {
         const playerYNorm = this.playerWorldY / 60000; // Full lake
 
         const playerScreenX = chartX + playerXNorm * chartWidth;
-        const playerScreenY = chartY + playerYNorm * chartHeight;
+        // Flip Y coordinate: Y=0 (Whitehall/south) at bottom, Y=60000 (Canadian border/north) at top
+        const playerScreenY = chartY + (1 - playerYNorm) * chartHeight;
 
         // Player dot
         this.uiGraphics.fillStyle(0x00ff00, 1.0);
@@ -752,7 +753,7 @@ export class NavigationScene extends Phaser.Scene {
         this.uiGraphics.lineStyle(2, 0x00ff00, 1.0);
         this.uiGraphics.lineBetween(playerScreenX, playerScreenY, arrowX, arrowY);
 
-        // Add city markers
+        // Add city markers (Y=0 at south/Whitehall, Y=1 at north/Canadian border)
         const cities = [
             { name: 'Whitehall', y: 0.05 },
             { name: 'Ticonderoga', y: 0.22 },
@@ -764,7 +765,8 @@ export class NavigationScene extends Phaser.Scene {
         ];
 
         cities.forEach(city => {
-            const cityY = chartY + city.y * chartHeight;
+            // Flip Y coordinate: south (0) at bottom, north (1) at top
+            const cityY = chartY + (1 - city.y) * chartHeight;
             this.uiGraphics.fillStyle(0xffff00, 0.8);
             this.uiGraphics.fillCircle(chartX + 2, cityY, 2);
 
@@ -1301,7 +1303,8 @@ export class NavigationScene extends Phaser.Scene {
         ];
 
         landmarks.forEach(landmark => {
-            const landmarkY = chartY + (landmark.y / 60000) * chartHeight;
+            // Flip Y coordinate: Y=0 (south/Whitehall) at bottom, Y=60000 (north) at top
+            const landmarkY = chartY + (1 - landmark.y / 60000) * chartHeight;
             let landmarkX;
             let labelX;
             let labelOrigin;
@@ -1337,7 +1340,8 @@ export class NavigationScene extends Phaser.Scene {
         const playerXNorm = this.playerWorldX / 20000;
         const playerYNorm = this.playerWorldY / 60000;
         const playerScreenX = chartX + playerXNorm * chartWidth;
-        const playerScreenY = chartY + playerYNorm * chartHeight;
+        // Flip Y coordinate: Y=0 (Whitehall/south) at bottom, Y=60000 (Canadian border/north) at top
+        const playerScreenY = chartY + (1 - playerYNorm) * chartHeight;
 
         this.uiGraphics.fillStyle(0x00ff00, 1.0);
         this.uiGraphics.fillCircle(playerScreenX, playerScreenY, 6);
@@ -1348,7 +1352,8 @@ export class NavigationScene extends Phaser.Scene {
         const cursorXNorm = this.navMapCursorX / 20000;
         const cursorYNorm = this.navMapCursorY / 60000;
         const cursorScreenX = chartX + cursorXNorm * chartWidth;
-        const cursorScreenY = chartY + cursorYNorm * chartHeight;
+        // Flip Y coordinate: Y=0 (Whitehall/south) at bottom, Y=60000 (Canadian border/north) at top
+        const cursorScreenY = chartY + (1 - cursorYNorm) * chartHeight;
 
         this.uiGraphics.fillStyle(0xff0000, 1.0);
         this.uiGraphics.fillCircle(cursorScreenX, cursorScreenY, 8);
