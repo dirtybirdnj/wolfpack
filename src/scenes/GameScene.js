@@ -267,6 +267,15 @@ export class GameScene extends Phaser.Scene {
     }
 
     /**
+     * Wrapper for debug panel - delegates to SpawningSystem
+     */
+    trySpawnFish() {
+        if (this.spawningSystem) {
+            this.spawningSystem.trySpawnFish();
+        }
+    }
+
+    /**
      * Update all entities (fish, baitfish, zooplankton)
      */
     updateEntities() {
