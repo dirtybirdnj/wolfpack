@@ -33,9 +33,9 @@ export const GameConfig = {
     SUMMER_WATER_TEMP_MAX: 75,
     THERMOCLINE_DEPTH: 35, // feet - lake trout stay below this in summer
 
-    // Canvas settings - optimized for 13" screens with improved visibility
-    CANVAS_WIDTH: 900,
-    CANVAS_HEIGHT: 630,
+    // Canvas settings - expanded for maximum game area
+    CANVAS_WIDTH: 1200,
+    CANVAS_HEIGHT: 650,
 
     // Sonar display settings
     SONAR_SCROLL_SPEED: 1.35, // pixels per frame (scaled for larger canvas)

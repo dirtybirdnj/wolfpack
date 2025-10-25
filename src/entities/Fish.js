@@ -844,7 +844,7 @@ export class Fish {
 
     getInfo() {
         return {
-            name: `${this.name} the ${this.speciesData.name}`,
+            name: this.name,
             species: this.speciesData.name,
             gender: this.gender,
             age: this.age + ' years',

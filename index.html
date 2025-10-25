@@ -48,18 +48,18 @@
         body {
             margin: 0;
             padding: 20px;
-            min-height: 100vh;
+            height: 100vh;
             background: linear-gradient(135deg, var(--bg-gradient-1) 0%, var(--bg-gradient-2) 100%);
             font-family: 'Courier New', monospace;
             color: var(--text-primary);
-            overflow-x: hidden;
+            overflow: hidden;
         }
 
 
         #main-layout {
             display: grid;
             grid-template-columns: 1fr 220px;
-            grid-template-rows: auto 1fr auto;
+            grid-template-rows: auto 1fr;
             gap: 15px;
             max-width: 1800px;
             margin: 0 auto;
@@ -74,9 +74,65 @@
             grid-row: 1 / 3;
         }
 
-        #game-info-panel {
+        #right-panel .panel.warning {
+            height: 650px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #top-bar-container {
             grid-column: 1;
             grid-row: 1;
+            display: flex;
+            align-items: start;
+            gap: 10px;
+        }
+
+        #gamepad-icon-container,
+        #book-icon-container {
+            position: relative;
+            flex-shrink: 0;
+            cursor: pointer;
+            user-select: none;
+            transition: opacity 0.3s;
+        }
+
+        #gamepad-icon,
+        #book-icon {
+            font-size: 32px;
+            line-height: 1;
+            opacity: 1;
+            transition: all 0.2s;
+        }
+
+        #gamepad-icon.keyboard-mode {
+            opacity: 0.3;
+        }
+
+        #gamepad-icon:hover,
+        #book-icon:hover {
+            transform: scale(1.1);
+        }
+
+        #gamepad-connection-indicator {
+            position: absolute;
+            bottom: -2px;
+            right: -2px;
+            width: 10px;
+            height: 10px;
+            background: #00ff00;
+            border-radius: 50%;
+            border: 2px solid var(--bg-gradient-1);
+            display: none;
+            box-shadow: 0 0 8px rgba(0, 255, 0, 0.8);
+        }
+
+        #gamepad-connection-indicator.connected {
+            display: block;
+        }
+
+        #game-info-panel {
+            flex: 1;
         }
 
         #game-container {
@@ -86,16 +142,6 @@
             margin: 0 auto;
             grid-column: 1;
             grid-row: 2;
-        }
-
-        #dev-toolbar {
-            grid-column: 1 / 3;
-            grid-row: 3;
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 20px;
-            max-width: 300px;
-            margin: 0 auto;
         }
 
         .controller-status-hidden {
@@ -203,13 +249,6 @@
             overflow-y: auto;
             font-size: 10px;
             line-height: 1.4;
-            min-height: 0;
-        }
-
-        #right-panel .panel.warning {
-            display: flex;
-            flex-direction: column;
-            flex: 1;
             min-height: 0;
         }
 
@@ -321,54 +360,68 @@
 </head>
 <body>
     <div id="main-layout">
-        <!-- Game Info Panel (Above Game) -->
-        <div id="game-info-panel" class="panel">
-            <div style="display: grid; grid-template-columns: repeat(9, 1fr); gap: 8px; font-size: 10px;">
-                <div>
-                    <div style="color: var(--text-muted); font-size: 8px;">SCORE</div>
-                    <div style="font-weight: bold; color: var(--text-primary); font-size: 11px;"><span id="ui-score">0</span></div>
-                </div>
-                <div>
-                    <div style="color: var(--text-muted); font-size: 8px;">CAUGHT/LOST</div>
-                    <div style="font-weight: bold; font-size: 11px;"><span id="ui-caught" style="color: var(--text-primary);">0</span>/<span id="ui-lost" style="color: #ff6666;">0</span></div>
-                </div>
-                <div>
-                    <div style="color: var(--text-muted); font-size: 8px;">DEPTH</div>
-                    <div style="font-weight: bold; color: var(--border-secondary); font-size: 11px;"><span id="ui-depth">0</span>ft</div>
-                </div>
-                <div>
-                    <div style="color: var(--text-muted); font-size: 8px;">SPEED</div>
-                    <div style="font-weight: bold; color: var(--text-primary); font-size: 11px;"><span id="ui-speed">2.0</span></div>
-                </div>
-                <div>
-                    <div style="color: var(--text-muted); font-size: 8px;">REEL</div>
-                    <div style="display: flex; align-items: center; gap: 3px;">
-                        <div style="flex: 1; height: 10px; background: rgba(0, 0, 0, 0.5); border: 1px solid var(--text-muted); border-radius: 2px; position: relative; overflow: hidden; min-width: 40px;">
-                            <div id="reel-speed-fill" style="position: absolute; left: 0; top: 0; bottom: 0; width: 0%; background: linear-gradient(90deg, #00ff00 0%, #ffff00 50%, #ff6600 100%); transition: width 0.05s linear;"></div>
-                        </div>
-                        <div style="color: var(--text-primary); font-size: 9px; font-weight: bold; min-width: 22px;">
-                            <span id="reel-speed-percent">0</span>%
+        <!-- Top Bar Container (Gamepad Icon + Game Info Panel) -->
+        <div id="top-bar-container">
+            <!-- Gamepad Icon -->
+            <div id="gamepad-icon-container">
+                <div id="gamepad-icon">🎮</div>
+                <div id="gamepad-connection-indicator"></div>
+            </div>
+
+            <!-- Game Info Panel -->
+            <div id="game-info-panel" class="panel">
+                <div style="display: grid; grid-template-columns: repeat(9, 1fr); gap: 8px; font-size: 10px;">
+                    <div>
+                        <div style="color: var(--text-muted); font-size: 8px;">SCORE</div>
+                        <div style="font-weight: bold; color: var(--text-primary); font-size: 11px;"><span id="ui-score">0</span></div>
+                    </div>
+                    <div>
+                        <div style="color: var(--text-muted); font-size: 8px;">CAUGHT/LOST</div>
+                        <div style="font-weight: bold; font-size: 11px;"><span id="ui-caught" style="color: var(--text-primary);">0</span>/<span id="ui-lost" style="color: #ff6666;">0</span></div>
+                    </div>
+                    <div>
+                        <div style="color: var(--text-muted); font-size: 8px;">DEPTH</div>
+                        <div style="font-weight: bold; color: var(--border-secondary); font-size: 11px;"><span id="ui-depth">0</span>ft</div>
+                    </div>
+                    <div>
+                        <div style="color: var(--text-muted); font-size: 8px;">SPEED</div>
+                        <div style="font-weight: bold; color: var(--text-primary); font-size: 11px;"><span id="ui-speed">2.0</span></div>
+                    </div>
+                    <div>
+                        <div style="color: var(--text-muted); font-size: 8px;">REEL</div>
+                        <div style="display: flex; align-items: center; gap: 3px;">
+                            <div style="flex: 1; height: 10px; background: rgba(0, 0, 0, 0.5); border: 1px solid var(--text-muted); border-radius: 2px; position: relative; overflow: hidden; min-width: 40px;">
+                                <div id="reel-speed-fill" style="position: absolute; left: 0; top: 0; bottom: 0; width: 0%; background: linear-gradient(90deg, #00ff00 0%, #ffff00 50%, #ff6600 100%); transition: width 0.05s linear;"></div>
+                            </div>
+                            <div style="color: var(--text-primary); font-size: 9px; font-weight: bold; min-width: 22px;">
+                                <span id="reel-speed-percent">0</span>%
+                            </div>
                         </div>
                     </div>
+                    <div>
+                        <div style="color: var(--text-muted); font-size: 8px;">TEMP</div>
+                        <div style="font-weight: bold; color: var(--border-secondary); font-size: 11px;"><span id="ui-temp">40</span>°F</div>
+                    </div>
+                    <div>
+                        <div style="color: var(--text-muted); font-size: 8px;">TIME</div>
+                        <div style="font-weight: bold; color: var(--text-primary); font-size: 11px;"><span id="ui-time">0:00</span></div>
+                    </div>
+                    <!-- Kayak Tiredness (shown when in kayak mode) -->
+                    <div id="ui-kayak-status" style="display: none;">
+                        <div style="color: var(--text-muted); font-size: 8px;">STAMINA</div>
+                        <div style="font-weight: bold; color: var(--text-primary); font-size: 11px;"><span id="ui-kayak-stamina">100</span>%</div>
+                    </div>
+                    <!-- Motorboat Gas (shown when in motorboat mode) -->
+                    <div id="ui-boat-status" style="display: none;">
+                        <div style="color: var(--text-muted); font-size: 8px;">FUEL</div>
+                        <div style="font-weight: bold; color: var(--text-primary); font-size: 11px;"><span id="ui-boat-fuel">100</span>%</div>
+                    </div>
                 </div>
-                <div>
-                    <div style="color: var(--text-muted); font-size: 8px;">TEMP</div>
-                    <div style="font-weight: bold; color: var(--border-secondary); font-size: 11px;"><span id="ui-temp">40</span>°F</div>
-                </div>
-                <div>
-                    <div style="color: var(--text-muted); font-size: 8px;">TIME</div>
-                    <div style="font-weight: bold; color: var(--text-primary); font-size: 11px;"><span id="ui-time">0:00</span></div>
-                </div>
-                <!-- Kayak Tiredness (shown when in kayak mode) -->
-                <div id="ui-kayak-status" style="display: none;">
-                    <div style="color: var(--text-muted); font-size: 8px;">STAMINA</div>
-                    <div style="font-weight: bold; color: var(--text-primary); font-size: 11px;"><span id="ui-kayak-stamina">100</span>%</div>
-                </div>
-                <!-- Motorboat Gas (shown when in motorboat mode) -->
-                <div id="ui-boat-status" style="display: none;">
-                    <div style="color: var(--text-muted); font-size: 8px;">FUEL</div>
-                    <div style="font-weight: bold; color: var(--text-primary); font-size: 11px;"><span id="ui-boat-fuel">100</span>%</div>
-                </div>
+            </div>
+
+            <!-- Book Icon (Species Guide) -->
+            <div id="book-icon-container">
+                <div id="book-icon">📖</div>
             </div>
         </div>
 
@@ -406,27 +459,6 @@
                 </div>
             </div>
         </div>
-
-        <!-- Dev Toolbar (Bottom) -->
-        <div id="dev-toolbar">
-            <!-- Column 1: Controller & Info -->
-            <div class="panel secondary">
-                <h3>🎮 CONTROLLER</h3>
-                <div style="margin: 10px 0;">
-                    <div style="font-size: 11px;">Status: <span id="controller-status" class="status-value status-disconnected">Waiting</span></div>
-                    <div id="controller-name" style="color: var(--border-warning); font-size: 9px; margin-top: 5px; font-weight: bold;">Press any button</div>
-                    <div id="controller-help" style="color: var(--text-muted); font-size: 9px; margin-top: 5px; font-style: italic;">
-                        Press button to detect
-                    </div>
-                </div>
-                <button id="test-controller-btn" class="dev-btn secondary" disabled style="font-size: 10px; padding: 6px 10px;">Test Controller</button>
-                <button id="check-gamepads-btn" class="dev-btn warning" style="font-size: 10px; padding: 6px 10px;">Check Gamepads</button>
-                <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border-secondary); font-size: 10px; line-height: 1.5; color: var(--text-muted);">
-                    <div><strong>Build:</strong> v0.3.0</div>
-                    <div><strong>Engine:</strong> Phaser 3.80.1</div>
-                </div>
-            </div>
-        </div>
     </div>
 
     <!-- Load Phaser from CDN -->
@@ -461,11 +493,41 @@
         // Make gamepad manager globally available for Phaser scenes
         window.gamepadManager = gamepadManager;
 
-        // Setup test controller button
-        document.getElementById('test-controller-btn').addEventListener('click', () => {
+        // Track keyboard usage
+        let keyboardUsed = false;
+        const gamepadIcon = document.getElementById('gamepad-icon');
+        const gamepadConnectionIndicator = document.getElementById('gamepad-connection-indicator');
+
+        // Detect keyboard input
+        window.addEventListener('keydown', () => {
+            if (!gamepadManager.isConnected()) {
+                keyboardUsed = true;
+                gamepadIcon.classList.add('keyboard-mode');
+            }
+        });
+
+        // Update gamepad connection indicator
+        function updateGamepadUI() {
+            if (gamepadManager.isConnected()) {
+                keyboardUsed = false;
+                gamepadIcon.classList.remove('keyboard-mode');
+                gamepadConnectionIndicator.classList.add('connected');
+            } else {
+                gamepadConnectionIndicator.classList.remove('connected');
+                if (keyboardUsed) {
+                    gamepadIcon.classList.add('keyboard-mode');
+                }
+            }
+        }
+
+        // Poll for gamepad connection status
+        setInterval(updateGamepadUI, 500);
+
+        // Function to show test controller overlay
+        function showTestController() {
             const gamepad = gamepadManager.getGamepad();
             if (!gamepad) {
-                alert('No controller connected!');
+                alert('No controller connected!\n\nPlease connect a gamepad and press any button on it first.');
                 return;
             }
 
@@ -514,9 +576,12 @@
                         </div>
                     </div>
 
-                    <div style="text-align: center;">
+                    <div style="text-align: center; display: flex; flex-direction: column; gap: 10px; align-items: center;">
                         <button id="close-test-btn" style="background: #ff6666; color: #000; border: none; padding: 12px 30px; font-size: 14px; font-family: 'Courier New', monospace; font-weight: bold; border-radius: 5px; cursor: pointer;">
                             CLOSE TEST (Press START or ESC)
+                        </button>
+                        <button id="check-gamepads-overlay-btn" style="background: #ffaa00; color: #000; border: none; padding: 8px 20px; font-size: 12px; font-family: 'Courier New', monospace; font-weight: bold; border-radius: 5px; cursor: pointer;">
+                            Check Gamepads
                         </button>
                     </div>
                 </div>
@@ -527,6 +592,7 @@
             const buttonsDiv = document.getElementById('test-buttons');
             const axesDiv = document.getElementById('test-axes');
             const closeBtn = document.getElementById('close-test-btn');
+            const checkGamepadsOverlayBtn = document.getElementById('check-gamepads-overlay-btn');
 
             // Button names for display
             const buttonNames = [
@@ -580,6 +646,11 @@
                 overlay.remove();
             });
 
+            // Check Gamepads button handler in overlay
+            checkGamepadsOverlayBtn.addEventListener('click', () => {
+                checkGamepads();
+            });
+
             // ESC key handler
             const escHandler = (e) => {
                 if (e.key === 'Escape') {
@@ -589,10 +660,10 @@
                 }
             };
             document.addEventListener('keydown', escHandler);
-        });
+        }
 
-        // Check Gamepads button - manual diagnostic
-        document.getElementById('check-gamepads-btn').addEventListener('click', () => {
+        // Check Gamepads function - manual diagnostic
+        function checkGamepads() {
             console.log('🔍 Manual gamepad check requested...');
             console.log('🔍 Gamepad API supported?', !!navigator.getGamepads);
 
@@ -634,12 +705,124 @@
             }
 
             alert(message);
+        }
+
+        // Setup gamepad icon click handler
+        document.getElementById('gamepad-icon-container').addEventListener('click', showTestController);
+
+        // Setup book icon click handler (Species Guide)
+        document.getElementById('book-icon-container').addEventListener('click', () => {
+            // Create species guide overlay
+            const overlay = document.createElement('div');
+            overlay.id = 'species-guide-overlay';
+            overlay.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.95);
+                color: #00ff00;
+                font-family: 'Courier New', monospace;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                z-index: 10000;
+                padding: 40px;
+                box-sizing: border-box;
+                overflow-y: auto;
+            `;
+
+            overlay.innerHTML = `
+                <div style="max-width: 900px; width: 100%;">
+                    <h1 style="text-align: center; color: #00aaff; margin-bottom: 20px;">📖 LAKE CHAMPLAIN SPECIES GUIDE</h1>
+                    <div style="background: rgba(0, 50, 100, 0.3); padding: 20px; border: 2px solid #00aaff; border-radius: 10px; margin-bottom: 20px;">
+                        <p style="font-size: 14px; margin: 0; text-align: center; color: #888;">
+                            Your comprehensive reference for Lake Champlain species, behavior patterns, and fishing techniques
+                        </p>
+                    </div>
+
+                    <div style="background: rgba(0, 100, 0, 0.2); padding: 20px; border: 2px solid #00ff00; border-radius: 10px; margin-bottom: 20px;">
+                        <h2 style="color: #ffff00; margin-top: 0;">🎯 Game Species</h2>
+
+                        <div style="margin: 15px 0; padding: 15px; background: rgba(0, 0, 0, 0.3); border-radius: 5px;">
+                            <h3 style="color: #00ff00; margin: 0 0 10px 0;">Northern Pike (Esox lucius)</h3>
+                            <p style="margin: 5px 0; font-size: 12px;"><strong>Behavior:</strong> Ambush predator, prefers shallow weedy areas, active hunters</p>
+                            <p style="margin: 5px 0; font-size: 12px;"><strong>Depth Range:</strong> 5-40 feet, often near vegetation</p>
+                            <p style="margin: 5px 0; font-size: 12px;"><strong>Target:</strong> Aggressively chases baitfish, attracted to movement</p>
+                        </div>
+
+                        <div style="margin: 15px 0; padding: 15px; background: rgba(0, 0, 0, 0.3); border-radius: 5px;">
+                            <h3 style="color: #00ff00; margin: 0 0 10px 0;">Lake Trout (Salvelinus namaycush)</h3>
+                            <p style="margin: 5px 0; font-size: 12px;"><strong>Behavior:</strong> Deep water specialist, cold-water lover, slow methodical hunter</p>
+                            <p style="margin: 5px 0; font-size: 12px;"><strong>Depth Range:</strong> 40-150 feet, stays in thermocline</p>
+                            <p style="margin: 5px 0; font-size: 12px;"><strong>Target:</strong> Prefers slower presentations near lake bottom</p>
+                        </div>
+
+                        <h2 style="color: #ffff00; margin-top: 30px;">🐟 Baitfish</h2>
+
+                        <div style="margin: 15px 0; padding: 15px; background: rgba(0, 0, 0, 0.3); border-radius: 5px;">
+                            <h3 style="color: #00aaff; margin: 0 0 10px 0;">Alewife</h3>
+                            <p style="margin: 5px 0; font-size: 12px;"><strong>Behavior:</strong> Schools tightly when threatened, moves in coordinated patterns</p>
+                            <p style="margin: 5px 0; font-size: 12px;"><strong>Pattern:</strong> Primary forage for all game fish</p>
+                        </div>
+
+                        <div style="margin: 15px 0; padding: 15px; background: rgba(0, 0, 0, 0.3); border-radius: 5px;">
+                            <h3 style="color: #00aaff; margin: 0 0 10px 0;">Smelt</h3>
+                            <p style="margin: 5px 0; font-size: 12px;"><strong>Behavior:</strong> Smaller, faster schools, often found in mid-water column</p>
+                            <p style="margin: 5px 0; font-size: 12px;"><strong>Pattern:</strong> Attracts larger predators when schooling</p>
+                        </div>
+
+                        <h2 style="color: #ffff00; margin-top: 30px;">💡 Fishing Tips</h2>
+                        <ul style="font-size: 12px; line-height: 1.8;">
+                            <li>Watch for baitfish schools - predators follow their prey</li>
+                            <li>Match your depth to where fish are actively feeding</li>
+                            <li>Pike prefer faster-moving targets near structure</li>
+                            <li>Lake trout hunt methodically in deeper, colder water</li>
+                            <li>Adjust your jigging speed based on fish activity</li>
+                        </ul>
+                    </div>
+
+                    <div style="text-align: center;">
+                        <button id="close-species-guide" style="background: #ff6666; color: #000; border: none; padding: 12px 30px; font-size: 14px; font-family: 'Courier New', monospace; font-weight: bold; border-radius: 5px; cursor: pointer;">
+                            CLOSE (Press ESC)
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            document.body.appendChild(overlay);
+
+            const closeBtn = document.getElementById('close-species-guide');
+
+            // Close button handler
+            closeBtn.addEventListener('click', () => {
+                overlay.remove();
+            });
+
+            // ESC key handler
+            const escHandler = (e) => {
+                if (e.key === 'Escape') {
+                    overlay.remove();
+                    document.removeEventListener('keydown', escHandler);
+                }
+            };
+            document.addEventListener('keydown', escHandler);
+
+            // Click background to close
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) {
+                    overlay.remove();
+                }
+            });
         });
 
         // Log initial state
         console.log('🎮 Gamepad Manager initialized. Waiting for controller connection...');
         console.log('🎮 Press any button on your controller to connect it.');
-        console.log('🎮 You can also click "Check Gamepads" to manually check for controllers.');
+        console.log('🎮 Click the gamepad icon to test your controller.');
+        console.log('📖 Click the book icon to view the species guide.');
     </script>
 
     <!-- Commit Log Modal -->
