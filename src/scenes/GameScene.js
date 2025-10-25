@@ -417,15 +417,22 @@ export class GameScene extends Phaser.Scene {
         });
 
         // Update baitfish clouds
+        const newCloudsFromSplits = [];
         this.baitfishClouds = this.baitfishClouds.filter(cloud => {
             if (cloud.visible) {
-                cloud.update(this.fishes, this.zooplankton);
+                const newCloud = cloud.update(this.fishes, this.zooplankton);
+                // If cloud split, add the new cloud to our collection
+                if (newCloud) {
+                    newCloudsFromSplits.push(newCloud);
+                }
                 return true;
             } else {
                 cloud.destroy();
                 return false;
             }
         });
+        // Add any new clouds created by splitting
+        this.baitfishClouds.push(...newCloudsFromSplits);
 
         // Update fish
         this.fishes.forEach((fish, index) => {

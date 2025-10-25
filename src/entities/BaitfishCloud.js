@@ -75,7 +75,7 @@ export class BaitfishCloud {
     }
 
     update(lakers = [], zooplankton = []) {
-        if (!this.visible) return;
+        if (!this.visible) return null;
 
         this.age++;
 
@@ -209,6 +209,48 @@ export class BaitfishCloud {
         if (this.baitfish.length === 0 || this.age > 30000 || this.isOffScreen()) {
             this.visible = false;
         }
+
+        // SURFACE COMPRESSION DETECTION - Split cloud if compressed against surface
+        // This prevents the horizontal line bug
+        const surfaceDepthLimit = 15; // Feet from surface
+        const surfaceYLimit = surfaceDepthLimit * GameConfig.DEPTH_SCALE;
+
+        if (this.centerY <= surfaceYLimit && this.baitfish.length >= 8) {
+            // Cloud is near surface and has enough fish to split
+            // Check if fish are compressed horizontally (measure spread)
+            let minY = Infinity;
+            let maxY = -Infinity;
+            let minX = Infinity;
+            let maxX = -Infinity;
+
+            this.baitfish.forEach(fish => {
+                if (fish.y < minY) minY = fish.y;
+                if (fish.y > maxY) maxY = fish.y;
+                if (fish.worldX < minX) minX = fish.worldX;
+                if (fish.worldX > maxX) maxX = fish.worldX;
+            });
+
+            const verticalSpread = maxY - minY;
+            const horizontalSpread = maxX - minX;
+
+            // If horizontal spread is much larger than vertical spread, we have a line
+            const compressionRatio = horizontalSpread / (verticalSpread + 1);
+
+            if (compressionRatio > 3.5) {
+                // Cloud is compressed into a horizontal line, split it!
+                console.log(`Cloud compressed (ratio: ${compressionRatio.toFixed(2)}), splitting...`);
+                const newCloud = this.split();
+
+                // Give the new cloud a downward velocity to move away from surface
+                if (newCloud) {
+                    newCloud.velocity.y = 1.0; // Move down
+                    this.velocity.y = 0.5; // Original cloud also drifts down slightly
+                    return newCloud; // Return the new cloud to be added
+                }
+            }
+        }
+
+        return null; // No split occurred
     }
 
     checkForLakersNearby(lakers) {
@@ -316,13 +358,14 @@ export class BaitfishCloud {
         const halfIndex = Math.floor(this.baitfish.length / 2);
         const newCloudBaitfish = this.baitfish.splice(halfIndex);
 
-        // Create new cloud slightly offset
+        // Create new cloud slightly offset (use world coordinates!)
         const offsetDirection = Math.random() < 0.5 ? 1 : -1;
         const newCloud = new BaitfishCloud(
             this.scene,
-            this.centerX + (offsetDirection * 40),
+            this.worldX + (offsetDirection * 40), // Use worldX, not centerX
             this.centerY,
-            0 // Don't spawn new fish, we'll add the split ones
+            0, // Don't spawn new fish, we'll add the split ones
+            this.speciesType // Preserve species type
         );
 
         // Clear the auto-spawned baitfish and add our split ones
