@@ -34,6 +34,10 @@ export class Baitfish {
             y: Utils.randomBetween(-5, 5)   // Reduced from -10,10 for tighter schooling
         };
 
+        // Velocity tracking for alignment rule
+        this.velocityX = 0;
+        this.velocityY = 0;
+
         // Visual properties for sonar display
         this.sonarTrail = [];
         this.maxTrailLength = 15;
@@ -137,12 +141,21 @@ export class Baitfish {
         this.targetWorldX = cloudCenter.worldX + this.schoolingOffset.x * spreadMultiplier;
         this.targetY = cloudCenter.y + this.schoolingOffset.y * spreadMultiplier;
 
-        // SEPARATION LOGIC - prevent baitfish from overlapping (maintain cloud shape)
-        // Check for nearby baitfish and add repulsion force
+        // FLOCKING RULES - Three classic boids behaviors
+        // Rule 1: Separation - prevent baitfish from overlapping
+        // Rule 2: Cohesion - stay close to neighbors
+        // Rule 3: Alignment - match swimming direction with neighbors
+
         let separationX = 0;
         let separationY = 0;
-        let nearbyCount = 0;
-        const separationRadius = 12; // Increased from 8 - minimum distance between fish
+        let cohesionX = 0;
+        let cohesionY = 0;
+        let alignmentX = 0;
+        let alignmentY = 0;
+        let neighborCount = 0;
+
+        const separationRadius = 12; // Minimum distance between fish
+        const neighborRadius = 50; // Detection range for cohesion and alignment
 
         otherBaitfish.forEach(other => {
             if (other === this || !other.visible || other.consumed) return;
@@ -151,20 +164,53 @@ export class Baitfish {
             const dy = this.y - other.y;
             const distance = Math.sqrt(dx * dx + dy * dy);
 
-            // If too close, add separation force
+            // Rule 1: SEPARATION - If too close, add repulsion force
             if (distance < separationRadius && distance > 0) {
-                // Stronger separation when very close
                 const strength = (separationRadius - distance) / separationRadius;
                 separationX += (dx / distance) * strength * 5;
                 separationY += (dy / distance) * strength * 5;
-                nearbyCount++;
+            }
+
+            // Rule 2 & 3: COHESION and ALIGNMENT - Track neighbors within detection radius
+            if (distance < neighborRadius && distance > 0) {
+                // Cohesion: accumulate neighbor positions
+                cohesionX += other.worldX;
+                cohesionY += other.y;
+
+                // Alignment: accumulate neighbor velocities
+                alignmentX += other.velocityX;
+                alignmentY += other.velocityY;
+
+                neighborCount++;
             }
         });
 
-        // Apply separation forces to target position
-        if (nearbyCount > 0) {
+        // Apply all three flocking forces to target position
+        if (neighborCount > 0) {
+            // Apply separation force (push away from too-close neighbors)
             this.targetWorldX += separationX;
             this.targetY += separationY;
+
+            // BOUNDARY DETECTION: Reduce cohesion/alignment near surface to prevent adhesion
+            const surfaceLimit = 50; // Within 50px (~14 feet) of surface
+            const nearSurface = this.y <= surfaceLimit;
+            const boundaryPenalty = nearSurface ? 0.3 : 1.0; // 70% reduction near surface
+
+            // Rule 2: COHESION - steer towards average position of neighbors
+            const avgNeighborX = cohesionX / neighborCount;
+            const avgNeighborY = cohesionY / neighborCount;
+            const cohesionForceX = (avgNeighborX - this.worldX) * 0.05 * boundaryPenalty;
+            const cohesionForceY = (avgNeighborY - this.y) * 0.05 * boundaryPenalty;
+            this.targetWorldX += cohesionForceX;
+            this.targetY += cohesionForceY;
+
+            // Rule 3: ALIGNMENT - match average velocity of neighbors
+            const avgVelocityX = alignmentX / neighborCount;
+            const avgVelocityY = alignmentY / neighborCount;
+            const alignmentForceX = (avgVelocityX - this.velocityX) * 0.1 * boundaryPenalty;
+            const alignmentForceY = (avgVelocityY - this.velocityY) * 0.1 * boundaryPenalty;
+            this.targetWorldX += alignmentForceX;
+            this.targetY += alignmentForceY;
         }
 
         // Add some random wandering (reduced for tighter schooling)
@@ -199,8 +245,20 @@ export class Baitfish {
             // When panicking, match vertical and horizontal speed better to maintain cloud shape
             const verticalMultiplier = this.panicMode ? 0.9 : 0.7; // Faster vertical when panicking
 
-            this.worldX += (dx / distance) * moveSpeed;
-            this.y += (dy / distance) * moveSpeed * verticalMultiplier;
+            // Calculate movement delta and update velocity
+            const moveDx = (dx / distance) * moveSpeed;
+            const moveDy = (dy / distance) * moveSpeed * verticalMultiplier;
+
+            this.worldX += moveDx;
+            this.y += moveDy;
+
+            // Update velocity for alignment rule
+            this.velocityX = moveDx;
+            this.velocityY = moveDy;
+        } else {
+            // Not moving, decay velocity
+            this.velocityX *= 0.9;
+            this.velocityY *= 0.9;
         }
 
         // Reset panic after a while
@@ -335,11 +393,17 @@ export class Baitfish {
             this.targetWorldX = bestZooplankton.worldX;
             this.targetY = bestZooplankton.y;
 
-            // SEPARATION LOGIC - maintain minimum distance from other baitfish while hunting
+            // FLOCKING RULES during hunting - maintain school cohesion even while feeding
             let separationX = 0;
             let separationY = 0;
-            let nearbyCount = 0;
+            let cohesionX = 0;
+            let cohesionY = 0;
+            let alignmentX = 0;
+            let alignmentY = 0;
+            let neighborCount = 0;
+
             const separationRadius = 15; // Minimum distance during feeding
+            const neighborRadius = 50; // Detection range for cohesion and alignment
 
             otherBaitfish.forEach(other => {
                 if (other === this || !other.visible || other.consumed) return;
@@ -348,19 +412,49 @@ export class Baitfish {
                 const dy = this.y - other.y;
                 const dist = Math.sqrt(dx * dx + dy * dy);
 
+                // Rule 1: SEPARATION - Push away from nearby baitfish
                 if (dist < separationRadius && dist > 0) {
-                    // Push away from nearby baitfish
                     const force = (separationRadius - dist) / separationRadius;
                     separationX += (dx / dist) * force * 8;
                     separationY += (dy / dist) * force * 8;
-                    nearbyCount++;
+                }
+
+                // Rule 2 & 3: COHESION and ALIGNMENT - Track neighbors
+                if (dist < neighborRadius && dist > 0) {
+                    cohesionX += other.worldX;
+                    cohesionY += other.y;
+                    alignmentX += other.velocityX;
+                    alignmentY += other.velocityY;
+                    neighborCount++;
                 }
             });
 
-            // Apply separation to target
-            if (nearbyCount > 0) {
+            // Apply all three flocking forces
+            if (neighborCount > 0) {
+                // Apply separation
                 this.targetWorldX += separationX;
                 this.targetY += separationY;
+
+                // BOUNDARY DETECTION: Reduce cohesion/alignment near surface
+                const surfaceLimit = 50;
+                const nearSurface = this.y <= surfaceLimit;
+                const boundaryPenalty = nearSurface ? 0.3 : 1.0;
+
+                // Rule 2: COHESION - steer towards neighbors (weaker during hunting)
+                const avgNeighborX = cohesionX / neighborCount;
+                const avgNeighborY = cohesionY / neighborCount;
+                const cohesionForceX = (avgNeighborX - this.worldX) * 0.03 * boundaryPenalty;
+                const cohesionForceY = (avgNeighborY - this.y) * 0.03 * boundaryPenalty;
+                this.targetWorldX += cohesionForceX;
+                this.targetY += cohesionForceY;
+
+                // Rule 3: ALIGNMENT - match velocity
+                const avgVelocityX = alignmentX / neighborCount;
+                const avgVelocityY = alignmentY / neighborCount;
+                const alignmentForceX = (avgVelocityX - this.velocityX) * 0.08 * boundaryPenalty;
+                const alignmentForceY = (avgVelocityY - this.velocityY) * 0.08 * boundaryPenalty;
+                this.targetWorldX += alignmentForceX;
+                this.targetY += alignmentForceY;
             }
 
             // Move towards adjusted target position
@@ -372,8 +466,20 @@ export class Baitfish {
                 // Hunt at moderate speed (reduced from 1.2 to prevent bunching)
                 const moveSpeed = this.speed * 1.0;
 
-                this.worldX += (dx / distance) * moveSpeed;
-                this.y += (dy / distance) * moveSpeed;
+                // Calculate movement delta and update velocity
+                const moveDx = (dx / distance) * moveSpeed;
+                const moveDy = (dy / distance) * moveSpeed;
+
+                this.worldX += moveDx;
+                this.y += moveDy;
+
+                // Update velocity for alignment rule
+                this.velocityX = moveDx;
+                this.velocityY = moveDy;
+            } else {
+                // Not moving, decay velocity
+                this.velocityX *= 0.9;
+                this.velocityY *= 0.9;
             }
         }
     }

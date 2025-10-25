@@ -37,6 +37,9 @@ export class BaitfishCloud {
         this.scaredLevel = 0; // 0-1, how scared the cloud is
         this.spreadMultiplier = 1.0; // 1.0 = normal, 0.5 = condensed, 2.0 = very spread out
 
+        // Surface trap detection
+        this.framesAtSurface = 0; // Track how long stuck at surface
+
         // Spawn the baitfish
         this.spawnBaitfish(count);
     }
@@ -75,7 +78,7 @@ export class BaitfishCloud {
     }
 
     update(lakers = [], zooplankton = []) {
-        if (!this.visible) return;
+        if (!this.visible) return null;
 
         this.age++;
 
@@ -98,10 +101,31 @@ export class BaitfishCloud {
                 const dist = Math.sqrt(dx * dx + dy * dy);
 
                 if (dist > 0) {
-                    // Flee directly away from laker with controlled speed
-                    const fleeSpeed = 1.2; // Moderate flee speed (was 2.5, too fast!)
-                    this.velocity.x = (dx / dist) * fleeSpeed;
-                    this.velocity.y = (dy / dist) * fleeSpeed * 0.7; // Slower vertical
+                    const fleeSpeed = 1.2;
+
+                    // SMART FLEE: Detect if trapped at surface
+                    const surfaceLimit = 50; // Within 50px (~14 feet) of surface
+                    const trappedAtSurface = this.centerY <= surfaceLimit;
+
+                    if (trappedAtSurface && nearestLaker.y > this.centerY) {
+                        // Lakers are below us and we're at surface - DIVE THROUGH or flee horizontally
+                        const shouldDive = Math.random() < 0.3; // 30% chance to dive through
+
+                        if (shouldDive) {
+                            // Bold escape: dive down and sideways to break through
+                            this.velocity.x = (dx / dist) * fleeSpeed * 1.5; // Fast horizontal
+                            this.velocity.y = 1.5; // Force downward dive
+                            console.log('Baitfish cloud diving through lakers to escape surface trap!');
+                        } else {
+                            // Flee horizontally only (no upward component)
+                            this.velocity.x = (dx / dist) * fleeSpeed * 1.5;
+                            this.velocity.y = Math.max(0, this.velocity.y * 0.5); // Allow down, prevent up
+                        }
+                    } else {
+                        // Normal flee behavior
+                        this.velocity.x = (dx / dist) * fleeSpeed;
+                        this.velocity.y = (dy / dist) * fleeSpeed * 0.7; // Slower vertical
+                    }
                 }
             } else {
                 // No specific laker, add erratic movement but keep it moderate
@@ -146,6 +170,22 @@ export class BaitfishCloud {
         this.centerY += this.velocity.y;
         this.depth = this.centerY / GameConfig.DEPTH_SCALE;
 
+        // SURFACE TRAP DETECTION: Track if stuck at surface
+        const surfaceLimit = 50;
+        if (this.centerY <= surfaceLimit) {
+            this.framesAtSurface++;
+
+            // If stuck for too long (3 seconds = 180 frames), force a dive
+            if (this.framesAtSurface > 180 && lakersNearby) {
+                console.log('Cloud stuck at surface for too long - forcing escape dive!');
+                this.velocity.y = 2.0; // Strong downward push
+                this.framesAtSurface = 0; // Reset counter
+            }
+        } else {
+            // Not at surface, reset counter
+            this.framesAtSurface = Math.max(0, this.framesAtSurface - 5); // Decay faster
+        }
+
         // Get lake bottom depth at cloud's current world position
         let bottomDepth = GameConfig.MAX_DEPTH;
         if (this.scene.boatManager) {
@@ -164,8 +204,8 @@ export class BaitfishCloud {
         // Keep cloud above lake bottom (with 10 feet buffer)
         const maxY = (bottomDepth - 10) * GameConfig.DEPTH_SCALE;
 
-        // Keep cloud in bounds
-        this.centerY = Math.max(30, Math.min(maxY, this.centerY));
+        // Keep cloud in bounds - use same minimum as individual fish (10px)
+        this.centerY = Math.max(10, Math.min(maxY, this.centerY));
 
         // Convert world position to screen position based on player position
         let playerWorldX;
@@ -209,6 +249,41 @@ export class BaitfishCloud {
         if (this.baitfish.length === 0 || this.age > 30000 || this.isOffScreen()) {
             this.visible = false;
         }
+
+        // HORIZONTAL LINE DETECTION - Despawn cloud if compressed into unrealistic formation
+        // This simulates natural cloud dispersal behavior
+        const surfaceDepthLimit = 15; // Feet from surface
+        const surfaceYLimit = surfaceDepthLimit * GameConfig.DEPTH_SCALE;
+
+        if (this.centerY <= surfaceYLimit && this.baitfish.length >= 8) {
+            // Cloud is near surface - check if compressed into horizontal line
+            let minY = Infinity;
+            let maxY = -Infinity;
+            let minX = Infinity;
+            let maxX = -Infinity;
+
+            this.baitfish.forEach(fish => {
+                if (fish.y < minY) minY = fish.y;
+                if (fish.y > maxY) maxY = fish.y;
+                if (fish.worldX < minX) minX = fish.worldX;
+                if (fish.worldX > maxX) maxX = fish.worldX;
+            });
+
+            const verticalSpread = maxY - minY;
+            const horizontalSpread = maxX - minX;
+
+            // If horizontal spread is much larger than vertical spread, we have a line
+            const compressionRatio = horizontalSpread / (verticalSpread + 1);
+
+            if (compressionRatio > 3.5) {
+                // Cloud compressed into horizontal line - despawn it!
+                console.log(`Cloud compressed (ratio: ${compressionRatio.toFixed(2)}) - dispersing naturally`);
+                this.visible = false; // Cloud disperses
+                return null;
+            }
+        }
+
+        return null; // No split occurred
     }
 
     checkForLakersNearby(lakers) {
@@ -316,13 +391,14 @@ export class BaitfishCloud {
         const halfIndex = Math.floor(this.baitfish.length / 2);
         const newCloudBaitfish = this.baitfish.splice(halfIndex);
 
-        // Create new cloud slightly offset
+        // Create new cloud slightly offset (use world coordinates!)
         const offsetDirection = Math.random() < 0.5 ? 1 : -1;
         const newCloud = new BaitfishCloud(
             this.scene,
-            this.centerX + (offsetDirection * 40),
+            this.worldX + (offsetDirection * 40), // Use worldX, not centerX
             this.centerY,
-            0 // Don't spawn new fish, we'll add the split ones
+            0, // Don't spawn new fish, we'll add the split ones
+            this.speciesType // Preserve species type
         );
 
         // Clear the auto-spawned baitfish and add our split ones
