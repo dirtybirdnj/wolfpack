@@ -416,15 +416,29 @@ export class MenuScene extends Phaser.Scene {
     }
 
     startGame(modeConfig) {
-        // Store fishing type and game mode in registry for GameScene to access
+        // Store fishing type and game mode in registry
         this.registry.set('fishingType', modeConfig.fishingType);
         this.registry.set('gameMode', modeConfig.gameMode);
+
+        // Determine which scene to start
+        // Kayak and motorboat modes start with navigation (top-down lake view)
+        // Ice fishing goes directly to GameScene (no navigation needed on ice)
+        const startingScene = (modeConfig.fishingType === GameConfig.FISHING_TYPE_KAYAK ||
+                               modeConfig.fishingType === GameConfig.FISHING_TYPE_MOTORBOAT)
+                               ? 'NavigationScene'
+                               : 'GameScene';
+
+        console.log(`Starting ${modeConfig.fishingType} fishing in ${modeConfig.gameMode} mode`);
+        console.log(`-> Going to ${startingScene}`);
 
         // Fade out and start game
         this.cameras.main.fadeOut(500);
         this.cameras.main.once('camerafadeoutcomplete', () => {
-            this.scene.start('GameScene');
-            this.scene.start('UIScene');
+            this.scene.start(startingScene);
+            // Only start UIScene for GameScene (navigation has its own UI)
+            if (startingScene === 'GameScene') {
+                this.scene.start('UIScene');
+            }
         });
     }
 }

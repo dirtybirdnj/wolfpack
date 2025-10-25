@@ -258,21 +258,10 @@ export class Lure {
     }
 
     reset() {
-        // Reset to surface (y=0) and appropriate X position based on fishing mode
-        if (this.scene.iceHoleManager) {
-            // Ice fishing mode: center on current ice hole
-            const currentHole = this.scene.iceHoleManager.getCurrentHole();
-            if (currentHole) {
-                this.x = currentHole.x;
-            } else {
-                // Fallback to canvas center if no hole found
-                this.x = GameConfig.CANVAS_WIDTH / 2;
-            }
-        } else {
-            // Kayak/Motorboat mode: reset to canvas center
-            this.x = GameConfig.CANVAS_WIDTH / 2;
-        }
-
+        // Reset to surface (y=0) and center X position
+        // The hole/boat is always rendered at the center of the screen,
+        // so the lure should drop from the center regardless of mode
+        this.x = GameConfig.CANVAS_WIDTH / 2;
         this.y = 0;
         this.depth = 0;
         this.velocity = 0;

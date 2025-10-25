@@ -1,4 +1,5 @@
 import GameConfig from '../config/GameConfig.js';
+import { getBathymetricData } from '../utils/BathymetricData.js';
 
 /**
  * Manages kayak and motor boat fishing modes
@@ -8,7 +9,14 @@ export class BoatManager {
         this.scene = scene;
         this.fishingType = fishingType;
 
-        // Lake bed depth variation (for different positions) - MUST be first!
+        // Get bathymetric data for realistic terrain
+        this.bathyData = getBathymetricData();
+
+        // Get world position from navigation (if coming from NavigationScene)
+        this.worldX = this.scene.registry.get('fishingWorldX') || null;
+        this.worldY = this.scene.registry.get('fishingWorldY') || 5000;
+
+        // Lake bed depth variation (for different positions)
         this.lakeBedProfile = this.generateLakeBedProfile();
 
         // Player position on water (horizontal, in game units)
@@ -56,26 +64,46 @@ export class BoatManager {
     }
 
     generateLakeBedProfile() {
-        // Generate varying lake bottom depths across the horizontal distance
-        // This gives different depths at different positions
+        /**
+         * Generate lake bottom depth profile using real bathymetric data
+         * If we have a world position from navigation, use that area
+         * Otherwise, use a default location
+         */
         const profile = [];
-        for (let x = 0; x < 10000; x += 50) {
-            // Shallow near docks, deep in middle
-            let depth;
-            if (x < 500) {
-                // Shallow near docks (10-30 feet)
-                depth = 10 + (x / 500) * 20;
-            } else if (x < 1500) {
-                // Gradually deepening (30-80 feet)
-                depth = 30 + ((x - 500) / 1000) * 50;
+
+        // Determine the center world X position for this fishing session
+        let centerWorldX;
+        if (this.worldX !== null) {
+            // Use position from NavigationScene
+            centerWorldX = this.worldX;
+            console.log(`🗺️ Using bathymetric data from navigation position: ${centerWorldX}`);
+        } else {
+            // Default position based on fishing type
+            if (this.fishingType === GameConfig.FISHING_TYPE_KAYAK) {
+                centerWorldX = 4000; // Mid-depth area
             } else {
-                // Deep water with variation (80-150 feet)
-                depth = 80 + Math.sin(x * 0.003) * 30 +
-                        Math.sin(x * 0.01) * 20 +
-                        Math.cos(x * 0.007) * 15;
+                centerWorldX = 1000; // Start near shore for motorboat
             }
-            profile.push({ x, depth: Math.max(10, Math.min(150, depth)) });
         }
+
+        // Generate profile centered on world position
+        // Map game X coordinates (-5000 to +5000) to world coordinates
+        for (let x = 0; x < 10000; x += 50) {
+            // Convert local game X to world X
+            // x=5000 (center of game) maps to centerWorldX
+            const offsetFromCenter = x - 5000;
+            const worldX = centerWorldX + offsetFromCenter;
+
+            // Get depth from bathymetric data
+            const depth = this.bathyData.getDepthAtPosition(worldX, this.worldY);
+
+            profile.push({
+                x,
+                depth,
+                worldX // Store world coordinate for reference
+            });
+        }
+
         return profile;
     }
 
@@ -192,6 +220,10 @@ export class BoatManager {
                     }
                 }
             }
+        } else {
+            // Regenerate gas when stationary (slowly)
+            this.gasLevel += 0.1; // Regenerate at 0.1 per frame when idle
+            this.gasLevel = Math.min(100, this.gasLevel);
         }
     }
 

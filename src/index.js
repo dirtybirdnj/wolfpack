@@ -4,6 +4,7 @@
 import GameConfig from './config/GameConfig.js';
 import BootScene from './scenes/BootScene.js';
 import MenuScene from './scenes/MenuScene.js';
+import NavigationScene from './scenes/NavigationScene.js';
 import GameScene from './scenes/GameScene.js';
 import GameOverScene from './scenes/GameOverScene.js';
 import UIScene from './scenes/UIScene.js';
@@ -22,7 +23,7 @@ const config = {
             debug: false
         }
     },
-    scene: [BootScene, MenuScene, GameScene, GameOverScene, UIScene],
+    scene: [BootScene, MenuScene, NavigationScene, GameScene, GameOverScene, UIScene],
     render: {
         pixelArt: false,
         antialias: true,
