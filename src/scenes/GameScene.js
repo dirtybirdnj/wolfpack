@@ -229,6 +229,9 @@ export class GameScene extends Phaser.Scene {
             this.notificationSystem.togglePause();
         }
 
+        // Always update notification system (handles pause menu input)
+        this.notificationSystem.update(time, delta);
+
         // If paused, skip all game updates
         if (this.notificationSystem.isPausedState()) {
             return;
@@ -273,7 +276,6 @@ export class GameScene extends Phaser.Scene {
         this.collisionSystem.update(time, delta);
         this.debugSystem.update(time, delta);
         this.scoreSystem.update(time, delta);
-        this.notificationSystem.update(time, delta);
 
         // Check for emergency fish spawn (arcade mode)
         this.spawningSystem.checkEmergencySpawn();

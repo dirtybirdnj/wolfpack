@@ -382,13 +382,16 @@ export class NotificationSystem {
                     const xButton = gamepad.buttons[0]; // X/A button
                     const circleButton = gamepad.buttons[1]; // Circle/B button
 
-                    if ((xButton && xButton.pressed && !this.buttonStates.x) ||
-                        (circleButton && circleButton.pressed && !this.buttonStates.circle)) {
+                    const xPressed = xButton ? xButton.pressed : false;
+                    const circlePressed = circleButton ? circleButton.pressed : false;
+
+                    if ((xPressed && !this.buttonStates.x) ||
+                        (circlePressed && !this.buttonStates.circle)) {
                         closePressed = true;
                     }
 
-                    this.buttonStates.x = xButton && xButton.pressed;
-                    this.buttonStates.circle = circleButton && circleButton.pressed;
+                    this.buttonStates.x = xPressed;
+                    this.buttonStates.circle = circlePressed;
                 }
             }
 
@@ -424,11 +427,13 @@ export class NotificationSystem {
 
             if (gamepad) {
                 // D-pad up/down
-                const dpadUp = gamepad.buttons[12] && gamepad.buttons[12].pressed;
-                const dpadDown = gamepad.buttons[13] && gamepad.buttons[13].pressed;
+                const dpadUpButton = gamepad.buttons[12];
+                const dpadDownButton = gamepad.buttons[13];
+                const dpadUp = dpadUpButton ? dpadUpButton.pressed : false;
+                const dpadDown = dpadDownButton ? dpadDownButton.pressed : false;
 
                 // Left stick
-                const leftStickY = gamepad.axes[1] ? gamepad.axes[1].getValue() : 0;
+                const leftStickY = gamepad.axes.length > 1 ? gamepad.axes[1].getValue() : 0;
 
                 if ((dpadUp || leftStickY < -0.5) && !this.buttonStates.up) {
                     upPressed = true;
@@ -442,7 +447,7 @@ export class NotificationSystem {
 
                 // X button (Cross on PlayStation, A on Xbox)
                 const xButton = gamepad.buttons[0];
-                const xButtonPressed = xButton && xButton.pressed;
+                const xButtonPressed = xButton ? xButton.pressed : false;
 
                 if (xButtonPressed && !this.buttonStates.x) {
                     confirmPressed = true;
