@@ -102,10 +102,20 @@ export class NavigationScene extends Phaser.Scene {
                 this.playerWorldY = 37000; // Burlington area
             }
         } else {
-            // Unlimited mode: Start near Burlington waterfront
-            this.playerWorldX = 1000; // Just off Burlington shore
-            this.playerWorldY = 37000; // Burlington area (central lake)
-            console.log('🏖️ Unlimited mode: Starting near Burlington shore - explore the lake');
+            // Unlimited mode: Start in good fishing water (not too shallow)
+            // Find spots with moderate depth (40-80ft) suitable for various species
+            const goodSpots = this.bathyData.findGoodFishingSpots(40, 80, 10);
+            if (goodSpots.length > 0) {
+                const spot = goodSpots[Math.floor(Math.random() * goodSpots.length)];
+                this.playerWorldX = spot.x;
+                this.playerWorldY = spot.y;
+                console.log(`🏖️ Unlimited mode: Starting in good fishing water (${spot.depth.toFixed(0)}ft)`);
+            } else {
+                // Fallback - further off Burlington shore in deeper water
+                this.playerWorldX = 3500; // Further from shore
+                this.playerWorldY = 37000; // Burlington area (central lake)
+                console.log('🏖️ Unlimited mode: Starting off Burlington shore');
+            }
         }
     }
 
@@ -2097,13 +2107,19 @@ export class NavigationScene extends Phaser.Scene {
         this.registry.set('fishingWorldX', this.playerWorldX);
         this.registry.set('fishingWorldY', this.playerWorldY);
 
+        // Store game mode and fishing type in registry
+        this.registry.set('fishingType', this.fishingType);
+        this.registry.set('gameMode', this.gameMode);
+
+        // Get current depth and store in registry
+        const depth = this.bathyData.getDepthAtPosition(this.playerWorldX, this.playerWorldY);
+        this.registry.set('currentDepth', depth);
+
         // Store tackle selections in registry
         this.registry.set('lureWeight', this.currentLureWeight);
         this.registry.set('lineType', this.currentLineType);
         this.registry.set('braidColor', this.currentBraidColor);
 
-        // Get current depth
-        const depth = this.bathyData.getDepthAtPosition(this.playerWorldX, this.playerWorldY);
         console.log(`   Position: (${this.playerWorldX}, ${this.playerWorldY})`);
         console.log(`   Depth: ${depth.toFixed(1)}ft`);
         console.log(`   Lure: ${this.currentLureWeight}oz | Line: ${this.currentLineType}`);

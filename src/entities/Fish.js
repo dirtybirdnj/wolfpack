@@ -29,9 +29,19 @@ export class Fish {
         this.worldX = x;
 
         // Screen coordinates (for rendering - calculated based on player position)
-        // Initialize screen X relative to player - will be properly calculated in first update
-        // For now, set to a default center position to avoid issues
-        this.x = GameConfig.CANVAS_WIDTH / 2;
+        // Calculate initial screen X position based on player's world position
+        let playerWorldX;
+        if (scene.iceHoleManager) {
+            const currentHole = scene.iceHoleManager.getCurrentHole();
+            playerWorldX = currentHole ? currentHole.x : x;
+        } else if (scene.boatManager) {
+            playerWorldX = scene.boatManager.getPlayerWorldX();
+        } else {
+            playerWorldX = x; // Fallback
+        }
+
+        const offsetFromPlayer = this.worldX - playerWorldX;
+        this.x = (GameConfig.CANVAS_WIDTH / 2) + offsetFromPlayer;
         this.y = y;
         this.depth = y / GameConfig.DEPTH_SCALE;
 
@@ -79,6 +89,10 @@ export class Fish {
         this.sonarStrength = this.calculateSonarStrength();
         this.graphics = scene.add.graphics();
         this.graphics.setDepth(10); // Render above sonar background but below UI
+
+        // External artwork sprite (if available)
+        this.sprite = null;
+        this.tryLoadArtwork();
 
         // State
         this.caught = false;
@@ -185,6 +199,44 @@ export class Fish {
         if (this.weight > 25) return 'strong';
         if (this.weight > 10) return 'medium';
         return 'weak';
+    }
+
+    /**
+     * Try to load external artwork for this fish species
+     * Checks for artwork files in assets/fish/{species}/ directory
+     * Falls back to procedural rendering if no artwork found
+     */
+    tryLoadArtwork() {
+        // Get size category for the artwork filename
+        const sizeCategory = this.weight > 30 ? 'trophy' :
+                           this.weight > 15 ? 'large' :
+                           this.weight > 5 ? 'medium' : 'small';
+
+        // Build potential texture keys to check
+        const textureKeys = [
+            `fish_${this.species}_${sizeCategory}`, // Size-specific: e.g., fish_lake_trout_trophy
+            `fish_${this.species}`                  // Species default: e.g., fish_lake_trout
+        ];
+
+        // Try to find a loaded texture
+        for (const key of textureKeys) {
+            if (this.scene.textures.exists(key)) {
+                // Create sprite from texture
+                this.sprite = this.scene.add.sprite(this.x, this.y, key);
+                this.sprite.setDepth(10);
+                this.sprite.setOrigin(0.5, 0.5);
+
+                // Scale sprite based on fish weight
+                const baseScale = Math.max(0.3, this.weight / 20);
+                this.sprite.setScale(baseScale);
+
+                console.log(`✓ Loaded artwork for ${this.species} (${sizeCategory}): ${key}`);
+                return;
+            }
+        }
+
+        // No artwork found - will use procedural rendering
+        // This is normal and expected until artwork files are added
     }
 
     updateBiology() {
@@ -333,19 +385,24 @@ export class Fish {
                 playerWorldX = this.worldX; // Fallback
             }
 
-            // Keep fish within reasonable bounds of player in world coordinates
-            // This prevents fish from swimming off screen indefinitely
-            const maxDistanceFromPlayer = 450; // Maximum world units from player
-            const minWorldX = playerWorldX - maxDistanceFromPlayer;
-            const maxWorldX = playerWorldX + maxDistanceFromPlayer;
+            // Check if fish has swum too far from player - mark for removal if so
+            // Fish should be able to spawn off-screen, swim past player, and exit the other side
+            const maxDistanceFromPlayer = 800; // Maximum world units before removal
+            const distanceFromPlayer = Math.abs(this.worldX - playerWorldX);
 
-            // Clamp worldX to prevent fish from going too far
-            this.worldX = Math.max(minWorldX, Math.min(maxWorldX, this.worldX));
+            // Mark fish invisible when they've swum far enough away (for cleanup)
+            if (distanceFromPlayer > maxDistanceFromPlayer) {
+                this.visible = false;
+                return; // Skip remaining updates for this fish
+            }
 
             // Get lake bottom depth at fish's current position
             let bottomDepth = GameConfig.MAX_DEPTH;
             if (this.scene.boatManager) {
-                bottomDepth = this.scene.boatManager.getDepthAtPosition(this.worldX);
+                // Convert fish screen position to game coordinates
+                const offsetFromPlayer = this.x - (GameConfig.CANVAS_WIDTH / 2);
+                const gameX = this.scene.boatManager.playerX + offsetFromPlayer;
+                bottomDepth = this.scene.boatManager.getDepthAtPosition(gameX);
             } else if (this.scene.iceHoleManager) {
                 // For ice fishing, get bottom from current hole's profile
                 const currentHole = this.scene.iceHoleManager.getCurrentHole();
@@ -367,25 +424,12 @@ export class Fish {
             const offsetFromPlayer = this.worldX - playerWorldX;
             this.x = (GameConfig.CANVAS_WIDTH / 2) + offsetFromPlayer;
 
-            // Clamp screen position to keep fish visible on screen
-            // Add margins to ensure fish don't swim off visible area
-            const screenMargin = 30; // pixels from edge
-            this.x = Math.max(screenMargin, Math.min(GameConfig.CANVAS_WIDTH - screenMargin, this.x));
-
-            // If fish hit screen boundary, also adjust world position to match
-            // This prevents fish from "sticking" to screen edge while trying to swim off
-            if (this.x <= screenMargin || this.x >= GameConfig.CANVAS_WIDTH - screenMargin) {
-                this.worldX = playerWorldX + (this.x - (GameConfig.CANVAS_WIDTH / 2));
-            }
+            // Allow fish to swim off-screen - don't clamp to screen boundaries
+            // Fish can spawn off-screen, swim through, and exit the other side
+            // They will be marked invisible and removed when they get too far (handled above)
 
             // Update sonar trail
             this.updateSonarTrail();
-
-            // Remove fish if too far from player in world coordinates (beyond ~500 units)
-            const distanceFromPlayer = Math.abs(this.worldX - playerWorldX);
-            if (distanceFromPlayer > 500) {
-                this.visible = false;
-            }
         }
 
         // Always render (whether in fight or not)
@@ -411,7 +455,10 @@ export class Fish {
     render() {
         this.graphics.clear();
 
-        if (!this.visible) return;
+        if (!this.visible) {
+            if (this.sprite) this.sprite.setVisible(false);
+            return;
+        }
 
         const bodySize = Math.max(8, this.weight / 2);
 
@@ -419,15 +466,23 @@ export class Fish {
         const movement = this.ai.getMovementVector();
         const isMovingRight = movement.x >= 0;
 
-        // Render species-specific fish
-        if (this.species === 'northern_pike') {
-            this.renderNorthernPike(bodySize, isMovingRight);
-        } else if (this.species === 'smallmouth_bass') {
-            this.renderSmallmouthBass(bodySize, isMovingRight);
-        } else if (this.species === 'yellow_perch_large') {
-            this.renderYellowPerch(bodySize, isMovingRight);
+        // If we have external artwork sprite, use it instead of procedural rendering
+        if (this.sprite) {
+            this.sprite.setVisible(true);
+            this.sprite.setPosition(this.x, this.y);
+            this.sprite.setFlipX(!isMovingRight); // Flip sprite to face movement direction
         } else {
-            this.renderLakeTrout(bodySize, isMovingRight);
+            // Use procedural rendering (current system)
+            // Render species-specific fish
+            if (this.species === 'northern_pike') {
+                this.renderNorthernPike(bodySize, isMovingRight);
+            } else if (this.species === 'smallmouth_bass') {
+                this.renderSmallmouthBass(bodySize, isMovingRight);
+            } else if (this.species === 'yellow_perch_large') {
+                this.renderYellowPerch(bodySize, isMovingRight);
+            } else {
+                this.renderLakeTrout(bodySize, isMovingRight);
+            }
         }
 
         // Interest flash - green circle that fades to show player triggered interest
@@ -1080,6 +1135,9 @@ export class Fish {
         this.graphics.destroy();
         if (this.speedPrefText) {
             this.speedPrefText.destroy();
+        }
+        if (this.sprite) {
+            this.sprite.destroy();
         }
     }
 }
