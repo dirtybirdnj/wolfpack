@@ -121,6 +121,21 @@ export class SpawningSystem {
             }
         }
 
+        // Check if water is deep enough for this fish
+        const actualDepth = this.scene.maxDepth || GameConfig.MAX_DEPTH;
+        const minRequiredDepth = species === 'northern_pike' ? 15 :
+                                 species === 'smallmouth_bass' ? 20 : 30; // Lake trout need deeper water
+
+        if (actualDepth < minRequiredDepth) {
+            // Water too shallow for this species, skip spawning
+            console.log(`⚠️ Water too shallow (${actualDepth}ft) for ${species} (needs ${minRequiredDepth}ft)`);
+            return null;
+        }
+
+        // Constrain depth to actual water depth (spawn at least 5ft above bottom)
+        const maxFishDepth = Math.max(10, actualDepth - 5);
+        depth = Math.min(depth, maxFishDepth);
+
         // Determine fish size
         const sizeRoll = Math.random();
         let size;
@@ -227,6 +242,20 @@ export class SpawningSystem {
             // Smelt prefer mid-depth cold water
             depth = Utils.randomBetween(30, 80);
         }
+
+        // Check if water is deep enough for this baitfish species
+        const actualDepth = this.scene.maxDepth || GameConfig.MAX_DEPTH;
+        const minRequiredDepth = speciesType === 'yellow_perch' ? 15 : 25; // Perch shallow, others deeper
+
+        if (actualDepth < minRequiredDepth) {
+            // Water too shallow for this baitfish species, skip spawning
+            console.log(`⚠️ Water too shallow (${actualDepth}ft) for ${speciesType} (needs ${minRequiredDepth}ft)`);
+            return null;
+        }
+
+        // Constrain depth to actual water depth (spawn at least 5ft above bottom)
+        const maxBaitfishDepth = Math.max(10, actualDepth - 5);
+        depth = Math.min(depth, maxBaitfishDepth);
 
         // Get player world position
         let playerWorldX;

@@ -215,11 +215,7 @@ export class BoatManager {
     }
 
     updateMotorboat() {
-        // TEMPORARILY DISABLED: Fuel restrictions
-        // Gas is always at 100% for testing purposes
-        this.gasLevel = 100;
-
-        /* ORIGINAL FUEL SYSTEM (DISABLED):
+        // Fuel system re-enabled
         if (this.isMoving) {
             // Decrease gas when moving
             this.gasLevel -= GameConfig.MOTORBOAT_GAS_USAGE;
@@ -254,7 +250,6 @@ export class BoatManager {
             this.gasLevel += 0.1; // Regenerate at 0.1 per frame when idle
             this.gasLevel = Math.min(100, this.gasLevel);
         }
-        */
     }
 
     render() {
