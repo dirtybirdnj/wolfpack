@@ -101,7 +101,9 @@ export class IceHoleManager {
         const canDrill = this.canDrillHole();
         if (!canDrill.can) {
             console.warn('Cannot drill:', canDrill.reason);
-            this.scene.showAchievement('Cannot Drill', canDrill.reason);
+            if (this.scene.notificationSystem) {
+                this.scene.notificationSystem.showMessage('Cannot Drill', canDrill.reason);
+            }
             return false;
         }
 
@@ -112,7 +114,9 @@ export class IceHoleManager {
         // Update UI
         this.updateBatteryUI();
         this.updateHoleUI();
-        this.scene.showAchievement('New Hole Drilled!', `Battery: ${this.drillChargesRemaining} left`);
+        if (this.scene.notificationSystem) {
+            this.scene.notificationSystem.showMessage('New Hole Drilled!', `Battery: ${this.drillChargesRemaining} left`);
+        }
 
         return true;
     }
@@ -126,7 +130,9 @@ export class IceHoleManager {
         // Retract lure
         this.scene.lure.reset();
 
-        this.scene.showAchievement('Movement Mode', 'Walk on ice - L/R to move, drill with Triangle');
+        if (this.scene.notificationSystem) {
+            this.scene.notificationSystem.showMessage('Movement Mode', 'Walk on ice - L/R to move, drill with Triangle');
+        }
     }
 
     exitMovementMode() {
@@ -149,10 +155,14 @@ export class IceHoleManager {
 
             console.log(`🎣 Entering fishing mode at hole #${this.currentHoleIndex + 1}`);
             this.updateHoleUI();
-            this.scene.showAchievement('Fishing Mode', `At hole #${this.currentHoleIndex + 1}`);
+            if (this.scene.notificationSystem) {
+                this.scene.notificationSystem.showMessage('Fishing Mode', `At hole #${this.currentHoleIndex + 1}`);
+            }
         } else {
             console.warn('Not at a hole! Move to a hole or drill one.');
-            this.scene.showAchievement('No Hole Here', 'Move to existing hole or drill new one');
+            if (this.scene.notificationSystem) {
+                this.scene.notificationSystem.showMessage('No Hole Here', 'Move to existing hole or drill new one');
+            }
         }
     }
 

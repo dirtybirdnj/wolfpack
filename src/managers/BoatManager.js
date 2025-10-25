@@ -144,7 +144,9 @@ export class BoatManager {
             if (this.tiredness >= GameConfig.KAYAK_TIREDNESS_THRESHOLD) {
                 this.isResting = true;
                 this.isPaddling = false;
-                this.scene.showAchievement('Too Tired!', 'Rest to recover stamina');
+                if (this.scene.notificationSystem) {
+                    this.scene.notificationSystem.showMessage('Too Tired!', 'Rest to recover stamina');
+                }
             }
         } else {
             // Decrease tiredness when resting
@@ -153,7 +155,9 @@ export class BoatManager {
 
             if (this.tiredness < GameConfig.KAYAK_TIREDNESS_THRESHOLD && this.isResting) {
                 this.isResting = false;
-                this.scene.showAchievement('Rested', 'Ready to paddle again!');
+                if (this.scene.notificationSystem) {
+                    this.scene.notificationSystem.showMessage('Rested', 'Ready to paddle again!');
+                }
             }
         }
     }
@@ -169,15 +173,23 @@ export class BoatManager {
                 // Check if we made it back to docks
                 if (this.playerX > GameConfig.MOTORBOAT_DOCK_POSITION - 50 &&
                     this.playerX < GameConfig.MOTORBOAT_DOCK_POSITION + 50) {
-                    this.scene.showAchievement('Safe!', 'Made it back to the docks');
+                    if (this.scene.notificationSystem) {
+                        this.scene.notificationSystem.showMessage('Safe!', 'Made it back to the docks');
+                    }
                 } else {
-                    this.scene.showAchievement('Out of Gas!', 'Game Over - stranded on the lake');
-                    this.scene.endGame();
+                    if (this.scene.notificationSystem) {
+                        this.scene.notificationSystem.showMessage('Out of Gas!', 'Game Over - stranded on the lake');
+                    }
+                    if (this.scene.scoreSystem) {
+                        this.scene.scoreSystem.endGame();
+                    }
                 }
             } else if (this.gasLevel < 20) {
                 // Low gas warning
                 if (Math.random() < 0.01) { // Occasional warning
-                    this.scene.showAchievement('Low Gas!', `${Math.floor(this.gasLevel)}% remaining`);
+                    if (this.scene.notificationSystem) {
+                        this.scene.notificationSystem.showMessage('Low Gas!', `${Math.floor(this.gasLevel)}% remaining`);
+                    }
                 }
             }
         }
