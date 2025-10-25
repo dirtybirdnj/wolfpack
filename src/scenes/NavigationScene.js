@@ -740,8 +740,10 @@ export class NavigationScene extends Phaser.Scene {
         for (let screenY = 0; screenY < chartHeight; screenY += gridSizeY) {
             for (let screenX = 0; screenX < chartWidth; screenX += gridSizeX) {
                 // Convert screen position to world coordinates
-                const worldXNorm = screenX / chartWidth;
-                const worldYNorm = 1 - (screenY / chartHeight); // Flip Y: top = north, bottom = south
+                // Flip X: left = NY (west), right = VT (east)
+                const worldXNorm = 1 - (screenX / chartWidth);
+                // Flip Y: top = north, bottom = south
+                const worldYNorm = 1 - (screenY / chartHeight);
 
                 const worldX = worldXNorm * 20000;
                 const worldY = worldYNorm * 60000;
@@ -775,14 +777,15 @@ export class NavigationScene extends Phaser.Scene {
 
         // Draw shorelines (both sides - lake is narrow)
         this.uiGraphics.lineStyle(2, 0x88ff88, 0.8);
-        this.uiGraphics.lineBetween(chartX, chartY, chartX, chartY + chartHeight); // Vermont (east)
-        this.uiGraphics.lineBetween(chartX + chartWidth, chartY, chartX + chartWidth, chartY + chartHeight); // NY (west)
+        this.uiGraphics.lineBetween(chartX, chartY, chartX, chartY + chartHeight); // NY (west)
+        this.uiGraphics.lineBetween(chartX + chartWidth, chartY, chartX + chartWidth, chartY + chartHeight); // Vermont (east)
 
         // Draw player position (full lake map)
         const playerXNorm = this.playerWorldX / 20000; // Normalize 0-1
         const playerYNorm = this.playerWorldY / 60000; // Full lake
 
-        const playerScreenX = chartX + playerXNorm * chartWidth;
+        // Flip X coordinate: X=0 (VT/east) at right, X=20000 (NY/west) at left
+        const playerScreenX = chartX + (1 - playerXNorm) * chartWidth;
         // Flip Y coordinate: Y=0 (Whitehall/south) at bottom, Y=60000 (Canadian border/north) at top
         const playerScreenY = chartY + (1 - playerYNorm) * chartHeight;
 
@@ -793,8 +796,9 @@ export class NavigationScene extends Phaser.Scene {
         // Player heading indicator
         const headingRad = (this.heading - 90) * (Math.PI / 180);
         const arrowLength = 10;
-        const arrowX = playerScreenX + Math.cos(headingRad) * arrowLength;
-        // Flip Y component because we flipped the Y coordinate system
+        // Flip X component because we flipped the X coordinate system (west is left)
+        const arrowX = playerScreenX - Math.cos(headingRad) * arrowLength;
+        // Flip Y component because we flipped the Y coordinate system (north is up)
         const arrowY = playerScreenY - Math.sin(headingRad) * arrowLength;
 
         this.uiGraphics.lineStyle(2, 0x00ff00, 1.0);
@@ -1201,10 +1205,28 @@ export class NavigationScene extends Phaser.Scene {
          * Handle navigation map cursor movement and fast travel
          */
 
-        const moveSpeed = 100; // Units per frame
+        const moveSpeed = 100; // Units per frame for digital input
+        const analogMoveSpeed = 150; // Units per frame for analog stick (faster for smooth control)
         let moved = false;
 
-        // Arrow keys or D-pad for cursor movement
+        // Left stick analog input (smooth movement)
+        if (this.gamepad) {
+            const leftStickX = this.gamepad.axes[0] ? this.gamepad.axes[0].getValue() : 0;
+            const leftStickY = this.gamepad.axes[1] ? this.gamepad.axes[1].getValue() : 0;
+
+            // Apply deadzone
+            const deadzone = 0.15;
+            if (Math.abs(leftStickX) > deadzone) {
+                this.navMapCursorX += leftStickX * analogMoveSpeed;
+                moved = true;
+            }
+            if (Math.abs(leftStickY) > deadzone) {
+                this.navMapCursorY += leftStickY * analogMoveSpeed;
+                moved = true;
+            }
+        }
+
+        // Arrow keys or D-pad for cursor movement (digital input)
         if (this.keys.left.isDown || (this.gamepad && this.gamepad.left)) {
             this.navMapCursorX -= moveSpeed;
             moved = true;
@@ -1328,8 +1350,10 @@ export class NavigationScene extends Phaser.Scene {
             depthSamples[screenY] = [];
             for (let screenX = 0; screenX < chartWidth; screenX += navGridSizeX) {
                 // Convert screen position to world coordinates
-                const worldXNorm = screenX / chartWidth;
-                const worldYNorm = 1 - (screenY / chartHeight); // Flip Y: top = north, bottom = south
+                // Flip X: left = NY (west), right = VT (east)
+                const worldXNorm = 1 - (screenX / chartWidth);
+                // Flip Y: top = north, bottom = south
+                const worldYNorm = 1 - (screenY / chartHeight);
 
                 const worldX = worldXNorm * 20000;
                 const worldY = worldYNorm * 60000;
@@ -1397,25 +1421,39 @@ export class NavigationScene extends Phaser.Scene {
             }
         });
 
-        // Draw Vermont shoreline (left/east)
+        // Draw NY shoreline (left/west)
         this.uiGraphics.lineStyle(3, 0x88ff88, 1.0);
         this.uiGraphics.lineBetween(chartX, chartY, chartX, chartY + chartHeight);
 
-        // Draw NY shoreline (right/west)
+        // Draw Vermont shoreline (right/east)
         this.uiGraphics.lineStyle(3, 0x88ff88, 1.0);
         this.uiGraphics.lineBetween(chartX + chartWidth, chartY, chartX + chartWidth, chartY + chartHeight);
 
-        // Draw city markers along the lake
+        // Draw city markers along the lake (more detailed)
         const landmarks = [
             { name: 'Whitehall', y: 3000, side: 'west' },
+            { name: 'Putnam', y: 7000, side: 'west' },
             { name: 'Ticonderoga', y: 13000, side: 'west' },
+            { name: 'Port Henry', y: 15500, side: 'west' },
             { name: 'Crown Point', y: 18000, side: 'west' },
+            { name: 'Chimney Point', y: 18500, side: 'east' },
+            { name: 'Essex', y: 20500, side: 'west' },
             { name: 'Split Rock', y: 23000, side: 'west' },
+            { name: 'Westport', y: 25000, side: 'west' },
+            { name: 'Basin Harbor', y: 28000, side: 'east' },
             { name: 'Four Brothers', y: 30000, side: 'center' },
+            { name: 'Willsboro', y: 32000, side: 'west' },
+            { name: 'Shelburne', y: 35000, side: 'east' },
             { name: 'Burlington', y: 37000, side: 'east' },
+            { name: 'Port Kent', y: 39000, side: 'west' },
+            { name: 'Colchester', y: 41000, side: 'east' },
+            { name: 'Valcour Island', y: 43000, side: 'center' },
             { name: 'Plattsburgh', y: 46000, side: 'west' },
+            { name: 'Cumberland Head', y: 48000, side: 'west' },
             { name: 'Grand Isle', y: 52000, side: 'center' },
-            { name: 'South Hero', y: 56000, side: 'east' }
+            { name: 'Isle La Motte', y: 54000, side: 'center' },
+            { name: 'South Hero', y: 56000, side: 'east' },
+            { name: 'Alburgh', y: 58000, side: 'west' }
         ];
 
         landmarks.forEach(landmark => {
@@ -1425,14 +1463,15 @@ export class NavigationScene extends Phaser.Scene {
             let labelX;
             let labelOrigin;
 
+            // After X-axis flip: west side is on left, east side is on right
             if (landmark.side === 'east') {
-                landmarkX = chartX + 5;
-                labelX = chartX + 12;
-                labelOrigin = 0;
-            } else if (landmark.side === 'west') {
                 landmarkX = chartX + chartWidth - 5;
                 labelX = chartX + chartWidth - 12;
                 labelOrigin = 1;
+            } else if (landmark.side === 'west') {
+                landmarkX = chartX + 5;
+                labelX = chartX + 12;
+                labelOrigin = 0;
             } else {
                 landmarkX = chartX + chartWidth / 2;
                 labelX = chartX + chartWidth / 2;
@@ -1455,7 +1494,8 @@ export class NavigationScene extends Phaser.Scene {
         // Draw player current position (full lake coordinates)
         const playerXNorm = this.playerWorldX / 20000;
         const playerYNorm = this.playerWorldY / 60000;
-        const playerScreenX = chartX + playerXNorm * chartWidth;
+        // Flip X coordinate: X=0 (VT/east) at right, X=20000 (NY/west) at left
+        const playerScreenX = chartX + (1 - playerXNorm) * chartWidth;
         // Flip Y coordinate: Y=0 (Whitehall/south) at bottom, Y=60000 (Canadian border/north) at top
         const playerScreenY = chartY + (1 - playerYNorm) * chartHeight;
 
@@ -1467,7 +1507,8 @@ export class NavigationScene extends Phaser.Scene {
         // Draw cursor position (full lake coordinates)
         const cursorXNorm = this.navMapCursorX / 20000;
         const cursorYNorm = this.navMapCursorY / 60000;
-        const cursorScreenX = chartX + cursorXNorm * chartWidth;
+        // Flip X coordinate: X=0 (VT/east) at right, X=20000 (NY/west) at left
+        const cursorScreenX = chartX + (1 - cursorXNorm) * chartWidth;
         // Flip Y coordinate: Y=0 (Whitehall/south) at bottom, Y=60000 (Canadian border/north) at top
         const cursorScreenY = chartY + (1 - cursorYNorm) * chartHeight;
 
@@ -1550,7 +1591,7 @@ export class NavigationScene extends Phaser.Scene {
         this.time.delayedCall(50, () => contourLabel.destroy());
 
         // Controls hint
-        const hintText = this.add.text(mapX + mapWidth / 2, mapY + mapHeight - 30, 'Arrow Keys: Move Cursor | X: Fast Travel | TAB: Cancel', {
+        const hintText = this.add.text(mapX + mapWidth / 2, mapY + mapHeight - 30, 'Left Stick/Arrows/D-Pad: Move Cursor | X: Fast Travel | TAB: Cancel', {
             fontSize: '13px',
             fontFamily: 'Courier New',
             color: '#aaaaaa'
