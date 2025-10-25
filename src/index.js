@@ -54,11 +54,8 @@ window.addEventListener('load', () => {
     // Create the game instance
     const game = new Phaser.Game(config);
     
-    // Add some debug info to console
-    console.log('%c🎣 Lake Champlain Ice Fishing Sonar Game 🎣', 'color: #00ff00; font-size: 20px; font-weight: bold;');
-    console.log('%cBuilt with Phaser 3', 'color: #88ff88; font-size: 14px;');
-    console.log('%cTarget Species: Salvelinus namaycush (Lake Trout)', 'color: #88ff88; font-size: 12px;');
-    console.log('%cLocation: 45°00\'N 73°15\'W - Burlington, Vermont', 'color: #88ff88; font-size: 12px;');
+    // Game initialized
+    console.log('Lake Champlain Fishing Game - Ready');
 
     // Prevent right-click context menu on game canvas
     game.canvas.addEventListener('contextmenu', (e) => {

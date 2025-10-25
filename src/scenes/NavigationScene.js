@@ -76,7 +76,7 @@ export class NavigationScene extends Phaser.Scene {
         this.createUI();
 
         // Show initial message
-        this.showInstruction('Hold X to move forward, D-pad to steer, Triangle to fish');
+        this.showInstruction('Hold X to move forward, D-pad to steer');
 
         console.log(`🚤 Starting at position (${this.playerWorldX}, ${this.playerWorldY})`);
         console.log(`   Depth: ${this.bathyData.getDepthAtPosition(this.playerWorldX, this.playerWorldY).toFixed(1)}ft`);
@@ -124,7 +124,12 @@ export class NavigationScene extends Phaser.Scene {
             circle: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D),
         };
 
-        // Gamepad support
+        // Gamepad support - check for already connected gamepad
+        if (this.input.gamepad.total > 0) {
+            this.gamepad = this.input.gamepad.getPad(0);
+            console.log('🎮 Using existing gamepad for navigation');
+        }
+
         this.input.gamepad.once('connected', (pad) => {
             console.log('🎮 Gamepad connected for navigation');
             this.gamepad = pad;
@@ -167,6 +172,10 @@ export class NavigationScene extends Phaser.Scene {
         // Keyboard input
         if (this.keys.x.isDown) {
             movePressed = true;
+            if (!this._debugLoggedKeyboard) {
+                console.log('✓ X key detected (keyboard)');
+                this._debugLoggedKeyboard = true;
+            }
         }
         if (this.keys.left.isDown) {
             steerLeft = true;
@@ -184,6 +193,10 @@ export class NavigationScene extends Phaser.Scene {
             const xButton = this.gamepad.buttons[0];
             if (xButton && xButton.pressed) {
                 movePressed = true;
+                if (!this._debugLoggedGamepad) {
+                    console.log('✓ X button detected (gamepad)');
+                    this._debugLoggedGamepad = true;
+                }
             }
 
             // D-pad or left stick for steering
@@ -205,7 +218,6 @@ export class NavigationScene extends Phaser.Scene {
 
             if (trianglePressed && !this.buttonStates.triangle) {
                 fishPressed = true;
-                console.log('🎮 Triangle button pressed - attempting to start fishing');
             }
 
             // Update button state for next frame
@@ -227,6 +239,11 @@ export class NavigationScene extends Phaser.Scene {
             this.isMoving = true;
             this.speed += this.acceleration;
             this.speed = Math.min(this.speed, this.maxSpeed);
+
+            if (!this._debugLoggedMovement) {
+                console.log(`✓ Movement active - speed: ${this.speed.toFixed(2)}, heading: ${this.heading.toFixed(0)}°`);
+                this._debugLoggedMovement = true;
+            }
         } else {
             this.isMoving = false;
             this.speed -= this.deceleration;
@@ -236,8 +253,6 @@ export class NavigationScene extends Phaser.Scene {
         // Fish button - transition to fishing mode
         if (fishPressed && this.speed < 0.5) {
             this.startFishing();
-        } else if (fishPressed && this.speed >= 0.5) {
-            this.showInstruction('Slow down to start fishing!');
         }
     }
 
@@ -641,7 +656,7 @@ export class NavigationScene extends Phaser.Scene {
             this.actionText.setAlpha(alpha);
         } else {
             // Moving - need to stop first
-            this.actionText.setText('Release X to stop, then Triangle to fish');
+            this.actionText.setText('Release X to stop');
             this.actionText.setColor('#ffaa00');
             this.actionText.setAlpha(1.0);
         }
