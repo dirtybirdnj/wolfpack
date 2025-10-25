@@ -385,14 +385,16 @@ export class Fish {
                 playerWorldX = this.worldX; // Fallback
             }
 
-            // Keep fish within reasonable bounds of player in world coordinates
-            // This prevents fish from swimming off screen indefinitely
-            const maxDistanceFromPlayer = 450; // Maximum world units from player
-            const minWorldX = playerWorldX - maxDistanceFromPlayer;
-            const maxWorldX = playerWorldX + maxDistanceFromPlayer;
+            // Check if fish has swum too far from player - mark for removal if so
+            // Fish should be able to spawn off-screen, swim past player, and exit the other side
+            const maxDistanceFromPlayer = 800; // Maximum world units before removal
+            const distanceFromPlayer = Math.abs(this.worldX - playerWorldX);
 
-            // Clamp worldX to prevent fish from going too far
-            this.worldX = Math.max(minWorldX, Math.min(maxWorldX, this.worldX));
+            // Mark fish invisible when they've swum far enough away (for cleanup)
+            if (distanceFromPlayer > maxDistanceFromPlayer) {
+                this.visible = false;
+                return; // Skip remaining updates for this fish
+            }
 
             // Get lake bottom depth at fish's current position
             let bottomDepth = GameConfig.MAX_DEPTH;
@@ -422,16 +424,9 @@ export class Fish {
             const offsetFromPlayer = this.worldX - playerWorldX;
             this.x = (GameConfig.CANVAS_WIDTH / 2) + offsetFromPlayer;
 
-            // Clamp screen position to keep fish visible on screen
-            // Add margins to ensure fish don't swim off visible area
-            const screenMargin = 30; // pixels from edge
-            this.x = Math.max(screenMargin, Math.min(GameConfig.CANVAS_WIDTH - screenMargin, this.x));
-
-            // If fish hit screen boundary, also adjust world position to match
-            // This prevents fish from "sticking" to screen edge while trying to swim off
-            if (this.x <= screenMargin || this.x >= GameConfig.CANVAS_WIDTH - screenMargin) {
-                this.worldX = playerWorldX + (this.x - (GameConfig.CANVAS_WIDTH / 2));
-            }
+            // Allow fish to swim off-screen - don't clamp to screen boundaries
+            // Fish can spawn off-screen, swim through, and exit the other side
+            // They will be marked invisible and removed when they get too far (handled above)
 
             // Update sonar trail
             this.updateSonarTrail();
