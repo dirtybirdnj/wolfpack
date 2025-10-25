@@ -144,6 +144,34 @@ export class NavigationScene extends Phaser.Scene {
         this.tackleBoxTab = 0; // 0=lure, 1=line, 2=rod, 3=reel
         this.tackleBoxSelected = { lure: 0, line: 0, rod: 0, reel: 0 };
 
+        // Tackle box gear options
+        this.tackleBoxGear = {
+            lureWeights: [
+                { label: '1/4 oz', value: 0.25, desc: 'Ultralight - slow sink' },
+                { label: '1/2 oz', value: 0.5, desc: 'Light - versatile' },
+                { label: '1 oz', value: 1.0, desc: 'Medium - good depth' },
+                { label: '2 oz', value: 2.0, desc: 'Heavy - fast sink' },
+                { label: '3 oz', value: 3.0, desc: 'Very heavy - deep water' },
+                { label: '4 oz', value: 4.0, desc: 'Extreme - deepest water' }
+            ],
+            lineTypes: [
+                { label: 'Braided', value: 'braid', desc: 'No stretch, high visibility' },
+                { label: 'Monofilament', value: 'monofilament', desc: 'Stretchy, invisible' },
+                { label: 'Fluorocarbon', value: 'fluorocarbon', desc: 'Low visibility, abrasion resistant' }
+            ],
+            braidColors: [
+                { label: 'Neon Green', value: 'neon-green', color: 0x00ff00 },
+                { label: 'Yellow', value: 'yellow', color: 0xffff00 },
+                { label: 'Moss Green', value: 'moss-green', color: 0x4a7c59 },
+                { label: 'White', value: 'white', color: 0xffffff }
+            ]
+        };
+
+        // Default to 1/2 oz lure and braided line
+        this.currentLureWeight = 0.5;
+        this.currentLineType = 'braid';
+        this.currentBraidColor = 'neon-green';
+
         // Fishing tips pool
         this.fishingTips = [
             "Fish are most active during dawn and dusk periods.",
@@ -1622,19 +1650,37 @@ export class NavigationScene extends Phaser.Scene {
         // Left/Right to change tabs
         let leftPressed = false;
         let rightPressed = false;
+        let upPressed = false;
+        let downPressed = false;
+        let confirmPressed = false;
 
         if (Phaser.Input.Keyboard.JustDown(this.keys.left)) leftPressed = true;
         if (Phaser.Input.Keyboard.JustDown(this.keys.right)) rightPressed = true;
+        if (Phaser.Input.Keyboard.JustDown(this.keys.up)) upPressed = true;
+        if (Phaser.Input.Keyboard.JustDown(this.keys.down)) downPressed = true;
+        if (Phaser.Input.Keyboard.JustDown(this.keys.x)) confirmPressed = true;
 
         if (this.gamepad) {
             const dpadLeft = this.gamepad.buttons[14] && this.gamepad.buttons[14].pressed;
             const dpadRight = this.gamepad.buttons[15] && this.gamepad.buttons[15].pressed;
+            const dpadUp = this.gamepad.buttons[12] && this.gamepad.buttons[12].pressed;
+            const dpadDown = this.gamepad.buttons[13] && this.gamepad.buttons[13].pressed;
 
             if (dpadLeft && !this.buttonStates.left) leftPressed = true;
             if (dpadRight && !this.buttonStates.right) rightPressed = true;
+            if (dpadUp && !this.buttonStates.up) upPressed = true;
+            if (dpadDown && !this.buttonStates.down) downPressed = true;
 
             this.buttonStates.left = dpadLeft;
             this.buttonStates.right = dpadRight;
+            this.buttonStates.up = dpadUp;
+            this.buttonStates.down = dpadDown;
+
+            // X button to confirm
+            const xButton = this.gamepad.buttons[0];
+            const xButtonPressed = xButton && xButton.pressed;
+            if (xButtonPressed && !this.buttonStates.x) confirmPressed = true;
+            this.buttonStates.x = xButtonPressed;
         }
 
         if (leftPressed) {
@@ -1644,6 +1690,45 @@ export class NavigationScene extends Phaser.Scene {
         if (rightPressed) {
             this.tackleBoxTab++;
             if (this.tackleBoxTab > 3) this.tackleBoxTab = 0;
+        }
+
+        // Up/Down to navigate within current tab
+        if (this.tackleBoxTab === 0) {
+            // LURE tab - navigate lure weights
+            const maxIndex = this.tackleBoxGear.lureWeights.length - 1;
+            if (upPressed) {
+                this.tackleBoxSelected.lure--;
+                if (this.tackleBoxSelected.lure < 0) this.tackleBoxSelected.lure = maxIndex;
+            }
+            if (downPressed) {
+                this.tackleBoxSelected.lure++;
+                if (this.tackleBoxSelected.lure > maxIndex) this.tackleBoxSelected.lure = 0;
+            }
+            if (confirmPressed) {
+                // Apply lure weight selection
+                const selected = this.tackleBoxGear.lureWeights[this.tackleBoxSelected.lure];
+                this.currentLureWeight = selected.value;
+                this.showInstruction(`Lure weight: ${selected.label}`);
+                console.log(`🎣 Lure weight changed to ${selected.label}`);
+            }
+        } else if (this.tackleBoxTab === 1) {
+            // LINE tab - navigate line types (and braid colors if braid selected)
+            const maxIndex = this.tackleBoxGear.lineTypes.length - 1;
+            if (upPressed) {
+                this.tackleBoxSelected.line--;
+                if (this.tackleBoxSelected.line < 0) this.tackleBoxSelected.line = maxIndex;
+            }
+            if (downPressed) {
+                this.tackleBoxSelected.line++;
+                if (this.tackleBoxSelected.line > maxIndex) this.tackleBoxSelected.line = 0;
+            }
+            if (confirmPressed) {
+                // Apply line type selection
+                const selected = this.tackleBoxGear.lineTypes[this.tackleBoxSelected.line];
+                this.currentLineType = selected.value;
+                this.showInstruction(`Line type: ${selected.label}`);
+                console.log(`🧵 Line type changed to ${selected.label}`);
+            }
         }
     }
 
@@ -1711,19 +1796,185 @@ export class NavigationScene extends Phaser.Scene {
             this.time.delayedCall(50, () => tabText.destroy());
         });
 
-        // Content area
-        const contentText = this.add.text(panelX + panelWidth / 2, panelY + 200, 'Gear selection coming soon!\n\nChoose your lures, lines,\nrods, and reels.', {
-            fontSize: '18px',
-            fontFamily: 'Courier New',
-            color: '#aaffaa',
-            align: 'center'
-        });
-        contentText.setOrigin(0.5, 0.5);
-        contentText.setDepth(1001);
-        this.time.delayedCall(50, () => contentText.destroy());
+        // Content area - show current tab content
+        const contentY = panelY + 130;
+        const contentX = panelX + 60;
+
+        if (this.tackleBoxTab === 0) {
+            // LURE tab - show lure weights
+            const titleText = this.add.text(panelX + panelWidth / 2, contentY - 20, 'SELECT LURE WEIGHT', {
+                fontSize: '16px',
+                fontFamily: 'Courier New',
+                color: '#00ff00',
+                fontStyle: 'bold'
+            });
+            titleText.setOrigin(0.5, 0.5);
+            titleText.setDepth(1001);
+            this.time.delayedCall(50, () => titleText.destroy());
+
+            this.tackleBoxGear.lureWeights.forEach((lure, index) => {
+                const itemY = contentY + 20 + (index * 45);
+                const isSelected = index === this.tackleBoxSelected.lure;
+
+                // Background for selected item
+                if (isSelected) {
+                    this.uiGraphics.fillStyle(0x2a4a3a, 1.0);
+                    this.uiGraphics.fillRoundedRect(contentX - 10, itemY - 18, panelWidth - 120, 40, 5);
+                    this.uiGraphics.lineStyle(2, 0x00ffff, 1.0);
+                    this.uiGraphics.strokeRoundedRect(contentX - 10, itemY - 18, panelWidth - 120, 40, 5);
+                }
+
+                // Lure weight label
+                const labelText = this.add.text(contentX, itemY, lure.label, {
+                    fontSize: isSelected ? '16px' : '14px',
+                    fontFamily: 'Courier New',
+                    color: isSelected ? '#00ffff' : '#88ff88',
+                    fontStyle: isSelected ? 'bold' : 'normal'
+                });
+                labelText.setDepth(1001);
+                this.time.delayedCall(50, () => labelText.destroy());
+
+                // Description
+                const descText = this.add.text(contentX + 150, itemY, lure.desc, {
+                    fontSize: '11px',
+                    fontFamily: 'Courier New',
+                    color: isSelected ? '#aaffaa' : '#666666'
+                });
+                descText.setDepth(1001);
+                this.time.delayedCall(50, () => descText.destroy());
+
+                // Current indicator
+                if (this.currentLureWeight === lure.value) {
+                    const currentText = this.add.text(contentX + 400, itemY, '✓ EQUIPPED', {
+                        fontSize: '10px',
+                        fontFamily: 'Courier New',
+                        color: '#00ff00',
+                        fontStyle: 'bold'
+                    });
+                    currentText.setDepth(1001);
+                    this.time.delayedCall(50, () => currentText.destroy());
+                }
+            });
+
+        } else if (this.tackleBoxTab === 1) {
+            // LINE tab - show line types
+            const titleText = this.add.text(panelX + panelWidth / 2, contentY - 20, 'SELECT FISHING LINE', {
+                fontSize: '16px',
+                fontFamily: 'Courier New',
+                color: '#00ff00',
+                fontStyle: 'bold'
+            });
+            titleText.setOrigin(0.5, 0.5);
+            titleText.setDepth(1001);
+            this.time.delayedCall(50, () => titleText.destroy());
+
+            this.tackleBoxGear.lineTypes.forEach((line, index) => {
+                const itemY = contentY + 20 + (index * 50);
+                const isSelected = index === this.tackleBoxSelected.line;
+
+                // Background for selected item
+                if (isSelected) {
+                    this.uiGraphics.fillStyle(0x2a4a3a, 1.0);
+                    this.uiGraphics.fillRoundedRect(contentX - 10, itemY - 18, panelWidth - 120, 45, 5);
+                    this.uiGraphics.lineStyle(2, 0x00ffff, 1.0);
+                    this.uiGraphics.strokeRoundedRect(contentX - 10, itemY - 18, panelWidth - 120, 45, 5);
+                }
+
+                // Line type label
+                const labelText = this.add.text(contentX, itemY, line.label, {
+                    fontSize: isSelected ? '16px' : '14px',
+                    fontFamily: 'Courier New',
+                    color: isSelected ? '#00ffff' : '#88ff88',
+                    fontStyle: isSelected ? 'bold' : 'normal'
+                });
+                labelText.setDepth(1001);
+                this.time.delayedCall(50, () => labelText.destroy());
+
+                // Description
+                const descText = this.add.text(contentX + 150, itemY, line.desc, {
+                    fontSize: '11px',
+                    fontFamily: 'Courier New',
+                    color: isSelected ? '#aaffaa' : '#666666'
+                });
+                descText.setDepth(1001);
+                this.time.delayedCall(50, () => descText.destroy());
+
+                // Current indicator
+                if (this.currentLineType === line.value) {
+                    const currentText = this.add.text(contentX + 400, itemY, '✓ EQUIPPED', {
+                        fontSize: '10px',
+                        fontFamily: 'Courier New',
+                        color: '#00ff00',
+                        fontStyle: 'bold'
+                    });
+                    currentText.setDepth(1001);
+                    this.time.delayedCall(50, () => currentText.destroy());
+                }
+            });
+
+            // Show braid color options if braid is selected
+            if (this.currentLineType === 'braid') {
+                const colorTitleY = contentY + 180;
+                const colorTitle = this.add.text(panelX + panelWidth / 2, colorTitleY, 'BRAID COLOR', {
+                    fontSize: '13px',
+                    fontFamily: 'Courier New',
+                    color: '#ffaa00',
+                    fontStyle: 'bold'
+                });
+                colorTitle.setOrigin(0.5, 0.5);
+                colorTitle.setDepth(1001);
+                this.time.delayedCall(50, () => colorTitle.destroy());
+
+                this.tackleBoxGear.braidColors.forEach((color, index) => {
+                    const colorX = contentX + (index * 110);
+                    const colorY = colorTitleY + 30;
+
+                    // Color swatch
+                    this.uiGraphics.fillStyle(color.color, 1.0);
+                    this.uiGraphics.fillRect(colorX, colorY, 20, 20);
+                    this.uiGraphics.lineStyle(1, 0xffffff, 0.5);
+                    this.uiGraphics.strokeRect(colorX, colorY, 20, 20);
+
+                    // Label
+                    const colorText = this.add.text(colorX + 25, colorY + 10, color.label, {
+                        fontSize: '10px',
+                        fontFamily: 'Courier New',
+                        color: this.currentBraidColor === color.value ? '#00ff00' : '#888888',
+                        fontStyle: this.currentBraidColor === color.value ? 'bold' : 'normal'
+                    });
+                    colorText.setOrigin(0, 0.5);
+                    colorText.setDepth(1001);
+                    this.time.delayedCall(50, () => colorText.destroy());
+                });
+            }
+
+        } else if (this.tackleBoxTab === 2) {
+            // ROD tab - coming soon
+            const comingSoonText = this.add.text(panelX + panelWidth / 2, panelY + 250, 'ROD SELECTION\nComing Soon!', {
+                fontSize: '18px',
+                fontFamily: 'Courier New',
+                color: '#666666',
+                align: 'center'
+            });
+            comingSoonText.setOrigin(0.5, 0.5);
+            comingSoonText.setDepth(1001);
+            this.time.delayedCall(50, () => comingSoonText.destroy());
+
+        } else if (this.tackleBoxTab === 3) {
+            // REEL tab - coming soon
+            const comingSoonText = this.add.text(panelX + panelWidth / 2, panelY + 250, 'REEL SELECTION\nComing Soon!', {
+                fontSize: '18px',
+                fontFamily: 'Courier New',
+                color: '#666666',
+                align: 'center'
+            });
+            comingSoonText.setOrigin(0.5, 0.5);
+            comingSoonText.setDepth(1001);
+            this.time.delayedCall(50, () => comingSoonText.destroy());
+        }
 
         // Controls hint
-        const hintText = this.add.text(panelX + panelWidth / 2, panelY + panelHeight - 30, '← →: Change Tab | TAB: Close', {
+        const hintText = this.add.text(panelX + panelWidth / 2, panelY + panelHeight - 30, '← →: Change Tab | ↑ ↓: Select | X: Equip | TAB: Close', {
             fontSize: '13px',
             fontFamily: 'Courier New',
             color: '#888888'
@@ -1846,10 +2097,16 @@ export class NavigationScene extends Phaser.Scene {
         this.registry.set('fishingWorldX', this.playerWorldX);
         this.registry.set('fishingWorldY', this.playerWorldY);
 
+        // Store tackle selections in registry
+        this.registry.set('lureWeight', this.currentLureWeight);
+        this.registry.set('lineType', this.currentLineType);
+        this.registry.set('braidColor', this.currentBraidColor);
+
         // Get current depth
         const depth = this.bathyData.getDepthAtPosition(this.playerWorldX, this.playerWorldY);
         console.log(`   Position: (${this.playerWorldX}, ${this.playerWorldY})`);
         console.log(`   Depth: ${depth.toFixed(1)}ft`);
+        console.log(`   Lure: ${this.currentLureWeight}oz | Line: ${this.currentLineType}`);
 
         // Fade out and transition to GameScene
         this.cameras.main.fadeOut(500);

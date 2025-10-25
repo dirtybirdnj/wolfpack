@@ -9,13 +9,46 @@ export class FishingLine {
         this.graphics = scene.add.graphics();
         this.graphics.setDepth(10); // Below lure but above most things
 
-        // Line properties
-        this.lineColor = 0x888888; // Gray fishing line
+        // Line properties (defaults)
+        this.lineColor = 0x00ff00; // Default: neon green braid
         this.lineWidth = 1;
-        this.lineAlpha = 0.6;
+        this.lineAlpha = 0.8; // Braid is more visible
+        this.lineType = 'braid';
 
         // Ice hole position (where line starts)
         this.iceHoleY = 54; // Ice surface height
+    }
+
+    setLineType(type, braidColor = 'neon-green') {
+        /**
+         * Set the fishing line type and color
+         * @param {string} type - 'braid', 'monofilament', or 'fluorocarbon'
+         * @param {string} braidColor - Only used if type is 'braid'
+         */
+        this.lineType = type;
+
+        if (type === 'braid') {
+            // Braided line - high visibility colors
+            const braidColors = {
+                'neon-green': 0x00ff00,
+                'yellow': 0xffff00,
+                'moss-green': 0x4a7c59,
+                'white': 0xffffff
+            };
+            this.lineColor = braidColors[braidColor] || 0x00ff00;
+            this.lineAlpha = 0.8; // Very visible
+            this.lineWidth = 1.5; // Slightly thicker
+        } else if (type === 'monofilament') {
+            // Monofilament - nearly invisible
+            this.lineColor = 0xaaaaaa; // Light gray
+            this.lineAlpha = 0.3; // Low visibility
+            this.lineWidth = 1;
+        } else if (type === 'fluorocarbon') {
+            // Fluorocarbon - clear/invisible underwater
+            this.lineColor = 0xcccccc; // Very light gray
+            this.lineAlpha = 0.2; // Lowest visibility
+            this.lineWidth = 1;
+        }
     }
 
     update(lure, hookedFish = null, manager = null) {
