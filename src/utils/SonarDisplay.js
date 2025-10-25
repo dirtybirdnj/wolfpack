@@ -299,8 +299,8 @@ export class SonarDisplay {
 
         this.graphics.strokePath();
 
-        // Fill below bottom
-        this.graphics.fillStyle(0x222222, 0.3);
+        // Fill below bottom with solid ground
+        this.graphics.fillStyle(0x8b7355, 1.0); // Solid brown earth color
         if (this.bottomProfile.length > 0) {
             this.graphics.beginPath();
             this.graphics.moveTo(this.bottomProfile[0].x, this.bottomProfile[0].y);
@@ -345,8 +345,9 @@ export class SonarDisplay {
         }
         this.graphics.strokePath();
 
-        // Fill below bottom - ensure proper polygon closure
-        this.graphics.fillStyle(0x222222, 0.3);
+        // Fill below bottom with solid ground - ensure proper polygon closure
+        // Use brown/tan earth tone to show solid lake bottom
+        this.graphics.fillStyle(0x8b7355, 1.0); // Solid brown earth color
         this.graphics.beginPath();
 
         // Start from bottom-left corner

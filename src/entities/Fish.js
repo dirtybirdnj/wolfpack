@@ -29,7 +29,9 @@ export class Fish {
         this.worldX = x;
 
         // Screen coordinates (for rendering - calculated based on player position)
-        this.x = x;
+        // Initialize screen X relative to player - will be properly calculated in first update
+        // For now, set to a default center position to avoid issues
+        this.x = GameConfig.CANVAS_WIDTH / 2;
         this.y = y;
         this.depth = y / GameConfig.DEPTH_SCALE;
 
