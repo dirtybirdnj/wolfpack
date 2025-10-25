@@ -398,15 +398,17 @@ export class SonarDisplay {
     }
     
     createDepthMarkers() {
-        // Create depth text objects once during initialization using actual water depth
-        const maxDepth = this.scene.maxDepth || GameConfig.MAX_DEPTH;
+        // Create depth text objects once during initialization using display range
+        // Display range is calculated in GameScene to show appropriate depth window
+        const displayRange = this.scene.displayRange || GameConfig.MAX_DEPTH;
         const textStyle = {
             fontSize: '10px',
             fontFamily: 'Courier New',
             color: '#00ff00'
         };
 
-        for (let depth = 0; depth <= maxDepth; depth += 25) {
+        // Create markers at 25ft intervals throughout the display range
+        for (let depth = 0; depth <= displayRange; depth += 25) {
             const y = depth * GameConfig.DEPTH_SCALE;
             if (y <= GameConfig.CANVAS_HEIGHT - 20) {
                 const text = this.scene.add.text(5, y - 6, depth + 'ft', textStyle);

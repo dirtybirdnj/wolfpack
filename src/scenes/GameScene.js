@@ -86,6 +86,24 @@ export class GameScene extends Phaser.Scene {
             console.log(`Starting game: ${this.fishingType} fishing in ${this.gameMode} mode`);
             console.log(`Water depth at location: ${this.maxDepth.toFixed(1)}ft`);
 
+            // Calculate dynamic depth scale to keep bottom at consistent screen position
+            // Target: bottom at 85% down screen, leaving 15% for bottom visualization
+            const TARGET_BOTTOM_RATIO = 0.85;
+            const MIN_DISPLAY_RANGE = 175; // Always show at least 175ft range
+
+            // Calculate required display range to position bottom correctly
+            const idealDisplayRange = this.maxDepth / TARGET_BOTTOM_RATIO;
+            const displayRange = Math.max(idealDisplayRange, MIN_DISPLAY_RANGE);
+
+            // Calculate pixels per foot based on display range
+            GameConfig.DEPTH_SCALE = GameConfig.CANVAS_HEIGHT / displayRange;
+
+            console.log(`Display range: 0-${displayRange.toFixed(1)}ft (${GameConfig.DEPTH_SCALE.toFixed(2)} px/ft)`);
+            console.log(`Bottom position: ${(this.maxDepth * GameConfig.DEPTH_SCALE).toFixed(1)}px (${((this.maxDepth * GameConfig.DEPTH_SCALE / GameConfig.CANVAS_HEIGHT) * 100).toFixed(1)}% down screen)`);
+
+            // Store display range for depth markers
+            this.displayRange = displayRange;
+
             // Initialize timer based on game mode
             if (this.gameMode === GameConfig.GAME_MODE_ARCADE) {
                 this.timeRemaining = GameConfig.ARCADE_TIME_LIMIT;
