@@ -296,6 +296,9 @@ export const PREDATOR_SPECIES = {
         commonNames: ['Laker', 'Togue', 'Mackinaw', 'Grey Trout'],
         status: 'Native, prized gamefish',
 
+        // Spawn configuration
+        spawnWeight: 30, // 30% spawn rate
+
         // Size categories with behavioral differences
         sizeCategories: {
             small: {
@@ -411,6 +414,9 @@ export const PREDATOR_SPECIES = {
         scientificName: 'Esox lucius',
         commonNames: ['Pike', 'Northerns', 'Gator', 'Snake'],
         status: 'Native, aggressive predator',
+
+        // Spawn configuration
+        spawnWeight: 15, // 15% spawn rate
 
         // Size categories with behavioral differences
         sizeCategories: {
@@ -562,6 +568,9 @@ export const PREDATOR_SPECIES = {
         commonNames: ['Smallie', 'Bronzeback', 'Brown Bass', 'Smalljaw'],
         status: 'Native, highly prized sport fish',
 
+        // Spawn configuration
+        spawnWeight: 15, // 15% spawn rate
+
         // Size categories with behavioral differences
         sizeCategories: {
             small: {
@@ -704,6 +713,150 @@ export const PREDATOR_SPECIES = {
 
         // Ecological notes
         notes: 'Aggressive active predator. Structure-oriented. Extremely acrobatic fighter - jumps frequently. Territorial, especially during spawn. Line-shy but opportunistic.'
+    },
+
+    yellow_perch_large: {
+        name: 'Yellow Perch',
+        scientificName: 'Perca flavescens',
+        commonNames: ['Perch', 'Ringed Perch', 'Striped Perch'],
+        status: 'Native, abundant, excellent beginner species',
+
+        // Spawn configuration
+        spawnWeight: 40, // 40% spawn rate (most abundant, beginner-friendly)
+
+        // Size categories - SMALLER than other predators (beginner-friendly)
+        sizeCategories: {
+            small: {
+                weightRange: [0.3, 0.7],
+                lengthRange: [8, 10],
+                depthPreference: [5, 15],
+                speedMultiplier: 1.2,
+                aggressivenessMultiplier: 1.4, // aggressive for their size
+                cautiousness: 0.3, // not very cautious
+                schoolingTendency: 0.6 // sometimes school
+            },
+            medium: {
+                weightRange: [0.7, 1.2],
+                lengthRange: [10, 12],
+                depthPreference: [8, 20],
+                speedMultiplier: 1.1,
+                aggressivenessMultiplier: 1.3,
+                cautiousness: 0.4,
+                schoolingTendency: 0.4
+            },
+            large: {
+                weightRange: [1.2, 2.0],
+                lengthRange: [12, 14],
+                depthPreference: [10, 25],
+                speedMultiplier: 1.0,
+                aggressivenessMultiplier: 1.2,
+                cautiousness: 0.5,
+                schoolingTendency: 0.2
+            },
+            trophy: {
+                weightRange: [2.0, 3.0],
+                lengthRange: [14, 16],
+                depthPreference: [12, 30],
+                speedMultiplier: 0.9,
+                aggressivenessMultiplier: 1.1,
+                cautiousness: 0.6,
+                schoolingTendency: 0.1 // larger perch more solitary
+            }
+        },
+
+        // Temperature preferences - tolerates wide range
+        tempPreference: {
+            optimal: 68, // 65-72°F range
+            min: 50,
+            max: 78,
+            lethal: 85,
+            behaviorAffect: true
+        },
+
+        // Seasonal depth preferences (feet)
+        depthPreference: {
+            spring: [5, 15], // shallow spawning
+            summer: [10, 25], // moderate depth
+            fall: [8, 20], // active feeding
+            winter: [15, 35] // deeper in ice fishing
+        },
+
+        // Diet composition - perch eat smaller fish and invertebrates
+        dietPreferences: {
+            alewife: 0.30, // small baitfish
+            rainbow_smelt: 0.20,
+            sculpin: 0.15,
+            insects: 0.25, // major food source (not modeled)
+            small_perch: 0.10 // some cannibalism
+        },
+
+        // Behavioral characteristics - EASY TO CATCH
+        behavior: {
+            huntingStyle: 'opportunistic', // not picky, strikes readily
+            feedingPeriods: ['all_day'], // feeds throughout the day
+            aggressionByDepth: {
+                surface: 1.3,
+                midColumn: 1.4, // most aggressive in mid-water
+                bottom: 1.2
+            },
+            cannibalismChance: 0.10, // moderate cannibalism
+            opportunisticFeeding: true,
+            structureOriented: true,
+            schoolingBehavior: {
+                schoolBySize: true, // perch school with similar-sized fish
+                schoolSize: [3, 8], // small schools
+                lessSchoolingWhenLarge: true
+            },
+            spawnPeriod: {
+                months: [4, 5], // April-May
+                behaviorChange: 'normal', // still feeds during spawn
+                feedingReduction: 0.8 // feeds less but still active
+            }
+        },
+
+        // Activity patterns - ACTIVE ALL DAY (easy to catch anytime)
+        activityByTime: {
+            dawn: 1.3,
+            morning: 1.2,
+            midday: 1.1, // still active at midday (unlike bass)
+            afternoon: 1.2,
+            dusk: 1.3,
+            night: 0.7,
+        },
+
+        // Fight characteristics - EASY FIGHT
+        fightCharacteristics: {
+            initialRun: 'weak', // not much initial run
+            tactics: ['head_shake', 'spin'], // simple fight tactics
+            stamina: 'low', // tires quickly
+            difficulty: 'easy', // BEGINNER-FRIENDLY
+            acrobatic: false, // doesn't jump
+            fightDuration: 'short' // quick fights
+        },
+
+        // Habitat preferences
+        habitatPreferences: {
+            primary: ['weed_edges', 'moderate_structure', 'sand_gravel_bottom'],
+            secondary: ['drop_offs', 'shallow_flats', 'near_docks'],
+            avoids: ['very_deep_water', 'strong_current']
+        },
+
+        // Visual characteristics (same as baitfish but larger)
+        appearance: {
+            bodyShape: 'deep', // deep-bodied
+            colorScheme: {
+                base: 0xccaa33, // golden yellow
+                bars: 0x4a3a1a, // dark brown/black vertical bars
+                belly: 0xf0e0b0, // pale yellow/cream
+                fins: 0xff6600, // orange/red fins (distinctive!)
+                eyes: 0x332211, // dark eyes
+                distinctive: ['vertical_bars', 'orange_fins', 'golden_color']
+            },
+            markingPattern: 'vertical_bars' // 6-8 dark vertical bars
+        },
+
+        // Ecological notes
+        notes: 'BEGINNER SPECIES - Easy to catch, abundant, fights weakly. Perfect for learning game mechanics. Schools by size. Active all day. Not picky about lures.'
     }
 };
 
@@ -722,10 +875,50 @@ export function calculateDietPreference(predatorSpecies, preySpecies) {
     return predatorData.dietPreferences[preySpecies] || 0.1; // default low preference
 }
 
+/**
+ * Get all spawnable predator species with their weights
+ * Returns array of {name, weight} objects normalized to 100%
+ * @returns {Array<{name: string, weight: number}>}
+ */
+export function getSpawnableSpecies() {
+    const species = [];
+    for (const [key, data] of Object.entries(PREDATOR_SPECIES)) {
+        if (data.spawnWeight && data.spawnWeight > 0) {
+            species.push({
+                name: key,
+                weight: data.spawnWeight,
+                data: data
+            });
+        }
+    }
+    return species;
+}
+
+/**
+ * Select a random species based on spawn weights
+ * Config-driven species selection - no hardcoded logic!
+ * @returns {string} Species key (e.g., 'lake_trout')
+ */
+export function selectRandomSpecies() {
+    const species = getSpawnableSpecies();
+    const totalWeight = species.reduce((sum, s) => sum + s.weight, 0);
+    let random = Math.random() * totalWeight;
+    for (const s of species) {
+        random -= s.weight;
+        if (random <= 0) {
+            return s.name;
+        }
+    }
+    // Fallback to first species
+    return species[0]?.name || 'lake_trout';
+}
+
 export default {
     BAITFISH_SPECIES,
     PREDATOR_SPECIES,
     getBaitfishSpecies,
     getPredatorSpecies,
-    calculateDietPreference
+    calculateDietPreference,
+    getSpawnableSpecies,
+    selectRandomSpecies
 };

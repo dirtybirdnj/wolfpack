@@ -3,7 +3,7 @@ import { Constants, Utils } from '../../utils/Constants.js';
 import Fish from '../../entities/Fish.js';
 import BaitfishCloud from '../../entities/BaitfishCloud.js';
 import Zooplankton from '../../entities/Zooplankton.js';
-import { getBaitfishSpecies } from '../../config/SpeciesData.js';
+import { getBaitfishSpecies, selectRandomSpecies, getPredatorSpecies } from '../../config/SpeciesData.js';
 
 /**
  * SpawningSystem - Handles all entity spawning logic
