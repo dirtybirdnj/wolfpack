@@ -296,8 +296,8 @@ export class SpawningSystem {
      * @returns {number} Number of zooplankton spawned
      */
     trySpawnZooplankton() {
-        // Don't spawn too many zooplankton at once
-        if (this.scene.zooplankton.length >= 30) {
+        // Increased maximum for more abundant food source
+        if (this.scene.zooplankton.length >= 50) {
             return 0;
         }
 
@@ -313,16 +313,24 @@ export class SpawningSystem {
             playerWorldX = 0;
         }
 
-        // Spawn 1-3 zooplankton at a time
-        const spawnCount = Math.floor(Utils.randomBetween(1, 3));
+        // Spawn 2-4 zooplankton at a time (increased from 1-3)
+        const spawnCount = Math.floor(Utils.randomBetween(2, 4));
 
         for (let i = 0; i < spawnCount; i++) {
             // Spawn at random position around player in world coordinates
             const offsetX = Utils.randomBetween(-300, 300);
             const worldX = playerWorldX + offsetX;
 
-            // Spawn near the bottom (95-100 feet deep)
-            const depth = Utils.randomBetween(95, 100);
+            // Spawn heavily weighted toward bottom, with some at mid-depths
+            // 70% spawn at bottom (85-100 feet), 30% at mid-depth (60-85 feet)
+            let depth;
+            if (Math.random() < 0.7) {
+                // Bottom layer - abundant zooplankton near lake floor
+                depth = Utils.randomBetween(85, 100);
+            } else {
+                // Mid-depth layer - less common but available for shallow feeders
+                depth = Utils.randomBetween(60, 85);
+            }
             const y = depth * GameConfig.DEPTH_SCALE;
 
             // Create zooplankton

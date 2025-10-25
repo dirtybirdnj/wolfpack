@@ -45,6 +45,11 @@ export class Baitfish {
         this.age = 0;
         this.panicMode = false;
 
+        // Target persistence for hunting behavior
+        this.currentTarget = null; // Currently targeted zooplankton
+        this.targetLockTime = 0; // How long we've been locked onto this target
+        this.minLockDuration = 120; // Minimum frames before switching targets (2 seconds at 60fps)
+
         // Flicker effect for baitfish (they shimmer on sonar)
         this.flickerPhase = Math.random() * Math.PI * 2;
     }
@@ -205,40 +210,111 @@ export class Baitfish {
     }
 
     handleHuntingBehavior(nearbyZooplankton, otherBaitfish = []) {
-        // Find the closest available zooplankton
-        // Prefer targets that aren't crowded by other baitfish
-        let bestZooplankton = null;
-        let bestScore = Infinity;
+        // Check if current target is still valid
+        if (this.currentTarget && this.currentTarget.visible && !this.currentTarget.consumed) {
+            // Increment lock time
+            this.targetLockTime++;
 
-        nearbyZooplankton.forEach(zp => {
-            if (!zp.visible || zp.consumed) return;
-
-            const distance = Math.sqrt(
-                Math.pow(this.x - zp.x, 2) +
-                Math.pow(this.y - zp.y, 2)
+            // Verify target is still in range (not too far away)
+            const currentDist = Math.sqrt(
+                Math.pow(this.x - this.currentTarget.x, 2) +
+                Math.pow(this.y - this.currentTarget.y, 2)
             );
 
-            // Count how many other baitfish are targeting this zooplankton
-            let competitorCount = 0;
-            otherBaitfish.forEach(other => {
-                if (other === this || !other.visible || other.consumed) return;
-                const otherDist = Math.sqrt(
-                    Math.pow(other.x - zp.x, 2) +
-                    Math.pow(other.y - zp.y, 2)
+            // Keep current target if within reasonable range
+            if (currentDist < 200) {
+                // Current target is valid, use it
+                let bestZooplankton = this.currentTarget;
+
+                // Only consider switching if we've been locked long enough AND a much better option exists
+                if (this.targetLockTime > this.minLockDuration) {
+                    let bestScore = currentDist; // Current target's score
+
+                    nearbyZooplankton.forEach(zp => {
+                        if (!zp.visible || zp.consumed || zp === this.currentTarget) return;
+
+                        const distance = Math.sqrt(
+                            Math.pow(this.x - zp.x, 2) +
+                            Math.pow(this.y - zp.y, 2)
+                        );
+
+                        // Count competitors for this alternative target
+                        let competitorCount = 0;
+                        otherBaitfish.forEach(other => {
+                            if (other === this || !other.visible || other.consumed) return;
+                            const otherDist = Math.sqrt(
+                                Math.pow(other.x - zp.x, 2) +
+                                Math.pow(other.y - zp.y, 2)
+                            );
+                            if (otherDist < 20) {
+                                competitorCount++;
+                            }
+                        });
+
+                        const score = distance + (competitorCount * 15);
+
+                        // Only switch if significantly better (50% improvement)
+                        if (score < bestScore * 0.5) {
+                            bestScore = score;
+                            bestZooplankton = zp;
+                        }
+                    });
+
+                    // If we switched targets, reset lock time
+                    if (bestZooplankton !== this.currentTarget) {
+                        this.currentTarget = bestZooplankton;
+                        this.targetLockTime = 0;
+                    }
+                }
+                // Continue with current or newly selected target
+            } else {
+                // Target moved too far, release it
+                this.currentTarget = null;
+                this.targetLockTime = 0;
+            }
+        }
+
+        // If no valid current target, find a new one
+        if (!this.currentTarget) {
+            let bestZooplankton = null;
+            let bestScore = Infinity;
+
+            nearbyZooplankton.forEach(zp => {
+                if (!zp.visible || zp.consumed) return;
+
+                const distance = Math.sqrt(
+                    Math.pow(this.x - zp.x, 2) +
+                    Math.pow(this.y - zp.y, 2)
                 );
-                if (otherDist < 20) { // Within 20px = competing for same food
-                    competitorCount++;
+
+                // Count how many other baitfish are targeting this zooplankton
+                let competitorCount = 0;
+                otherBaitfish.forEach(other => {
+                    if (other === this || !other.visible || other.consumed) return;
+                    const otherDist = Math.sqrt(
+                        Math.pow(other.x - zp.x, 2) +
+                        Math.pow(other.y - zp.y, 2)
+                    );
+                    if (otherDist < 20) { // Within 20px = competing for same food
+                        competitorCount++;
+                    }
+                });
+
+                // Score = distance + penalty for crowding (prefer uncrowded targets)
+                const score = distance + (competitorCount * 15);
+
+                if (score < bestScore) {
+                    bestScore = score;
+                    bestZooplankton = zp;
                 }
             });
 
-            // Score = distance + penalty for crowding (prefer uncrowded targets)
-            const score = distance + (competitorCount * 15);
+            // Set new target and reset lock time
+            this.currentTarget = bestZooplankton;
+            this.targetLockTime = 0;
+        }
 
-            if (score < bestScore) {
-                bestScore = score;
-                bestZooplankton = zp;
-            }
-        });
+        let bestZooplankton = this.currentTarget;
 
         if (bestZooplankton) {
             const targetDistance = Math.sqrt(
@@ -249,6 +325,9 @@ export class Baitfish {
             // If close enough, consume the zooplankton
             if (targetDistance < 5) {
                 bestZooplankton.consume();
+                // Clear current target so we look for a new one
+                this.currentTarget = null;
+                this.targetLockTime = 0;
                 // Don't return - continue hunting more zooplankton
             }
 
