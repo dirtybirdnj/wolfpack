@@ -274,37 +274,38 @@ export class BoatManager {
 
     drawBoat() {
         const screenX = GameConfig.CANVAS_WIDTH / 2; // Boat always centered
+        const waterSurfaceY = 0; // Water surface is at y=0
 
         if (this.fishingType === GameConfig.FISHING_TYPE_KAYAK) {
-            // Draw kayak
+            // Draw kayak - positioned above water surface
             this.graphics.fillStyle(0xff6600, 1.0);
-            // Kayak body (elongated ellipse)
-            this.graphics.fillEllipse(screenX, 10, 30, 8);
+            // Kayak body (elongated ellipse) - floating on water
+            this.graphics.fillEllipse(screenX, waterSurfaceY - 5, 30, 8);
             // Paddle
             if (this.isPaddling) {
                 const paddleOffset = Math.sin(Date.now() * 0.01) * 15;
                 this.graphics.lineStyle(2, 0x8b4513, 1.0);
-                this.graphics.lineBetween(screenX - 10 + paddleOffset, 5, screenX - 15 + paddleOffset, 0);
+                this.graphics.lineBetween(screenX - 10 + paddleOffset, waterSurfaceY - 10, screenX - 15 + paddleOffset, waterSurfaceY - 15);
             }
         } else {
-            // Draw motor boat
+            // Draw motor boat - positioned above water surface
             this.graphics.fillStyle(0xffffff, 1.0);
-            // Boat body (larger)
-            this.graphics.fillRoundedRect(screenX - 25, 5, 50, 12, 5);
+            // Boat body (larger) - floating on water
+            this.graphics.fillRoundedRect(screenX - 25, waterSurfaceY - 12, 50, 12, 5);
             // Motor
             this.graphics.fillStyle(0x666666, 1.0);
-            this.graphics.fillRect(screenX + 20, 12, 8, 6);
+            this.graphics.fillRect(screenX + 20, waterSurfaceY - 5, 8, 6);
             // Wake if moving
             if (this.isMoving) {
                 this.graphics.lineStyle(2, 0xffffff, 0.5);
-                this.graphics.lineBetween(screenX - 30, 15, screenX - 40, 20);
-                this.graphics.lineBetween(screenX - 30, 15, screenX - 40, 10);
+                this.graphics.lineBetween(screenX - 30, waterSurfaceY + 2, screenX - 40, waterSurfaceY + 7);
+                this.graphics.lineBetween(screenX - 30, waterSurfaceY + 2, screenX - 40, waterSurfaceY - 3);
             }
         }
 
-        // Position indicator below boat
+        // Position indicator below boat (in the water)
         const depthHere = this.getDepthAtPosition(this.playerX);
-        const text = this.scene.add.text(screenX, 25, `Depth: ${depthHere.toFixed(0)}ft`, {
+        const text = this.scene.add.text(screenX, waterSurfaceY + 12, `Depth: ${depthHere.toFixed(0)}ft`, {
             fontSize: '8px',
             fontFamily: 'Courier New',
             color: '#ffff00',

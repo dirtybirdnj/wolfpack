@@ -100,8 +100,10 @@
             grid-column: 1 / 4;
             grid-row: 3;
             display: grid;
-            grid-template-columns: 1fr 1fr 1fr 1fr;
+            grid-template-columns: 1fr;
             gap: 20px;
+            max-width: 300px;
+            margin: 0 auto;
         }
 
         .controller-status-hidden {
@@ -508,10 +510,6 @@
                     <div style="font-weight: bold; color: var(--border-secondary); font-size: 11px;"><span id="ui-depth">0</span>ft</div>
                 </div>
                 <div>
-                    <div style="color: var(--text-muted); font-size: 8px;">STATE</div>
-                    <div style="font-weight: bold; color: var(--text-secondary); font-size: 10px;"><span id="ui-lure-state">SURFACE</span></div>
-                </div>
-                <div>
                     <div style="color: var(--text-muted); font-size: 8px;">SPEED</div>
                     <div style="font-weight: bold; color: var(--text-primary); font-size: 11px;"><span id="ui-speed">2.0</span></div>
                 </div>
@@ -534,9 +532,15 @@
                     <div style="color: var(--text-muted); font-size: 8px;">TIME</div>
                     <div style="font-weight: bold; color: var(--text-primary); font-size: 11px;"><span id="ui-time">0:00</span></div>
                 </div>
-                <div>
-                    <div style="color: var(--text-muted); font-size: 8px;">ZONE</div>
-                    <div style="font-weight: bold; font-size: 10px;" id="ui-zone-text"><span id="ui-zone">Surface</span></div>
+                <!-- Kayak Tiredness (shown when in kayak mode) -->
+                <div id="ui-kayak-status" style="display: none;">
+                    <div style="color: var(--text-muted); font-size: 8px;">STAMINA</div>
+                    <div style="font-weight: bold; color: var(--text-primary); font-size: 11px;"><span id="ui-kayak-stamina">100</span>%</div>
+                </div>
+                <!-- Motorboat Gas (shown when in motorboat mode) -->
+                <div id="ui-boat-status" style="display: none;">
+                    <div style="color: var(--text-muted); font-size: 8px;">FUEL</div>
+                    <div style="font-weight: bold; color: var(--text-primary); font-size: 11px;"><span id="ui-boat-fuel">100</span>%</div>
                 </div>
             </div>
         </div>
@@ -578,56 +582,7 @@
 
         <!-- Dev Toolbar (Bottom) -->
         <div id="dev-toolbar">
-            <!-- Column 1: Actions -->
-            <div class="panel warning">
-                <h3>🔧 DEV ACTIONS</h3>
-                <button id="spawn-fish-btn" class="dev-btn">Spawn Fish</button>
-                <button id="spawn-5-fish-btn" class="dev-btn">Spawn 5 Fish</button>
-                <button id="reset-game-btn" class="dev-btn">Reset Game</button>
-                <button id="toggle-debug-btn" class="dev-btn">Toggle Debug</button>
-            </div>
-
-            <!-- Column 2: Lure Weight -->
-            <div class="panel warning">
-                <h3>🎣 LURE WEIGHT</h3>
-                <div style="font-size: 11px; margin-bottom: 8px;">
-                    Current: <span id="current-lure-weight" class="status-value">0.5oz</span>
-                </div>
-                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px;">
-                    <button id="lure-weight-0.25" class="dev-btn" style="font-size: 10px; padding: 6px 4px;">1/4oz</button>
-                    <button id="lure-weight-0.5" class="dev-btn" style="font-size: 10px; padding: 6px 4px;">1/2oz</button>
-                    <button id="lure-weight-1" class="dev-btn" style="font-size: 10px; padding: 6px 4px;">1oz</button>
-                    <button id="lure-weight-2" class="dev-btn" style="font-size: 10px; padding: 6px 4px;">2oz</button>
-                    <button id="lure-weight-3" class="dev-btn" style="font-size: 10px; padding: 6px 4px;">3oz</button>
-                    <button id="lure-weight-4" class="dev-btn" style="font-size: 10px; padding: 6px 4px;">4oz</button>
-                </div>
-            </div>
-
-            <!-- Column 3: Fishing Line -->
-            <div class="panel warning">
-                <h3>🧵 FISHING LINE</h3>
-                <div style="font-size: 11px; margin-bottom: 8px;">
-                    Type: <span id="current-line-type" class="status-value">Braided</span>
-                </div>
-                <div style="display: grid; grid-template-columns: 1fr; gap: 4px; margin-bottom: 8px;">
-                    <button id="line-type-braid" class="dev-btn" style="font-size: 10px; padding: 6px 4px;">Braid</button>
-                    <button id="line-type-monofilament" class="dev-btn" style="font-size: 10px; padding: 6px 4px;">Mono</button>
-                    <button id="line-type-fluorocarbon" class="dev-btn" style="font-size: 10px; padding: 6px 4px;">Fluoro</button>
-                </div>
-                <div id="braid-color-section" style="border-top: 1px solid var(--text-muted); padding-top: 8px;">
-                    <div style="font-size: 11px; margin-bottom: 6px;">
-                        Color: <span id="current-braid-color" class="status-value">Neon Green</span>
-                    </div>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px;">
-                        <button id="braid-color-neon-green" class="dev-btn" style="font-size: 9px; padding: 4px 2px;">Neon</button>
-                        <button id="braid-color-yellow" class="dev-btn" style="font-size: 9px; padding: 4px 2px;">Yellow</button>
-                        <button id="braid-color-moss-green" class="dev-btn" style="font-size: 9px; padding: 4px 2px;">Moss</button>
-                        <button id="braid-color-white" class="dev-btn" style="font-size: 9px; padding: 4px 2px;">White</button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Column 4: Controller & Info -->
+            <!-- Column 1: Controller & Info -->
             <div class="panel secondary">
                 <h3>🎮 CONTROLLER</h3>
                 <div style="margin: 10px 0;">
