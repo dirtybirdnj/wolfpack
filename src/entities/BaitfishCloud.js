@@ -123,19 +123,21 @@ export class BaitfishCloud {
             // Spread out when safe (1.5 to 2.0 multiplier)
             this.spreadMultiplier = Math.min(2.0, 1.5 + (1 - this.scaredLevel) * 0.5);
 
-            // Normal gentle drift
-            if (Math.random() < 0.01) {
-                this.velocity.x += Utils.randomBetween(-0.2, 0.2);
-                this.velocity.y += Utils.randomBetween(-0.1, 0.1);
+            // Normal active wandering - much more mobile now
+            // Increased from 1% to 5% chance per frame for more frequent direction changes
+            if (Math.random() < 0.05) {
+                this.velocity.x += Utils.randomBetween(-0.4, 0.4);
+                this.velocity.y += Utils.randomBetween(-0.2, 0.2);
             }
 
-            // Decay velocity when calm
-            this.velocity.x *= 0.95;
-            this.velocity.y *= 0.95;
+            // Reduced velocity decay when calm - keeps clouds moving longer
+            // Changed from 0.95 to 0.98 (5% decay -> 2% decay)
+            this.velocity.x *= 0.98;
+            this.velocity.y *= 0.98;
 
-            // Keep velocity reasonable
-            this.velocity.x = Math.max(-1.0, Math.min(1.0, this.velocity.x));
-            this.velocity.y = Math.max(-0.5, Math.min(0.5, this.velocity.y));
+            // Keep velocity reasonable - increased max speeds for more wandering
+            this.velocity.x = Math.max(-1.5, Math.min(1.5, this.velocity.x));
+            this.velocity.y = Math.max(-0.8, Math.min(0.8, this.velocity.y));
         }
 
         // Update center position (cloud drifts or flees) - use world coordinates

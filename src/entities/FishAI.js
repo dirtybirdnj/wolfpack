@@ -774,11 +774,20 @@ export class FishAI {
         const pickyFactor = this.fish.hunger > 70 ? 0.3 : 1.0;
         const dietBonus = dietPreference * pickyFactor * 0.4; // Can add up to 0.22 for preferred prey
 
+        // SIZE/TROPHY BONUS - Larger fish are more aggressive hunters
+        // Trophy fish (>30 lbs) and large fish (>15 lbs) need more food and hunt more aggressively
+        const sizeBonus = this.fish.weight > 30 ? 0.35 :  // Trophy: +35% hunt score
+                         this.fish.weight > 15 ? 0.20 :  // Large: +20% hunt score
+                         this.fish.weight > 5 ? 0.10 : 0; // Medium: +10% hunt score
+
         // Base hunt score (hunger + distance + frenzy)
         let huntScore = (hungerFactor * 0.6) + (distanceFactor * 0.3) + frenzyBonus;
 
         // Apply diet preference bonus
         huntScore += dietBonus;
+
+        // Apply size bonus - trophy fish hunt much more aggressively
+        huntScore += sizeBonus;
 
         // Rare species (cisco) get extra appeal bonus
         if (preySpecies === 'cisco') {
