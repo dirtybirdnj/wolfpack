@@ -72,6 +72,12 @@
             gap: 12px;
             grid-column: 2;
             grid-row: 1 / 3;
+            min-height: 100vh;
+        }
+
+        #right-panel .panel.warning {
+            height: calc(100vh - 100px);
+            min-height: 600px;
         }
 
         #top-bar-container {
@@ -82,7 +88,8 @@
             gap: 10px;
         }
 
-        #gamepad-icon-container {
+        #gamepad-icon-container,
+        #book-icon-container {
             position: relative;
             flex-shrink: 0;
             cursor: pointer;
@@ -90,8 +97,9 @@
             transition: opacity 0.3s;
         }
 
-        #gamepad-icon {
-            font-size: 48px;
+        #gamepad-icon,
+        #book-icon {
+            font-size: 32px;
             line-height: 1;
             opacity: 1;
             transition: all 0.2s;
@@ -101,7 +109,8 @@
             opacity: 0.3;
         }
 
-        #gamepad-icon:hover {
+        #gamepad-icon:hover,
+        #book-icon:hover {
             transform: scale(1.1);
         }
 
@@ -109,8 +118,8 @@
             position: absolute;
             bottom: -2px;
             right: -2px;
-            width: 12px;
-            height: 12px;
+            width: 10px;
+            height: 10px;
             background: #00ff00;
             border-radius: 50%;
             border: 2px solid var(--bg-gradient-1);
@@ -416,6 +425,11 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Book Icon (Species Guide) -->
+            <div id="book-icon-container">
+                <div id="book-icon">📖</div>
+            </div>
         </div>
 
         <!-- Center Panel (Game) -->
@@ -703,10 +717,119 @@
         // Setup gamepad icon click handler
         document.getElementById('gamepad-icon-container').addEventListener('click', showTestController);
 
+        // Setup book icon click handler (Species Guide)
+        document.getElementById('book-icon-container').addEventListener('click', () => {
+            // Create species guide overlay
+            const overlay = document.createElement('div');
+            overlay.id = 'species-guide-overlay';
+            overlay.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.95);
+                color: #00ff00;
+                font-family: 'Courier New', monospace;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                z-index: 10000;
+                padding: 40px;
+                box-sizing: border-box;
+                overflow-y: auto;
+            `;
+
+            overlay.innerHTML = `
+                <div style="max-width: 900px; width: 100%;">
+                    <h1 style="text-align: center; color: #00aaff; margin-bottom: 20px;">📖 LAKE CHAMPLAIN SPECIES GUIDE</h1>
+                    <div style="background: rgba(0, 50, 100, 0.3); padding: 20px; border: 2px solid #00aaff; border-radius: 10px; margin-bottom: 20px;">
+                        <p style="font-size: 14px; margin: 0; text-align: center; color: #888;">
+                            Your comprehensive reference for Lake Champlain species, behavior patterns, and fishing techniques
+                        </p>
+                    </div>
+
+                    <div style="background: rgba(0, 100, 0, 0.2); padding: 20px; border: 2px solid #00ff00; border-radius: 10px; margin-bottom: 20px;">
+                        <h2 style="color: #ffff00; margin-top: 0;">🎯 Game Species</h2>
+
+                        <div style="margin: 15px 0; padding: 15px; background: rgba(0, 0, 0, 0.3); border-radius: 5px;">
+                            <h3 style="color: #00ff00; margin: 0 0 10px 0;">Northern Pike (Esox lucius)</h3>
+                            <p style="margin: 5px 0; font-size: 12px;"><strong>Behavior:</strong> Ambush predator, prefers shallow weedy areas, active hunters</p>
+                            <p style="margin: 5px 0; font-size: 12px;"><strong>Depth Range:</strong> 5-40 feet, often near vegetation</p>
+                            <p style="margin: 5px 0; font-size: 12px;"><strong>Target:</strong> Aggressively chases baitfish, attracted to movement</p>
+                        </div>
+
+                        <div style="margin: 15px 0; padding: 15px; background: rgba(0, 0, 0, 0.3); border-radius: 5px;">
+                            <h3 style="color: #00ff00; margin: 0 0 10px 0;">Lake Trout (Salvelinus namaycush)</h3>
+                            <p style="margin: 5px 0; font-size: 12px;"><strong>Behavior:</strong> Deep water specialist, cold-water lover, slow methodical hunter</p>
+                            <p style="margin: 5px 0; font-size: 12px;"><strong>Depth Range:</strong> 40-150 feet, stays in thermocline</p>
+                            <p style="margin: 5px 0; font-size: 12px;"><strong>Target:</strong> Prefers slower presentations near lake bottom</p>
+                        </div>
+
+                        <h2 style="color: #ffff00; margin-top: 30px;">🐟 Baitfish</h2>
+
+                        <div style="margin: 15px 0; padding: 15px; background: rgba(0, 0, 0, 0.3); border-radius: 5px;">
+                            <h3 style="color: #00aaff; margin: 0 0 10px 0;">Alewife</h3>
+                            <p style="margin: 5px 0; font-size: 12px;"><strong>Behavior:</strong> Schools tightly when threatened, moves in coordinated patterns</p>
+                            <p style="margin: 5px 0; font-size: 12px;"><strong>Pattern:</strong> Primary forage for all game fish</p>
+                        </div>
+
+                        <div style="margin: 15px 0; padding: 15px; background: rgba(0, 0, 0, 0.3); border-radius: 5px;">
+                            <h3 style="color: #00aaff; margin: 0 0 10px 0;">Smelt</h3>
+                            <p style="margin: 5px 0; font-size: 12px;"><strong>Behavior:</strong> Smaller, faster schools, often found in mid-water column</p>
+                            <p style="margin: 5px 0; font-size: 12px;"><strong>Pattern:</strong> Attracts larger predators when schooling</p>
+                        </div>
+
+                        <h2 style="color: #ffff00; margin-top: 30px;">💡 Fishing Tips</h2>
+                        <ul style="font-size: 12px; line-height: 1.8;">
+                            <li>Watch for baitfish schools - predators follow their prey</li>
+                            <li>Match your depth to where fish are actively feeding</li>
+                            <li>Pike prefer faster-moving targets near structure</li>
+                            <li>Lake trout hunt methodically in deeper, colder water</li>
+                            <li>Adjust your jigging speed based on fish activity</li>
+                        </ul>
+                    </div>
+
+                    <div style="text-align: center;">
+                        <button id="close-species-guide" style="background: #ff6666; color: #000; border: none; padding: 12px 30px; font-size: 14px; font-family: 'Courier New', monospace; font-weight: bold; border-radius: 5px; cursor: pointer;">
+                            CLOSE (Press ESC)
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            document.body.appendChild(overlay);
+
+            const closeBtn = document.getElementById('close-species-guide');
+
+            // Close button handler
+            closeBtn.addEventListener('click', () => {
+                overlay.remove();
+            });
+
+            // ESC key handler
+            const escHandler = (e) => {
+                if (e.key === 'Escape') {
+                    overlay.remove();
+                    document.removeEventListener('keydown', escHandler);
+                }
+            };
+            document.addEventListener('keydown', escHandler);
+
+            // Click background to close
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) {
+                    overlay.remove();
+                }
+            });
+        });
+
         // Log initial state
         console.log('🎮 Gamepad Manager initialized. Waiting for controller connection...');
         console.log('🎮 Press any button on your controller to connect it.');
         console.log('🎮 Click the gamepad icon to test your controller.');
+        console.log('📖 Click the book icon to view the species guide.');
     </script>
 
     <!-- Commit Log Modal -->
