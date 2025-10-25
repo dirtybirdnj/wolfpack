@@ -129,6 +129,12 @@ export class NavigationScene extends Phaser.Scene {
             console.log('🎮 Gamepad connected for navigation');
             this.gamepad = pad;
         });
+
+        // Track button states for "JustDown" detection
+        this.buttonStates = {
+            triangle: false,
+            x: false
+        };
     }
 
     update(time, delta) {
@@ -174,8 +180,9 @@ export class NavigationScene extends Phaser.Scene {
 
         // Gamepad input
         if (this.gamepad) {
-            // X button (Cross on PlayStation, A on Xbox)
-            if (this.gamepad.buttons[0] && this.gamepad.buttons[0].pressed) {
+            // X button (Cross on PlayStation, A on Xbox) - button index 0
+            const xButton = this.gamepad.buttons[0];
+            if (xButton && xButton.pressed) {
                 movePressed = true;
             }
 
@@ -191,10 +198,18 @@ export class NavigationScene extends Phaser.Scene {
                 steerRight = true;
             }
 
-            // Triangle button (Y on Xbox)
-            if (this.gamepad.buttons[3] && Phaser.Input.Keyboard.JustDown(this.gamepad.buttons[3])) {
+            // Triangle button (Y on Xbox) - button index 3
+            // Detect "JustDown" - button is pressed now but wasn't pressed last frame
+            const triangleButton = this.gamepad.buttons[3];
+            const trianglePressed = triangleButton && triangleButton.pressed;
+
+            if (trianglePressed && !this.buttonStates.triangle) {
                 fishPressed = true;
+                console.log('🎮 Triangle button pressed - attempting to start fishing');
             }
+
+            // Update button state for next frame
+            this.buttonStates.triangle = trianglePressed;
         }
 
         // Apply steering
