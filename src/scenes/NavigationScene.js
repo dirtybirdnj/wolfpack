@@ -349,6 +349,9 @@ export class NavigationScene extends Phaser.Scene {
         if (this.fishfinderActive) {
             this.renderFishfinder();
         }
+
+        // Draw overview map
+        this.renderOverviewMap();
     }
 
     renderWater() {
@@ -465,14 +468,18 @@ export class NavigationScene extends Phaser.Scene {
 
     renderFishfinder() {
         /**
-         * Draw fishfinder minimap in corner
-         * Shows depth profile ahead of the boat
+         * Draw fishfinder with BOTTOM LOCK feature
+         * Bottom of lake always at bottom of display, with depth tick marks
          */
 
         const fWidth = 280;
         const fHeight = 180;
         const fX = this.viewportWidth - fWidth - 20;
         const fY = 20;
+        const chartX = fX + 10;
+        const chartY = fY + 30;
+        const chartWidth = fWidth - 50; // Leave room for tick marks on right
+        const chartHeight = fHeight - 40;
 
         // Background
         this.uiGraphics.fillStyle(0x000000, 0.8);
@@ -489,18 +496,11 @@ export class NavigationScene extends Phaser.Scene {
             color: '#00ff00',
             fontStyle: 'bold'
         };
-        const title = this.add.text(fX + 10, fY + 8, 'FISHFINDER', titleStyle);
+        const title = this.add.text(chartX, fY + 8, 'FISHFINDER', titleStyle);
         title.setDepth(1000);
         this.time.delayedCall(50, () => title.destroy());
 
-        // Current depth
-        const currentDepth = this.bathyData.getDepthAtPosition(this.playerWorldX, this.playerWorldY);
-        const depthText = this.add.text(fX + fWidth - 10, fY + 8, `${currentDepth.toFixed(0)}ft`, titleStyle);
-        depthText.setOrigin(1, 0);
-        depthText.setDepth(1000);
-        this.time.delayedCall(50, () => depthText.destroy());
-
-        // Draw depth profile
+        // Get depth profile
         const profileLength = 1000; // Look ahead 1000 game units
         const profile = this.bathyData.getDepthProfile(
             this.playerWorldX,
@@ -509,14 +509,83 @@ export class NavigationScene extends Phaser.Scene {
             profileLength
         );
 
-        // Draw bottom contour
+        // Find depth range for bottom-lock
+        let maxDepth = 0;
+        let minDepth = 999;
+        for (let i = 0; i < profile.length; i++) {
+            maxDepth = Math.max(maxDepth, profile[i].depth);
+            minDepth = Math.min(minDepth, profile[i].depth);
+        }
+
+        // Add some margin above the shallowest point
+        const depthRange = maxDepth - minDepth;
+        const displayMinDepth = Math.max(0, minDepth - depthRange * 0.2);
+        const displayMaxDepth = maxDepth;
+        const displayRange = displayMaxDepth - displayMinDepth;
+
+        // Determine tick interval based on depth range
+        let tickInterval;
+        if (displayRange <= 30) {
+            tickInterval = 5;
+        } else if (displayRange <= 60) {
+            tickInterval = 10;
+        } else if (displayRange <= 120) {
+            tickInterval = 15;
+        } else {
+            tickInterval = 20;
+        }
+
+        // Draw depth tick marks on right side
+        const tickX = chartX + chartWidth + 5;
+        const tickTextStyle = {
+            fontSize: '9px',
+            fontFamily: 'Courier New',
+            color: '#888888'
+        };
+
+        const startTick = Math.floor(displayMinDepth / tickInterval) * tickInterval;
+        for (let depth = startTick; depth <= displayMaxDepth + tickInterval; depth += tickInterval) {
+            if (depth < displayMinDepth) continue;
+
+            // Bottom-lock: 0 at top, max depth at bottom
+            const normalizedDepth = (depth - displayMinDepth) / displayRange;
+            const tickY = chartY + normalizedDepth * chartHeight;
+
+            if (tickY >= chartY && tickY <= chartY + chartHeight) {
+                // Tick mark
+                this.uiGraphics.lineStyle(1, 0x888888, 0.8);
+                this.uiGraphics.lineBetween(tickX, tickY, tickX + 5, tickY);
+
+                // Depth label
+                const tickLabel = this.add.text(tickX + 8, tickY, `${depth}`, tickTextStyle);
+                tickLabel.setOrigin(0, 0.5);
+                tickLabel.setDepth(1000);
+                this.time.delayedCall(50, () => tickLabel.destroy());
+
+                // Horizontal grid line
+                this.uiGraphics.lineStyle(1, 0x444444, 0.3);
+                this.uiGraphics.lineBetween(chartX, tickY, chartX + chartWidth, tickY);
+            }
+        }
+
+        // Draw water surface line at top
+        this.uiGraphics.lineStyle(2, 0x0088ff, 0.6);
+        this.uiGraphics.lineBetween(chartX, chartY, chartX + chartWidth, chartY);
+
+        // Draw bottom contour (BOTTOM LOCK - max depth at bottom)
         this.uiGraphics.lineStyle(2, 0xaa8844, 1.0);
         this.uiGraphics.beginPath();
 
+        const bottomPoints = [];
         for (let i = 0; i < profile.length; i++) {
-            const px = fX + 10 + (i / profile.length) * (fWidth - 20);
+            const px = chartX + (i / profile.length) * chartWidth;
             const depth = profile[i].depth;
-            const py = fY + 40 + ((depth / 150) * (fHeight - 50));
+
+            // Bottom-lock scaling: deeper depths appear lower on screen
+            const normalizedDepth = (depth - displayMinDepth) / displayRange;
+            const py = chartY + normalizedDepth * chartHeight;
+
+            bottomPoints.push({ x: px, y: py });
 
             if (i === 0) {
                 this.uiGraphics.moveTo(px, py);
@@ -526,29 +595,121 @@ export class NavigationScene extends Phaser.Scene {
         }
         this.uiGraphics.strokePath();
 
-        // Fill below bottom
-        this.uiGraphics.fillStyle(0x6a5a4a, 0.4);
-        this.uiGraphics.fillRect(fX + 10, fY + 40, fWidth - 20, fHeight - 50);
+        // Fill below bottom (sediment)
+        if (bottomPoints.length > 0) {
+            this.uiGraphics.fillStyle(0x6a5a4a, 0.5);
+            this.uiGraphics.beginPath();
+            this.uiGraphics.moveTo(bottomPoints[0].x, bottomPoints[0].y);
+            for (let i = 1; i < bottomPoints.length; i++) {
+                this.uiGraphics.lineTo(bottomPoints[i].x, bottomPoints[i].y);
+            }
+            this.uiGraphics.lineTo(chartX + chartWidth, chartY + chartHeight);
+            this.uiGraphics.lineTo(chartX, chartY + chartHeight);
+            this.uiGraphics.closePath();
+            this.uiGraphics.fillPath();
+        }
 
-        // Structure indicator
-        const structure = this.bathyData.getStructureDescription(this.playerWorldX, this.playerWorldY);
-        const structText = this.add.text(fX + 10, fY + fHeight - 25, structure, {
-            fontSize: '10px',
+        // Current depth indicator (boat position)
+        const currentDepth = this.bathyData.getDepthAtPosition(this.playerWorldX, this.playerWorldY);
+        const depthText = this.add.text(fX + fWidth - 10, fY + 8, `${currentDepth.toFixed(0)}ft`, {
+            fontSize: '12px',
             fontFamily: 'Courier New',
-            color: '#ffff00'
+            color: '#ffff00',
+            fontStyle: 'bold'
         });
-        structText.setDepth(1000);
-        this.time.delayedCall(50, () => structText.destroy());
+        depthText.setOrigin(1, 0);
+        depthText.setDepth(1000);
+        this.time.delayedCall(50, () => depthText.destroy());
+    }
 
-        // Depth description
-        const depthDesc = this.bathyData.getDepthDescription(currentDepth);
-        const descText = this.add.text(fX + 10, fY + fHeight - 12, depthDesc, {
+    renderOverviewMap() {
+        /**
+         * Draw overview map in bottom-right corner
+         * Shows player position in Burlington Bay
+         */
+
+        const mapWidth = 200;
+        const mapHeight = 150;
+        const mapX = this.viewportWidth - mapWidth - 20;
+        const mapY = this.viewportHeight - mapHeight - 20;
+
+        // Background
+        this.uiGraphics.fillStyle(0x000000, 0.8);
+        this.uiGraphics.fillRoundedRect(mapX, mapY, mapWidth, mapHeight, 8);
+
+        // Border
+        this.uiGraphics.lineStyle(2, 0x00ff00, 1.0);
+        this.uiGraphics.strokeRoundedRect(mapX, mapY, mapWidth, mapHeight, 8);
+
+        // Title
+        const titleStyle = {
+            fontSize: '11px',
+            fontFamily: 'Courier New',
+            color: '#00ff00',
+            fontStyle: 'bold'
+        };
+        const title = this.add.text(mapX + 10, mapY + 8, 'BURLINGTON BAY', titleStyle);
+        title.setDepth(1000);
+        this.time.delayedCall(50, () => title.destroy());
+
+        // Map area (inside padding)
+        const chartX = mapX + 15;
+        const chartY = mapY + 28;
+        const chartWidth = mapWidth - 30;
+        const chartHeight = mapHeight - 38;
+
+        // Draw depth zones as colored areas
+        // East (shallow) to West (deep)
+        const zones = [
+            { start: 0, end: 0.15, color: 0x88ccff, name: 'Shore' },      // 0-1500: Very shallow (10-25ft)
+            { start: 0.15, end: 0.35, color: 0x6699cc, name: 'Shelf' },   // 1500-3500: Shelf (25-50ft)
+            { start: 0.35, end: 0.60, color: 0x4466aa, name: 'Drop' },    // 3500-6000: Transitional (50-90ft)
+            { start: 0.60, end: 1.0, color: 0x223388, name: 'Deep' }      // 6000-10000: Deep (90-150ft)
+        ];
+
+        zones.forEach(zone => {
+            const zoneX = chartX + zone.start * chartWidth;
+            const zoneWidth = (zone.end - zone.start) * chartWidth;
+            this.uiGraphics.fillStyle(zone.color, 0.6);
+            this.uiGraphics.fillRect(zoneX, chartY, zoneWidth, chartHeight);
+        });
+
+        // Draw shoreline (left edge - Burlington waterfront)
+        this.uiGraphics.lineStyle(3, 0x00ff00, 0.8);
+        this.uiGraphics.lineBetween(chartX, chartY, chartX, chartY + chartHeight);
+
+        // Draw player position
+        const playerXNorm = this.playerWorldX / 10000; // Normalize 0-1
+        const playerYNorm = this.playerWorldY / 10000;
+
+        const playerScreenX = chartX + playerXNorm * chartWidth;
+        const playerScreenY = chartY + playerYNorm * chartHeight;
+
+        // Player dot
+        this.uiGraphics.fillStyle(0xff0000, 1.0);
+        this.uiGraphics.fillCircle(playerScreenX, playerScreenY, 5);
+
+        // Player heading indicator
+        const headingRad = (this.heading - 90) * (Math.PI / 180);
+        const arrowLength = 12;
+        const arrowX = playerScreenX + Math.cos(headingRad) * arrowLength;
+        const arrowY = playerScreenY + Math.sin(headingRad) * arrowLength;
+
+        this.uiGraphics.lineStyle(2, 0xff0000, 1.0);
+        this.uiGraphics.lineBetween(playerScreenX, playerScreenY, arrowX, arrowY);
+
+        // Distance from shore
+        const distFromShore = this.playerWorldX; // Units from left edge
+        const distMiles = (distFromShore / 1000 * 0.2).toFixed(1); // Rough conversion
+
+        const distText = this.add.text(mapX + mapWidth / 2, mapY + mapHeight - 8, `${distMiles}mi from shore`, {
             fontSize: '9px',
             fontFamily: 'Courier New',
             color: '#88ff88'
         });
-        descText.setDepth(1000);
-        this.time.delayedCall(50, () => descText.destroy());
+        distText.setOrigin(0.5, 0);
+        distText.setDepth(1000);
+        this.time.delayedCall(50, () => distText.destroy());
     }
 
     createUI() {
