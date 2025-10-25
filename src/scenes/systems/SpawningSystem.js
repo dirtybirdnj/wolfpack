@@ -120,6 +120,11 @@ export class SpawningSystem {
             }
         }
 
+        // Constrain depth to actual water depth at location
+        const maxDepth = this.scene.maxDepth || GameConfig.MAX_DEPTH;
+        const maxFishDepth = Math.max(10, maxDepth - 5); // Fish spawn at least 5ft above bottom, min 10ft
+        depth = Math.min(depth, maxFishDepth);
+
         // Determine fish size
         const sizeRoll = Math.random();
         let size;
@@ -226,6 +231,11 @@ export class SpawningSystem {
             // Smelt prefer mid-depth cold water
             depth = Utils.randomBetween(30, 80);
         }
+
+        // Constrain depth to actual water depth at location
+        const maxDepth = this.scene.maxDepth || GameConfig.MAX_DEPTH;
+        const maxBaitfishDepth = Math.max(10, maxDepth - 5); // Baitfish at least 5ft above bottom
+        depth = Math.min(depth, maxBaitfishDepth);
 
         // Get player world position
         let playerWorldX;

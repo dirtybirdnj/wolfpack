@@ -1628,8 +1628,9 @@ export class NavigationScene extends Phaser.Scene {
         this.registry.set('fishingType', this.fishingType);
         this.registry.set('gameMode', this.gameMode);
 
-        // Get current depth
+        // Get current depth and store in registry
         const depth = this.bathyData.getDepthAtPosition(this.playerWorldX, this.playerWorldY);
+        this.registry.set('currentDepth', depth);
         console.log(`   Position: (${this.playerWorldX}, ${this.playerWorldY})`);
         console.log(`   Depth: ${depth.toFixed(1)}ft`);
 

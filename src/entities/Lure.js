@@ -89,9 +89,11 @@ export class Lure {
             this.state = Constants.LURE_STATE.SURFACE;
         }
         
-        if (this.y >= GameConfig.MAX_DEPTH * GameConfig.DEPTH_SCALE) {
-            this.y = GameConfig.MAX_DEPTH * GameConfig.DEPTH_SCALE;
-            this.depth = GameConfig.MAX_DEPTH;
+        // Use actual water depth from scene (set from bathymetric data)
+        const maxDepth = this.scene.maxDepth || GameConfig.MAX_DEPTH;
+        if (this.y >= maxDepth * GameConfig.DEPTH_SCALE) {
+            this.y = maxDepth * GameConfig.DEPTH_SCALE;
+            this.depth = maxDepth;
             this.velocity = 0;
             this.state = Constants.LURE_STATE.IDLE;
         }

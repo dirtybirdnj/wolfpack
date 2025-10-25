@@ -80,7 +80,11 @@ export class GameScene extends Phaser.Scene {
             // Get fishing type and game mode from registry (set by MenuScene)
             this.fishingType = this.registry.get('fishingType') || GameConfig.FISHING_TYPE_ICE;
             this.gameMode = this.registry.get('gameMode') || GameConfig.GAME_MODE_UNLIMITED;
+
+            // Get actual depth from bathymetric data (set by NavigationScene)
+            this.maxDepth = this.registry.get('currentDepth') || GameConfig.MAX_DEPTH;
             console.log(`Starting game: ${this.fishingType} fishing in ${this.gameMode} mode`);
+            console.log(`Water depth at location: ${this.maxDepth.toFixed(1)}ft`);
 
             // Initialize timer based on game mode
             if (this.gameMode === GameConfig.GAME_MODE_ARCADE) {
