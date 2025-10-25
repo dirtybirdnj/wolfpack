@@ -286,54 +286,56 @@ export class SonarDisplay {
         const playerWorldX = this.scene.boatManager.playerX;
         const lakeBedProfile = this.scene.boatManager.lakeBedProfile;
 
+        // Collect all visible points
+        const visiblePoints = [];
+        for (let i = 0; i < lakeBedProfile.length; i++) {
+            const point = lakeBedProfile[i];
+            const offsetFromPlayer = point.x - playerWorldX;
+            const screenX = (GameConfig.CANVAS_WIDTH / 2) + offsetFromPlayer;
+            const screenY = point.depth * GameConfig.DEPTH_SCALE;
+
+            if (screenX >= -50 && screenX <= GameConfig.CANVAS_WIDTH + 50) {
+                visiblePoints.push({ x: screenX, y: screenY });
+            }
+        }
+
+        if (visiblePoints.length === 0) return; // No points to draw
+
         // Draw the lakebed line
         this.graphics.lineStyle(2, 0x444444, 0.8);
         this.graphics.beginPath();
-
-        let firstPoint = true;
-        for (let i = 0; i < lakeBedProfile.length; i++) {
-            const point = lakeBedProfile[i];
-            const offsetFromPlayer = point.x - playerWorldX;
-            const screenX = (GameConfig.CANVAS_WIDTH / 2) + offsetFromPlayer;
-            const screenY = point.depth * GameConfig.DEPTH_SCALE;
-
-            // Only draw points that are visible on screen
-            if (screenX >= -50 && screenX <= GameConfig.CANVAS_WIDTH + 50) {
-                if (firstPoint) {
-                    this.graphics.moveTo(screenX, screenY);
-                    firstPoint = false;
-                } else {
-                    this.graphics.lineTo(screenX, screenY);
-                }
-            }
+        this.graphics.moveTo(visiblePoints[0].x, visiblePoints[0].y);
+        for (let i = 1; i < visiblePoints.length; i++) {
+            this.graphics.lineTo(visiblePoints[i].x, visiblePoints[i].y);
         }
-
         this.graphics.strokePath();
 
-        // Fill below bottom
+        // Fill below bottom - ensure proper polygon closure
         this.graphics.fillStyle(0x222222, 0.3);
         this.graphics.beginPath();
 
-        firstPoint = true;
-        for (let i = 0; i < lakeBedProfile.length; i++) {
-            const point = lakeBedProfile[i];
-            const offsetFromPlayer = point.x - playerWorldX;
-            const screenX = (GameConfig.CANVAS_WIDTH / 2) + offsetFromPlayer;
-            const screenY = point.depth * GameConfig.DEPTH_SCALE;
+        // Start from bottom-left corner
+        this.graphics.moveTo(0, GameConfig.CANVAS_HEIGHT);
 
-            if (screenX >= -50 && screenX <= GameConfig.CANVAS_WIDTH + 50) {
-                if (firstPoint) {
-                    this.graphics.moveTo(screenX, screenY);
-                    firstPoint = false;
-                } else {
-                    this.graphics.lineTo(screenX, screenY);
-                }
-            }
+        // If first visible point is not at left edge, draw to it
+        if (visiblePoints[0].x > 0) {
+            this.graphics.lineTo(visiblePoints[0].x, GameConfig.CANVAS_HEIGHT);
         }
 
-        // Close the fill area
+        // Draw along the terrain profile
+        for (let i = 0; i < visiblePoints.length; i++) {
+            this.graphics.lineTo(visiblePoints[i].x, visiblePoints[i].y);
+        }
+
+        // If last visible point is not at right edge, draw to bottom-right
+        if (visiblePoints[visiblePoints.length - 1].x < GameConfig.CANVAS_WIDTH) {
+            this.graphics.lineTo(visiblePoints[visiblePoints.length - 1].x, GameConfig.CANVAS_HEIGHT);
+        }
+
+        // Close at bottom-right corner
         this.graphics.lineTo(GameConfig.CANVAS_WIDTH, GameConfig.CANVAS_HEIGHT);
-        this.graphics.lineTo(0, GameConfig.CANVAS_HEIGHT);
+
+        // Close the path back to start
         this.graphics.closePath();
         this.graphics.fillPath();
     }

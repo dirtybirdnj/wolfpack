@@ -559,7 +559,11 @@ export class FishFight {
         this.scene.score += this.fish.points;
         this.scene.fishCaught++;
         this.scene.events.emit('updateScore', { score: this.scene.score, caught: this.scene.fishCaught });
-        this.scene.checkAchievements();
+
+        // Check for achievements
+        if (this.scene.scoreSystem) {
+            this.scene.scoreSystem.checkAchievements();
+        }
 
         // Show catch popup
         this.showCatchPopup(info);

@@ -296,6 +296,9 @@ export const PREDATOR_SPECIES = {
         commonNames: ['Laker', 'Togue', 'Mackinaw', 'Grey Trout'],
         status: 'Native, prized gamefish',
 
+        // Spawn configuration
+        spawnWeight: 30, // 30% spawn rate
+
         // Size categories with behavioral differences
         sizeCategories: {
             small: {
@@ -411,6 +414,9 @@ export const PREDATOR_SPECIES = {
         scientificName: 'Esox lucius',
         commonNames: ['Pike', 'Northerns', 'Gator', 'Snake'],
         status: 'Native, aggressive predator',
+
+        // Spawn configuration
+        spawnWeight: 15, // 15% spawn rate
 
         // Size categories with behavioral differences
         sizeCategories: {
@@ -562,6 +568,9 @@ export const PREDATOR_SPECIES = {
         commonNames: ['Smallie', 'Bronzeback', 'Brown Bass', 'Smalljaw'],
         status: 'Native, highly prized sport fish',
 
+        // Spawn configuration
+        spawnWeight: 15, // 15% spawn rate
+
         // Size categories with behavioral differences
         sizeCategories: {
             small: {
@@ -711,6 +720,9 @@ export const PREDATOR_SPECIES = {
         scientificName: 'Perca flavescens',
         commonNames: ['Perch', 'Ringed Perch', 'Striped Perch'],
         status: 'Native, abundant, excellent beginner species',
+
+        // Spawn configuration
+        spawnWeight: 40, // 40% spawn rate (most abundant, beginner-friendly)
 
         // Size categories - SMALLER than other predators (beginner-friendly)
         sizeCategories: {
@@ -863,10 +875,50 @@ export function calculateDietPreference(predatorSpecies, preySpecies) {
     return predatorData.dietPreferences[preySpecies] || 0.1; // default low preference
 }
 
+/**
+ * Get all spawnable predator species with their weights
+ * Returns array of {name, weight} objects normalized to 100%
+ * @returns {Array<{name: string, weight: number}>}
+ */
+export function getSpawnableSpecies() {
+    const species = [];
+    for (const [key, data] of Object.entries(PREDATOR_SPECIES)) {
+        if (data.spawnWeight && data.spawnWeight > 0) {
+            species.push({
+                name: key,
+                weight: data.spawnWeight,
+                data: data
+            });
+        }
+    }
+    return species;
+}
+
+/**
+ * Select a random species based on spawn weights
+ * Config-driven species selection - no hardcoded logic!
+ * @returns {string} Species key (e.g., 'lake_trout')
+ */
+export function selectRandomSpecies() {
+    const species = getSpawnableSpecies();
+    const totalWeight = species.reduce((sum, s) => sum + s.weight, 0);
+    let random = Math.random() * totalWeight;
+    for (const s of species) {
+        random -= s.weight;
+        if (random <= 0) {
+            return s.name;
+        }
+    }
+    // Fallback to first species
+    return species[0]?.name || 'lake_trout';
+}
+
 export default {
     BAITFISH_SPECIES,
     PREDATOR_SPECIES,
     getBaitfishSpecies,
     getPredatorSpecies,
-    calculateDietPreference
+    calculateDietPreference,
+    getSpawnableSpecies,
+    selectRandomSpecies
 };
