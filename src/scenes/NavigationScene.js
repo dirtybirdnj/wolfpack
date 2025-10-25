@@ -376,16 +376,26 @@ export class NavigationScene extends Phaser.Scene {
                 this.gasLevel = Math.max(0, this.gasLevel);
 
                 if (this.gasLevel <= 0) {
-                    this.maxSpeed = 0;
-                    this.showInstruction('Out of gas! Game over');
-                    this.time.delayedCall(2000, () => {
-                        this.scene.start('GameOverScene');
-                    });
+                    // Out of gas - force slow speed like kayak tiredness
+                    this.maxSpeed = 1.0;
+                    if (Math.random() < 0.02) {
+                        this.showInstruction('Out of gas! Stop to refuel');
+                    }
+                } else if (this.gasLevel <= 20) {
+                    // Low gas warning
+                    if (Math.random() < 0.01) {
+                        this.showInstruction('Low on gas! Slow down to conserve fuel');
+                    }
                 }
             } else {
-                // Regenerate gas slowly when idle
-                this.gasLevel += 0.05;
+                // Regenerate gas when idle or moving slowly
+                this.gasLevel += GameConfig.MOTORBOAT_GAS_REGENERATION || 0.1;
                 this.gasLevel = Math.min(100, this.gasLevel);
+
+                // Restore max speed when refueled
+                if (this.gasLevel > 20) {
+                    this.maxSpeed = 8.0;
+                }
             }
         }
     }
@@ -724,8 +734,8 @@ export class NavigationScene extends Phaser.Scene {
         const chartHeight = mapHeight - 38;
 
         // Draw depth-based shading by sampling bathymetric data
-        const gridSizeX = 10; // Sample every 10 pixels horizontally
-        const gridSizeY = 15; // Sample every 15 pixels vertically
+        const gridSizeX = 4; // Sample every 4 pixels horizontally (increased detail)
+        const gridSizeY = 6; // Sample every 6 pixels vertically (increased detail)
 
         for (let screenY = 0; screenY < chartHeight; screenY += gridSizeY) {
             for (let screenX = 0; screenX < chartWidth; screenX += gridSizeX) {
@@ -1301,21 +1311,84 @@ export class NavigationScene extends Phaser.Scene {
         const chartWidth = mapWidth - 120;
         const chartHeight = mapHeight - 130;
 
-        // Draw depth gradient (simple vertical gradient showing lake deepening from south to north)
-        const depthGradient = [
-            { yStart: 0.00, yEnd: 0.13, color: 0xaaddff }, // Whitehall - shallow
-            { yStart: 0.13, yEnd: 0.30, color: 0x88bbee }, // Ticonderoga - moderate
-            { yStart: 0.30, yEnd: 0.53, color: 0x6699dd }, // Widening - deeper
-            { yStart: 0.53, yEnd: 0.70, color: 0x4466aa }, // Burlington - deepest
-            { yStart: 0.70, yEnd: 0.83, color: 0x5588cc }, // Plattsburgh - deep
-            { yStart: 0.83, yEnd: 1.00, color: 0x7799dd }  // Northern islands - moderate
-        ];
+        // Draw detailed depth-based shading by sampling bathymetric data
+        const navGridSizeX = 3; // Sample every 3 pixels (very high detail for navigation map)
+        const navGridSizeY = 4; // Sample every 4 pixels
 
-        depthGradient.forEach(zone => {
-            const zoneY = chartY + zone.yStart * chartHeight;
-            const zoneHeight = (zone.yEnd - zone.yStart) * chartHeight;
-            this.uiGraphics.fillStyle(zone.color, 0.7);
-            this.uiGraphics.fillRect(chartX, zoneY, chartWidth, zoneHeight);
+        // Store depth samples for contour line drawing
+        const depthSamples = [];
+
+        for (let screenY = 0; screenY < chartHeight; screenY += navGridSizeY) {
+            depthSamples[screenY] = [];
+            for (let screenX = 0; screenX < chartWidth; screenX += navGridSizeX) {
+                // Convert screen position to world coordinates
+                const worldXNorm = screenX / chartWidth;
+                const worldYNorm = 1 - (screenY / chartHeight); // Flip Y: top = north, bottom = south
+
+                const worldX = worldXNorm * 20000;
+                const worldY = worldYNorm * 60000;
+
+                // Sample depth at this position
+                const depth = this.bathyData.getDepthAtPosition(worldX, worldY);
+                depthSamples[screenY][screenX] = depth;
+
+                // Color based on depth with more granular zones
+                let color, alpha;
+                if (depth < 20) {
+                    color = 0xcceeFF; // Very shallow - lightest blue
+                    alpha = 0.9;
+                } else if (depth < 40) {
+                    color = 0xaaddff; // Shallow - very light blue
+                    alpha = 0.9;
+                } else if (depth < 60) {
+                    color = 0x88bbee; // Light blue
+                    alpha = 0.9;
+                } else if (depth < 80) {
+                    color = 0x6699dd; // Medium-light blue
+                    alpha = 0.9;
+                } else if (depth < 100) {
+                    color = 0x5588cc; // Medium blue
+                    alpha = 0.9;
+                } else if (depth < 120) {
+                    color = 0x4477bb; // Medium-dark blue
+                    alpha = 0.9;
+                } else if (depth < 150) {
+                    color = 0x3366aa; // Dark blue
+                    alpha = 0.9;
+                } else {
+                    color = 0x225599; // Very dark blue - deepest
+                    alpha = 0.9;
+                }
+
+                this.uiGraphics.fillStyle(color, alpha);
+                this.uiGraphics.fillRect(chartX + screenX, chartY + screenY, navGridSizeX, navGridSizeY);
+            }
+        }
+
+        // Draw depth contour lines at specific depths
+        const contourDepths = [50, 100, 150]; // Draw contours at these depths
+        contourDepths.forEach(targetDepth => {
+            this.uiGraphics.lineStyle(1, 0x88ffaa, 0.3);
+
+            for (let screenY = 0; screenY < chartHeight - navGridSizeY; screenY += navGridSizeY) {
+                for (let screenX = 0; screenX < chartWidth - navGridSizeX; screenX += navGridSizeX) {
+                    if (!depthSamples[screenY] || !depthSamples[screenY][screenX]) continue;
+
+                    const depth = depthSamples[screenY][screenX];
+                    const depthRight = depthSamples[screenY][screenX + navGridSizeX];
+                    const depthDown = depthSamples[screenY + navGridSizeY] ? depthSamples[screenY + navGridSizeY][screenX] : null;
+
+                    // Check if contour line crosses this cell
+                    if (depthRight && ((depth <= targetDepth && depthRight >= targetDepth) || (depth >= targetDepth && depthRight <= targetDepth))) {
+                        this.uiGraphics.lineBetween(chartX + screenX + navGridSizeX / 2, chartY + screenY,
+                                                     chartX + screenX + navGridSizeX / 2, chartY + screenY + navGridSizeY);
+                    }
+                    if (depthDown && ((depth <= targetDepth && depthDown >= targetDepth) || (depth >= targetDepth && depthDown <= targetDepth))) {
+                        this.uiGraphics.lineBetween(chartX + screenX, chartY + screenY + navGridSizeY / 2,
+                                                     chartX + screenX + navGridSizeX, chartY + screenY + navGridSizeY / 2);
+                    }
+                }
+            }
         });
 
         // Draw Vermont shoreline (left/east)
@@ -1409,6 +1482,66 @@ export class NavigationScene extends Phaser.Scene {
         cursorText.setOrigin(0.5, 0.5);
         cursorText.setDepth(1001);
         this.time.delayedCall(50, () => cursorText.destroy());
+
+        // Depth legend (top-right corner)
+        const legendX = mapX + mapWidth - 15;
+        const legendY = mapY + 75;
+        const legendWidth = 100;
+
+        // Legend title
+        const legendTitle = this.add.text(legendX, legendY, 'DEPTH', {
+            fontSize: '10px',
+            fontFamily: 'Courier New',
+            color: '#00ff00',
+            fontStyle: 'bold'
+        });
+        legendTitle.setOrigin(1, 0);
+        legendTitle.setDepth(1001);
+        this.time.delayedCall(50, () => legendTitle.destroy());
+
+        // Legend entries
+        const legendEntries = [
+            { depth: '0-20ft', color: 0xcceeFF },
+            { depth: '20-40ft', color: 0xaaddff },
+            { depth: '40-60ft', color: 0x88bbee },
+            { depth: '60-80ft', color: 0x6699dd },
+            { depth: '80-100ft', color: 0x5588cc },
+            { depth: '100-120ft', color: 0x4477bb },
+            { depth: '120-150ft', color: 0x3366aa },
+            { depth: '150+ft', color: 0x225599 }
+        ];
+
+        legendEntries.forEach((entry, index) => {
+            const entryY = legendY + 15 + (index * 14);
+
+            // Color swatch
+            this.uiGraphics.fillStyle(entry.color, 0.9);
+            this.uiGraphics.fillRect(legendX - legendWidth, entryY, 12, 10);
+
+            // Depth label
+            const entryText = this.add.text(legendX - legendWidth + 16, entryY + 5, entry.depth, {
+                fontSize: '8px',
+                fontFamily: 'Courier New',
+                color: '#88ff88'
+            });
+            entryText.setOrigin(0, 0.5);
+            entryText.setDepth(1001);
+            this.time.delayedCall(50, () => entryText.destroy());
+        });
+
+        // Contour lines legend
+        const contourLegendY = legendY + 15 + (legendEntries.length * 14) + 8;
+        this.uiGraphics.lineStyle(2, 0x88ffaa, 0.5);
+        this.uiGraphics.lineBetween(legendX - legendWidth, contourLegendY, legendX - legendWidth + 12, contourLegendY);
+
+        const contourLabel = this.add.text(legendX - legendWidth + 16, contourLegendY, 'Contours', {
+            fontSize: '8px',
+            fontFamily: 'Courier New',
+            color: '#88ff88'
+        });
+        contourLabel.setOrigin(0, 0.5);
+        contourLabel.setDepth(1001);
+        this.time.delayedCall(50, () => contourLabel.destroy());
 
         // Controls hint
         const hintText = this.add.text(mapX + mapWidth / 2, mapY + mapHeight - 30, 'Arrow Keys: Move Cursor | X: Fast Travel | TAB: Cancel', {

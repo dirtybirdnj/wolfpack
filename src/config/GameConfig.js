@@ -22,7 +22,8 @@ export const GameConfig = {
 
     // Motor boat mode settings
     MOTORBOAT_MOVE_SPEED: 4.0, // pixels per frame (fast movement)
-    MOTORBOAT_GAS_USAGE: 0.08, // gas decrease per frame when moving
+    MOTORBOAT_GAS_USAGE: 0.01, // gas decrease per frame when moving (reduced for longer navigation)
+    MOTORBOAT_GAS_REGENERATION: 0.1, // gas increase per frame when idle (increased for faster recovery)
     MOTORBOAT_START_GAS: 100, // start with full tank
     MOTORBOAT_DOCK_POSITION: 100, // X position of docks (right side)
     MOTORBOAT_DEEP_WATER_START: 700, // X position where deep water begins
