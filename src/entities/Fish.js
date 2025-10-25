@@ -90,6 +90,10 @@ export class Fish {
         this.graphics = scene.add.graphics();
         this.graphics.setDepth(10); // Render above sonar background but below UI
 
+        // External artwork sprite (if available)
+        this.sprite = null;
+        this.tryLoadArtwork();
+
         // State
         this.caught = false;
         this.visible = true;
@@ -195,6 +199,44 @@ export class Fish {
         if (this.weight > 25) return 'strong';
         if (this.weight > 10) return 'medium';
         return 'weak';
+    }
+
+    /**
+     * Try to load external artwork for this fish species
+     * Checks for artwork files in assets/fish/{species}/ directory
+     * Falls back to procedural rendering if no artwork found
+     */
+    tryLoadArtwork() {
+        // Get size category for the artwork filename
+        const sizeCategory = this.weight > 30 ? 'trophy' :
+                           this.weight > 15 ? 'large' :
+                           this.weight > 5 ? 'medium' : 'small';
+
+        // Build potential texture keys to check
+        const textureKeys = [
+            `fish_${this.species}_${sizeCategory}`, // Size-specific: e.g., fish_lake_trout_trophy
+            `fish_${this.species}`                  // Species default: e.g., fish_lake_trout
+        ];
+
+        // Try to find a loaded texture
+        for (const key of textureKeys) {
+            if (this.scene.textures.exists(key)) {
+                // Create sprite from texture
+                this.sprite = this.scene.add.sprite(this.x, this.y, key);
+                this.sprite.setDepth(10);
+                this.sprite.setOrigin(0.5, 0.5);
+
+                // Scale sprite based on fish weight
+                const baseScale = Math.max(0.3, this.weight / 20);
+                this.sprite.setScale(baseScale);
+
+                console.log(`✓ Loaded artwork for ${this.species} (${sizeCategory}): ${key}`);
+                return;
+            }
+        }
+
+        // No artwork found - will use procedural rendering
+        // This is normal and expected until artwork files are added
     }
 
     updateBiology() {
@@ -424,7 +466,10 @@ export class Fish {
     render() {
         this.graphics.clear();
 
-        if (!this.visible) return;
+        if (!this.visible) {
+            if (this.sprite) this.sprite.setVisible(false);
+            return;
+        }
 
         const bodySize = Math.max(8, this.weight / 2);
 
@@ -432,15 +477,23 @@ export class Fish {
         const movement = this.ai.getMovementVector();
         const isMovingRight = movement.x >= 0;
 
-        // Render species-specific fish
-        if (this.species === 'northern_pike') {
-            this.renderNorthernPike(bodySize, isMovingRight);
-        } else if (this.species === 'smallmouth_bass') {
-            this.renderSmallmouthBass(bodySize, isMovingRight);
-        } else if (this.species === 'yellow_perch_large') {
-            this.renderYellowPerch(bodySize, isMovingRight);
+        // If we have external artwork sprite, use it instead of procedural rendering
+        if (this.sprite) {
+            this.sprite.setVisible(true);
+            this.sprite.setPosition(this.x, this.y);
+            this.sprite.setFlipX(!isMovingRight); // Flip sprite to face movement direction
         } else {
-            this.renderLakeTrout(bodySize, isMovingRight);
+            // Use procedural rendering (current system)
+            // Render species-specific fish
+            if (this.species === 'northern_pike') {
+                this.renderNorthernPike(bodySize, isMovingRight);
+            } else if (this.species === 'smallmouth_bass') {
+                this.renderSmallmouthBass(bodySize, isMovingRight);
+            } else if (this.species === 'yellow_perch_large') {
+                this.renderYellowPerch(bodySize, isMovingRight);
+            } else {
+                this.renderLakeTrout(bodySize, isMovingRight);
+            }
         }
 
         // Interest flash - green circle that fades to show player triggered interest
@@ -1093,6 +1146,9 @@ export class Fish {
         this.graphics.destroy();
         if (this.speedPrefText) {
             this.speedPrefText.destroy();
+        }
+        if (this.sprite) {
+            this.sprite.destroy();
         }
     }
 }
