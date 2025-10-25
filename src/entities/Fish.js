@@ -320,6 +320,26 @@ export class Fish {
             this.y += movement.y;
             this.depth = this.y / GameConfig.DEPTH_SCALE;
 
+            // Get player's world position
+            let playerWorldX;
+            if (this.scene.iceHoleManager) {
+                const currentHole = this.scene.iceHoleManager.getCurrentHole();
+                playerWorldX = currentHole ? currentHole.x : this.worldX;
+            } else if (this.scene.boatManager) {
+                playerWorldX = this.scene.boatManager.playerX;
+            } else {
+                playerWorldX = this.worldX; // Fallback
+            }
+
+            // Keep fish within reasonable bounds of player in world coordinates
+            // This prevents fish from swimming off screen indefinitely
+            const maxDistanceFromPlayer = 450; // Maximum world units from player
+            const minWorldX = playerWorldX - maxDistanceFromPlayer;
+            const maxWorldX = playerWorldX + maxDistanceFromPlayer;
+
+            // Clamp worldX to prevent fish from going too far
+            this.worldX = Math.max(minWorldX, Math.min(maxWorldX, this.worldX));
+
             // Get lake bottom depth at fish's current position
             let bottomDepth = GameConfig.MAX_DEPTH;
             if (this.scene.boatManager) {
@@ -342,16 +362,6 @@ export class Fish {
             this.y = Math.max(10, Math.min(maxY, this.y));
 
             // Convert world position to screen position based on player position
-            let playerWorldX;
-            if (this.scene.iceHoleManager) {
-                const currentHole = this.scene.iceHoleManager.getCurrentHole();
-                playerWorldX = currentHole ? currentHole.x : this.worldX;
-            } else if (this.scene.boatManager) {
-                playerWorldX = this.scene.boatManager.playerX;
-            } else {
-                playerWorldX = this.worldX; // Fallback
-            }
-
             const offsetFromPlayer = this.worldX - playerWorldX;
             this.x = (GameConfig.CANVAS_WIDTH / 2) + offsetFromPlayer;
 

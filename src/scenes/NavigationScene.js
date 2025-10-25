@@ -967,7 +967,13 @@ export class NavigationScene extends Phaser.Scene {
     handleMenuToggle() {
         /**
          * Check if Select button was pressed to toggle menu
+         * Only toggle if we're not in a submenu (submenus handle select themselves)
          */
+
+        // Don't toggle main menu if a submenu is active
+        if (this.subMenuActive) {
+            return;
+        }
 
         let selectPressed = false;
 
