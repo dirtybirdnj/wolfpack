@@ -723,9 +723,45 @@ export class NavigationScene extends Phaser.Scene {
         const chartWidth = mapWidth - 30;
         const chartHeight = mapHeight - 38;
 
-        // Draw simple depth gradient (darker = deeper)
-        this.uiGraphics.fillStyle(0x4488aa, 0.6);
-        this.uiGraphics.fillRect(chartX, chartY, chartWidth, chartHeight);
+        // Draw depth-based shading by sampling bathymetric data
+        const gridSizeX = 10; // Sample every 10 pixels horizontally
+        const gridSizeY = 15; // Sample every 15 pixels vertically
+
+        for (let screenY = 0; screenY < chartHeight; screenY += gridSizeY) {
+            for (let screenX = 0; screenX < chartWidth; screenX += gridSizeX) {
+                // Convert screen position to world coordinates
+                const worldXNorm = screenX / chartWidth;
+                const worldYNorm = 1 - (screenY / chartHeight); // Flip Y: top = north, bottom = south
+
+                const worldX = worldXNorm * 20000;
+                const worldY = worldYNorm * 60000;
+
+                // Sample depth at this position
+                const depth = this.bathyData.getDepthAtPosition(worldX, worldY);
+
+                // Color based on depth (lighter = shallow, darker = deep)
+                let color, alpha;
+                if (depth < 30) {
+                    color = 0xaaddff; // Very light blue - shallow
+                    alpha = 0.8;
+                } else if (depth < 60) {
+                    color = 0x88bbee; // Light blue
+                    alpha = 0.8;
+                } else if (depth < 100) {
+                    color = 0x6699dd; // Medium blue
+                    alpha = 0.8;
+                } else if (depth < 150) {
+                    color = 0x4477bb; // Dark blue
+                    alpha = 0.8;
+                } else {
+                    color = 0x2255aa; // Very dark blue - deep
+                    alpha = 0.8;
+                }
+
+                this.uiGraphics.fillStyle(color, alpha);
+                this.uiGraphics.fillRect(chartX + screenX, chartY + screenY, gridSizeX, gridSizeY);
+            }
+        }
 
         // Draw shorelines (both sides - lake is narrow)
         this.uiGraphics.lineStyle(2, 0x88ff88, 0.8);
@@ -748,7 +784,8 @@ export class NavigationScene extends Phaser.Scene {
         const headingRad = (this.heading - 90) * (Math.PI / 180);
         const arrowLength = 10;
         const arrowX = playerScreenX + Math.cos(headingRad) * arrowLength;
-        const arrowY = playerScreenY + Math.sin(headingRad) * arrowLength;
+        // Flip Y component because we flipped the Y coordinate system
+        const arrowY = playerScreenY - Math.sin(headingRad) * arrowLength;
 
         this.uiGraphics.lineStyle(2, 0x00ff00, 1.0);
         this.uiGraphics.lineBetween(playerScreenX, playerScreenY, arrowX, arrowY);
