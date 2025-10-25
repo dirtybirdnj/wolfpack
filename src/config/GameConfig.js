@@ -35,7 +35,7 @@ export const GameConfig = {
 
     // Canvas settings - expanded for maximum game area
     CANVAS_WIDTH: 1200,
-    CANVAS_HEIGHT: 720,
+    CANVAS_HEIGHT: 650,
 
     // Sonar display settings
     SONAR_SCROLL_SPEED: 1.35, // pixels per frame (scaled for larger canvas)
