@@ -1,50 +1,53 @@
 /**
- * Bathymetric data for Lake Champlain - Cumberland Head to Four Brothers Islands
- * Data derived from NOAA chart 14782
+ * Bathymetric data for Lake Champlain - Full Lake Coverage
+ * Data derived from NOAA charts 14781, 14782, 14783, 14784
  *
- * This represents a realistic grid-based bathymetric model of the broader Lake Champlain area
+ * This represents a realistic grid-based bathymetric model of the entire Lake Champlain
  * Coordinates are in game units, depths are in feet
  *
- * Map coverage (NOAA Chart 14782):
- * - North: Cumberland Head / Plattsburgh area
- * - South: Four Brothers Islands
- * - East: Vermont shore (Burlington, Shelburne)
- * - West: New York shore (Plattsburgh, Cumberland Head)
- * - Approximate real-world dimensions: 25km N-S x 12km E-W
+ * Map coverage (NOAA Charts 14781-14784):
+ * - North: Richelieu River / Canadian Border
+ * - South: Whitehall, NY (southern terminus)
+ * - East: Vermont shore (Burlington, Shelburne, Ticonderoga)
+ * - West: New York shore (Plattsburgh, Crown Point, Whitehall)
+ * - Approximate real-world dimensions: 193km (120mi) N-S x 19km (12mi) E-W at widest
  */
 
 export class BathymetricData {
     constructor() {
-        // Define the expanded Lake Champlain bathymetric grid
-        // X represents east-west position (0 = Vermont/Burlington shore, 20000 = NY shore/Plattsburgh)
-        // Y represents north-south position (0 = south/Four Brothers, 30000 = north/Cumberland Head)
+        // Define the full Lake Champlain bathymetric grid
+        // X represents east-west position (0 = Vermont shore, 20000 = NY shore)
+        // Y represents north-south position (0 = Whitehall/south, 60000 = Canadian border/north)
         // Depth values are in feet
 
         this.gridResolution = 500; // Grid cell size in game units
-        this.width = 20000; // Game world width (12km real-world ~ 20000 units)
-        this.height = 30000; // Game world height (25km real-world ~ 30000 units)
+        this.width = 20000; // Game world width (19km real-world ~ 20000 units)
+        this.height = 60000; // Game world height (193km real-world ~ 60000 units)
 
-        // Realistic depth profile based on NOAA chart 14782
-        // Covers Cumberland Head to Four Brothers Islands
+        // Realistic depth profile based on NOAA charts 14781-14784
+        // Covers entire Lake Champlain from Whitehall to Canadian border
         this.depthGrid = this.generateLakeChamplainProfile();
     }
 
     generateLakeChamplainProfile() {
         /**
-         * Lake Champlain bathymetric features (NOAA Chart 14782):
+         * Lake Champlain bathymetric features (NOAA Charts 14781-14784):
          *
-         * Geographic Features:
-         * - Burlington (VT) waterfront: East shore, mid-map (x=0-2000, y=12000-18000)
-         * - Plattsburgh (NY) area: West shore, northern section (x=15000-20000, y=22000-30000)
-         * - Main lake channel: Runs north-south through center (x=8000-12000)
-         * - Four Brothers Islands: Southern extent (y=0-4000)
-         * - Cumberland Head: Northern extent (y=26000-30000)
+         * Geographic Features (South to North):
+         * - Whitehall (southern terminus): Y=0-8000, narrow/shallow (15-40ft)
+         * - Ticonderoga/Crown Point: Y=8000-18000, narrow channel (30-80ft)
+         * - Barber Point/Split Rock: Y=18000-28000, widening (40-120ft)
+         * - Four Brothers Islands: Y=28000-32000, island structure (20-100ft)
+         * - Burlington (VT): Y=32000-42000, widest/deepest (80-200ft)
+         * - Plattsburgh (NY): Y=42000-50000, wide section (70-180ft)
+         * - Grand Isle/South Hero: Y=50000-60000, islands/shallower (20-90ft)
          *
          * Depth Zones:
          * - Nearshore shelves (both sides): 10-40 feet
          * - Mid-lake shelf: 40-80 feet
-         * - Main channel: 80-200 feet (deepest areas 150-200ft)
-         * - Island areas: Shallow with structure, 15-60 feet
+         * - Main channel (Burlington area): 80-200 feet (deepest ~200ft)
+         * - Southern narrows: 15-80 feet
+         * - Northern islands: 15-90 feet with structure
          * - Drop-offs and ledges throughout for structure
          */
 
@@ -75,68 +78,110 @@ export class BathymetricData {
 
     calculateDepthAtGridPoint(x, y) {
         /**
-         * Calculate realistic depth based on NOAA Chart 14782
-         * Lake Champlain: Cumberland Head to Four Brothers Islands
+         * Calculate realistic depth based on NOAA Charts 14781-14784
+         * Full Lake Champlain: Whitehall to Canadian Border
          *
          * Key bathymetric features:
-         * - East shore (Vermont/Burlington): Gradual shelf, 10-60ft
-         * - West shore (NY/Plattsburgh): Steeper drop, 10-80ft
-         * - Main channel (center): Deep trough, 100-200ft
-         * - Island areas: Shallow structure, 15-60ft
-         * - North (Cumberland Head): Generally deeper, 60-150ft
-         * - South (Four Brothers): Shallower, more structure, 30-100ft
+         * - Southern narrows (Whitehall-Ticonderoga): Shallow, riverine, 15-80ft
+         * - Central widening (Burlington-Plattsburgh): Deep channel, 80-200ft
+         * - Northern islands (Grand Isle-South Hero): Moderate with structure, 20-90ft
+         * - East shore (Vermont): Generally gradual shelf
+         * - West shore (New York): Steeper in places
          */
 
         // Normalize coordinates
         const xNorm = x / this.width; // 0 (Vermont shore) to 1 (NY shore)
-        const yNorm = y / this.height; // 0 (south/Four Brothers) to 1 (north/Cumberland Head)
+        const yNorm = y / this.height; // 0 (south/Whitehall) to 1 (north/Canadian border)
 
-        // Calculate distance from center channel (main north-south deep trough)
-        // Channel runs roughly at x = 0.45-0.55 (slightly west of center)
-        const channelCenter = 0.50;
-        const distFromChannel = Math.abs(xNorm - channelCenter);
-
-        // Base depth profile - main lake channel is deepest
-        let baseDepth;
-
-        if (distFromChannel < 0.10) {
-            // Main deep channel (40-60% across): 100-200 feet
-            // Deeper in the north, shallower in the south
-            const channelDepth = 100 + yNorm * 100; // 100ft south to 200ft north
-            // Center of channel is deepest
-            const channelFactor = 1 - (distFromChannel / 0.10);
-            baseDepth = 60 + channelDepth * channelFactor;
-        } else if (xNorm < 0.20) {
-            // Vermont/Burlington nearshore (0-20%): Gradual shelf, 10-50 feet
-            const shoreDepth = 10 + (xNorm / 0.20) * 40;
-            baseDepth = shoreDepth;
-        } else if (xNorm < 0.40) {
-            // Vermont mid-shelf (20-40%): 50-80 feet
-            const localX = (xNorm - 0.20) / 0.20;
-            baseDepth = 50 + localX * 30;
-        } else if (xNorm > 0.80) {
-            // NY nearshore (80-100%): Steeper, 15-60 feet
-            const localX = (xNorm - 0.80) / 0.20;
-            baseDepth = 15 + (1 - localX) * 45;
+        // Lake width modulation - narrows significantly in south
+        // 0.0-0.13 (0-8000): Very narrow at Whitehall (~30% of max width)
+        // 0.13-0.30 (8000-18000): Narrow at Ticonderoga (~50% of max width)
+        // 0.30-0.80 (18000-48000): Wide section (Burlington/Plattsburgh) (~100% width)
+        // 0.80-1.0 (48000-60000): Medium width at northern islands (~70% width)
+        let widthFactor;
+        if (yNorm < 0.13) {
+            widthFactor = 0.30; // Very narrow at Whitehall
+        } else if (yNorm < 0.30) {
+            widthFactor = 0.30 + (yNorm - 0.13) * (0.50 - 0.30) / 0.17;
+        } else if (yNorm < 0.80) {
+            widthFactor = 0.50 + (yNorm - 0.30) * (1.0 - 0.50) / 0.50;
         } else {
-            // Transitional zones and drop-offs (40-80%): 60-120 feet
-            const distFactor = Math.abs(xNorm - channelCenter) - 0.10;
-            baseDepth = 120 - distFactor * 100;
+            widthFactor = 1.0 - (yNorm - 0.80) * (1.0 - 0.70) / 0.20;
         }
 
-        // North-south depth variation
-        // Northern section (Cumberland Head) is generally deeper
-        // Southern section (Four Brothers) has more structure and variation
-        let nsModifier;
-        if (yNorm < 0.15) {
-            // Four Brothers Islands area - shallow structure
-            nsModifier = -20 + Math.sin(x * 0.003) * 15;
-        } else if (yNorm > 0.80) {
-            // Cumberland Head area - deeper water
-            nsModifier = 10 + yNorm * 20;
+        // Adjust x position based on lake width at this latitude
+        const effectiveXNorm = (xNorm - 0.5) / widthFactor + 0.5;
+
+        // Clamp to shore if outside narrowed lake
+        if (effectiveXNorm < 0 || effectiveXNorm > 1) {
+            return 5; // Shore/land
+        }
+
+        // Calculate distance from center channel (main north-south deep trough)
+        const channelCenter = 0.50;
+        const distFromChannel = Math.abs(effectiveXNorm - channelCenter);
+
+        // Determine base depth based on lake section (south to north)
+        let baseDepth;
+        let maxChannelDepth;
+
+        // Set maximum channel depth based on latitude
+        if (yNorm < 0.13) {
+            // Whitehall area: Very shallow, riverine
+            maxChannelDepth = 40;
+        } else if (yNorm < 0.30) {
+            // Ticonderoga/Crown Point: Narrow channel, moderate
+            maxChannelDepth = 50 + (yNorm - 0.13) * 170; // 50-80ft
+        } else if (yNorm < 0.53) {
+            // Four Brothers to Burlington: Deepening
+            maxChannelDepth = 80 + (yNorm - 0.30) * 520; // 80-200ft (deepest at Burlington)
+        } else if (yNorm < 0.83) {
+            // Burlington to Plattsburgh: Deep but gradually shallowing
+            maxChannelDepth = 200 - (yNorm - 0.53) * 67; // 200-180ft
         } else {
-            // Mid-section - gradual transition
-            nsModifier = (yNorm - 0.5) * 15;
+            // Northern islands: Moderate depth
+            maxChannelDepth = 180 - (yNorm - 0.83) * 529; // 180-90ft
+        }
+
+        if (distFromChannel < 0.10) {
+            // Main deep channel (center 20%): Deepest water
+            const channelFactor = 1 - (distFromChannel / 0.10);
+            baseDepth = maxChannelDepth * 0.6 + maxChannelDepth * 0.4 * channelFactor;
+        } else if (effectiveXNorm < 0.20) {
+            // Vermont nearshore (0-20%): Gradual shelf, 10-50 feet
+            const shoreDepth = 10 + (effectiveXNorm / 0.20) * 40;
+            baseDepth = shoreDepth * (maxChannelDepth / 100);
+        } else if (effectiveXNorm < 0.40) {
+            // Vermont mid-shelf (20-40%): 50-80 feet
+            const localX = (effectiveXNorm - 0.20) / 0.20;
+            baseDepth = (50 + localX * 30) * (maxChannelDepth / 100);
+        } else if (effectiveXNorm > 0.80) {
+            // NY nearshore (80-100%): Steeper, 15-60 feet
+            const localX = (effectiveXNorm - 0.80) / 0.20;
+            baseDepth = (15 + (1 - localX) * 45) * (maxChannelDepth / 100);
+        } else {
+            // Transitional zones and drop-offs (40-80%): 60-120 feet
+            const distFactor = Math.abs(effectiveXNorm - channelCenter) - 0.10;
+            baseDepth = (120 - distFactor * 100) * (maxChannelDepth / 150);
+        }
+
+        // North-south depth variation for local structure
+        let nsModifier = 0;
+        if (yNorm < 0.13) {
+            // Whitehall: Very shallow, rocky
+            nsModifier = -10 + Math.sin(x * 0.005) * 8;
+        } else if (yNorm < 0.30) {
+            // Ticonderoga/Crown Point: Moderate structure
+            nsModifier = Math.sin(x * 0.003) * 10;
+        } else if (yNorm < 0.50) {
+            // Four Brothers: Island structure
+            nsModifier = -15 + Math.sin(x * 0.002) * 12;
+        } else if (yNorm < 0.70) {
+            // Burlington/Plattsburgh: Main basin, less variation
+            nsModifier = Math.sin(x * 0.001) * 8;
+        } else {
+            // Northern islands: Shallow bays and structure
+            nsModifier = -10 + Math.sin(x * 0.004) * 15;
         }
 
         // Add realistic underwater features
@@ -160,24 +205,29 @@ export class BathymetricData {
 
         let structure = 0;
 
-        // Create a rocky ledge in mid-depth zone (great for walleye, lake trout)
-        if (xNorm > 0.40 && xNorm < 0.45 && yNorm > 0.3 && yNorm < 0.7) {
+        // Create a rocky ledge near Burlington (great for walleye, lake trout)
+        if (xNorm > 0.40 && xNorm < 0.45 && yNorm > 0.60 && yNorm < 0.70) {
             // Vertical drop-off of 10-15 feet
             structure -= 12;
         }
 
-        // Submerged hump in southern section (pike/bass structure)
-        if (xNorm > 0.25 && xNorm < 0.35 && yNorm < 0.3) {
+        // Four Brothers Islands structure (pike/bass habitat)
+        if (xNorm > 0.25 && xNorm < 0.35 && yNorm > 0.45 && yNorm < 0.55) {
             const humpCenterX = 0.30;
-            const humpCenterY = 0.15;
+            const humpCenterY = 0.50;
             const distToHump = Math.sqrt(
                 Math.pow(xNorm - humpCenterX, 2) +
-                Math.pow(yNorm - humpCenterY, 2)
+                Math.pow((yNorm - humpCenterY) * 2, 2) // Elongated N-S
             );
             if (distToHump < 0.08) {
                 // Top of hump is 15 feet shallower
                 structure -= 15 * (1 - distToHump / 0.08);
             }
+        }
+
+        // South Hero Island area structure
+        if (yNorm > 0.85 && xNorm > 0.20 && xNorm < 0.50) {
+            structure -= 20 * Math.sin((x + y) * 0.001);
         }
 
         // Add natural bottom texture using Perlin-like noise
