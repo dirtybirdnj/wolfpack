@@ -209,8 +209,10 @@ export class FishFight {
             onComplete: () => text.destroy()
         });
 
-        // Update stats
-        this.scene.fishLost++;
+        // Update stats through ScoreSystem
+        if (this.scene.scoreSystem) {
+            this.scene.scoreSystem.addFishLost();
+        }
         this.scene.events.emit('updateFishLost', this.scene.fishLost);
 
         // Release fish from lure
@@ -502,8 +504,10 @@ export class FishFight {
             onComplete: () => text.destroy()
         });
 
-        // Update stats
-        this.scene.fishLost++;
+        // Update stats through ScoreSystem
+        if (this.scene.scoreSystem) {
+            this.scene.scoreSystem.addFishLost();
+        }
         this.scene.events.emit('updateFishLost', this.scene.fishLost);
 
         // Release fish from lure - fish swims away fast!
@@ -555,15 +559,12 @@ export class FishFight {
         };
         this.scene.caughtFishData.push(fishData);
 
-        // Update score
-        this.scene.score += this.fish.points;
-        this.scene.fishCaught++;
-        this.scene.events.emit('updateScore', { score: this.scene.score, caught: this.scene.fishCaught });
-
-        // Check for achievements
+        // Update score through ScoreSystem
         if (this.scene.scoreSystem) {
-            this.scene.scoreSystem.checkAchievements();
+            this.scene.scoreSystem.addScore(this.fish.points);
+            this.scene.scoreSystem.addFishCaught();
         }
+        this.scene.events.emit('updateScore', { score: this.scene.score, caught: this.scene.fishCaught });
 
         // Show catch popup
         this.showCatchPopup(info);

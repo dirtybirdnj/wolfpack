@@ -77,15 +77,16 @@ export class SonarDisplay {
     }
     
     generateBottomProfile() {
-        // Generate a realistic lakebed profile
+        // Generate a realistic lakebed profile using actual water depth
+        const maxDepth = this.scene.maxDepth || GameConfig.MAX_DEPTH;
         const profile = [];
-        let depth = GameConfig.MAX_DEPTH - 10;
-        
+        let depth = maxDepth - 10;
+
         for (let x = 0; x < GameConfig.CANVAS_WIDTH + 200; x += 20) {
             // Add some variation to simulate rocks, drop-offs, etc.
             depth += (Math.random() - 0.5) * 3;
-            depth = Math.max(GameConfig.MAX_DEPTH - 20, Math.min(GameConfig.MAX_DEPTH - 5, depth));
-            
+            depth = Math.max(maxDepth - 20, Math.min(maxDepth - 5, depth));
+
             // Occasional structure (rocks, logs)
             if (Math.random() < 0.1) {
                 profile.push({ x: x, y: depth * GameConfig.DEPTH_SCALE, type: 'structure' });
@@ -93,7 +94,7 @@ export class SonarDisplay {
                 profile.push({ x: x, y: depth * GameConfig.DEPTH_SCALE, type: 'normal' });
             }
         }
-        
+
         return profile;
     }
     
@@ -200,10 +201,11 @@ export class SonarDisplay {
             this.graphics.lineBetween(x, 0, x, GameConfig.CANVAS_HEIGHT);
         }
 
-        // Horizontal lines (static - depth markers)
+        // Horizontal lines (static - depth markers) using actual water depth
+        const maxDepth = this.scene.maxDepth || GameConfig.MAX_DEPTH;
         for (let y = 0; y < GameConfig.CANVAS_HEIGHT; y += GameConfig.GRID_SIZE * 2) {
             const depth = y / GameConfig.DEPTH_SCALE;
-            if (depth <= GameConfig.MAX_DEPTH) {
+            if (depth <= maxDepth) {
                 this.graphics.lineStyle(1, GameConfig.COLOR_GRID, 0.15);
                 this.graphics.lineBetween(0, y, GameConfig.CANVAS_WIDTH, y);
             }
@@ -396,14 +398,15 @@ export class SonarDisplay {
     }
     
     createDepthMarkers() {
-        // Create depth text objects once during initialization
+        // Create depth text objects once during initialization using actual water depth
+        const maxDepth = this.scene.maxDepth || GameConfig.MAX_DEPTH;
         const textStyle = {
             fontSize: '10px',
             fontFamily: 'Courier New',
             color: '#00ff00'
         };
 
-        for (let depth = 0; depth <= GameConfig.MAX_DEPTH; depth += 25) {
+        for (let depth = 0; depth <= maxDepth; depth += 25) {
             const y = depth * GameConfig.DEPTH_SCALE;
             if (y <= GameConfig.CANVAS_HEIGHT - 20) {
                 const text = this.scene.add.text(5, y - 6, depth + 'ft', textStyle);
