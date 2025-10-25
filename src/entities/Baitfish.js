@@ -58,7 +58,7 @@ export class Baitfish {
 
         // Check for nearby zooplankton to hunt (new feature)
         if (nearbyZooplankton && nearbyZooplankton.length > 0 && !lakersNearby) {
-            this.handleHuntingBehavior(nearbyZooplankton);
+            this.handleHuntingBehavior(nearbyZooplankton, otherBaitfish);
         } else {
             // Normal schooling behavior (confused behavior removed in main)
             this.handleNormalBehavior(cloudCenter, lakersNearby, spreadMultiplier, otherBaitfish);
@@ -204,10 +204,11 @@ export class Baitfish {
         }
     }
 
-    handleHuntingBehavior(nearbyZooplankton) {
-        // Find the closest zooplankton
-        let closestZooplankton = null;
-        let closestDistance = Infinity;
+    handleHuntingBehavior(nearbyZooplankton, otherBaitfish = []) {
+        // Find the closest available zooplankton
+        // Prefer targets that aren't crowded by other baitfish
+        let bestZooplankton = null;
+        let bestScore = Infinity;
 
         nearbyZooplankton.forEach(zp => {
             if (!zp.visible || zp.consumed) return;
@@ -217,30 +218,80 @@ export class Baitfish {
                 Math.pow(this.y - zp.y, 2)
             );
 
-            if (distance < closestDistance) {
-                closestDistance = distance;
-                closestZooplankton = zp;
+            // Count how many other baitfish are targeting this zooplankton
+            let competitorCount = 0;
+            otherBaitfish.forEach(other => {
+                if (other === this || !other.visible || other.consumed) return;
+                const otherDist = Math.sqrt(
+                    Math.pow(other.x - zp.x, 2) +
+                    Math.pow(other.y - zp.y, 2)
+                );
+                if (otherDist < 20) { // Within 20px = competing for same food
+                    competitorCount++;
+                }
+            });
+
+            // Score = distance + penalty for crowding (prefer uncrowded targets)
+            const score = distance + (competitorCount * 15);
+
+            if (score < bestScore) {
+                bestScore = score;
+                bestZooplankton = zp;
             }
         });
 
-        if (closestZooplankton) {
+        if (bestZooplankton) {
+            const targetDistance = Math.sqrt(
+                Math.pow(this.x - bestZooplankton.x, 2) +
+                Math.pow(this.y - bestZooplankton.y, 2)
+            );
+
             // If close enough, consume the zooplankton
-            if (closestDistance < 5) {
-                closestZooplankton.consume();
-                return;
+            if (targetDistance < 5) {
+                bestZooplankton.consume();
+                // Don't return - continue hunting more zooplankton
             }
 
-            // Move towards the zooplankton (use world coordinates)
-            this.targetWorldX = closestZooplankton.worldX;
-            this.targetY = closestZooplankton.y;
+            // Calculate base target position
+            this.targetWorldX = bestZooplankton.worldX;
+            this.targetY = bestZooplankton.y;
 
+            // SEPARATION LOGIC - maintain minimum distance from other baitfish while hunting
+            let separationX = 0;
+            let separationY = 0;
+            let nearbyCount = 0;
+            const separationRadius = 15; // Minimum distance during feeding
+
+            otherBaitfish.forEach(other => {
+                if (other === this || !other.visible || other.consumed) return;
+
+                const dx = this.worldX - other.worldX;
+                const dy = this.y - other.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                if (dist < separationRadius && dist > 0) {
+                    // Push away from nearby baitfish
+                    const force = (separationRadius - dist) / separationRadius;
+                    separationX += (dx / dist) * force * 8;
+                    separationY += (dy / dist) * force * 8;
+                    nearbyCount++;
+                }
+            });
+
+            // Apply separation to target
+            if (nearbyCount > 0) {
+                this.targetWorldX += separationX;
+                this.targetY += separationY;
+            }
+
+            // Move towards adjusted target position
             const dx = this.targetWorldX - this.worldX;
             const dy = this.targetY - this.y;
             const distance = Math.sqrt(dx * dx + dy * dy);
 
             if (distance > 1) {
-                // Hunt at normal speed
-                const moveSpeed = this.speed * 1.2;
+                // Hunt at moderate speed (reduced from 1.2 to prevent bunching)
+                const moveSpeed = this.speed * 1.0;
 
                 this.worldX += (dx / distance) * moveSpeed;
                 this.y += (dy / distance) * moveSpeed;
