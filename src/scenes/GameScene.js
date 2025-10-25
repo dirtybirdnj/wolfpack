@@ -2,6 +2,8 @@ import GameConfig from '../config/GameConfig.js';
 import { Constants, Utils } from '../utils/Constants.js';
 import SonarDisplay from '../utils/SonarDisplay.js';
 import Lure from '../entities/Lure.js';
+import Fish from '../entities/Fish.js';
+import BaitfishCloud from '../entities/BaitfishCloud.js';
 import FishFight from '../entities/FishFight.js';
 import IceHoleManager from '../managers/IceHoleManager.js';
 import BoatManager from '../managers/BoatManager.js';
