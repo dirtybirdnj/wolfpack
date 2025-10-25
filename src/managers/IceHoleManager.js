@@ -1,4 +1,5 @@
 import GameConfig from '../config/GameConfig.js';
+import { getBathymetricData } from '../utils/BathymetricData.js';
 
 /**
  * Manages ice fishing holes and player position on the ice
@@ -6,6 +7,13 @@ import GameConfig from '../config/GameConfig.js';
 export class IceHoleManager {
     constructor(scene) {
         this.scene = scene;
+
+        // Get bathymetric data for realistic terrain
+        this.bathyData = getBathymetricData();
+
+        // Get world position from navigation (if coming from NavigationScene)
+        this.worldX = this.scene.registry.get('fishingWorldX') || null;
+        this.worldY = this.scene.registry.get('fishingWorldY') || 5000;
 
         // Hole tracking
         this.holes = [];
@@ -42,17 +50,40 @@ export class IceHoleManager {
     }
 
     generateLakeBedProfile() {
-        // Generate varying lake bottom depths across the horizontal distance
-        // This gives different depths at different hole positions
+        /**
+         * Generate lake bottom depth profile using real bathymetric data
+         * If we have a world position from navigation, use that area
+         * Otherwise, use a default location
+         */
         const profile = [];
-        for (let x = 0; x < 10000; x += 50) {
-            // Use Perlin-like noise for natural variation
-            const depth = GameConfig.MAX_DEPTH - 20 +
-                         Math.sin(x * 0.003) * 15 +
-                         Math.sin(x * 0.01) * 8 +
-                         Math.cos(x * 0.007) * 10;
-            profile.push({ x, depth: Math.max(120, Math.min(150, depth)) });
+
+        // Determine the center world X position for this fishing session
+        let centerWorldX;
+        if (this.worldX !== null) {
+            // Use position from NavigationScene
+            centerWorldX = this.worldX;
+            console.log(`🗺️ Using bathymetric data from navigation position: ${centerWorldX}`);
+        } else {
+            // Default to mid-depth ice fishing area
+            centerWorldX = 5000;
         }
+
+        // Generate profile centered on world position
+        for (let x = 0; x < 10000; x += 50) {
+            // Convert local game X to world X
+            const offsetFromCenter = x - 5000;
+            const worldX = centerWorldX + offsetFromCenter;
+
+            // Get depth from bathymetric data
+            const depth = this.bathyData.getDepthAtPosition(worldX, this.worldY);
+
+            profile.push({
+                x,
+                depth,
+                worldX // Store world coordinate for reference
+            });
+        }
+
         return profile;
     }
 
