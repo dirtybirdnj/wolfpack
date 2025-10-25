@@ -1,6 +1,7 @@
 import GameConfig from '../config/GameConfig.js';
 import { Constants, Utils } from '../utils/Constants.js';
 import FishAI from './FishAI.js';
+import { getBaitfishSpecies, getPredatorSpecies } from '../config/SpeciesData.js';
 
 // Fish name pools
 const MALE_NAMES = [
@@ -16,9 +17,13 @@ const FEMALE_NAMES = [
 ];
 
 export class Fish {
-    constructor(scene, x, y, size = 'MEDIUM', fishingType = null) {
+    constructor(scene, x, y, size = 'MEDIUM', fishingType = null, species = 'lake_trout') {
         this.scene = scene;
         this.fishingType = fishingType || scene.fishingType; // Use provided fishingType or get from scene
+
+        // Species data
+        this.species = species;
+        this.speciesData = getPredatorSpecies(species);
 
         // World coordinates (actual position in the lake)
         this.worldX = x;
@@ -31,8 +36,22 @@ export class Fish {
         // Fish properties
         this.size = Constants.FISH_SIZE[size];
         this.weight = Utils.randomBetween(this.size.min, this.size.max);
-        // Calculate length based on weight (lake trout: length in inches ≈ 10.5 * weight^0.31)
-        this.length = Math.round(10.5 * Math.pow(this.weight, 0.31));
+
+        // Calculate length based on weight - species-specific formulas
+        if (species === 'northern_pike') {
+            // Northern pike: length in inches ≈ 13.5 * weight^0.28 (longer, more slender)
+            this.length = Math.round(13.5 * Math.pow(this.weight, 0.28));
+        } else if (species === 'smallmouth_bass') {
+            // Smallmouth bass: length in inches ≈ 11.2 * weight^0.33 (compact, deep-bodied)
+            this.length = Math.round(11.2 * Math.pow(this.weight, 0.33));
+        } else if (species === 'yellow_perch_large') {
+            // Yellow perch: length in inches ≈ 9.5 * weight^0.35 (smaller, deep-bodied)
+            this.length = Math.round(9.5 * Math.pow(this.weight, 0.35));
+        } else {
+            // Lake trout: length in inches ≈ 10.5 * weight^0.31
+            this.length = Math.round(10.5 * Math.pow(this.weight, 0.31));
+        }
+
         this.baseSpeed = Utils.randomBetween(GameConfig.FISH_SPEED_MIN, GameConfig.FISH_SPEED_MAX);
         this.points = this.size.points;
 
@@ -95,20 +114,67 @@ export class Fish {
     }
     
     calculateBiologicalAge() {
-        // Lake trout age-weight relationship (bigger fish are older)
-        // Based on typical lake trout growth rates
-        if (this.weight <= 5) {
-            // Small fish: 3-6 years
-            return Math.round(Utils.randomBetween(3, 6));
-        } else if (this.weight <= 12) {
-            // Medium fish: 6-12 years
-            return Math.round(Utils.randomBetween(6, 12));
-        } else if (this.weight <= 25) {
-            // Large fish: 12-20 years
-            return Math.round(Utils.randomBetween(12, 20));
+        // Species-specific age-weight relationships
+        if (this.species === 'northern_pike') {
+            // Northern pike grow faster than lake trout, shorter lifespan
+            if (this.weight <= 6) {
+                // Small pike: 2-4 years
+                return Math.round(Utils.randomBetween(2, 4));
+            } else if (this.weight <= 15) {
+                // Medium pike: 4-8 years
+                return Math.round(Utils.randomBetween(4, 8));
+            } else if (this.weight <= 25) {
+                // Large pike: 8-14 years
+                return Math.round(Utils.randomBetween(8, 14));
+            } else {
+                // Trophy pike: 14-22 years
+                return Math.round(Utils.randomBetween(14, 22));
+            }
+        } else if (this.species === 'smallmouth_bass') {
+            // Smallmouth bass moderate growth, medium lifespan
+            if (this.weight <= 2) {
+                // Small bass: 2-4 years
+                return Math.round(Utils.randomBetween(2, 4));
+            } else if (this.weight <= 4) {
+                // Medium bass: 4-7 years
+                return Math.round(Utils.randomBetween(4, 7));
+            } else if (this.weight <= 6) {
+                // Large bass: 7-12 years
+                return Math.round(Utils.randomBetween(7, 12));
+            } else {
+                // Trophy bass: 12-18 years
+                return Math.round(Utils.randomBetween(12, 18));
+            }
+        } else if (this.species === 'yellow_perch_large') {
+            // Yellow perch fast growth, shorter lifespan
+            if (this.weight <= 0.7) {
+                // Small perch: 1-3 years
+                return Math.round(Utils.randomBetween(1, 3));
+            } else if (this.weight <= 1.2) {
+                // Medium perch: 3-5 years
+                return Math.round(Utils.randomBetween(3, 5));
+            } else if (this.weight <= 2.0) {
+                // Large perch: 5-8 years
+                return Math.round(Utils.randomBetween(5, 8));
+            } else {
+                // Trophy perch: 8-12 years
+                return Math.round(Utils.randomBetween(8, 12));
+            }
         } else {
-            // Trophy fish: 20-30+ years
-            return Math.round(Utils.randomBetween(20, 30));
+            // Lake trout age-weight relationship (slower growth, longer lived)
+            if (this.weight <= 5) {
+                // Small fish: 3-6 years
+                return Math.round(Utils.randomBetween(3, 6));
+            } else if (this.weight <= 12) {
+                // Medium fish: 6-12 years
+                return Math.round(Utils.randomBetween(6, 12));
+            } else if (this.weight <= 25) {
+                // Large fish: 12-20 years
+                return Math.round(Utils.randomBetween(12, 20));
+            } else {
+                // Trophy fish: 20-30+ years
+                return Math.round(Utils.randomBetween(20, 30));
+            }
         }
     }
 
@@ -321,102 +387,34 @@ export class Fish {
     
     render() {
         this.graphics.clear();
-        
+
         if (!this.visible) return;
-        
-        // Choose color based on sonar strength and state
-        let color;
-        if (this.ai.state === Constants.FISH_STATE.STRIKING) {
-            color = GameConfig.COLOR_FISH_STRONG;
-        } else {
-            switch (this.sonarStrength) {
-                case 'strong':
-                    color = GameConfig.COLOR_FISH_STRONG;
-                    break;
-                case 'medium':
-                    color = GameConfig.COLOR_FISH_MEDIUM;
-                    break;
-                default:
-                    color = GameConfig.COLOR_FISH_WEAK;
-            }
-        }
-        
-        // Draw realistic lake trout based on reference photos
-        const bodySize = Math.max(8, this.weight / 2); // Larger, more visible
+
+        const bodySize = Math.max(8, this.weight / 2);
 
         // Get movement direction to orient the fish
         const movement = this.ai.getMovementVector();
         const isMovingRight = movement.x >= 0;
 
-        // Save graphics state and apply rotation for angling
-        this.graphics.save();
-        this.graphics.translateCanvas(this.x, this.y);
-
-        // Apply rotation angle, flip if moving left
-        if (isMovingRight) {
-            this.graphics.rotateCanvas(this.angle);
+        // Render species-specific fish
+        if (this.species === 'northern_pike') {
+            this.renderNorthernPike(bodySize, isMovingRight);
+        } else if (this.species === 'smallmouth_bass') {
+            this.renderSmallmouthBass(bodySize, isMovingRight);
+        } else if (this.species === 'yellow_perch_large') {
+            this.renderYellowPerch(bodySize, isMovingRight);
         } else {
-            // When moving left, flip the fish and reverse the angle
-            this.graphics.scaleCanvas(-1, 1);
-            this.graphics.rotateCanvas(-this.angle);
+            this.renderLakeTrout(bodySize, isMovingRight);
         }
-
-        // Draw fish at origin (0, 0) since we translated to fish position
-        // Main body - grayish-olive color (top/back)
-        this.graphics.fillStyle(GameConfig.COLOR_FISH_BODY, 1.0);
-        this.graphics.fillEllipse(0, 0, bodySize * 2.5, bodySize * 0.8);
-
-        // Belly - cream/pinkish lighter color (bottom half)
-        this.graphics.fillStyle(GameConfig.COLOR_FISH_BELLY, 0.8);
-        this.graphics.fillEllipse(0, bodySize * 0.2, bodySize * 2.2, bodySize * 0.5);
-
-        // Tail fin - pale cream color
-        const tailSize = bodySize * 0.7;
-        const tailX = -bodySize * 1.25; // Always points backward (left in local space)
-        const tailY = 0;
-
-        this.graphics.fillStyle(GameConfig.COLOR_FISH_FINS, 0.9);
-        this.graphics.beginPath();
-
-        // Tail always points backward in local coordinates
-        this.graphics.moveTo(tailX, tailY);
-        this.graphics.lineTo(tailX - tailSize, tailY - tailSize * 0.6);
-        this.graphics.lineTo(tailX - tailSize, tailY + tailSize * 0.6);
-
-        this.graphics.closePath();
-        this.graphics.fillPath();
-
-        // Dorsal and pectoral fins - pale cream
-        this.graphics.fillStyle(GameConfig.COLOR_FISH_FINS, 0.7);
-        // Dorsal fin (top)
-        this.graphics.fillTriangle(
-            0, -bodySize * 0.5,
-            -bodySize * 0.3, -bodySize * 1.2,
-            bodySize * 0.3, -bodySize * 1.2
-        );
-        // Pectoral fins (sides)
-        const finX = -bodySize * 0.3;
-        this.graphics.fillTriangle(
-            finX, 0,
-            finX - bodySize * 0.4, -bodySize * 0.3,
-            finX - bodySize * 0.4, bodySize * 0.3
-        );
-
-        // Restore graphics state (undo rotation and translation)
-        this.graphics.restore();
 
         // Interest flash - green circle that fades to show player triggered interest
         if (this.interestFlash > 0) {
-            // Circle size based on how close to striking
-            // Starts large and contracts as fish gets closer to committing
             const flashSize = bodySize * (2 + (1 - this.interestFlash) * 1.5);
-            const flashAlpha = this.interestFlash * 0.8; // Max alpha 0.8 for visibility
+            const flashAlpha = this.interestFlash * 0.8;
 
-            // Bright green for interest
             this.graphics.lineStyle(3, 0x00ff00, flashAlpha);
             this.graphics.strokeCircle(this.x, this.y, flashSize);
 
-            // Add pulsing effect for higher interest levels
             if (this.interestFlash > 0.7) {
                 const pulseSize = flashSize + Math.sin(this.frameAge * 0.3) * 4;
                 this.graphics.lineStyle(2, 0x00ff00, flashAlpha * 0.5);
@@ -424,7 +422,315 @@ export class Fish {
             }
         }
     }
-    
+
+    renderLakeTrout(bodySize, isMovingRight) {
+        // Save graphics state and apply rotation
+        this.graphics.save();
+        this.graphics.translateCanvas(this.x, this.y);
+
+        if (isMovingRight) {
+            this.graphics.rotateCanvas(this.angle);
+        } else {
+            this.graphics.scaleCanvas(-1, 1);
+            this.graphics.rotateCanvas(-this.angle);
+        }
+
+        // Main body - grayish-olive color
+        this.graphics.fillStyle(GameConfig.COLOR_FISH_BODY, 1.0);
+        this.graphics.fillEllipse(0, 0, bodySize * 2.5, bodySize * 0.8);
+
+        // Belly - cream/pinkish lighter color
+        this.graphics.fillStyle(GameConfig.COLOR_FISH_BELLY, 0.8);
+        this.graphics.fillEllipse(0, bodySize * 0.2, bodySize * 2.2, bodySize * 0.5);
+
+        // Tail fin
+        const tailSize = bodySize * 0.7;
+        const tailX = -bodySize * 1.25;
+        const tailY = 0;
+
+        this.graphics.fillStyle(GameConfig.COLOR_FISH_FINS, 0.9);
+        this.graphics.beginPath();
+        this.graphics.moveTo(tailX, tailY);
+        this.graphics.lineTo(tailX - tailSize, tailY - tailSize * 0.6);
+        this.graphics.lineTo(tailX - tailSize, tailY + tailSize * 0.6);
+        this.graphics.closePath();
+        this.graphics.fillPath();
+
+        // Dorsal and pectoral fins
+        this.graphics.fillStyle(GameConfig.COLOR_FISH_FINS, 0.7);
+        this.graphics.fillTriangle(
+            0, -bodySize * 0.5,
+            -bodySize * 0.3, -bodySize * 1.2,
+            bodySize * 0.3, -bodySize * 1.2
+        );
+        const finX = -bodySize * 0.3;
+        this.graphics.fillTriangle(
+            finX, 0,
+            finX - bodySize * 0.4, -bodySize * 0.3,
+            finX - bodySize * 0.4, bodySize * 0.3
+        );
+
+        this.graphics.restore();
+    }
+
+    renderNorthernPike(bodySize, isMovingRight) {
+        // Northern pike - torpedo-shaped, olive green with cream oval spots
+        const colors = this.speciesData.appearance.colorScheme;
+
+        this.graphics.save();
+        this.graphics.translateCanvas(this.x, this.y);
+
+        if (isMovingRight) {
+            this.graphics.rotateCanvas(this.angle);
+        } else {
+            this.graphics.scaleCanvas(-1, 1);
+            this.graphics.rotateCanvas(-this.angle);
+        }
+
+        // Pike body - long and cylindrical (torpedo-shaped)
+        // Pike are longer and more slender than trout
+        const pikeLength = bodySize * 3.2; // Longer than trout (2.5)
+        const pikeHeight = bodySize * 0.6; // More slender than trout (0.8)
+
+        // Main body - olive green
+        this.graphics.fillStyle(colors.base, 1.0);
+        this.graphics.fillEllipse(0, 0, pikeLength, pikeHeight);
+
+        // Belly - light cream
+        this.graphics.fillStyle(colors.belly, 0.9);
+        this.graphics.fillEllipse(0, pikeHeight * 0.15, pikeLength * 0.9, pikeHeight * 0.4);
+
+        // Characteristic cream/white oval spots in horizontal rows
+        this.graphics.fillStyle(colors.spots, 0.8);
+        const spotsPerRow = 5;
+        const spotSpacing = pikeLength / (spotsPerRow + 1);
+
+        // Upper row of spots
+        for (let i = 0; i < spotsPerRow; i++) {
+            const spotX = -pikeLength * 0.4 + (i * spotSpacing);
+            const spotY = -pikeHeight * 0.15;
+            this.graphics.fillEllipse(spotX, spotY, bodySize * 0.25, bodySize * 0.15);
+        }
+
+        // Middle row of spots
+        for (let i = 0; i < spotsPerRow; i++) {
+            const spotX = -pikeLength * 0.35 + (i * spotSpacing);
+            const spotY = 0;
+            this.graphics.fillEllipse(spotX, spotY, bodySize * 0.25, bodySize * 0.15);
+        }
+
+        // Tail - pike have a distinctive forked tail
+        const tailSize = bodySize * 0.8;
+        const tailX = -pikeLength * 0.45;
+
+        this.graphics.fillStyle(colors.fins, 0.9);
+        this.graphics.beginPath();
+        this.graphics.moveTo(tailX, 0);
+        this.graphics.lineTo(tailX - tailSize * 0.8, -tailSize * 0.7);
+        this.graphics.lineTo(tailX - tailSize * 0.8, tailSize * 0.7);
+        this.graphics.closePath();
+        this.graphics.fillPath();
+
+        // Dorsal fin - far back on pike (near tail)
+        this.graphics.fillStyle(colors.fins, 0.75);
+        const dorsalX = -pikeLength * 0.25;
+        this.graphics.fillTriangle(
+            dorsalX, -pikeHeight * 0.4,
+            dorsalX - bodySize * 0.5, -pikeHeight * 1.3,
+            dorsalX + bodySize * 0.3, -pikeHeight * 1.0
+        );
+
+        // Pectoral fins
+        const finX = -bodySize * 0.2;
+        this.graphics.fillTriangle(
+            finX, 0,
+            finX - bodySize * 0.3, -pikeHeight * 0.25,
+            finX - bodySize * 0.3, pikeHeight * 0.25
+        );
+
+        this.graphics.restore();
+    }
+
+    renderSmallmouthBass(bodySize, isMovingRight) {
+        // Smallmouth bass - compact, deep-bodied with bronze coloring and vertical bars
+        const colors = this.speciesData.appearance.colorScheme;
+
+        this.graphics.save();
+        this.graphics.translateCanvas(this.x, this.y);
+
+        if (isMovingRight) {
+            this.graphics.rotateCanvas(this.angle);
+        } else {
+            this.graphics.scaleCanvas(-1, 1);
+            this.graphics.rotateCanvas(-this.angle);
+        }
+
+        // Bass body - compact and muscular (shorter and deeper than trout)
+        const bassLength = bodySize * 2.2; // Shorter than trout (2.5)
+        const bassHeight = bodySize * 0.9; // Deeper body than trout (0.8)
+
+        // Main body - bronze/brown
+        this.graphics.fillStyle(colors.base, 1.0);
+        this.graphics.fillEllipse(0, 0, bassLength, bassHeight);
+
+        // Belly - cream/tan
+        this.graphics.fillStyle(colors.belly, 0.9);
+        this.graphics.fillEllipse(0, bassHeight * 0.2, bassLength * 0.85, bassHeight * 0.5);
+
+        // Vertical bars - distinctive feature of smallmouth
+        this.graphics.fillStyle(colors.bars, 0.7);
+        const barCount = 9; // 8-10 bars
+        const barWidth = bassLength * 0.08;
+        const barSpacing = bassLength / (barCount + 1);
+
+        for (let i = 0; i < barCount; i++) {
+            const barX = -bassLength * 0.4 + (i * barSpacing);
+            // Bars are taller in the middle, shorter at ends
+            const heightMultiplier = 1.0 - Math.abs(i - barCount / 2) * 0.15;
+            const barHeight = bassHeight * 0.8 * heightMultiplier;
+
+            this.graphics.fillRect(
+                barX - barWidth / 2,
+                -barHeight / 2,
+                barWidth,
+                barHeight
+            );
+        }
+
+        // Red eye - distinctive feature
+        const eyeX = bassLength * 0.35;
+        const eyeY = -bassHeight * 0.25;
+        this.graphics.fillStyle(colors.eyes, 1.0);
+        this.graphics.fillCircle(eyeX, eyeY, bodySize * 0.15);
+
+        // Tail - slightly forked
+        const tailSize = bodySize * 0.75;
+        const tailX = -bassLength * 0.45;
+
+        this.graphics.fillStyle(colors.fins, 0.9);
+        this.graphics.beginPath();
+        this.graphics.moveTo(tailX, 0);
+        this.graphics.lineTo(tailX - tailSize * 0.7, -tailSize * 0.6);
+        this.graphics.lineTo(tailX - tailSize * 0.7, tailSize * 0.6);
+        this.graphics.closePath();
+        this.graphics.fillPath();
+
+        // Dorsal fin - spiny front section, soft rear section (bass characteristic)
+        this.graphics.fillStyle(colors.fins, 0.8);
+
+        // Spiny dorsal (front)
+        const spinyDorsalX = -bassLength * 0.15;
+        this.graphics.fillTriangle(
+            spinyDorsalX, -bassHeight * 0.5,
+            spinyDorsalX - bodySize * 0.4, -bassHeight * 1.3,
+            spinyDorsalX + bodySize * 0.2, -bassHeight * 1.2
+        );
+
+        // Soft dorsal (rear)
+        const softDorsalX = bassLength * 0.05;
+        this.graphics.fillTriangle(
+            softDorsalX, -bassHeight * 0.5,
+            softDorsalX - bodySize * 0.2, -bassHeight * 1.1,
+            softDorsalX + bodySize * 0.3, -bassHeight * 1.0
+        );
+
+        // Pectoral fins
+        const finX = -bodySize * 0.2;
+        this.graphics.fillTriangle(
+            finX, 0,
+            finX - bodySize * 0.35, -bassHeight * 0.3,
+            finX - bodySize * 0.35, bassHeight * 0.3
+        );
+
+        this.graphics.restore();
+    }
+
+    renderYellowPerch(bodySize, isMovingRight) {
+        // Yellow perch - golden with vertical bars and orange fins
+        const colors = this.speciesData.appearance.colorScheme;
+
+        this.graphics.save();
+        this.graphics.translateCanvas(this.x, this.y);
+
+        if (isMovingRight) {
+            this.graphics.rotateCanvas(this.angle);
+        } else {
+            this.graphics.scaleCanvas(-1, 1);
+            this.graphics.rotateCanvas(-this.angle);
+        }
+
+        // Perch body - deep and laterally compressed (similar to bass but smaller)
+        const perchLength = bodySize * 2.0; // Shorter than bass (2.2)
+        const perchHeight = bodySize * 0.85; // Deep body like bass (0.9)
+
+        // Main body - golden yellow
+        this.graphics.fillStyle(colors.base, 1.0);
+        this.graphics.fillEllipse(0, 0, perchLength, perchHeight);
+
+        // Belly - pale yellow/cream
+        this.graphics.fillStyle(colors.belly, 0.9);
+        this.graphics.fillEllipse(0, perchHeight * 0.25, perchLength * 0.8, perchHeight * 0.45);
+
+        // Vertical bars - 6-8 dark bars (like bass but on yellow background)
+        this.graphics.fillStyle(colors.bars, 0.75);
+        const barCount = 7;
+        const barWidth = perchLength * 0.09;
+        const barSpacing = perchLength / (barCount + 1);
+
+        for (let i = 0; i < barCount; i++) {
+            const barX = -perchLength * 0.4 + (i * barSpacing);
+            const heightMultiplier = 1.0 - Math.abs(i - barCount / 2) * 0.12;
+            const barHeight = perchHeight * 0.75 * heightMultiplier;
+
+            this.graphics.fillRect(
+                barX - barWidth / 2,
+                -barHeight / 2,
+                barWidth,
+                barHeight
+            );
+        }
+
+        // Tail
+        const tailSize = bodySize * 0.7;
+        const tailX = -perchLength * 0.45;
+
+        this.graphics.fillStyle(colors.fins, 0.9);
+        this.graphics.beginPath();
+        this.graphics.moveTo(tailX, 0);
+        this.graphics.lineTo(tailX - tailSize * 0.65, -tailSize * 0.55);
+        this.graphics.lineTo(tailX - tailSize * 0.65, tailSize * 0.55);
+        this.graphics.closePath();
+        this.graphics.fillPath();
+
+        // Spiny dorsal fin (front)
+        this.graphics.fillStyle(colors.fins, 0.85);
+        const spinyDorsalX = -perchLength * 0.15;
+        this.graphics.fillTriangle(
+            spinyDorsalX, -perchHeight * 0.5,
+            spinyDorsalX - bodySize * 0.35, -perchHeight * 1.2,
+            spinyDorsalX + bodySize * 0.15, -perchHeight * 1.1
+        );
+
+        // Soft dorsal fin (rear) - orange/red tinted
+        this.graphics.fillStyle(colors.fins, 0.9);
+        const softDorsalX = perchLength * 0.05;
+        this.graphics.fillTriangle(
+            softDorsalX, -perchHeight * 0.5,
+            softDorsalX - bodySize * 0.15, -perchHeight * 1.0,
+            softDorsalX + bodySize * 0.25, -perchHeight * 0.9
+        );
+
+        // Pectoral fins
+        const finX = -bodySize * 0.15;
+        this.graphics.fillTriangle(
+            finX, 0,
+            finX - bodySize * 0.3, -perchHeight * 0.25,
+            finX - bodySize * 0.3, perchHeight * 0.25
+        );
+
+        this.graphics.restore();
+    }
+
     handleCaught() {
         // Animation when fish is caught
         this.graphics.clear();
@@ -439,15 +745,29 @@ export class Fish {
         }, 500);
     }
 
-    feedOnBaitfish() {
-        // Fish has consumed a baitfish, reduce hunger
-        this.hunger = Math.max(0, this.hunger - GameConfig.BAITFISH_CONSUMPTION_HUNGER_REDUCTION);
+    feedOnBaitfish(preySpecies = 'alewife') {
+        // Fish has consumed a baitfish, reduce hunger based on prey nutrition value
+        const speciesData = getBaitfishSpecies(preySpecies);
+        const nutritionValue = speciesData.nutritionValue || 20; // Default to 20 if not specified
+
+        // Different species provide different nutrition:
+        // Cisco: 30 (large, nutritious)
+        // Smelt: 25 (high-fat content)
+        // Alewife: 20 (abundant, standard)
+        // Perch: 18 (moderate)
+        // Sculpin: 15 (small, less nutritious)
+
+        this.hunger = Math.max(0, this.hunger - nutritionValue);
         this.lastFed = this.frameAge;
+
+        // Log feeding for debugging (commented out for production)
+        // console.log(`${this.name} fed on ${preySpecies}, hunger reduced by ${nutritionValue} (now ${Math.floor(this.hunger)}%)`);
     }
 
     getInfo() {
         return {
-            name: this.name,
+            name: `${this.name} the ${this.speciesData.name}`,
+            species: this.speciesData.name,
             gender: this.gender,
             age: this.age + ' years',
             weight: this.weight.toFixed(1) + ' lbs',
@@ -468,51 +788,269 @@ export class Fish {
     renderAtPosition(graphics, x, y, scale = 3) {
         const bodySize = Math.max(8, this.weight / 2) * scale;
 
-        // Save graphics state and apply rotation for angling
         graphics.save();
         graphics.translateCanvas(x, y);
         graphics.scaleCanvas(1, 1); // Always face right for popup
         graphics.rotateCanvas(0); // Horizontal orientation
 
-        // Main body - grayish-olive color (top/back)
+        if (this.species === 'northern_pike') {
+            this.renderNorthernPikeAtPosition(graphics, bodySize);
+        } else if (this.species === 'smallmouth_bass') {
+            this.renderSmallmouthBassAtPosition(graphics, bodySize);
+        } else if (this.species === 'yellow_perch_large') {
+            this.renderYellowPerchAtPosition(graphics, bodySize);
+        } else {
+            this.renderLakeTroutAtPosition(graphics, bodySize);
+        }
+
+        graphics.restore();
+    }
+
+    renderLakeTroutAtPosition(graphics, bodySize) {
+        // Main body - grayish-olive color
         graphics.fillStyle(GameConfig.COLOR_FISH_BODY, 1.0);
         graphics.fillEllipse(0, 0, bodySize * 2.5, bodySize * 0.8);
 
-        // Belly - cream/pinkish lighter color (bottom half)
+        // Belly - cream/pinkish lighter color
         graphics.fillStyle(GameConfig.COLOR_FISH_BELLY, 0.8);
         graphics.fillEllipse(0, bodySize * 0.2, bodySize * 2.2, bodySize * 0.5);
 
-        // Tail fin - pale cream color
+        // Tail fin
         const tailSize = bodySize * 0.7;
         const tailX = -bodySize * 1.25;
-        const tailY = 0;
 
         graphics.fillStyle(GameConfig.COLOR_FISH_FINS, 0.9);
         graphics.beginPath();
-        graphics.moveTo(tailX, tailY);
-        graphics.lineTo(tailX - tailSize, tailY - tailSize * 0.6);
-        graphics.lineTo(tailX - tailSize, tailY + tailSize * 0.6);
+        graphics.moveTo(tailX, 0);
+        graphics.lineTo(tailX - tailSize, -tailSize * 0.6);
+        graphics.lineTo(tailX - tailSize, tailSize * 0.6);
         graphics.closePath();
         graphics.fillPath();
 
-        // Dorsal and pectoral fins - pale cream
+        // Dorsal and pectoral fins
         graphics.fillStyle(GameConfig.COLOR_FISH_FINS, 0.7);
-        // Dorsal fin (top)
         graphics.fillTriangle(
             0, -bodySize * 0.5,
             -bodySize * 0.3, -bodySize * 1.2,
             bodySize * 0.3, -bodySize * 1.2
         );
-        // Pectoral fins (sides)
         const finX = -bodySize * 0.3;
         graphics.fillTriangle(
             finX, 0,
             finX - bodySize * 0.4, -bodySize * 0.3,
             finX - bodySize * 0.4, bodySize * 0.3
         );
+    }
 
-        // Restore graphics state
-        graphics.restore();
+    renderNorthernPikeAtPosition(graphics, bodySize) {
+        const colors = this.speciesData.appearance.colorScheme;
+
+        // Pike body - longer and more slender
+        const pikeLength = bodySize * 3.2;
+        const pikeHeight = bodySize * 0.6;
+
+        // Main body - olive green
+        graphics.fillStyle(colors.base, 1.0);
+        graphics.fillEllipse(0, 0, pikeLength, pikeHeight);
+
+        // Belly - light cream
+        graphics.fillStyle(colors.belly, 0.9);
+        graphics.fillEllipse(0, pikeHeight * 0.15, pikeLength * 0.9, pikeHeight * 0.4);
+
+        // Cream/white oval spots in horizontal rows
+        graphics.fillStyle(colors.spots, 0.8);
+        const spotsPerRow = 5;
+        const spotSpacing = pikeLength / (spotsPerRow + 1);
+
+        for (let i = 0; i < spotsPerRow; i++) {
+            const spotX = -pikeLength * 0.4 + (i * spotSpacing);
+            const spotY = -pikeHeight * 0.15;
+            graphics.fillEllipse(spotX, spotY, bodySize * 0.25, bodySize * 0.15);
+        }
+
+        for (let i = 0; i < spotsPerRow; i++) {
+            const spotX = -pikeLength * 0.35 + (i * spotSpacing);
+            const spotY = 0;
+            graphics.fillEllipse(spotX, spotY, bodySize * 0.25, bodySize * 0.15);
+        }
+
+        // Tail - forked
+        const tailSize = bodySize * 0.8;
+        const tailX = -pikeLength * 0.45;
+
+        graphics.fillStyle(colors.fins, 0.9);
+        graphics.beginPath();
+        graphics.moveTo(tailX, 0);
+        graphics.lineTo(tailX - tailSize * 0.8, -tailSize * 0.7);
+        graphics.lineTo(tailX - tailSize * 0.8, tailSize * 0.7);
+        graphics.closePath();
+        graphics.fillPath();
+
+        // Dorsal fin - far back
+        graphics.fillStyle(colors.fins, 0.75);
+        const dorsalX = -pikeLength * 0.25;
+        graphics.fillTriangle(
+            dorsalX, -pikeHeight * 0.4,
+            dorsalX - bodySize * 0.5, -pikeHeight * 1.3,
+            dorsalX + bodySize * 0.3, -pikeHeight * 1.0
+        );
+
+        // Pectoral fins
+        const finX = -bodySize * 0.2;
+        graphics.fillTriangle(
+            finX, 0,
+            finX - bodySize * 0.3, -pikeHeight * 0.25,
+            finX - bodySize * 0.3, pikeHeight * 0.25
+        );
+    }
+
+    renderSmallmouthBassAtPosition(graphics, bodySize) {
+        const colors = this.speciesData.appearance.colorScheme;
+
+        // Bass body - compact and muscular
+        const bassLength = bodySize * 2.2;
+        const bassHeight = bodySize * 0.9;
+
+        // Main body - bronze/brown
+        graphics.fillStyle(colors.base, 1.0);
+        graphics.fillEllipse(0, 0, bassLength, bassHeight);
+
+        // Belly - cream/tan
+        graphics.fillStyle(colors.belly, 0.9);
+        graphics.fillEllipse(0, bassHeight * 0.2, bassLength * 0.85, bassHeight * 0.5);
+
+        // Vertical bars
+        graphics.fillStyle(colors.bars, 0.7);
+        const barCount = 9;
+        const barWidth = bassLength * 0.08;
+        const barSpacing = bassLength / (barCount + 1);
+
+        for (let i = 0; i < barCount; i++) {
+            const barX = -bassLength * 0.4 + (i * barSpacing);
+            const heightMultiplier = 1.0 - Math.abs(i - barCount / 2) * 0.15;
+            const barHeight = bassHeight * 0.8 * heightMultiplier;
+
+            graphics.fillRect(
+                barX - barWidth / 2,
+                -barHeight / 2,
+                barWidth,
+                barHeight
+            );
+        }
+
+        // Red eye
+        const eyeX = bassLength * 0.35;
+        const eyeY = -bassHeight * 0.25;
+        graphics.fillStyle(colors.eyes, 1.0);
+        graphics.fillCircle(eyeX, eyeY, bodySize * 0.15);
+
+        // Tail
+        const tailSize = bodySize * 0.75;
+        const tailX = -bassLength * 0.45;
+
+        graphics.fillStyle(colors.fins, 0.9);
+        graphics.beginPath();
+        graphics.moveTo(tailX, 0);
+        graphics.lineTo(tailX - tailSize * 0.7, -tailSize * 0.6);
+        graphics.lineTo(tailX - tailSize * 0.7, tailSize * 0.6);
+        graphics.closePath();
+        graphics.fillPath();
+
+        // Dorsal fins - spiny and soft sections
+        graphics.fillStyle(colors.fins, 0.8);
+
+        const spinyDorsalX = -bassLength * 0.15;
+        graphics.fillTriangle(
+            spinyDorsalX, -bassHeight * 0.5,
+            spinyDorsalX - bodySize * 0.4, -bassHeight * 1.3,
+            spinyDorsalX + bodySize * 0.2, -bassHeight * 1.2
+        );
+
+        const softDorsalX = bassLength * 0.05;
+        graphics.fillTriangle(
+            softDorsalX, -bassHeight * 0.5,
+            softDorsalX - bodySize * 0.2, -bassHeight * 1.1,
+            softDorsalX + bodySize * 0.3, -bassHeight * 1.0
+        );
+
+        // Pectoral fins
+        const finX = -bodySize * 0.2;
+        graphics.fillTriangle(
+            finX, 0,
+            finX - bodySize * 0.35, -bassHeight * 0.3,
+            finX - bodySize * 0.35, bassHeight * 0.3
+        );
+    }
+
+    renderYellowPerchAtPosition(graphics, bodySize) {
+        const colors = this.speciesData.appearance.colorScheme;
+
+        const perchLength = bodySize * 2.0;
+        const perchHeight = bodySize * 0.85;
+
+        // Main body - golden yellow
+        graphics.fillStyle(colors.base, 1.0);
+        graphics.fillEllipse(0, 0, perchLength, perchHeight);
+
+        // Belly - pale yellow/cream
+        graphics.fillStyle(colors.belly, 0.9);
+        graphics.fillEllipse(0, perchHeight * 0.25, perchLength * 0.8, perchHeight * 0.45);
+
+        // Vertical bars
+        graphics.fillStyle(colors.bars, 0.75);
+        const barCount = 7;
+        const barWidth = perchLength * 0.09;
+        const barSpacing = perchLength / (barCount + 1);
+
+        for (let i = 0; i < barCount; i++) {
+            const barX = -perchLength * 0.4 + (i * barSpacing);
+            const heightMultiplier = 1.0 - Math.abs(i - barCount / 2) * 0.12;
+            const barHeight = perchHeight * 0.75 * heightMultiplier;
+
+            graphics.fillRect(
+                barX - barWidth / 2,
+                -barHeight / 2,
+                barWidth,
+                barHeight
+            );
+        }
+
+        // Tail
+        const tailSize = bodySize * 0.7;
+        const tailX = -perchLength * 0.45;
+
+        graphics.fillStyle(colors.fins, 0.9);
+        graphics.beginPath();
+        graphics.moveTo(tailX, 0);
+        graphics.lineTo(tailX - tailSize * 0.65, -tailSize * 0.55);
+        graphics.lineTo(tailX - tailSize * 0.65, tailSize * 0.55);
+        graphics.closePath();
+        graphics.fillPath();
+
+        // Dorsal fins
+        graphics.fillStyle(colors.fins, 0.85);
+        const spinyDorsalX = -perchLength * 0.15;
+        graphics.fillTriangle(
+            spinyDorsalX, -perchHeight * 0.5,
+            spinyDorsalX - bodySize * 0.35, -perchHeight * 1.2,
+            spinyDorsalX + bodySize * 0.15, -perchHeight * 1.1
+        );
+
+        graphics.fillStyle(colors.fins, 0.9);
+        const softDorsalX = perchLength * 0.05;
+        graphics.fillTriangle(
+            softDorsalX, -perchHeight * 0.5,
+            softDorsalX - bodySize * 0.15, -perchHeight * 1.0,
+            softDorsalX + bodySize * 0.25, -perchHeight * 0.9
+        );
+
+        // Pectoral fins
+        const finX = -bodySize * 0.15;
+        graphics.fillTriangle(
+            finX, 0,
+            finX - bodySize * 0.3, -perchHeight * 0.25,
+            finX - bodySize * 0.3, perchHeight * 0.25
+        );
     }
 
     destroy() {

@@ -8,6 +8,7 @@ export class FishFight {
 
         // Fight state
         this.active = true;
+        this.hasLanded = false; // Prevent duplicate scoring
         this.lineTension = 20; // Start with some tension
         this.fishDistance = Math.abs(this.fish.y - 0); // Distance to surface
         this.initialDepth = this.fish.y; // Starting depth for visual tracking
@@ -526,6 +527,12 @@ export class FishFight {
     }
 
     landFish() {
+        // Prevent duplicate scoring - only land the fish once
+        if (this.hasLanded) {
+            return;
+        }
+        this.hasLanded = true;
+
         console.log('Fish landed!');
 
         const info = this.fish.getInfo();
@@ -608,12 +615,22 @@ export class FishFight {
         this.fish.renderAtPosition(fishGraphics, popupX, popupY - 40, 4);
 
         // Fish stats
-        const ageInSeconds = Math.floor(this.fish.age / 60);
+        // Format age display (fish.age is already in years from calculateBiologicalAge)
+        let ageDisplay;
+        if (this.fish.age < 2) {
+            // Young fish: show in months
+            const ageInMonths = Math.round(this.fish.age * 12);
+            ageDisplay = `${ageInMonths} months`;
+        } else {
+            // Adult fish: show in years
+            ageDisplay = `${this.fish.age} years`;
+        }
+
         const statsText = this.scene.add.text(popupX, popupY + 100,
             `${info.name} (${info.gender})\n\n` +
             `Weight: ${info.weight}\n` +
             `Length: ${info.length}\n` +
-            `Age: ${ageInSeconds} seconds\n\n` +
+            `Age: ${ageDisplay}\n\n` +
             `Points: +${this.fish.points}`,
             {
                 fontSize: '20px',
@@ -622,7 +639,7 @@ export class FishFight {
                 align: 'center',
                 stroke: '#000000',
                 strokeThickness: 3,
-                lineSpacing: 5
+                lineSpacing: 8
             }
         );
         statsText.setOrigin(0.5, 0.5);

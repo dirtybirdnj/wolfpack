@@ -10,6 +10,7 @@ import BoatManager from '../managers/BoatManager.js';
 import FishingLine from '../entities/FishingLine.js';
 import { FishingLineModel } from '../models/FishingLineModel.js';
 import Zooplankton from '../entities/Zooplankton.js';
+import { getBaitfishSpecies } from '../config/SpeciesData.js';
 
 export class GameScene extends Phaser.Scene {
     constructor() {
@@ -64,6 +65,25 @@ export class GameScene extends Phaser.Scene {
         } else {
             this.iceHoleManager = new IceHoleManager(this);
             this.boatManager = null; // Not used in winter modes
+        }
+
+        // Show/hide UI panels based on fishing mode
+        const iceDrillPanel = document.getElementById('ice-drill-panel');
+        const kayakPanel = document.getElementById('kayak-tiredness-panel');
+        const boatPanel = document.getElementById('motorboat-gas-panel');
+
+        if (this.fishingType === GameConfig.FISHING_TYPE_ICE) {
+            if (iceDrillPanel) iceDrillPanel.style.display = 'block';
+            if (kayakPanel) kayakPanel.style.display = 'none';
+            if (boatPanel) boatPanel.style.display = 'none';
+        } else if (this.fishingType === GameConfig.FISHING_TYPE_KAYAK) {
+            if (iceDrillPanel) iceDrillPanel.style.display = 'none';
+            if (kayakPanel) kayakPanel.style.display = 'block';
+            if (boatPanel) boatPanel.style.display = 'none';
+        } else if (this.fishingType === GameConfig.FISHING_TYPE_MOTORBOAT) {
+            if (iceDrillPanel) iceDrillPanel.style.display = 'none';
+            if (kayakPanel) kayakPanel.style.display = 'none';
+            if (boatPanel) boatPanel.style.display = 'block';
         }
 
         // Set up the sonar display (pass fishing type for proper rendering)
@@ -955,17 +975,49 @@ export class GameScene extends Phaser.Scene {
             return; // No manager available
         }
 
-        // Determine fish spawn depth based on realistic lake trout behavior
+        // Select species based on Lake Champlain distribution
+        // Yellow Perch: 40%, Lake Trout: 30%, Northern Pike: 15%, Smallmouth Bass: 15%
+        let species = 'yellow_perch_large';
+        const speciesRoll = Math.random();
+        if (speciesRoll < 0.40) {
+            species = 'yellow_perch_large'; // Abundant beginner-friendly species
+        } else if (speciesRoll < 0.70) {
+            species = 'lake_trout'; // Dominant coldwater predator
+        } else if (speciesRoll < 0.85) {
+            species = 'northern_pike'; // Aggressive shallow-water ambusher
+        } else {
+            species = 'smallmouth_bass'; // Structure-oriented fighter
+        }
+
+        // Determine fish spawn depth based on species-specific behavior
         let depth;
         const tempFactor = (this.waterTemp - 38) / 7; // 0 to 1 based on temp range
 
-        // Lake trout prefer different depths based on temperature
-        if (tempFactor < 0.3) {
-            // Cold water - fish can be shallower
-            depth = Utils.randomBetween(15, 80);
+        if (species === 'yellow_perch_large') {
+            // Yellow perch shallow to moderate depth
+            // 5-25 feet, very accessible for beginners
+            depth = Utils.randomBetween(5, 25);
+        } else if (species === 'northern_pike') {
+            // Pike prefer shallow, structure-oriented water
+            // Always spawn in top 30 feet regardless of temperature
+            depth = Utils.randomBetween(8, 30);
+        } else if (species === 'smallmouth_bass') {
+            // Smallmouth bass prefer mid-depth rocky structure
+            // 10-40 feet, slightly deeper in warmer water
+            if (tempFactor < 0.5) {
+                depth = Utils.randomBetween(10, 30); // Shallower in cold water
+            } else {
+                depth = Utils.randomBetween(15, 40); // Deeper in warm water
+            }
         } else {
-            // Warmer water - fish go deeper
-            depth = Utils.randomBetween(30, 120);
+            // Lake trout prefer different depths based on temperature
+            if (tempFactor < 0.3) {
+                // Cold water - fish can be shallower
+                depth = Utils.randomBetween(15, 80);
+            } else {
+                // Warmer water - fish go deeper
+                depth = Utils.randomBetween(30, 120);
+            }
         }
 
         // Determine fish size
@@ -988,8 +1040,8 @@ export class GameScene extends Phaser.Scene {
         const worldX = playerWorldX + (fromLeft ? -spawnDistance : spawnDistance);
         const y = depth * GameConfig.DEPTH_SCALE;
 
-        // Create the fish (worldX will be used internally, x will be calculated for screen)
-        const fish = new Fish(this, worldX, y, size);
+        // Create the fish with species parameter (worldX will be used internally, x will be calculated for screen)
+        const fish = new Fish(this, worldX, y, size, this.fishingType, species);
 
         // Set initial movement direction - fish swim toward and past the player
         if (fromLeft) {
@@ -1007,34 +1059,67 @@ export class GameScene extends Phaser.Scene {
             return;
         }
 
-        // Determine cloud size using weighted distribution for more variety
-        // Increased sizes to sustain aggressive lake trout feeding behavior
-        // 60% small (5-15), 30% medium (16-30), 10% large (31-50)
-        let cloudSize;
-        const sizeRoll = Math.random();
-        if (sizeRoll < 0.6) {
-            // Small clouds (most common) - increased from 3-8 to 5-15
-            cloudSize = Math.floor(Utils.randomBetween(5, 15));
-        } else if (sizeRoll < 0.9) {
-            // Medium clouds (less common) - increased from 9-15 to 16-30
-            cloudSize = Math.floor(Utils.randomBetween(16, 30));
+        // Select species based on weighted spawn rates (realistic Lake Champlain distribution)
+        // Alewife: 40%, Smelt: 30%, Perch: 20%, Sculpin: 10%, Cisco: rare (handled separately)
+        let speciesType = 'alewife';
+        const speciesRoll = Math.random();
+        if (speciesRoll < 0.40) {
+            speciesType = 'alewife'; // Most abundant (invasive species)
+        } else if (speciesRoll < 0.70) {
+            speciesType = 'rainbow_smelt'; // Common, preferred prey
+        } else if (speciesRoll < 0.90) {
+            speciesType = 'yellow_perch'; // Common in shallows
         } else {
-            // Large clouds (rare - massive feeding frenzies!) - increased from 16-24 to 31-50
-            cloudSize = Math.floor(Utils.randomBetween(31, 50));
+            speciesType = 'sculpin'; // Bottom-dwelling, less common
         }
 
-        // Baitfish prefer certain depth zones (typically shallower than lake trout)
-        let depth;
-        const depthRoll = Math.random();
-        if (depthRoll < 0.4) {
-            // Shallow - 20-40 ft
-            depth = Utils.randomBetween(20, 40);
-        } else if (depthRoll < 0.8) {
-            // Mid depth - 40-70 ft
-            depth = Utils.randomBetween(40, 70);
+        // Rare cisco spawn (10% of the time, only in deep water)
+        if (Math.random() < 0.10 && speciesType === 'alewife') {
+            speciesType = 'cisco';
+        }
+
+        // Load species data to determine spawn parameters
+        const speciesData = getBaitfishSpecies(speciesType);
+
+        // Determine cloud size based on species schooling behavior
+        let cloudSize;
+        const schoolSize = speciesData.schoolSize;
+
+        if (speciesData.schoolingDensity === 'none') {
+            // Solitary or small groups (sculpin)
+            cloudSize = Math.floor(Utils.randomBetween(schoolSize.min, schoolSize.max));
         } else {
-            // Deeper - 70-100 ft
-            depth = Utils.randomBetween(70, 100);
+            // Schooling species - use weighted distribution
+            const sizeRoll = Math.random();
+            if (sizeRoll < 0.6) {
+                // Small schools
+                cloudSize = Math.floor(Utils.randomBetween(schoolSize.min, schoolSize.min + 10));
+            } else if (sizeRoll < 0.9) {
+                // Medium schools
+                cloudSize = Math.floor(Utils.randomBetween(schoolSize.min + 10, schoolSize.max));
+            } else {
+                // Large schools (massive aggregations)
+                cloudSize = Math.floor(Utils.randomBetween(schoolSize.max, schoolSize.max + 20));
+            }
+        }
+
+        // Spawn depth based on species preferences
+        const depthRange = speciesData.depthRange;
+        let depth = Utils.randomBetween(depthRange.min, depthRange.max);
+
+        // Species-specific depth tweaks
+        if (speciesType === 'sculpin') {
+            // Sculpin prefer deeper, bottom areas
+            depth = Utils.randomBetween(80, 120);
+        } else if (speciesType === 'cisco') {
+            // Cisco are deep-water specialists
+            depth = Utils.randomBetween(60, 100);
+        } else if (speciesType === 'yellow_perch') {
+            // Perch prefer shallower, warmer water
+            depth = Utils.randomBetween(10, 40);
+        } else if (speciesType === 'rainbow_smelt') {
+            // Smelt prefer mid-depth cold water
+            depth = Utils.randomBetween(30, 80);
         }
 
         // Get player world position
@@ -1054,13 +1139,18 @@ export class GameScene extends Phaser.Scene {
         const worldX = playerWorldX + (fromLeft ? -spawnDistance : spawnDistance);
         const y = depth * GameConfig.DEPTH_SCALE;
 
-        // Create the baitfish cloud
-        const cloud = new BaitfishCloud(this, worldX, y, cloudSize);
+        // Create the baitfish cloud with species type
+        const cloud = new BaitfishCloud(this, worldX, y, cloudSize, speciesType);
 
         // Set initial drift direction (drift toward and past player)
         cloud.velocity.x = fromLeft ? Utils.randomBetween(0.3, 0.8) : Utils.randomBetween(-0.8, -0.3);
 
         this.baitfishClouds.push(cloud);
+
+        // Log rare species spawns
+        if (speciesType === 'cisco') {
+            console.log('🐟 RARE: Cisco school spotted at', Math.floor(depth), 'feet!');
+        }
     }
 
     trySpawnZooplankton() {

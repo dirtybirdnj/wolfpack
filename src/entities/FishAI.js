@@ -1,5 +1,6 @@
 import GameConfig from '../config/GameConfig.js';
 import { Constants, Utils } from '../utils/Constants.js';
+import { calculateDietPreference } from '../config/SpeciesData.js';
 
 export class FishAI {
     constructor(fish, fishingType) {
@@ -31,12 +32,45 @@ export class FishAI {
 
         // Thermocline behavior (summer modes only)
         this.returningToThermocline = false;
+
+        // Northern Pike ambush behavior
+        if (this.fish.species === 'northern_pike') {
+            this.isAmbushPredator = true;
+            this.ambushPosition = {
+                x: this.fish.worldX,
+                y: this.fish.y
+            };
+            this.ambushRadius = 50; // How far pike will patrol from ambush position
+            this.strikeRange = 60; // Longer strike range than trout (was 25)
+            this.burstSpeed = 2.5; // Explosive burst speed multiplier
+        } else {
+            this.isAmbushPredator = false;
+        }
+
+        // Smallmouth Bass circling behavior
+        if (this.fish.species === 'smallmouth_bass') {
+            this.circlesBeforeStrike = true;
+            this.isCircling = false;
+            this.circleAngle = Math.random() * Math.PI * 2; // Starting angle for circle
+            this.circleRadius = 35; // Circle radius around lure
+            this.circleSpeed = 0.08; // How fast to circle (radians per frame)
+            this.circleDirection = Math.random() < 0.5 ? 1 : -1; // Clockwise or counter-clockwise
+            this.circleTime = 0; // How long bass has been circling
+            this.maxCircleTime = 120; // Max frames to circle before deciding (2 seconds at 60fps)
+        } else {
+            this.circlesBeforeStrike = false;
+        }
     }
 
     get aggressiveness() {
         // Apply depth zone bonus to base aggressiveness
         const zoneBonus = this.fish.depthZone.aggressivenessBonus;
         return Math.max(0.1, Math.min(1.0, this.baseAggressiveness + zoneBonus));
+    }
+
+    getStrikeDistance() {
+        // Northern pike have longer strike range due to their elongated body and explosive bursts
+        return this.isAmbushPredator ? this.strikeRange : GameConfig.STRIKE_DISTANCE;
     }
     
     calculateDepthPreference() {
@@ -57,33 +91,36 @@ export class FishAI {
     }
 
     detectFrenzy(lure, allFish) {
-        // Lake trout get excited when they see others chasing
-        // Count other fish that are interested/chasing/striking
+        // Lake trout get excited when they see others chasing OR feeding on baitfish
+        // Count other fish that are actively engaged (lure or baitfish)
         const excitedFish = allFish.filter(otherFish => {
             if (otherFish === this.fish) return false; // Don't count self
 
+            // Include HUNTING_BAITFISH and FEEDING states - makes frenzy much more likely!
             const isExcited = otherFish.ai.state === Constants.FISH_STATE.INTERESTED ||
                             otherFish.ai.state === Constants.FISH_STATE.CHASING ||
-                            otherFish.ai.state === Constants.FISH_STATE.STRIKING;
+                            otherFish.ai.state === Constants.FISH_STATE.STRIKING ||
+                            otherFish.ai.state === Constants.FISH_STATE.HUNTING_BAITFISH ||
+                            otherFish.ai.state === Constants.FISH_STATE.FEEDING;
 
-            // Only count fish within visual range
+            // INCREASED visual range - fish can see feeding activity from farther away
             const dist = Utils.calculateDistance(this.fish.x, this.fish.y, otherFish.x, otherFish.y);
-            return isExcited && dist < GameConfig.DETECTION_RANGE * 2;
+            return isExcited && dist < GameConfig.DETECTION_RANGE * 3; // Increased from 2x to 3x
         });
 
-        // If other fish are excited, 50% chance to join frenzy
+        // If other fish are excited, HIGHER chance to join frenzy (75% instead of 50%)
         if (excitedFish.length > 0 && this.state === Constants.FISH_STATE.IDLE) {
-            if (Math.random() < 0.5) {
+            if (Math.random() < 0.75) { // Increased from 0.5
                 // Enter frenzy state!
                 this.fish.inFrenzy = true;
 
                 // Duration scales with number of frenzied fish (base 300 frames = 5 sec)
                 const baseDuration = 300;
-                const scaledDuration = baseDuration * (1 + excitedFish.length * 0.3);
+                const scaledDuration = baseDuration * (1 + excitedFish.length * 0.4); // Increased from 0.3
                 this.fish.frenzyTimer = Math.floor(scaledDuration);
 
-                // Intensity based on number of excited fish
-                this.fish.frenzyIntensity = Math.min(1.0, excitedFish.length * 0.25);
+                // Intensity based on number of excited fish (stronger now)
+                this.fish.frenzyIntensity = Math.min(1.0, excitedFish.length * 0.3); // Increased from 0.25
 
                 // Frenzying fish get multiple strike attempts (2-3 swipes)
                 this.maxStrikeAttempts = Math.floor(Math.random() * 2) + 2; // 2 or 3 attempts
@@ -333,7 +370,7 @@ export class FishAI {
                 this.targetY = lure.y;
 
                 // Try to strike if close enough
-                if (distance < GameConfig.STRIKE_DISTANCE) {
+                if (distance < this.getStrikeDistance()) {
                     if (this.fish.scene && this.fish.scene.currentFight && this.fish.scene.currentFight.active) {
                         this.disengageFish();
                         return;
@@ -365,7 +402,7 @@ export class FishAI {
         this.targetY = lure.y;
 
         // Check if close enough to strike
-        if (distance < GameConfig.STRIKE_DISTANCE) {
+        if (distance < this.getStrikeDistance()) {
             this.decisionCooldown = 50;
 
             if (this.fish.scene && this.fish.scene.currentFight && this.fish.scene.currentFight.active) {
@@ -382,7 +419,7 @@ export class FishAI {
                 this.decisionCooldown = 50;
                 this.fish.triggerInterestFlash(1.0);
             }
-        } else if (distance < GameConfig.STRIKE_DISTANCE * 1.5) {
+        } else if (distance < this.getStrikeDistance() * 1.5) {
             this.decisionCooldown = 100;
         }
 
@@ -463,7 +500,7 @@ export class FishAI {
             if (this.fish.scene) {
                 this.fish.scene.events.emit('fishCaught', this.fish);
             }
-        } else if (distance > GameConfig.STRIKE_DISTANCE * 2) {
+        } else if (distance > this.getStrikeDistance() * 2) {
             // Missed the strike!
 
             // Handle engaged fish differently
@@ -552,7 +589,38 @@ export class FishAI {
 
         // IDLE fish cruise horizontally without a specific target
         if (this.state === Constants.FISH_STATE.IDLE || !this.targetX || !this.targetY) {
-            // Check thermocline in summer modes
+            // Northern Pike: ambush behavior - stay near ambush position
+            if (this.isAmbushPredator) {
+                const dx = this.ambushPosition.x - this.fish.worldX;
+                const dy = this.ambushPosition.y - this.fish.y;
+                const distanceFromAmbush = Math.sqrt(dx * dx + dy * dy);
+
+                // Dead zone: if very close to ambush position, stop completely
+                if (distanceFromAmbush < 10) {
+                    return {
+                        x: 0, // Completely still horizontally
+                        y: Math.sin(this.fish.frameAge * 0.02) * 0.08 // Very subtle hovering
+                    };
+                }
+                // If outside ambush radius, slowly drift back
+                else if (distanceFromAmbush > this.ambushRadius) {
+                    const returnSpeed = this.fish.speed * 0.3; // Very slow return
+                    return {
+                        x: (dx / distanceFromAmbush) * returnSpeed,
+                        y: (dy / distanceFromAmbush) * returnSpeed * 0.6
+                    };
+                }
+                // Within ambush radius but not in dead zone - very slow drift toward center
+                else {
+                    const returnSpeed = this.fish.speed * 0.1; // Minimal drift
+                    return {
+                        x: (dx / distanceFromAmbush) * returnSpeed,
+                        y: (dy / distanceFromAmbush) * returnSpeed * 0.5 + Math.sin(this.fish.frameAge * 0.02) * 0.08
+                    };
+                }
+            }
+
+            // Lake Trout: thermocline behavior in summer modes
             if (isSummerMode) {
                 const thermoclineDepth = GameConfig.THERMOCLINE_DEPTH;
                 const currentDepth = this.fish.depth;
@@ -581,7 +649,7 @@ export class FishAI {
                 }
             }
 
-            // Winter mode: normal idle behavior
+            // Winter mode: normal idle behavior (lake trout)
             return {
                 x: this.fish.speed * this.idleDirection,
                 y: 0 // Stay at current depth while idle
@@ -602,11 +670,21 @@ export class FishAI {
 
         switch (this.state) {
             case Constants.FISH_STATE.CHASING:
-                speedMultiplier = GameConfig.CHASE_SPEED_MULTIPLIER;
+                // Pike don't chase as much - they ambush. Lake trout are pursuit hunters.
+                if (this.isAmbushPredator) {
+                    speedMultiplier = 1.2; // Slow chase
+                } else {
+                    speedMultiplier = GameConfig.CHASE_SPEED_MULTIPLIER;
+                }
                 verticalSpeedMultiplier = 0.95; // Near-equal vertical speed when chasing
                 break;
             case Constants.FISH_STATE.STRIKING:
-                speedMultiplier = 2.5;
+                // Northern pike have EXPLOSIVE strikes (burst speed)
+                if (this.isAmbushPredator) {
+                    speedMultiplier = this.burstSpeed * 2.0; // 5x speed burst!
+                } else {
+                    speedMultiplier = 2.5; // Lake trout normal strike
+                }
                 verticalSpeedMultiplier = 1.0; // Full vertical speed when striking
                 break;
             case Constants.FISH_STATE.FLEEING:
@@ -619,8 +697,12 @@ export class FishAI {
                 verticalSpeedMultiplier = 0.8;
                 break;
             case Constants.FISH_STATE.HUNTING_BAITFISH:
-                // Aggressive pursuit of baitfish
-                speedMultiplier = GameConfig.BAITFISH_PURSUIT_SPEED;
+                // Pike ambush baitfish, trout pursue them
+                if (this.isAmbushPredator) {
+                    speedMultiplier = 1.5; // Pike wait for baitfish to come close
+                } else {
+                    speedMultiplier = GameConfig.BAITFISH_PURSUIT_SPEED;
+                }
                 // Hungrier fish move faster vertically to reach baitfish (0-100 scale)
                 verticalSpeedMultiplier = 0.85 + (this.fish.hunger * GameConfig.HUNGER_VERTICAL_SCALING);
                 break;
@@ -679,10 +761,29 @@ export class FishAI {
         const distanceFactor = 1 - (cloudInfo.distance / GameConfig.BAITFISH_DETECTION_RANGE);
 
         // Check if other fish are hunting this cloud (frenzying)
+        // INCREASED bonus for feeding activity - makes frenzy more likely!
         const otherFishHunting = cloudInfo.cloud.lakersChasing.length;
-        const frenzyBonus = Math.min(otherFishHunting * 0.3, 0.8); // Increased from 0.2/0.6 to 0.3/0.8
+        const frenzyBonus = Math.min(otherFishHunting * 0.5, 1.2); // Increased from 0.3/0.8 to 0.5/1.2
 
-        const huntScore = (hungerFactor * 0.6) + (distanceFactor * 0.3) + frenzyBonus;
+        // DIET PREFERENCE - Lake trout prefer certain prey species (based on real-world data)
+        const preySpecies = cloudInfo.cloud.speciesType;
+        const dietPreference = calculateDietPreference('lake_trout', preySpecies);
+        // Diet preferences: alewife 0.55, smelt 0.25, perch 0.08, sculpin 0.08, cisco 0.04
+
+        // Very hungry fish (>70%) are less picky about species
+        const pickyFactor = this.fish.hunger > 70 ? 0.3 : 1.0;
+        const dietBonus = dietPreference * pickyFactor * 0.4; // Can add up to 0.22 for preferred prey
+
+        // Base hunt score (hunger + distance + frenzy)
+        let huntScore = (hungerFactor * 0.6) + (distanceFactor * 0.3) + frenzyBonus;
+
+        // Apply diet preference bonus
+        huntScore += dietBonus;
+
+        // Rare species (cisco) get extra appeal bonus
+        if (preySpecies === 'cisco') {
+            huntScore += 0.15; // Rare delicacy!
+        }
 
         return huntScore > 0.35; // Lowered from 0.5 for more aggressive pursuit
     }
@@ -718,8 +819,9 @@ export class FishAI {
             // Check if we're close enough to eat the baitfish
             if (result.distance < 10) { // Increased from 8 for easier catches
                 // Consume the baitfish!
+                const preySpecies = this.targetBaitfishCloud.speciesType;
                 this.targetBaitfishCloud.consumeBaitfish();
-                this.fish.feedOnBaitfish();
+                this.fish.feedOnBaitfish(preySpecies); // Pass species for nutrition calculation
                 this.state = Constants.FISH_STATE.FEEDING;
                 this.decisionCooldown = 100; // Reduced from 200 for faster feeding cycle
                 return;

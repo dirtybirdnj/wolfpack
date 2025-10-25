@@ -180,6 +180,10 @@ export class BoatManager {
                     this.scene.showAchievement('Low Gas!', `${Math.floor(this.gasLevel)}% remaining`);
                 }
             }
+        } else {
+            // Regenerate gas when stationary (slowly)
+            this.gasLevel += 0.1; // Regenerate at 0.1 per frame when idle
+            this.gasLevel = Math.min(100, this.gasLevel);
         }
     }
 

@@ -1,15 +1,20 @@
 import GameConfig from '../config/GameConfig.js';
 import { Utils } from '../utils/Constants.js';
 import Baitfish from './Baitfish.js';
+import { getBaitfishSpecies } from '../config/SpeciesData.js';
 
 export class BaitfishCloud {
-    constructor(scene, worldX, y, count) {
+    constructor(scene, worldX, y, count, speciesType = 'alewife') {
         this.scene = scene;
         this.id = `cloud_${Date.now()}_${Math.random()}`;
         this.worldX = worldX; // World X coordinate (like fish)
         this.centerX = worldX; // Screen X coordinate (calculated in update)
         this.centerY = y;
         this.depth = y / GameConfig.DEPTH_SCALE;
+
+        // Species information
+        this.speciesType = speciesType;
+        this.speciesData = getBaitfishSpecies(speciesType);
 
         // Cloud properties
         this.baitfish = [];
@@ -37,16 +42,32 @@ export class BaitfishCloud {
     }
 
     spawnBaitfish(count) {
+        // Adjust spawn pattern based on species behavior
+        const schoolingDensity = this.speciesData.schoolingDensity;
+        let spreadX = 60;
+        let spreadY = 40;
+
+        if (schoolingDensity === 'very_high') {
+            // Tighter schools (smelt)
+            spreadX = 40;
+            spreadY = 25;
+        } else if (schoolingDensity === 'none') {
+            // Very spread out (sculpin)
+            spreadX = 100;
+            spreadY = 60;
+        }
+
         for (let i = 0; i < count; i++) {
-            // Spawn in a tight cluster for better schooling
-            const offsetX = Utils.randomBetween(-60, 60);  // Reduced from -160,160 for tighter schools
-            const offsetY = Utils.randomBetween(-40, 40);  // Reduced from -100,100 for tighter schools
+            // Spawn in a cluster based on species schooling behavior
+            const offsetX = Utils.randomBetween(-spreadX, spreadX);
+            const offsetY = Utils.randomBetween(-spreadY, spreadY);
 
             const baitfish = new Baitfish(
                 this.scene,
                 this.worldX + offsetX,  // Use world coordinates
                 this.centerY + offsetY,
-                this.id
+                this.id,
+                this.speciesType // Pass species type to baitfish
             );
 
             this.baitfish.push(baitfish);
@@ -69,21 +90,32 @@ export class BaitfishCloud {
             // Get scared quickly when lakers approach
             this.scaredLevel = Math.min(1.0, this.scaredLevel + 0.15);
 
-            // Scared clouds move faster and more erratically
-            const panicMultiplier = 1.5 + this.scaredLevel;
-            this.velocity.x *= panicMultiplier;
-            this.velocity.y *= panicMultiplier;
+            // Determine flee direction (away from nearest laker)
+            if (this.lakersChasing.length > 0) {
+                const nearestLaker = this.lakersChasing[0];
+                const dx = this.worldX - nearestLaker.worldX;
+                const dy = this.centerY - nearestLaker.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
 
-            // Add erratic movement
-            this.velocity.x += Utils.randomBetween(-0.8, 0.8);
-            this.velocity.y += Utils.randomBetween(-0.5, 0.5);
+                if (dist > 0) {
+                    // Flee directly away from laker with controlled speed
+                    const fleeSpeed = 1.2; // Moderate flee speed (was 2.5, too fast!)
+                    this.velocity.x = (dx / dist) * fleeSpeed;
+                    this.velocity.y = (dy / dist) * fleeSpeed * 0.7; // Slower vertical
+                }
+            } else {
+                // No specific laker, add erratic movement but keep it moderate
+                this.velocity.x += Utils.randomBetween(-0.4, 0.4);
+                this.velocity.y += Utils.randomBetween(-0.2, 0.2);
+            }
 
-            // Keep velocity reasonable but allow faster panic movement
-            this.velocity.x = Math.max(-2.5, Math.min(2.5, this.velocity.x));
-            this.velocity.y = Math.max(-1.5, Math.min(1.5, this.velocity.y));
+            // Keep velocity reasonable - slower than before to prevent line formation
+            this.velocity.x = Math.max(-1.5, Math.min(1.5, this.velocity.x));
+            this.velocity.y = Math.max(-1.0, Math.min(1.0, this.velocity.y));
 
-            // Condense the school when scared (0.3 to 0.6 based on fear)
-            this.spreadMultiplier = Math.max(0.3, 1.0 - (this.scaredLevel * 0.7));
+            // Condense the school when scared BUT not too tight (0.4 to 0.7 instead of 0.3-0.6)
+            // This prevents fish from bunching into a single-file line
+            this.spreadMultiplier = Math.max(0.4, 1.0 - (this.scaredLevel * 0.6));
         } else {
             // Calm down slowly when no lakers nearby
             this.scaredLevel = Math.max(0, this.scaredLevel - 0.02);
@@ -149,7 +181,15 @@ export class BaitfishCloud {
         // Update all baitfish in the cloud
         this.baitfish = this.baitfish.filter(baitfish => {
             if (!baitfish.consumed && baitfish.visible) {
-                baitfish.update({ worldX: this.worldX, x: this.centerX, y: this.centerY }, lakersNearby, this.spreadMultiplier, this.scaredLevel, nearbyZooplankton);
+                // Pass other baitfish in cloud for separation logic
+                baitfish.update(
+                    { worldX: this.worldX, x: this.centerX, y: this.centerY },
+                    lakersNearby,
+                    this.spreadMultiplier,
+                    this.scaredLevel,
+                    nearbyZooplankton,
+                    this.baitfish // Pass all baitfish for separation
+                );
                 return true;
             } else if (baitfish.consumed) {
                 baitfish.destroy();

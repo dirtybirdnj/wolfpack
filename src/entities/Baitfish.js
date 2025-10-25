@@ -1,8 +1,9 @@
 import GameConfig from '../config/GameConfig.js';
 import { Constants, Utils } from '../utils/Constants.js';
+import { getBaitfishSpecies } from '../config/SpeciesData.js';
 
 export class Baitfish {
-    constructor(scene, worldX, y, cloudId) {
+    constructor(scene, worldX, y, cloudId, speciesType = 'alewife') {
         this.scene = scene;
         this.worldX = worldX; // World X coordinate (like fish)
         this.x = worldX; // Screen X coordinate (calculated in update)
@@ -10,9 +11,20 @@ export class Baitfish {
         this.cloudId = cloudId;
         this.depth = y / GameConfig.DEPTH_SCALE;
 
-        // Baitfish properties (much smaller than lake trout)
-        this.size = Utils.randomBetween(0.5, 1.5); // inches
-        this.speed = Utils.randomBetween(0.8, 1.5);
+        // Load species-specific data
+        this.species = speciesType;
+        this.speciesData = getBaitfishSpecies(speciesType);
+
+        // Baitfish properties - now based on real species data
+        this.length = Utils.randomBetween(
+            this.speciesData.sizeRange.min,
+            this.speciesData.sizeRange.max
+        ); // inches (realistic scale)
+        this.size = this.length / 4; // visual size multiplier for rendering
+        this.speed = Utils.randomBetween(
+            this.speciesData.speed.base * 0.8,
+            this.speciesData.speed.base * 1.2
+        );
 
         // Movement behavior (use world coordinates)
         this.targetWorldX = worldX;
@@ -37,7 +49,7 @@ export class Baitfish {
         this.flickerPhase = Math.random() * Math.PI * 2;
     }
 
-    update(cloudCenter, lakersNearby = false, spreadMultiplier = 1.0, scaredLevel = 0, nearbyZooplankton = []) {
+    update(cloudCenter, lakersNearby = false, spreadMultiplier = 1.0, scaredLevel = 0, nearbyZooplankton = [], otherBaitfish = []) {
         if (this.consumed || !this.visible) {
             return;
         }
@@ -49,7 +61,7 @@ export class Baitfish {
             this.handleHuntingBehavior(nearbyZooplankton);
         } else {
             // Normal schooling behavior (confused behavior removed in main)
-            this.handleNormalBehavior(cloudCenter, lakersNearby, spreadMultiplier);
+            this.handleNormalBehavior(cloudCenter, lakersNearby, spreadMultiplier, otherBaitfish);
         }
 
         this.depth = this.y / GameConfig.DEPTH_SCALE;
@@ -102,7 +114,7 @@ export class Baitfish {
         this.render();
     }
 
-    handleNormalBehavior(cloudCenter, lakersNearby, spreadMultiplier) {
+    handleNormalBehavior(cloudCenter, lakersNearby, spreadMultiplier, otherBaitfish = []) {
         // Check if lakers are nearby - if so, panic!
         if (lakersNearby) {
             this.panicMode = true;
@@ -110,13 +122,45 @@ export class Baitfish {
 
         // Apply spread multiplier to schooling offset range
         // When safe: larger spread (spreadMultiplier ~2.0)
-        // When scared: condensed (spreadMultiplier ~0.3-0.6)
-        const maxOffsetX = 30 * spreadMultiplier;  // Reduced from 50 for tighter schooling
-        const maxOffsetY = 20 * spreadMultiplier;  // Reduced from 30 for tighter schooling
+        // When scared: condensed but maintain minimum separation
+        const minOffsetX = 25; // Minimum horizontal spread to prevent concentration
+        const minOffsetY = 15; // Minimum vertical spread
+        const maxOffsetX = Math.max(minOffsetX, 30 * spreadMultiplier);
+        const maxOffsetY = Math.max(minOffsetY, 20 * spreadMultiplier);
 
         // Schooling behavior - stay near cloud center with dynamic offset (use world coordinates)
         this.targetWorldX = cloudCenter.worldX + this.schoolingOffset.x * spreadMultiplier;
         this.targetY = cloudCenter.y + this.schoolingOffset.y * spreadMultiplier;
+
+        // SEPARATION LOGIC - prevent baitfish from overlapping (maintain cloud shape)
+        // Check for nearby baitfish and add repulsion force
+        let separationX = 0;
+        let separationY = 0;
+        let nearbyCount = 0;
+        const separationRadius = 8; // pixels - minimum distance between fish
+
+        otherBaitfish.forEach(other => {
+            if (other === this || !other.visible || other.consumed) return;
+
+            const dx = this.worldX - other.worldX;
+            const dy = this.y - other.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+
+            // If too close, add separation force
+            if (distance < separationRadius && distance > 0) {
+                // Stronger separation when very close
+                const strength = (separationRadius - distance) / separationRadius;
+                separationX += (dx / distance) * strength * 5;
+                separationY += (dy / distance) * strength * 5;
+                nearbyCount++;
+            }
+        });
+
+        // Apply separation forces to target position
+        if (nearbyCount > 0) {
+            this.targetWorldX += separationX;
+            this.targetY += separationY;
+        }
 
         // Add some random wandering (reduced for tighter schooling)
         if (Math.random() < 0.015) {  // Reduced from 0.02
@@ -135,11 +179,23 @@ export class Baitfish {
         const distance = Math.sqrt(dx * dx + dy * dy);
 
         if (distance > 1) {
-            const speedMultiplier = this.panicMode ? 2.5 : 1.2;  // Increased from 1.0 for tighter schooling
+            // Use species-specific panic speed - but cap it to prevent line formation
+            let speedMultiplier = 1.2; // Base multiplier for normal schooling
+
+            if (this.panicMode) {
+                // Reduce panic multiplier to prevent fish from catching up too fast
+                // This was causing line formation when cloud fled
+                const rawPanicMultiplier = this.speciesData.speed.panic / this.speciesData.speed.base;
+                speedMultiplier = Math.min(1.8, rawPanicMultiplier); // Cap at 1.8x (was 2.5x+)
+            }
+
             const moveSpeed = this.speed * speedMultiplier;
 
+            // When panicking, match vertical and horizontal speed better to maintain cloud shape
+            const verticalMultiplier = this.panicMode ? 0.9 : 0.7; // Faster vertical when panicking
+
             this.worldX += (dx / distance) * moveSpeed;
-            this.y += (dy / distance) * moveSpeed * 0.7; // Slower vertical movement
+            this.y += (dy / distance) * moveSpeed * verticalMultiplier;
         }
 
         // Reset panic after a while
@@ -220,8 +276,10 @@ export class Baitfish {
         this.flickerPhase += 0.1;
         const flickerIntensity = Math.sin(this.flickerPhase) * 0.3 + 0.7;
 
-        // Color - baitfish show up as lighter/silvery marks
-        const color = this.panicMode ? GameConfig.COLOR_BAITFISH_PANIC : GameConfig.COLOR_BAITFISH;
+        // Color - use species-specific colors
+        const color = this.panicMode
+            ? this.speciesData.panicColor
+            : this.speciesData.color;
 
         // Draw very faint trail
         for (let i = 0; i < this.sonarTrail.length - 1; i++) {
@@ -238,18 +296,90 @@ export class Baitfish {
         // Draw main baitfish (small mark)
         const bodySize = this.size + 1;
 
-        // Small elongated mark (baitfish are thin)
+        // Body shape varies by species
+        const appearance = this.speciesData.appearance;
+        const bodyLength = bodySize * 1.5 * appearance.length;
+        const bodyHeight = bodySize * 0.7 * appearance.height;
+
+        // Draw body based on species shape
         this.graphics.fillStyle(color, 0.6 * flickerIntensity);
-        this.graphics.fillEllipse(this.x, this.y, bodySize * 1.5, bodySize * 0.7);
+
+        if (appearance.bodyShape === 'slender') {
+            // Slender, elongated (smelt, cisco)
+            this.graphics.fillEllipse(this.x, this.y, bodyLength * 1.2, bodyHeight * 0.6);
+        } else if (appearance.bodyShape === 'deep') {
+            // Deep-bodied (alewife, perch)
+            this.graphics.fillEllipse(this.x, this.y, bodyLength, bodyHeight * 1.1);
+        } else if (appearance.bodyShape === 'bottom') {
+            // Bottom-dwelling (sculpin) - flattened
+            this.graphics.fillEllipse(this.x, this.y, bodyLength * 0.9, bodyHeight * 0.5);
+        } else {
+            // Default streamlined shape
+            this.graphics.fillEllipse(this.x, this.y, bodyLength, bodyHeight);
+        }
 
         // Brighter center dot
         this.graphics.fillStyle(color, 0.9 * flickerIntensity);
         this.graphics.fillCircle(this.x, this.y, bodySize * 0.4);
 
+        // Species-specific features
+        this.renderSpeciesFeatures(bodySize, color, flickerIntensity, appearance);
+
         // Occasional flash (like light reflecting off scales on sonar)
         if (Math.random() < 0.05) {
             this.graphics.lineStyle(1, color, 0.8);
             this.graphics.strokeCircle(this.x, this.y, bodySize * 2);
+        }
+    }
+
+    renderSpeciesFeatures(bodySize, color, flickerIntensity, appearance) {
+        // Render species-specific visual features
+
+        // Yellow Perch - vertical bars
+        if (this.species === 'yellow_perch' && appearance.features.includes('vertical_bars')) {
+            const barCount = appearance.barCount || 7;
+            const barColor = 0x2a3a1a; // dark bars
+            this.graphics.fillStyle(barColor, 0.5 * flickerIntensity);
+
+            for (let i = 0; i < barCount; i++) {
+                const barX = this.x - bodySize + (i * bodySize * 0.4);
+                this.graphics.fillRect(
+                    barX,
+                    this.y - bodySize * 0.6,
+                    bodySize * 0.12,
+                    bodySize * 1.2
+                );
+            }
+
+            // Orange fins
+            if (appearance.finColor) {
+                this.graphics.fillStyle(appearance.finColor, 0.6 * flickerIntensity);
+                this.graphics.fillCircle(this.x, this.y + bodySize * 0.5, bodySize * 0.3);
+            }
+        }
+
+        // Alewife - dark gill spot
+        if (this.species === 'alewife' && appearance.features.includes('dark_gill_spot')) {
+            this.graphics.fillStyle(0x2a3a4a, 0.7 * flickerIntensity);
+            this.graphics.fillCircle(this.x - bodySize * 0.5, this.y - bodySize * 0.2, bodySize * 0.2);
+        }
+
+        // Smelt, Cisco - iridescent sheen
+        if (appearance.features.includes('iridescent_sheen')) {
+            const iridColor = this.species === 'rainbow_smelt' ? 0xffccff : 0xccddff;
+            this.graphics.fillStyle(iridColor, 0.3 * flickerIntensity);
+            this.graphics.fillCircle(this.x, this.y, bodySize * 0.6);
+        }
+
+        // Sculpin - camouflage pattern
+        if (this.species === 'sculpin' && appearance.features.includes('camouflage_pattern')) {
+            // Random mottled spots
+            for (let i = 0; i < 3; i++) {
+                const spotX = this.x + Utils.randomBetween(-bodySize * 0.5, bodySize * 0.5);
+                const spotY = this.y + Utils.randomBetween(-bodySize * 0.3, bodySize * 0.3);
+                this.graphics.fillStyle(0x3a4a2a, 0.5 * flickerIntensity);
+                this.graphics.fillCircle(spotX, spotY, bodySize * 0.15);
+            }
         }
     }
 

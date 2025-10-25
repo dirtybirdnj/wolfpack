@@ -258,12 +258,18 @@ export class Lure {
     }
 
     reset() {
-        // Always reset to surface (y=0) and center on current ice hole
-        const currentHole = this.scene.iceHoleManager.getCurrentHole();
-        if (currentHole) {
-            this.x = currentHole.x;
+        // Reset to surface (y=0) and appropriate X position based on fishing mode
+        if (this.scene.iceHoleManager) {
+            // Ice fishing mode: center on current ice hole
+            const currentHole = this.scene.iceHoleManager.getCurrentHole();
+            if (currentHole) {
+                this.x = currentHole.x;
+            } else {
+                // Fallback to canvas center if no hole found
+                this.x = GameConfig.CANVAS_WIDTH / 2;
+            }
         } else {
-            // Fallback to canvas center if no hole found
+            // Kayak/Motorboat mode: reset to canvas center
             this.x = GameConfig.CANVAS_WIDTH / 2;
         }
 
