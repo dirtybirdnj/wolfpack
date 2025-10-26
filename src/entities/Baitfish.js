@@ -97,23 +97,36 @@ export class Baitfish {
         this.y = Math.max(minY, Math.min(maxY, this.y));
 
         // Convert world position to screen position based on player position
-        let playerWorldX;
+        // In nature simulation mode, use worldX directly as screen X
         if (this.scene.iceHoleManager) {
             const currentHole = this.scene.iceHoleManager.getCurrentHole();
-            playerWorldX = currentHole ? currentHole.x : this.worldX;
+            const playerWorldX = currentHole ? currentHole.x : this.worldX;
+            const offsetFromPlayer = this.worldX - playerWorldX;
+            this.x = (GameConfig.CANVAS_WIDTH / 2) + offsetFromPlayer;
+
+            // Remove if too far from player in world coordinates
+            const distanceFromPlayer = Math.abs(this.worldX - playerWorldX);
+            if (distanceFromPlayer > 600) {
+                this.visible = false;
+            }
         } else if (this.scene.boatManager) {
-            playerWorldX = this.scene.boatManager.getPlayerWorldX();
+            const playerWorldX = this.scene.boatManager.getPlayerWorldX();
+            const offsetFromPlayer = this.worldX - playerWorldX;
+            this.x = (GameConfig.CANVAS_WIDTH / 2) + offsetFromPlayer;
+
+            // Remove if too far from player in world coordinates
+            const distanceFromPlayer = Math.abs(this.worldX - playerWorldX);
+            if (distanceFromPlayer > 600) {
+                this.visible = false;
+            }
         } else {
-            playerWorldX = this.worldX; // Fallback
-        }
+            // Nature simulation mode - use worldX directly as screen X (no player to offset from)
+            this.x = this.worldX;
 
-        const offsetFromPlayer = this.worldX - playerWorldX;
-        this.x = (GameConfig.CANVAS_WIDTH / 2) + offsetFromPlayer;
-
-        // Remove if too far from player in world coordinates
-        const distanceFromPlayer = Math.abs(this.worldX - playerWorldX);
-        if (distanceFromPlayer > 600) {
-            this.visible = false;
+            // Remove if actually off screen (not player-relative)
+            if (this.worldX < -400 || this.worldX > GameConfig.CANVAS_WIDTH + 400) {
+                this.visible = false;
+            }
         }
 
         // Update sonar trail
