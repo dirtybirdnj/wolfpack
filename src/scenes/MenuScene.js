@@ -58,70 +58,70 @@ export class MenuScene extends Phaser.Scene {
             fontStyle: 'bold'
         }).setOrigin(0.5);
 
-        // 3x2 Grid layout for 6 combinations (3 fishing types x 2 modes)
-        const buttonWidth = 180;
+        // Single horizontal row layout for all 7 game modes
+        const buttonWidth = 130;
         const buttonHeight = 70;
-        const buttonSpacingX = 220;
-        const buttonSpacingY = 85;
+        const buttonSpacing = 25;
         const centerX = width / 2;
-        const startY = 370;
+        const buttonY = 400;
 
-        // Row 1: Ice Fishing
+        // Calculate starting X position to center all buttons
+        const totalWidth = (buttonWidth * 7) + (buttonSpacing * 6);
+        const startX = centerX - (totalWidth / 2) + (buttonWidth / 2);
+
+        // Create all 7 buttons in a single row
         const iceArcade = this.createModeButton(
-            centerX - buttonSpacingX / 2, startY,
-            'ICE FISHING',
-            'Arcade\n2 Minutes',
+            startX + (buttonWidth + buttonSpacing) * 0, buttonY,
+            'ICE',
+            'Arcade',
             { fishingType: GameConfig.FISHING_TYPE_ICE, gameMode: GameConfig.GAME_MODE_ARCADE },
             0
         );
 
         const iceUnlimited = this.createModeButton(
-            centerX + buttonSpacingX / 2, startY,
-            'ICE FISHING',
-            'Unlimited\nRelax & fish',
+            startX + (buttonWidth + buttonSpacing) * 1, buttonY,
+            'ICE',
+            'Unlimited',
             { fishingType: GameConfig.FISHING_TYPE_ICE, gameMode: GameConfig.GAME_MODE_UNLIMITED },
             1
         );
 
-        // Row 2: Kayak Fishing
         const kayakArcade = this.createModeButton(
-            centerX - buttonSpacingX / 2, startY + buttonSpacingY,
-            'KAYAK FISHING',
-            'Arcade\n2 Minutes',
+            startX + (buttonWidth + buttonSpacing) * 2, buttonY,
+            'KAYAK',
+            'Arcade',
             { fishingType: GameConfig.FISHING_TYPE_KAYAK, gameMode: GameConfig.GAME_MODE_ARCADE },
             2
         );
 
         const kayakUnlimited = this.createModeButton(
-            centerX + buttonSpacingX / 2, startY + buttonSpacingY,
-            'KAYAK FISHING',
-            'Unlimited\nSummer paddle',
+            startX + (buttonWidth + buttonSpacing) * 3, buttonY,
+            'KAYAK',
+            'Unlimited',
             { fishingType: GameConfig.FISHING_TYPE_KAYAK, gameMode: GameConfig.GAME_MODE_UNLIMITED },
             3
         );
 
-        // Row 3: Motor Boat Fishing
         const boatArcade = this.createModeButton(
-            centerX - buttonSpacingX / 2, startY + buttonSpacingY * 2,
-            'MOTOR BOAT',
-            'Arcade\n2 Minutes',
+            startX + (buttonWidth + buttonSpacing) * 4, buttonY,
+            'BOAT',
+            'Arcade',
             { fishingType: GameConfig.FISHING_TYPE_MOTORBOAT, gameMode: GameConfig.GAME_MODE_ARCADE },
             4
         );
 
         const boatUnlimited = this.createModeButton(
-            centerX + buttonSpacingX / 2, startY + buttonSpacingY * 2,
-            'MOTOR BOAT',
-            'Unlimited\nSummer cruise',
+            startX + (buttonWidth + buttonSpacing) * 5, buttonY,
+            'BOAT',
+            'Unlimited',
             { fishingType: GameConfig.FISHING_TYPE_MOTORBOAT, gameMode: GameConfig.GAME_MODE_UNLIMITED },
             5
         );
 
-        // Row 4: Nature Simulation (centered, single button)
         const natureSimulation = this.createModeButton(
-            centerX, startY + buttonSpacingY * 3,
-            'NATURE SIMULATION',
-            'Observe AI\nNo player',
+            startX + (buttonWidth + buttonSpacing) * 6, buttonY,
+            'NATURE',
+            'Simulation',
             { fishingType: GameConfig.FISHING_TYPE_NATURE_SIMULATION, gameMode: null },
             6
         );
@@ -151,14 +151,10 @@ export class MenuScene extends Phaser.Scene {
             this.gamepadState = {
                 lastDpadLeft: false,
                 lastDpadRight: false,
-                lastDpadUp: false,
-                lastDpadDown: false,
                 lastX: false,
                 lastA: false,
                 lastAnalogLeft: false,
-                lastAnalogRight: false,
-                lastAnalogUp: false,
-                lastAnalogDown: false
+                lastAnalogRight: false
             };
 
             // Highlight the first button
@@ -270,51 +266,17 @@ export class MenuScene extends Phaser.Scene {
     }
 
     update() {
-        // Handle keyboard navigation - 3x2 grid + centered nature simulation button
+        // Handle keyboard navigation - single horizontal row
         if (Phaser.Input.Keyboard.JustDown(this.cursors.left)) {
-            // Move left in grid (toggle between columns: 0↔1, 2↔3, 4↔5)
-            // Nature simulation (6) stays on 6
-            if (this.selectedMode !== 6) {
-                if (this.selectedMode % 2 === 1) {
-                    this.selectedMode--;
-                } else {
-                    this.selectedMode++;
-                }
+            if (this.selectedMode > 0) {
+                this.selectedMode--;
                 this.updateSelection();
             }
         }
 
         if (Phaser.Input.Keyboard.JustDown(this.cursors.right)) {
-            // Move right in grid (same as left - toggle)
-            // Nature simulation (6) stays on 6
-            if (this.selectedMode !== 6) {
-                if (this.selectedMode % 2 === 1) {
-                    this.selectedMode--;
-                } else {
-                    this.selectedMode++;
-                }
-                this.updateSelection();
-            }
-        }
-
-        if (Phaser.Input.Keyboard.JustDown(this.cursors.up)) {
-            // Move up in grid (0→0, 1→1, 2→0, 3→1, 4→2, 5→3, 6→4)
-            if (this.selectedMode === 6) {
-                this.selectedMode = 4; // From nature simulation to motor boat row
-                this.updateSelection();
-            } else if (this.selectedMode >= 2) {
-                this.selectedMode -= 2;
-                this.updateSelection();
-            }
-        }
-
-        if (Phaser.Input.Keyboard.JustDown(this.cursors.down)) {
-            // Move down in grid (0→2, 1→3, 2→4, 3→5, 4→6, 5→6)
-            if (this.selectedMode === 4 || this.selectedMode === 5) {
-                this.selectedMode = 6; // From motor boat row to nature simulation
-                this.updateSelection();
-            } else if (this.selectedMode < 4) {
-                this.selectedMode += 2;
+            if (this.selectedMode < this.buttons.length - 1) {
+                this.selectedMode++;
                 this.updateSelection();
             }
         }
@@ -329,115 +291,50 @@ export class MenuScene extends Phaser.Scene {
 
         // Handle gamepad navigation
         if (this.gamepadDetected && window.gamepadManager && window.gamepadManager.isConnected()) {
-            // D-Pad navigation - 3x2 grid + centered nature simulation button
+            // D-Pad navigation - single horizontal row
             const dpadLeft = window.gamepadManager.getButton('DpadLeft');
             const dpadRight = window.gamepadManager.getButton('DpadRight');
-            const dpadUp = window.gamepadManager.getButton('DpadUp');
-            const dpadDown = window.gamepadManager.getButton('DpadDown');
 
             if (dpadLeft.pressed && !this.gamepadState.lastDpadLeft) {
-                if (this.selectedMode !== 6) {
-                    if (this.selectedMode % 2 === 1) {
-                        this.selectedMode--;
-                    } else {
-                        this.selectedMode++;
-                    }
+                if (this.selectedMode > 0) {
+                    this.selectedMode--;
                     this.updateSelection();
                 }
             }
 
             if (dpadRight.pressed && !this.gamepadState.lastDpadRight) {
-                if (this.selectedMode !== 6) {
-                    if (this.selectedMode % 2 === 1) {
-                        this.selectedMode--;
-                    } else {
-                        this.selectedMode++;
-                    }
-                    this.updateSelection();
-                }
-            }
-
-            if (dpadUp.pressed && !this.gamepadState.lastDpadUp) {
-                if (this.selectedMode === 6) {
-                    this.selectedMode = 4;
-                    this.updateSelection();
-                } else if (this.selectedMode >= 2) {
-                    this.selectedMode -= 2;
-                    this.updateSelection();
-                }
-            }
-
-            if (dpadDown.pressed && !this.gamepadState.lastDpadDown) {
-                if (this.selectedMode === 4 || this.selectedMode === 5) {
-                    this.selectedMode = 6;
-                    this.updateSelection();
-                } else if (this.selectedMode < 4) {
-                    this.selectedMode += 2;
+                if (this.selectedMode < this.buttons.length - 1) {
+                    this.selectedMode++;
                     this.updateSelection();
                 }
             }
 
             this.gamepadState.lastDpadLeft = dpadLeft.pressed;
             this.gamepadState.lastDpadRight = dpadRight.pressed;
-            this.gamepadState.lastDpadUp = dpadUp.pressed;
-            this.gamepadState.lastDpadDown = dpadDown.pressed;
 
-            // Analog stick navigation - 3x2 grid + centered nature simulation button
+            // Analog stick navigation - single horizontal row
             const leftStickX = window.gamepadManager.getAxis('LeftStickX');
-            const leftStickY = window.gamepadManager.getAxis('LeftStickY');
             const analogThreshold = 0.5;
 
             const analogLeft = leftStickX < -analogThreshold;
             const analogRight = leftStickX > analogThreshold;
-            const analogUp = leftStickY < -analogThreshold;
-            const analogDown = leftStickY > analogThreshold;
 
             if (analogLeft && !this.gamepadState.lastAnalogLeft) {
-                if (this.selectedMode !== 6) {
-                    if (this.selectedMode % 2 === 1) {
-                        this.selectedMode--;
-                    } else {
-                        this.selectedMode++;
-                    }
+                if (this.selectedMode > 0) {
+                    this.selectedMode--;
                     this.updateSelection();
                 }
             }
 
             if (analogRight && !this.gamepadState.lastAnalogRight) {
-                if (this.selectedMode !== 6) {
-                    if (this.selectedMode % 2 === 1) {
-                        this.selectedMode--;
-                    } else {
-                        this.selectedMode++;
-                    }
-                    this.updateSelection();
-                }
-            }
-
-            if (analogUp && !this.gamepadState.lastAnalogUp) {
-                if (this.selectedMode === 6) {
-                    this.selectedMode = 4;
-                    this.updateSelection();
-                } else if (this.selectedMode >= 2) {
-                    this.selectedMode -= 2;
-                    this.updateSelection();
-                }
-            }
-
-            if (analogDown && !this.gamepadState.lastAnalogDown) {
-                if (this.selectedMode === 4 || this.selectedMode === 5) {
-                    this.selectedMode = 6;
-                    this.updateSelection();
-                } else if (this.selectedMode < 4) {
-                    this.selectedMode += 2;
+                if (this.selectedMode < this.buttons.length - 1) {
+                    this.selectedMode++;
                     this.updateSelection();
                 }
             }
 
             this.gamepadState.lastAnalogLeft = analogLeft;
             this.gamepadState.lastAnalogRight = analogRight;
-            this.gamepadState.lastAnalogUp = analogUp;
-            this.gamepadState.lastAnalogDown = analogDown;
 
             // Confirm with X or A button
             const xButton = window.gamepadManager.getButton('X');

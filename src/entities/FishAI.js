@@ -178,6 +178,25 @@ export class FishAI {
 
         this.lastDecisionTime = currentTime;
 
+        // PRIORITY: Check for baitfish clouds (natural food source)
+        // Fish prioritize real food over lures, especially when hungry
+        const nearbyBaitfishCloud = this.findNearestBaitfishCloud(baitfishClouds);
+
+        // In nature simulation mode (no lure), fish only hunt baitfish or idle
+        if (!lure) {
+            // Nature simulation mode - no lure to track
+            if (nearbyBaitfishCloud && this.shouldHuntBaitfish(nearbyBaitfishCloud)) {
+                this.startHuntingBaitfish(nearbyBaitfishCloud);
+            } else if (this.state === Constants.FISH_STATE.HUNTING_BAITFISH) {
+                this.huntBaitfish(nearbyBaitfishCloud);
+            } else {
+                // Just idle swim naturally
+                this.state = Constants.FISH_STATE.IDLE;
+            }
+            return;
+        }
+
+        // Normal fishing mode - lure exists
         // Calculate distance and relationship to lure
         const distance = Utils.calculateDistance(
             this.fish.x, this.fish.y,
@@ -189,10 +208,6 @@ export class FishAI {
 
         // Detect frenzy feeding - other fish chasing excites this one
         this.detectFrenzy(lure, allFish);
-
-        // PRIORITY: Check for baitfish clouds (natural food source)
-        // Fish prioritize real food over lures, especially when hungry
-        const nearbyBaitfishCloud = this.findNearestBaitfishCloud(baitfishClouds);
 
         // State machine for fish behavior
         switch (this.state) {
