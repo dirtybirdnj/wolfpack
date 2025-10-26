@@ -34,14 +34,17 @@ export class Fish {
         if (scene.iceHoleManager) {
             const currentHole = scene.iceHoleManager.getCurrentHole();
             playerWorldX = currentHole ? currentHole.x : x;
+            const offsetFromPlayer = this.worldX - playerWorldX;
+            this.x = (GameConfig.CANVAS_WIDTH / 2) + offsetFromPlayer;
         } else if (scene.boatManager) {
             playerWorldX = scene.boatManager.getPlayerWorldX();
+            const offsetFromPlayer = this.worldX - playerWorldX;
+            this.x = (GameConfig.CANVAS_WIDTH / 2) + offsetFromPlayer;
         } else {
-            playerWorldX = x; // Fallback
+            // Nature simulation mode - use worldX directly as screen X (no player to offset from)
+            this.x = this.worldX;
         }
 
-        const offsetFromPlayer = this.worldX - playerWorldX;
-        this.x = (GameConfig.CANVAS_WIDTH / 2) + offsetFromPlayer;
         this.y = y;
         this.depth = y / GameConfig.DEPTH_SCALE;
 
@@ -374,30 +377,43 @@ export class Fish {
             this.y += movement.y;
             this.depth = this.y / GameConfig.DEPTH_SCALE;
 
-            // Get player's world position
+            // Get player's world position (or use nature simulation mode)
             let playerWorldX;
+            let isNatureSimulation = false;
+
             if (this.scene.iceHoleManager) {
                 const currentHole = this.scene.iceHoleManager.getCurrentHole();
                 playerWorldX = currentHole ? currentHole.x : this.worldX;
             } else if (this.scene.boatManager) {
                 playerWorldX = this.scene.boatManager.getPlayerWorldX();
             } else {
-                playerWorldX = this.worldX; // Fallback
+                // Nature simulation mode - no player to track
+                isNatureSimulation = true;
+                playerWorldX = GameConfig.CANVAS_WIDTH / 2; // Center reference for distance checks
             }
 
             // Check if fish has swum too far from player - mark for removal if so
             // Fish should be able to spawn off-screen, swim past player, and exit the other side
-            const maxDistanceFromPlayer = 800; // Maximum world units before removal
-            const distanceFromPlayer = Math.abs(this.worldX - playerWorldX);
+            // In nature simulation, use screen edges instead of player distance
+            if (isNatureSimulation) {
+                // In nature mode, remove fish that swim too far off screen
+                if (this.worldX < -400 || this.worldX > GameConfig.CANVAS_WIDTH + 400) {
+                    this.visible = false;
+                    return;
+                }
+            } else {
+                const maxDistanceFromPlayer = 800; // Maximum world units before removal
+                const distanceFromPlayer = Math.abs(this.worldX - playerWorldX);
 
-            // Mark fish invisible when they've swum far enough away (for cleanup)
-            if (distanceFromPlayer > maxDistanceFromPlayer) {
-                this.visible = false;
-                return; // Skip remaining updates for this fish
+                // Mark fish invisible when they've swum far enough away (for cleanup)
+                if (distanceFromPlayer > maxDistanceFromPlayer) {
+                    this.visible = false;
+                    return; // Skip remaining updates for this fish
+                }
             }
 
             // Get lake bottom depth at fish's current position
-            let bottomDepth = GameConfig.MAX_DEPTH;
+            let bottomDepth = this.scene.maxDepth || GameConfig.MAX_DEPTH;
             if (this.scene.boatManager) {
                 // Convert fish screen position to game coordinates
                 const offsetFromPlayer = this.x - (GameConfig.CANVAS_WIDTH / 2);
@@ -413,6 +429,7 @@ export class Fish {
                     bottomDepth = closest.y / GameConfig.DEPTH_SCALE;
                 }
             }
+            // If neither manager exists (nature simulation), use scene.maxDepth which was already set above
 
             // Keep fish above lake bottom (with 5 feet buffer)
             const maxY = (bottomDepth - 5) * GameConfig.DEPTH_SCALE;
@@ -421,8 +438,13 @@ export class Fish {
             this.y = Math.max(10, Math.min(maxY, this.y));
 
             // Convert world position to screen position based on player position
-            const offsetFromPlayer = this.worldX - playerWorldX;
-            this.x = (GameConfig.CANVAS_WIDTH / 2) + offsetFromPlayer;
+            // In nature simulation mode, worldX IS the screen X (no conversion needed)
+            if (isNatureSimulation) {
+                this.x = this.worldX;
+            } else {
+                const offsetFromPlayer = this.worldX - playerWorldX;
+                this.x = (GameConfig.CANVAS_WIDTH / 2) + offsetFromPlayer;
+            }
 
             // Allow fish to swim off-screen - don't clamp to screen boundaries
             // Fish can spawn off-screen, swim through, and exit the other side

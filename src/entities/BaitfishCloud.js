@@ -208,18 +208,20 @@ export class BaitfishCloud {
         this.centerY = Math.max(10, Math.min(maxY, this.centerY));
 
         // Convert world position to screen position based on player position
-        let playerWorldX;
+        // In nature simulation mode, use worldX directly as screen X
         if (this.scene.iceHoleManager) {
             const currentHole = this.scene.iceHoleManager.getCurrentHole();
-            playerWorldX = currentHole ? currentHole.x : this.worldX;
+            const playerWorldX = currentHole ? currentHole.x : this.worldX;
+            const offsetFromPlayer = this.worldX - playerWorldX;
+            this.centerX = (GameConfig.CANVAS_WIDTH / 2) + offsetFromPlayer;
         } else if (this.scene.boatManager) {
-            playerWorldX = this.scene.boatManager.getPlayerWorldX();
+            const playerWorldX = this.scene.boatManager.getPlayerWorldX();
+            const offsetFromPlayer = this.worldX - playerWorldX;
+            this.centerX = (GameConfig.CANVAS_WIDTH / 2) + offsetFromPlayer;
         } else {
-            playerWorldX = this.worldX; // Fallback
+            // Nature simulation mode - use worldX directly as screen X (no player to offset from)
+            this.centerX = this.worldX;
         }
-
-        const offsetFromPlayer = this.worldX - playerWorldX;
-        this.centerX = (GameConfig.CANVAS_WIDTH / 2) + offsetFromPlayer;
 
         // Update all baitfish in the cloud
         this.baitfish = this.baitfish.filter(baitfish => {
