@@ -310,8 +310,15 @@ export class SpawningSystem {
         // Create the baitfish cloud with species type
         const cloud = new BaitfishCloud(this.scene, worldX, y, cloudSize, speciesType);
 
-        // Set initial drift direction (drift toward and past player)
-        cloud.velocity.x = fromLeft ? Utils.randomBetween(0.3, 0.8) : Utils.randomBetween(-0.8, -0.3);
+        // Set initial drift direction
+        if (isNatureSimulation) {
+            // Nature mode: random horizontal drift in either direction (not toward center!)
+            cloud.velocity.x = Utils.randomBetween(-0.8, 0.8);
+            cloud.velocity.y = Utils.randomBetween(-0.3, 0.3);
+        } else {
+            // Normal mode: drift toward and past player
+            cloud.velocity.x = fromLeft ? Utils.randomBetween(0.3, 0.8) : Utils.randomBetween(-0.8, -0.3);
+        }
 
         this.scene.baitfishClouds.push(cloud);
 

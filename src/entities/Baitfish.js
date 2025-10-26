@@ -76,7 +76,7 @@ export class Baitfish {
         this.depth = this.y / GameConfig.DEPTH_SCALE;
 
         // Get lake bottom depth at baitfish's current world position
-        let bottomDepth = GameConfig.MAX_DEPTH;
+        let bottomDepth = this.scene.maxDepth || GameConfig.MAX_DEPTH;
         if (this.scene.boatManager) {
             bottomDepth = this.scene.boatManager.getDepthAtPosition(this.worldX);
         } else if (this.scene.iceHoleManager) {
@@ -89,12 +89,12 @@ export class Baitfish {
                 bottomDepth = closest.y / GameConfig.DEPTH_SCALE;
             }
         }
+        // If neither manager exists (nature simulation), use scene.maxDepth which was already set above
 
-        // Keep above lake bottom (with 5 feet buffer)
-        const maxY = (bottomDepth - 5) * GameConfig.DEPTH_SCALE;
-
-        // Keep in bounds
-        this.y = Math.max(10, Math.min(maxY, this.y));
+        // Keep in vertical bounds based on water depth
+        const minY = 3 * GameConfig.DEPTH_SCALE; // 3 feet from surface (baitfish can be shallower than clouds)
+        const maxY = Math.max(minY + 5, (bottomDepth - 3) * GameConfig.DEPTH_SCALE); // 3 feet from bottom
+        this.y = Math.max(minY, Math.min(maxY, this.y));
 
         // Convert world position to screen position based on player position
         let playerWorldX;
