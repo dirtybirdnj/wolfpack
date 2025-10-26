@@ -3,7 +3,7 @@ import GameConfig from '../config/GameConfig.js';
 export class MenuScene extends Phaser.Scene {
     constructor() {
         super({ key: 'MenuScene' });
-        this.selectedMode = 0; // 0-5 for 6 game combinations
+        this.selectedMode = 0; // 0-6 for 7 game combinations (6 + nature simulation)
         this.buttons = [];
     }
 
@@ -117,7 +117,16 @@ export class MenuScene extends Phaser.Scene {
             5
         );
 
-        this.buttons = [iceArcade, iceUnlimited, kayakArcade, kayakUnlimited, boatArcade, boatUnlimited];
+        // Row 4: Nature Simulation (centered, single button)
+        const natureSimulation = this.createModeButton(
+            centerX, startY + buttonSpacingY * 3,
+            'NATURE SIMULATION',
+            'Observe AI\nNo player',
+            { fishingType: GameConfig.FISHING_TYPE_NATURE_SIMULATION, gameMode: null },
+            6
+        );
+
+        this.buttons = [iceArcade, iceUnlimited, kayakArcade, kayakUnlimited, boatArcade, boatUnlimited, natureSimulation];
 
         // Controls hint
         const controlsY = 570;
@@ -261,38 +270,50 @@ export class MenuScene extends Phaser.Scene {
     }
 
     update() {
-        // Handle keyboard navigation - 3x2 grid navigation
+        // Handle keyboard navigation - 3x2 grid + centered nature simulation button
         if (Phaser.Input.Keyboard.JustDown(this.cursors.left)) {
             // Move left in grid (toggle between columns: 0↔1, 2↔3, 4↔5)
-            if (this.selectedMode % 2 === 1) {
-                this.selectedMode--;
-            } else {
-                this.selectedMode++;
+            // Nature simulation (6) stays on 6
+            if (this.selectedMode !== 6) {
+                if (this.selectedMode % 2 === 1) {
+                    this.selectedMode--;
+                } else {
+                    this.selectedMode++;
+                }
+                this.updateSelection();
             }
-            this.updateSelection();
         }
 
         if (Phaser.Input.Keyboard.JustDown(this.cursors.right)) {
             // Move right in grid (same as left - toggle)
-            if (this.selectedMode % 2 === 1) {
-                this.selectedMode--;
-            } else {
-                this.selectedMode++;
+            // Nature simulation (6) stays on 6
+            if (this.selectedMode !== 6) {
+                if (this.selectedMode % 2 === 1) {
+                    this.selectedMode--;
+                } else {
+                    this.selectedMode++;
+                }
+                this.updateSelection();
             }
-            this.updateSelection();
         }
 
         if (Phaser.Input.Keyboard.JustDown(this.cursors.up)) {
-            // Move up in grid (0→0, 1→1, 2→0, 3→1, 4→2, 5→3)
-            if (this.selectedMode >= 2) {
+            // Move up in grid (0→0, 1→1, 2→0, 3→1, 4→2, 5→3, 6→4)
+            if (this.selectedMode === 6) {
+                this.selectedMode = 4; // From nature simulation to motor boat row
+                this.updateSelection();
+            } else if (this.selectedMode >= 2) {
                 this.selectedMode -= 2;
                 this.updateSelection();
             }
         }
 
         if (Phaser.Input.Keyboard.JustDown(this.cursors.down)) {
-            // Move down in grid (0→2, 1→3, 2→4, 3→5, 4→4, 5→5)
-            if (this.selectedMode < 4) {
+            // Move down in grid (0→2, 1→3, 2→4, 3→5, 4→6, 5→6)
+            if (this.selectedMode === 4 || this.selectedMode === 5) {
+                this.selectedMode = 6; // From motor boat row to nature simulation
+                this.updateSelection();
+            } else if (this.selectedMode < 4) {
                 this.selectedMode += 2;
                 this.updateSelection();
             }
@@ -308,39 +329,49 @@ export class MenuScene extends Phaser.Scene {
 
         // Handle gamepad navigation
         if (this.gamepadDetected && window.gamepadManager && window.gamepadManager.isConnected()) {
-            // D-Pad navigation - 3x2 grid
+            // D-Pad navigation - 3x2 grid + centered nature simulation button
             const dpadLeft = window.gamepadManager.getButton('DpadLeft');
             const dpadRight = window.gamepadManager.getButton('DpadRight');
             const dpadUp = window.gamepadManager.getButton('DpadUp');
             const dpadDown = window.gamepadManager.getButton('DpadDown');
 
             if (dpadLeft.pressed && !this.gamepadState.lastDpadLeft) {
-                if (this.selectedMode % 2 === 1) {
-                    this.selectedMode--;
-                } else {
-                    this.selectedMode++;
+                if (this.selectedMode !== 6) {
+                    if (this.selectedMode % 2 === 1) {
+                        this.selectedMode--;
+                    } else {
+                        this.selectedMode++;
+                    }
+                    this.updateSelection();
                 }
-                this.updateSelection();
             }
 
             if (dpadRight.pressed && !this.gamepadState.lastDpadRight) {
-                if (this.selectedMode % 2 === 1) {
-                    this.selectedMode--;
-                } else {
-                    this.selectedMode++;
+                if (this.selectedMode !== 6) {
+                    if (this.selectedMode % 2 === 1) {
+                        this.selectedMode--;
+                    } else {
+                        this.selectedMode++;
+                    }
+                    this.updateSelection();
                 }
-                this.updateSelection();
             }
 
             if (dpadUp.pressed && !this.gamepadState.lastDpadUp) {
-                if (this.selectedMode >= 2) {
+                if (this.selectedMode === 6) {
+                    this.selectedMode = 4;
+                    this.updateSelection();
+                } else if (this.selectedMode >= 2) {
                     this.selectedMode -= 2;
                     this.updateSelection();
                 }
             }
 
             if (dpadDown.pressed && !this.gamepadState.lastDpadDown) {
-                if (this.selectedMode < 4) {
+                if (this.selectedMode === 4 || this.selectedMode === 5) {
+                    this.selectedMode = 6;
+                    this.updateSelection();
+                } else if (this.selectedMode < 4) {
                     this.selectedMode += 2;
                     this.updateSelection();
                 }
@@ -351,7 +382,7 @@ export class MenuScene extends Phaser.Scene {
             this.gamepadState.lastDpadUp = dpadUp.pressed;
             this.gamepadState.lastDpadDown = dpadDown.pressed;
 
-            // Analog stick navigation - 3x2 grid
+            // Analog stick navigation - 3x2 grid + centered nature simulation button
             const leftStickX = window.gamepadManager.getAxis('LeftStickX');
             const leftStickY = window.gamepadManager.getAxis('LeftStickY');
             const analogThreshold = 0.5;
@@ -362,32 +393,42 @@ export class MenuScene extends Phaser.Scene {
             const analogDown = leftStickY > analogThreshold;
 
             if (analogLeft && !this.gamepadState.lastAnalogLeft) {
-                if (this.selectedMode % 2 === 1) {
-                    this.selectedMode--;
-                } else {
-                    this.selectedMode++;
+                if (this.selectedMode !== 6) {
+                    if (this.selectedMode % 2 === 1) {
+                        this.selectedMode--;
+                    } else {
+                        this.selectedMode++;
+                    }
+                    this.updateSelection();
                 }
-                this.updateSelection();
             }
 
             if (analogRight && !this.gamepadState.lastAnalogRight) {
-                if (this.selectedMode % 2 === 1) {
-                    this.selectedMode--;
-                } else {
-                    this.selectedMode++;
+                if (this.selectedMode !== 6) {
+                    if (this.selectedMode % 2 === 1) {
+                        this.selectedMode--;
+                    } else {
+                        this.selectedMode++;
+                    }
+                    this.updateSelection();
                 }
-                this.updateSelection();
             }
 
             if (analogUp && !this.gamepadState.lastAnalogUp) {
-                if (this.selectedMode >= 2) {
+                if (this.selectedMode === 6) {
+                    this.selectedMode = 4;
+                    this.updateSelection();
+                } else if (this.selectedMode >= 2) {
                     this.selectedMode -= 2;
                     this.updateSelection();
                 }
             }
 
             if (analogDown && !this.gamepadState.lastAnalogDown) {
-                if (this.selectedMode < 4) {
+                if (this.selectedMode === 4 || this.selectedMode === 5) {
+                    this.selectedMode = 6;
+                    this.updateSelection();
+                } else if (this.selectedMode < 4) {
                     this.selectedMode += 2;
                     this.updateSelection();
                 }
@@ -421,12 +462,18 @@ export class MenuScene extends Phaser.Scene {
         this.registry.set('gameMode', modeConfig.gameMode);
 
         // Determine which scene to start
-        // Kayak and motorboat modes start with navigation (top-down lake view)
-        // Ice fishing goes directly to GameScene (no navigation needed on ice)
-        const startingScene = (modeConfig.fishingType === GameConfig.FISHING_TYPE_KAYAK ||
-                               modeConfig.fishingType === GameConfig.FISHING_TYPE_MOTORBOAT)
-                               ? 'NavigationScene'
-                               : 'GameScene';
+        let startingScene;
+        if (modeConfig.fishingType === GameConfig.FISHING_TYPE_NATURE_SIMULATION) {
+            // Nature simulation goes to its own scene
+            startingScene = 'NatureSimulationScene';
+        } else if (modeConfig.fishingType === GameConfig.FISHING_TYPE_KAYAK ||
+                   modeConfig.fishingType === GameConfig.FISHING_TYPE_MOTORBOAT) {
+            // Kayak and motorboat modes start with navigation (top-down lake view)
+            startingScene = 'NavigationScene';
+        } else {
+            // Ice fishing goes directly to GameScene (no navigation needed on ice)
+            startingScene = 'GameScene';
+        }
 
         console.log(`Starting ${modeConfig.fishingType} fishing in ${modeConfig.gameMode} mode`);
         console.log(`-> Going to ${startingScene}`);

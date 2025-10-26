@@ -70,7 +70,10 @@ export class SpawningSystem {
         }
 
         // Get player position in world coordinates (depends on fishing type)
+        // In nature simulation mode, there is no player, so spawn randomly across screen
         let playerWorldX;
+        let isNatureSimulation = false;
+
         if (this.scene.iceHoleManager) {
             const currentHole = this.scene.iceHoleManager.getCurrentHole();
             if (!currentHole) return null;
@@ -79,7 +82,9 @@ export class SpawningSystem {
             // Use getPlayerWorldX() to get actual world coordinates, not game coordinates
             playerWorldX = this.scene.boatManager.getPlayerWorldX();
         } else {
-            return null; // No manager available
+            // Nature simulation mode - spawn randomly across the screen
+            isNatureSimulation = true;
+            playerWorldX = GameConfig.CANVAS_WIDTH / 2;
         }
 
         // Select species based on Lake Champlain distribution
@@ -151,13 +156,26 @@ export class SpawningSystem {
 
         // Spawn fish in world coordinates relative to player's hole
         // Fish spawn at random distances around the player (200-400 units away)
-        const spawnDistance = Utils.randomBetween(200, 400);
-        const fromLeft = Math.random() < 0.5;
-        const worldX = playerWorldX + (fromLeft ? -spawnDistance : spawnDistance);
+        // In nature simulation mode, spawn across full screen width
+        let worldX, fromLeft;
+
+        if (isNatureSimulation) {
+            // Nature simulation: spawn randomly across screen
+            const screenLeft = -200;
+            const screenRight = GameConfig.CANVAS_WIDTH + 200;
+            worldX = Utils.randomBetween(screenLeft, screenRight);
+            fromLeft = Math.random() < 0.5;
+        } else {
+            // Normal fishing mode: spawn relative to player
+            const spawnDistance = Utils.randomBetween(200, 400);
+            fromLeft = Math.random() < 0.5;
+            worldX = playerWorldX + (fromLeft ? -spawnDistance : spawnDistance);
+        }
+
         const y = depth * GameConfig.DEPTH_SCALE;
 
         // Create the fish with species parameter (worldX will be used internally, x will be calculated for screen)
-        const fish = new Fish(this.scene, worldX, y, size, this.scene.fishingType, species);
+        const fish = new Fish(this.scene, worldX, y, size, this.scene.fishingType || 'observation', species);
 
         // Set initial movement direction - fish swim toward and past the player
         if (fromLeft) {
@@ -258,7 +276,10 @@ export class SpawningSystem {
         depth = Math.min(depth, maxBaitfishDepth);
 
         // Get player world position
+        // In nature simulation mode, spawn randomly across screen
         let playerWorldX;
+        let isNatureSimulation = false;
+
         if (this.scene.iceHoleManager) {
             const currentHole = this.scene.iceHoleManager.getCurrentHole();
             playerWorldX = currentHole ? currentHole.x : 0;
@@ -266,13 +287,24 @@ export class SpawningSystem {
             // Use getPlayerWorldX() to get actual world coordinates, not game coordinates
             playerWorldX = this.scene.boatManager.getPlayerWorldX();
         } else {
-            playerWorldX = 0;
+            isNatureSimulation = true;
+            playerWorldX = GameConfig.CANVAS_WIDTH / 2;
         }
 
         // Spawn in world coordinates at a distance from player (200-400 units away)
-        const spawnDistance = Utils.randomBetween(200, 400);
+        // In nature simulation mode, spawn randomly across screen
+        let worldX;
         const fromLeft = Math.random() < 0.5;
-        const worldX = playerWorldX + (fromLeft ? -spawnDistance : spawnDistance);
+
+        if (isNatureSimulation) {
+            const screenLeft = -200;
+            const screenRight = GameConfig.CANVAS_WIDTH + 200;
+            worldX = Utils.randomBetween(screenLeft, screenRight);
+        } else {
+            const spawnDistance = Utils.randomBetween(200, 400);
+            worldX = playerWorldX + (fromLeft ? -spawnDistance : spawnDistance);
+        }
+
         const y = depth * GameConfig.DEPTH_SCALE;
 
         // Create the baitfish cloud with species type
@@ -302,7 +334,10 @@ export class SpawningSystem {
         }
 
         // Get player world position
+        // In nature simulation mode, spawn randomly across screen
         let playerWorldX;
+        let isNatureSimulation = false;
+
         if (this.scene.iceHoleManager) {
             const currentHole = this.scene.iceHoleManager.getCurrentHole();
             playerWorldX = currentHole ? currentHole.x : 0;
@@ -310,7 +345,8 @@ export class SpawningSystem {
             // Use getPlayerWorldX() to get actual world coordinates, not game coordinates
             playerWorldX = this.scene.boatManager.getPlayerWorldX();
         } else {
-            playerWorldX = 0;
+            isNatureSimulation = true;
+            playerWorldX = GameConfig.CANVAS_WIDTH / 2;
         }
 
         // Spawn 2-4 zooplankton at a time (increased from 1-3)
@@ -318,8 +354,17 @@ export class SpawningSystem {
 
         for (let i = 0; i < spawnCount; i++) {
             // Spawn at random position around player in world coordinates
-            const offsetX = Utils.randomBetween(-300, 300);
-            const worldX = playerWorldX + offsetX;
+            // In nature simulation mode, spawn randomly across screen
+            let worldX;
+
+            if (isNatureSimulation) {
+                const screenLeft = -200;
+                const screenRight = GameConfig.CANVAS_WIDTH + 200;
+                worldX = Utils.randomBetween(screenLeft, screenRight);
+            } else {
+                const offsetX = Utils.randomBetween(-300, 300);
+                worldX = playerWorldX + offsetX;
+            }
 
             // Spawn heavily weighted toward bottom, with some at mid-depths
             // 70% spawn at bottom (85-100 feet), 30% at mid-depth (60-85 feet)
@@ -349,7 +394,10 @@ export class SpawningSystem {
         console.log('Spawning emergency fish!');
 
         // Get player position in world coordinates (depends on fishing type)
+        // In nature simulation mode, there is no player, so spawn randomly across screen
         let playerWorldX;
+        let isNatureSimulation = false;
+
         if (this.scene.iceHoleManager) {
             const currentHole = this.scene.iceHoleManager.getCurrentHole();
             if (!currentHole) return null;
@@ -358,7 +406,9 @@ export class SpawningSystem {
             // Use getPlayerWorldX() to get actual world coordinates, not game coordinates
             playerWorldX = this.scene.boatManager.getPlayerWorldX();
         } else {
-            return null; // No manager available
+            // Nature simulation mode - spawn randomly across the screen
+            isNatureSimulation = true;
+            playerWorldX = GameConfig.CANVAS_WIDTH / 2;
         }
 
         // Spawn from random side using world coordinates

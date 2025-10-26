@@ -8,6 +8,7 @@ import NavigationScene from './scenes/NavigationScene.js';
 import GameScene from './scenes/GameScene.js';
 import GameOverScene from './scenes/GameOverScene.js';
 import UIScene from './scenes/UIScene.js';
+import NatureSimulationScene from './scenes/NatureSimulationScene.js';
 
 // Phaser game configuration
 const config = {
@@ -23,7 +24,7 @@ const config = {
             debug: false
         }
     },
-    scene: [BootScene, MenuScene, NavigationScene, GameScene, GameOverScene, UIScene],
+    scene: [BootScene, MenuScene, NavigationScene, GameScene, GameOverScene, UIScene, NatureSimulationScene],
     render: {
         pixelArt: false,
         antialias: true,
