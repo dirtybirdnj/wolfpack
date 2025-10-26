@@ -518,25 +518,20 @@ export class NatureSimulationScene extends Phaser.Scene {
         }
 
         // Update all fish
+        // Pass null for lure (no fishing in nature mode), but pass other fish and baitfish for AI
         this.fishes.forEach(fish => {
-            if (fish.active) {
-                // Fish update their own AI and movement
-                fish.update();
-            }
+            fish.update(null, this.fishes, this.baitfishClouds);
         });
 
         // Update all baitfish clouds
+        // Pass fish (as "lakers") and zooplankton for baitfish AI
         this.baitfishClouds.forEach(cloud => {
-            if (cloud.active) {
-                cloud.update();
-            }
+            cloud.update(this.fishes, this.zooplankton);
         });
 
         // Update all zooplankton
         this.zooplankton.forEach(plankton => {
-            if (plankton.active) {
-                plankton.update();
-            }
+            plankton.update();
         });
 
         // Update debug system
@@ -544,10 +539,10 @@ export class NatureSimulationScene extends Phaser.Scene {
             this.debugSystem.update();
         }
 
-        // Clean up destroyed entities
-        this.fishes = this.fishes.filter(f => f.active);
-        this.baitfishClouds = this.baitfishClouds.filter(c => c.active);
-        this.zooplankton = this.zooplankton.filter(p => p.active);
+        // Clean up destroyed entities (remove invisible entities)
+        this.fishes = this.fishes.filter(f => f.visible);
+        this.baitfishClouds = this.baitfishClouds.filter(c => c.visible);
+        this.zooplankton = this.zooplankton.filter(p => p.visible);
     }
 }
 
