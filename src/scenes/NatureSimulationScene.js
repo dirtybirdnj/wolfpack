@@ -269,10 +269,16 @@ export class NatureSimulationScene extends Phaser.Scene {
         const baitfishCount = this.baitfishClouds.length;
         const zooplanktonCount = this.zooplankton.length;
 
+        // Show different controls based on whether gamepad is connected
+        let controlsText = 'ESC: Menu | D: Toggle Debug | SPACE: Spawn Fish | B: Spawn Baitfish';
+        if (this.gamepadDetected && window.gamepadManager && window.gamepadManager.isConnected()) {
+            controlsText = 'Start: Menu | D: Debug | X: Spawn Fish | Y: Spawn Baitfish';
+        }
+
         this.infoText.setText([
             `NATURE SIMULATION | Depth: ${this.maxDepth}ft | Temp: ${this.waterTemp}°F | Time: ${timeStr}`,
             `Fish: ${fishCount} | Baitfish Schools: ${baitfishCount} | Zooplankton: ${zooplanktonCount}`,
-            'ESC: Menu | D: Toggle Debug | SPACE: Spawn Fish | B: Spawn Baitfish'
+            controlsText
         ].join('\n'));
     }
 
@@ -317,6 +323,8 @@ export class NatureSimulationScene extends Phaser.Scene {
                 lastDpadDown: false,
                 lastA: false,
                 lastX: false,
+                lastY: false,
+                lastStart: false,
                 lastAnalogLeft: false,
                 lastAnalogRight: false,
                 lastAnalogUp: false,
@@ -521,7 +529,33 @@ export class NatureSimulationScene extends Phaser.Scene {
         // Handle SPACE to spawn fish manually (only when not in depth selection)
         if (Phaser.Input.Keyboard.JustDown(this.spaceKey)) {
             this.trySpawnFish();
-            console.log('Manually spawned fish');
+        }
+
+        // Handle gamepad controls for spawning
+        if (this.gamepadDetected && window.gamepadManager && window.gamepadManager.isConnected()) {
+            const xButton = window.gamepadManager.getButton('X');
+            const yButton = window.gamepadManager.getButton('Y');
+            const startButton = window.gamepadManager.getButton('Start');
+
+            // X button to spawn fish (like SPACE)
+            if (xButton.pressed && !this.gamepadState.lastX) {
+                this.trySpawnFish();
+            }
+
+            // Y button to spawn baitfish (like B key)
+            if (yButton.pressed && !this.gamepadState.lastY) {
+                this.trySpawnBaitfishCloud();
+            }
+
+            // Start button to return to menu (like ESC)
+            if (startButton.pressed && !this.gamepadState.lastStart) {
+                console.log('Returning to menu...');
+                this.scene.start('MenuScene');
+            }
+
+            this.gamepadState.lastX = xButton.pressed;
+            this.gamepadState.lastY = yButton.pressed;
+            this.gamepadState.lastStart = startButton.pressed;
         }
 
         // Update info text
