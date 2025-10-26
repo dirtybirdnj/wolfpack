@@ -88,8 +88,11 @@ export class Baitfish {
                 );
                 bottomDepth = closest.y / GameConfig.DEPTH_SCALE;
             }
+        } else {
+            // Nature simulation mode - bottom profile is drawn at maxDepth - 5 feet (deepest point)
+            // Subtract 5 to match the visual bottom profile from SonarDisplay.generateBottomProfile()
+            bottomDepth = (this.scene.maxDepth || GameConfig.MAX_DEPTH) - 5;
         }
-        // If neither manager exists (nature simulation), use scene.maxDepth which was already set above
 
         // Keep in vertical bounds based on water depth
         const minY = 3 * GameConfig.DEPTH_SCALE; // 3 feet from surface (baitfish can be shallower than clouds)

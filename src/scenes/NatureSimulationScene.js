@@ -26,10 +26,10 @@ export class NatureSimulationScene extends Phaser.Scene {
         // Simulation state
         this.waterTemp = 40;
         this.debugMode = true; // Always show debug info in nature mode
-        this.selectedDepth = 50; // Default depth
+        this.selectedDepth = 80; // Default depth (80ft is typical for Lake Champlain)
         this.depthSelectionActive = true; // Show depth selection UI
         this.gameTime = 0;
-        this.selectedButtonIndex = 0; // For keyboard/gamepad navigation
+        this.selectedButtonIndex = 7; // Start with 80ft button selected (index 7)
     }
 
     create() {
