@@ -272,7 +272,7 @@ export class NatureSimulationScene extends Phaser.Scene {
         this.infoText.setText([
             `NATURE SIMULATION | Depth: ${this.maxDepth}ft | Temp: ${this.waterTemp}°F | Time: ${timeStr}`,
             `Fish: ${fishCount} | Baitfish Schools: ${baitfishCount} | Zooplankton: ${zooplanktonCount}`,
-            'ESC: Menu | D: Toggle Debug | SPACE: Spawn Fish'
+            'ESC: Menu | D: Toggle Debug | SPACE: Spawn Fish | B: Spawn Baitfish'
         ].join('\n'));
     }
 
@@ -326,16 +326,39 @@ export class NatureSimulationScene extends Phaser.Scene {
     }
 
     trySpawnFish() {
-        // Spawn a fish using the spawning system
+        // Spawn a fish using the spawning system with random species
         if (this.spawningSystem) {
-            this.spawningSystem.trySpawnFish();
+            try {
+                const fish = this.spawningSystem.trySpawnFish();
+                if (fish) {
+                    console.log(`✓ Spawned ${fish.species} (${fish.weight.toFixed(1)}lbs) at ${fish.depth.toFixed(1)}ft`);
+                } else {
+                    console.log('⚠️ Could not spawn fish (water may be too shallow for selected species, trying again...)');
+                    // Try again with potentially different species
+                    const retryFish = this.spawningSystem.trySpawnFish();
+                    if (retryFish) {
+                        console.log(`✓ Spawned ${retryFish.species} (${retryFish.weight.toFixed(1)}lbs) at ${retryFish.depth.toFixed(1)}ft`);
+                    }
+                }
+            } catch (error) {
+                console.error('Error spawning fish:', error);
+            }
         }
     }
 
     trySpawnBaitfishCloud() {
-        // Spawn a baitfish cloud using the spawning system
+        // Spawn a baitfish cloud using the spawning system with random species
         if (this.spawningSystem) {
-            this.spawningSystem.trySpawnBaitfishCloud();
+            try {
+                const cloud = this.spawningSystem.trySpawnBaitfishCloud();
+                if (cloud) {
+                    console.log(`✓ Spawned ${cloud.speciesType} school (${cloud.initialCount} fish) at ${cloud.depth.toFixed(1)}ft`);
+                } else {
+                    console.log('⚠️ Could not spawn baitfish (max clouds reached)');
+                }
+            } catch (error) {
+                console.error('Error spawning baitfish:', error);
+            }
         }
     }
 
