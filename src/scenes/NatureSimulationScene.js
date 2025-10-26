@@ -29,6 +29,7 @@ export class NatureSimulationScene extends Phaser.Scene {
         this.selectedDepth = 50; // Default depth
         this.depthSelectionActive = true; // Show depth selection UI
         this.gameTime = 0;
+        this.selectedButtonIndex = 0; // For keyboard/gamepad navigation
     }
 
     create() {
@@ -49,8 +50,8 @@ export class NatureSimulationScene extends Phaser.Scene {
             GameConfig.WATER_TEMP_MAX
         );
 
-        // Initialize spawning system (no lure, so pass null)
-        this.spawningSystem = new SpawningSystem(this, null);
+        // Initialize spawning system (no lure needed in nature mode)
+        this.spawningSystem = new SpawningSystem(this);
 
         // Initialize debug system
         this.debugSystem = new DebugSystem(this);
@@ -80,17 +81,16 @@ export class NatureSimulationScene extends Phaser.Scene {
     }
 
     updateDepthScale() {
-        // Calculate dynamic depth scale to keep bottom at consistent screen position
-        const TARGET_BOTTOM_RATIO = 0.85;
-        const MIN_DISPLAY_RANGE = 175;
+        // In nature mode, always keep bottom at exactly 20px from bottom of screen
+        // This ensures consistent visualization regardless of depth chosen
+        const BOTTOM_MARGIN = 20; // pixels from bottom
+        const availableHeight = GameConfig.CANVAS_HEIGHT - BOTTOM_MARGIN;
 
-        const idealDisplayRange = this.maxDepth / TARGET_BOTTOM_RATIO;
-        const displayRange = Math.max(idealDisplayRange, MIN_DISPLAY_RANGE);
+        // Calculate scale so that maxDepth fits exactly in availableHeight
+        GameConfig.DEPTH_SCALE = availableHeight / this.maxDepth;
+        this.displayRange = this.maxDepth;
 
-        GameConfig.DEPTH_SCALE = GameConfig.CANVAS_HEIGHT / displayRange;
-        this.displayRange = displayRange;
-
-        console.log(`Depth set to ${this.maxDepth}ft (${GameConfig.DEPTH_SCALE.toFixed(2)} px/ft)`);
+        console.log(`Depth set to ${this.maxDepth}ft (${GameConfig.DEPTH_SCALE.toFixed(2)} px/ft, bottom at ${(this.maxDepth * GameConfig.DEPTH_SCALE).toFixed(1)}px)`);
     }
 
     createDepthSelectionUI() {
@@ -104,7 +104,7 @@ export class NatureSimulationScene extends Phaser.Scene {
         this.depthPanel.strokeRoundedRect(width / 2 - 280, 20, 560, 180, 10);
 
         // Title
-        this.add.text(width / 2, 45, 'NATURE SIMULATION - SELECT WATER DEPTH', {
+        this.depthTitle = this.add.text(width / 2, 45, 'NATURE SIMULATION - SELECT WATER DEPTH', {
             fontSize: '18px',
             fontFamily: 'Courier New',
             color: '#00ff00',
@@ -130,12 +130,15 @@ export class NatureSimulationScene extends Phaser.Scene {
         this.depthButtons.push(randomButton);
 
         // Instructions
-        this.add.text(width / 2, 175, 'Click a depth to begin observation | ESC to return to menu', {
+        this.depthInstructions = this.add.text(width / 2, 175, 'Arrow Keys/D-Pad: Navigate | Enter/A: Select | ESC: Menu', {
             fontSize: '11px',
             fontFamily: 'Courier New',
             color: '#88ff88',
             align: 'center'
         }).setOrigin(0.5);
+
+        // Highlight first button by default
+        this.updateDepthButtonSelection();
     }
 
     createDepthButton(x, y, depth, isRandom = false) {
@@ -197,6 +200,21 @@ export class NatureSimulationScene extends Phaser.Scene {
         return container;
     }
 
+    updateDepthButtonSelection() {
+        if (!this.depthButtons || this.depthButtons.length === 0) return;
+
+        // Clear all button highlights
+        this.depthButtons.forEach((btn, index) => {
+            const isSelected = index === this.selectedButtonIndex;
+            btn.btnBg.clear();
+            btn.btnBg.fillStyle(isSelected ? 0x3a5a4a : 0x2a4a3a, 1);
+            btn.btnBg.lineStyle(isSelected ? 3 : 2, isSelected ? 0x00ffff : 0x00ff00, 1);
+            btn.btnBg.fillRoundedRect(-btn.btnWidth / 2, -btn.btnHeight / 2, btn.btnWidth, btn.btnHeight, 5);
+            btn.btnBg.strokeRoundedRect(-btn.btnWidth / 2, -btn.btnHeight / 2, btn.btnWidth, btn.btnHeight, 5);
+            btn.btnText.setColor(isSelected ? '#00ffff' : '#00ff00');
+        });
+    }
+
     selectDepth(depth) {
         this.selectedDepth = depth;
         this.maxDepth = depth;
@@ -205,6 +223,8 @@ export class NatureSimulationScene extends Phaser.Scene {
         // Hide depth selection UI
         this.depthSelectionActive = false;
         this.depthPanel.destroy();
+        this.depthTitle.destroy();
+        this.depthInstructions.destroy();
         this.depthButtons.forEach(btn => btn.destroy());
 
         // Update sonar display with new depth
@@ -257,33 +277,52 @@ export class NatureSimulationScene extends Phaser.Scene {
     }
 
     setupControls() {
+        // Set up keyboard cursors
+        this.cursors = this.input.keyboard.createCursorKeys();
+        this.enterKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER);
+        this.spaceKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+
         // ESC to return to menu
         this.input.keyboard.on('keydown-ESC', () => {
             console.log('Returning to menu...');
             this.scene.start('MenuScene');
         });
 
-        // D to toggle debug mode
+        // D to toggle debug mode (only when not in depth selection)
         this.input.keyboard.on('keydown-D', () => {
-            this.debugMode = !this.debugMode;
-            console.log('Debug mode:', this.debugMode ? 'ON' : 'OFF');
-        });
-
-        // SPACE to manually spawn a fish (for testing)
-        this.input.keyboard.on('keydown-SPACE', () => {
             if (!this.depthSelectionActive) {
-                this.trySpawnFish();
-                console.log('Manually spawned fish');
+                this.debugMode = !this.debugMode;
+                console.log('Debug mode:', this.debugMode ? 'ON' : 'OFF');
             }
         });
 
-        // B to spawn baitfish
+        // B to spawn baitfish (only when not in depth selection)
         this.input.keyboard.on('keydown-B', () => {
             if (!this.depthSelectionActive) {
                 this.trySpawnBaitfishCloud();
                 console.log('Manually spawned baitfish cloud');
             }
         });
+
+        // Check for gamepad
+        this.gamepadDetected = false;
+        if (window.gamepadManager && window.gamepadManager.isConnected()) {
+            this.gamepadDetected = true;
+
+            // Setup gamepad state tracking
+            this.gamepadState = {
+                lastDpadLeft: false,
+                lastDpadRight: false,
+                lastDpadUp: false,
+                lastDpadDown: false,
+                lastA: false,
+                lastX: false,
+                lastAnalogLeft: false,
+                lastAnalogRight: false,
+                lastAnalogUp: false,
+                lastAnalogDown: false
+            };
+        }
     }
 
     trySpawnFish() {
@@ -300,10 +339,166 @@ export class NatureSimulationScene extends Phaser.Scene {
         }
     }
 
+    handleDepthSelectionInput() {
+        // Handle keyboard navigation
+        if (Phaser.Input.Keyboard.JustDown(this.cursors.left)) {
+            if (this.selectedButtonIndex > 0) {
+                this.selectedButtonIndex--;
+                this.updateDepthButtonSelection();
+            }
+        }
+
+        if (Phaser.Input.Keyboard.JustDown(this.cursors.right)) {
+            if (this.selectedButtonIndex < this.depthButtons.length - 1) {
+                this.selectedButtonIndex++;
+                this.updateDepthButtonSelection();
+            }
+        }
+
+        if (Phaser.Input.Keyboard.JustDown(this.cursors.up)) {
+            // Move up a row (10 buttons in top row, 1 in bottom)
+            if (this.selectedButtonIndex === 10) {
+                // From RANDOM button to middle of top row
+                this.selectedButtonIndex = 5;
+                this.updateDepthButtonSelection();
+            }
+        }
+
+        if (Phaser.Input.Keyboard.JustDown(this.cursors.down)) {
+            // Move down a row
+            if (this.selectedButtonIndex < 10) {
+                // From top row to RANDOM button
+                this.selectedButtonIndex = 10;
+                this.updateDepthButtonSelection();
+            }
+        }
+
+        if (Phaser.Input.Keyboard.JustDown(this.enterKey) ||
+            Phaser.Input.Keyboard.JustDown(this.spaceKey)) {
+            const selectedButton = this.depthButtons[this.selectedButtonIndex];
+            if (selectedButton) {
+                const depth = selectedButton.isRandom ?
+                    Phaser.Math.Between(10, 100) :
+                    selectedButton.depth;
+                this.selectDepth(depth);
+            }
+        }
+
+        // Handle gamepad navigation
+        if (this.gamepadDetected && window.gamepadManager && window.gamepadManager.isConnected()) {
+            // D-Pad navigation
+            const dpadLeft = window.gamepadManager.getButton('DpadLeft');
+            const dpadRight = window.gamepadManager.getButton('DpadRight');
+            const dpadUp = window.gamepadManager.getButton('DpadUp');
+            const dpadDown = window.gamepadManager.getButton('DpadDown');
+
+            if (dpadLeft.pressed && !this.gamepadState.lastDpadLeft) {
+                if (this.selectedButtonIndex > 0) {
+                    this.selectedButtonIndex--;
+                    this.updateDepthButtonSelection();
+                }
+            }
+
+            if (dpadRight.pressed && !this.gamepadState.lastDpadRight) {
+                if (this.selectedButtonIndex < this.depthButtons.length - 1) {
+                    this.selectedButtonIndex++;
+                    this.updateDepthButtonSelection();
+                }
+            }
+
+            if (dpadUp.pressed && !this.gamepadState.lastDpadUp) {
+                if (this.selectedButtonIndex === 10) {
+                    this.selectedButtonIndex = 5;
+                    this.updateDepthButtonSelection();
+                }
+            }
+
+            if (dpadDown.pressed && !this.gamepadState.lastDpadDown) {
+                if (this.selectedButtonIndex < 10) {
+                    this.selectedButtonIndex = 10;
+                    this.updateDepthButtonSelection();
+                }
+            }
+
+            this.gamepadState.lastDpadLeft = dpadLeft.pressed;
+            this.gamepadState.lastDpadRight = dpadRight.pressed;
+            this.gamepadState.lastDpadUp = dpadUp.pressed;
+            this.gamepadState.lastDpadDown = dpadDown.pressed;
+
+            // Analog stick navigation
+            const leftStickX = window.gamepadManager.getAxis('LeftStickX');
+            const leftStickY = window.gamepadManager.getAxis('LeftStickY');
+            const analogThreshold = 0.5;
+
+            const analogLeft = leftStickX < -analogThreshold;
+            const analogRight = leftStickX > analogThreshold;
+            const analogUp = leftStickY < -analogThreshold;
+            const analogDown = leftStickY > analogThreshold;
+
+            if (analogLeft && !this.gamepadState.lastAnalogLeft) {
+                if (this.selectedButtonIndex > 0) {
+                    this.selectedButtonIndex--;
+                    this.updateDepthButtonSelection();
+                }
+            }
+
+            if (analogRight && !this.gamepadState.lastAnalogRight) {
+                if (this.selectedButtonIndex < this.depthButtons.length - 1) {
+                    this.selectedButtonIndex++;
+                    this.updateDepthButtonSelection();
+                }
+            }
+
+            if (analogUp && !this.gamepadState.lastAnalogUp) {
+                if (this.selectedButtonIndex === 10) {
+                    this.selectedButtonIndex = 5;
+                    this.updateDepthButtonSelection();
+                }
+            }
+
+            if (analogDown && !this.gamepadState.lastAnalogDown) {
+                if (this.selectedButtonIndex < 10) {
+                    this.selectedButtonIndex = 10;
+                    this.updateDepthButtonSelection();
+                }
+            }
+
+            this.gamepadState.lastAnalogLeft = analogLeft;
+            this.gamepadState.lastAnalogRight = analogRight;
+            this.gamepadState.lastAnalogUp = analogUp;
+            this.gamepadState.lastAnalogDown = analogDown;
+
+            // Confirm with A or X button
+            const aButton = window.gamepadManager.getButton('A');
+            const xButton = window.gamepadManager.getButton('X');
+
+            if ((aButton.pressed && !this.gamepadState.lastA) ||
+                (xButton.pressed && !this.gamepadState.lastX)) {
+                const selectedButton = this.depthButtons[this.selectedButtonIndex];
+                if (selectedButton) {
+                    const depth = selectedButton.isRandom ?
+                        Phaser.Math.Between(10, 100) :
+                        selectedButton.depth;
+                    this.selectDepth(depth);
+                }
+            }
+
+            this.gamepadState.lastA = aButton.pressed;
+            this.gamepadState.lastX = xButton.pressed;
+        }
+    }
+
     update(time, delta) {
         if (this.depthSelectionActive) {
-            // Don't update simulation while selecting depth
+            // Handle keyboard navigation during depth selection
+            this.handleDepthSelectionInput();
             return;
+        }
+
+        // Handle SPACE to spawn fish manually (only when not in depth selection)
+        if (Phaser.Input.Keyboard.JustDown(this.spaceKey)) {
+            this.trySpawnFish();
+            console.log('Manually spawned fish');
         }
 
         // Update info text
