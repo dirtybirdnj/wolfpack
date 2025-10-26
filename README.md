@@ -1,5 +1,7 @@
 # Wolfpack
 
+![Wolf Pack SNES Box Art]([image_url](https://github.com/dirtybirdnj/wolfpack/blob/main/samples/snes-wolfpack.jpg?raw=true) "Wolfpack SNES box art")
+
 A Lake Champlain ice fishing simulator that mimics the sonar/fish finder view, built with Phaser 3. Hunt for lake trout in packs across the deep, cold waters of Lake Champlain.
 
 ## 🎣 About
