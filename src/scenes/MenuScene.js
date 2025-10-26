@@ -369,6 +369,10 @@ export class MenuScene extends Phaser.Scene {
             startingScene = 'NavigationScene';
         } else {
             // Ice fishing goes directly to GameScene (no navigation needed on ice)
+            // Clear previous navigation position data to use default deep water location
+            this.registry.set('fishingWorldX', null);
+            this.registry.set('fishingWorldY', 5000);
+            this.registry.set('currentDepth', GameConfig.MAX_DEPTH);
             startingScene = 'GameScene';
         }
 
