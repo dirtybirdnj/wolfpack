@@ -65,7 +65,7 @@ export class SpawningSystem {
      */
     trySpawnFish() {
         // Don't spawn too many fish at once
-        if (this.scene.fishes.length >= 4) {
+        if (this.scene.fishes.length >= 20) {
             return null;
         }
 

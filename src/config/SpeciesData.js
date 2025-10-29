@@ -16,7 +16,7 @@ export const BAITFISH_SPECIES = {
         tempPreference: { optimal: 62, min: 50, max: 70 }, // °F
 
         // Schooling behavior
-        schoolSize: { min: 20, max: 50 }, // large, dense aggregations
+        schoolSize: { min: 40, max: 100 }, // large, dense aggregations (doubled)
         schoolingDensity: 'high', // tight schools
 
         // Movement
@@ -68,7 +68,7 @@ export const BAITFISH_SPECIES = {
         tempPreference: { optimal: 48, min: 40, max: 55 }, // °F - prefer cold water
 
         // Schooling behavior
-        schoolSize: { min: 10, max: 30 }, // tight schools, especially during spawn
+        schoolSize: { min: 20, max: 60 }, // tight schools, especially during spawn (doubled)
         schoolingDensity: 'very_high', // extremely tight schools
 
         // Movement
@@ -99,7 +99,7 @@ export const BAITFISH_SPECIES = {
             spring: {
                 depthRange: [0, 10], // very shallow spawning runs
                 activity: 'spawning',
-                schoolSize: { min: 30, max: 60 } // massive aggregations
+                schoolSize: { min: 60, max: 120 } // massive aggregations (doubled)
             },
             summer: {
                 depthRange: [30, 80],
@@ -134,7 +134,7 @@ export const BAITFISH_SPECIES = {
         tempPreference: { optimal: 50, min: 40, max: 60 }, // °F - cold water species
 
         // Schooling behavior
-        schoolSize: { min: 1, max: 3 }, // solitary or small groups
+        schoolSize: { min: 2, max: 6 }, // solitary or small groups (doubled)
         schoolingDensity: 'none', // non-schooling
 
         // Movement
@@ -188,7 +188,7 @@ export const BAITFISH_SPECIES = {
         tempPreference: { optimal: 68, min: 60, max: 75 }, // °F - warmer water than other prey
 
         // Schooling behavior
-        schoolSize: { min: 8, max: 20 }, // school by size
+        schoolSize: { min: 16, max: 40 }, // school by size (doubled)
         schoolingDensity: 'medium', // moderate schooling
 
         // Movement
@@ -243,7 +243,7 @@ export const BAITFISH_SPECIES = {
         tempPreference: { optimal: 50, min: 45, max: 55 }, // °F - cold water only
 
         // Schooling behavior
-        schoolSize: { min: 15, max: 40 }, // dense schools in open water
+        schoolSize: { min: 30, max: 80 }, // dense schools in open water (doubled)
         schoolingDensity: 'high',
 
         // Movement

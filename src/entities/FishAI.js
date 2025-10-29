@@ -60,6 +60,9 @@ export class FishAI {
         } else {
             this.circlesBeforeStrike = false;
         }
+
+        // Fish bump detection - tracks if bump has occurred during this chase
+        this.hasBumpedLure = false;
     }
 
     get aggressiveness() {
@@ -254,6 +257,9 @@ export class FishAI {
     }
     
     idleBehavior(distance, lure, lureSpeed, depthDifference) {
+        // Reset bump flag when returning to idle
+        this.hasBumpedLure = false;
+
         // Lake trout can see 40-70 feet above and below
         const horizontalDist = Math.abs(this.fish.x - lure.x);
         const verticalDist = Math.abs(this.fish.y - lure.y);
@@ -368,6 +374,20 @@ export class FishAI {
         // Check if lure is in a baitfish cloud - fish can't tell the difference!
         const lureInBaitfishCloud = this.isLureInBaitfishCloud(lure, baitfishClouds);
 
+        // FISH BUMP DETECTION - Fish bumps the lure when getting close
+        // Bump zone is 1.5x to 2x the strike distance
+        const strikeDistance = this.getStrikeDistance();
+        const bumpZoneMin = strikeDistance * 1.5;
+        const bumpZoneMax = strikeDistance * 2.0;
+
+        if (!this.hasBumpedLure && distance >= bumpZoneMin && distance <= bumpZoneMax) {
+            // Fish has entered the bump zone - emit bump event
+            this.hasBumpedLure = true;
+            if (this.fish.scene) {
+                this.fish.scene.events.emit('fishBump', this.fish);
+            }
+        }
+
         // ENGAGED FISH BEHAVIOR - Special mechanics for fish locked onto lure
         if (this.fish.isEngaged) {
             // Change state every 3 seconds (180 frames at 60fps)
@@ -409,6 +429,18 @@ export class FishAI {
                 // Stop and just look at the lure
                 this.targetX = this.fish.x; // Stay in place
                 this.targetY = this.fish.y;
+
+                // Smallmouth bass: Higher chance to bump while loitering/investigating
+                if (this.fish.species === 'smallmouth_bass' && distance < strikeDistance * 1.8) {
+                    // 40% chance per loiter cycle to bump the lure
+                    if (Math.random() < 0.4 && !this.hasBumpedLure) {
+                        this.hasBumpedLure = true;
+                        if (this.fish.scene) {
+                            this.fish.scene.events.emit('fishBump', this.fish);
+                            console.log('Smallmouth bass investigating - bump!');
+                        }
+                    }
+                }
             }
 
             return; // Engaged fish don't run normal chase logic
@@ -509,14 +541,14 @@ export class FishAI {
                 return;
             }
 
-            // Fish has caught the lure!
-            this.fish.caught = true;
-            this.state = Constants.FISH_STATE.FLEEING;
-
-            // Trigger catch event in the fish
+            // Fish strikes at lure - trigger bite attempt (player must hookset to catch)
             if (this.fish.scene) {
-                this.fish.scene.events.emit('fishCaught', this.fish);
+                this.fish.scene.events.emit('fishStrike', this.fish);
             }
+
+            // Fish will flee after striking (waiting for hookset)
+            this.state = Constants.FISH_STATE.FLEEING;
+            this.decisionCooldown = 1000; // Longer cooldown while waiting for hookset
         } else if (distance > this.getStrikeDistance() * 2) {
             // Missed the strike!
 
@@ -556,6 +588,9 @@ export class FishAI {
     }
     
     fleeingBehavior(distance) {
+        // Reset bump flag when fleeing
+        this.hasBumpedLure = false;
+
         // FAST FLEEING - Fish ran out of swipes
         if (this.fish.isFastFleeing) {
             // Pick direction based on current position - swim off screen

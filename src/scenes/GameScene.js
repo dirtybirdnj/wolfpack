@@ -58,6 +58,25 @@ export class GameScene extends Phaser.Scene {
         this.controllerTestMode = false;
         this.controllerTestUI = null;
 
+        // Hookset window state
+        this.hooksetWindow = {
+            active: false,
+            fish: null,
+            startTime: 0,
+            duration: 45, // frames (~750ms at 60fps) to perform hookset
+            hasHookset: false
+        };
+
+        // Jig detection state (for pike summoning)
+        this.jigDetection = {
+            lastStickY: 0,
+            jigCount: 0,
+            lastJigTime: 0,
+            jigTimeout: 2000, // Reset jig count if 2 seconds pass between jigs
+            needsReset: false, // Track if we need to reset to neutral position
+            threshold: 0.5 // Stick movement threshold
+        };
+
         // Game mode specific
         this.gameMode = null; // 'arcade' or 'unlimited'
         this.timeRemaining = 0;
@@ -164,16 +183,20 @@ export class GameScene extends Phaser.Scene {
             // Create fishing line
             this.fishingLine = new FishingLine(this);
 
+            // Initialize fishing line model
+            this.fishingLineModel = new FishingLineModel();
+
             // Apply line type from tackle box selection
             const lineType = this.registry.get('lineType');
             const braidColor = this.registry.get('braidColor');
             if (lineType !== undefined) {
                 this.fishingLine.setLineType(lineType, braidColor);
+                this.fishingLineModel.setLineType(lineType);
+                if (lineType === 'braid' && braidColor) {
+                    this.fishingLineModel.setBraidColor(braidColor);
+                }
                 console.log(`🧵 Line type set to ${lineType}${lineType === 'braid' ? ' (' + braidColor + ')' : ''}`);
             }
-
-            // Initialize fishing line model
-            this.fishingLineModel = new FishingLineModel();
 
             // Set water temperature
             this.initializeWaterTemp();
@@ -182,7 +205,9 @@ export class GameScene extends Phaser.Scene {
             this.initializeSystems();
 
             // Event listeners
+            this.events.on('fishStrike', this.handleFishStrike, this);
             this.events.on('fishCaught', this.handleFishCaught, this);
+            this.events.on('fishBump', this.handleFishBump, this);
 
             // Fade in
             this.cameras.main.fadeIn(500);
@@ -325,6 +350,79 @@ export class GameScene extends Phaser.Scene {
                 this.renderTackleBox();
             }
             return; // Skip normal game updates while tackle box is open
+        }
+
+        // Handle hookset window
+        if (this.hooksetWindow.active) {
+            const elapsed = time - this.hooksetWindow.startTime;
+
+            // Check if window expired
+            if (elapsed > this.hooksetWindow.duration * (1000 / 60)) {
+                console.log('Hookset window expired - fish got away!');
+                this.hooksetWindow.active = false;
+                this.hooksetWindow.fish = null;
+                // Fish escapes (already fleeing from FishAI)
+            } else if (!this.hooksetWindow.hasHookset) {
+                // Check for hookset input (right stick up OR R trigger full press)
+                if (window.gamepadManager && window.gamepadManager.isConnected()) {
+                    const rightStickY = window.gamepadManager.getAxis(3); // Right stick Y axis
+                    const r2Trigger = window.gamepadManager.getButton('R2');
+
+                    // Detect upward motion on right stick (negative Y is up) OR full R trigger press
+                    const stickHookset = rightStickY < -0.5;
+                    const triggerHookset = r2Trigger && r2Trigger.value >= 0.95; // 95%+ trigger press
+
+                    if (stickHookset || triggerHookset) {
+                        // Successful hookset!
+                        const method = stickHookset ? 'stick up' : 'full reel';
+                        console.log(`HOOKSET! (${method}) Fish is hooked!`);
+                        this.hooksetWindow.hasHookset = true;
+
+                        // Mark fish as caught and trigger catch event
+                        const fish = this.hooksetWindow.fish;
+                        fish.caught = true;
+                        this.events.emit('fishCaught', fish);
+                    }
+                }
+            }
+        }
+
+        // Jig detection for pike summoning (only when not fighting)
+        if ((!this.currentFight || !this.currentFight.active) && window.gamepadManager && window.gamepadManager.isConnected()) {
+            const rightStickY = window.gamepadManager.getAxis(3);
+            const currentTime = time;
+
+            // Check if too much time has passed - reset jig count
+            if (currentTime - this.jigDetection.lastJigTime > this.jigDetection.jigTimeout) {
+                this.jigDetection.jigCount = 0;
+                this.jigDetection.needsReset = false;
+            }
+
+            // Detect stick movement
+            if (this.jigDetection.needsReset) {
+                // Waiting for stick to return to neutral
+                if (Math.abs(rightStickY) < 0.2) {
+                    this.jigDetection.needsReset = false;
+                }
+            } else {
+                // Check for up movement (negative Y is up)
+                if (rightStickY < -this.jigDetection.threshold && this.jigDetection.lastStickY > -this.jigDetection.threshold) {
+                    // Upward jig detected!
+                    this.jigDetection.jigCount++;
+                    this.jigDetection.lastJigTime = currentTime;
+                    this.jigDetection.needsReset = true;
+                    console.log(`Jig ${this.jigDetection.jigCount}/5`);
+
+                    // Check if we've reached 5 jigs
+                    if (this.jigDetection.jigCount >= 5) {
+                        this.summonPikeAttack();
+                        this.jigDetection.jigCount = 0;
+                        this.jigDetection.needsReset = false;
+                    }
+                }
+            }
+
+            this.jigDetection.lastStickY = rightStickY;
         }
 
         // Handle fish fight if active
@@ -544,13 +642,51 @@ export class GameScene extends Phaser.Scene {
     }
 
     /**
+     * Handle fish strike event - opens hookset window
+     * @param {Fish} fish - The fish that struck at the lure
+     */
+    handleFishStrike(fish) {
+        console.log(`Fish ${fish.name} strikes! Hookset window opening...`);
+
+        // Open hookset window
+        this.hooksetWindow.active = true;
+        this.hooksetWindow.fish = fish;
+        this.hooksetWindow.startTime = this.time.now;
+        this.hooksetWindow.hasHookset = false;
+
+        // Always show visual feedback - stronger shake for strike
+        this.lure.vibrate(5, 30); // Stronger vibration for strike (5px, 30 frames = ~500ms)
+
+        // Get line type's haptic sensitivity
+        const hapticSensitivity = this.fishingLineModel.getHapticSensitivity();
+
+        // Roll for whether player feels the strike (based on line sensitivity)
+        if (Math.random() <= hapticSensitivity) {
+            // Player feels the strike! Scale haptic intensity by line sensitivity
+            // Base haptic for strike: 200ms duration, 0.5/0.25 magnitude (stronger than bump)
+            // Scale by sensitivity: Braid (100%) = full strength, Mono (40%) = 40% strength
+            const strongMagnitude = 0.5 * hapticSensitivity;
+            const weakMagnitude = 0.25 * hapticSensitivity;
+
+            this.rumbleGamepad(200, strongMagnitude, weakMagnitude);
+            console.log(`Strike felt! (${(hapticSensitivity * 100).toFixed(0)}% sensitivity - ${this.fishingLineModel.getDisplayName()}) - Haptic: ${strongMagnitude.toFixed(2)}/${weakMagnitude.toFixed(2)}`);
+        } else {
+            console.log(`Strike occurred but not felt! (${(hapticSensitivity * 100).toFixed(0)}% sensitivity) - Better watch the lure!`);
+        }
+    }
+
+    /**
      * Handle fish caught event (start fish fight)
      * @param {Fish} fish - The fish that was caught
      */
     handleFishCaught(fish) {
         console.log('Fish hooked! Starting fight...');
 
-        // Rumble on fish bite
+        // Close hookset window
+        this.hooksetWindow.active = false;
+        this.hooksetWindow.fish = null;
+
+        // Rumble on successful hookset
         this.rumbleGamepad(300, 0.6, 0.3);
 
         // Show hook notification
@@ -558,6 +694,138 @@ export class GameScene extends Phaser.Scene {
 
         // Start the fight
         this.currentFight = new FishFight(this, fish, this.lure);
+    }
+
+    /**
+     * Handle fish bump event - haptic feedback based on line sensitivity
+     * @param {Fish} fish - The fish that bumped the lure
+     */
+    handleFishBump(fish) {
+        // Always show visual feedback - lure vibrates regardless of whether player feels it
+        this.lure.vibrate(3, 20); // 3px intensity, 20 frames (~333ms)
+
+        // Get line type's haptic sensitivity
+        const hapticSensitivity = this.fishingLineModel.getHapticSensitivity();
+
+        // Roll for whether player feels the bump (based on line sensitivity)
+        if (Math.random() <= hapticSensitivity) {
+            // Player feels the bump! Scale haptic intensity by line sensitivity
+            // Base haptic for bump: 150ms duration, 0.3/0.15 magnitude
+            // Scale by sensitivity: Braid (100%) = full strength, Mono (40%) = 40% strength
+            const strongMagnitude = 0.3 * hapticSensitivity;
+            const weakMagnitude = 0.15 * hapticSensitivity;
+
+            this.rumbleGamepad(150, strongMagnitude, weakMagnitude);
+            console.log(`Fish bump detected! (${(hapticSensitivity * 100).toFixed(0)}% sensitivity - ${this.fishingLineModel.getDisplayName()}) - Haptic: ${strongMagnitude.toFixed(2)}/${weakMagnitude.toFixed(2)}`);
+        } else {
+            console.log(`Fish bump occurred but not felt (${(hapticSensitivity * 100).toFixed(0)}% sensitivity)`);
+        }
+    }
+
+    /**
+     * Summon all pike on screen to attack the lure once
+     */
+    summonPikeAttack() {
+        console.log('🎣 PIKE SUMMONED! All northern pike are attacking!');
+
+        // Find all northern pike fish
+        const pike = this.fishes.filter(fish => fish.species === 'northern_pike' && fish.visible);
+
+        if (pike.length === 0) {
+            console.log('No pike on screen to summon');
+            return;
+        }
+
+        console.log(`Summoning ${pike.length} pike to attack`);
+
+        // SCARE OTHER PREDATORS - Pike rushing scares other species
+        let scaredCount = 0;
+        this.fishes.forEach(otherFish => {
+            // Skip pike themselves
+            if (otherFish.species === 'northern_pike' || !otherFish.visible) return;
+
+            // Check if this fish can see any of the rushing pike
+            for (const rushingPike of pike) {
+                const dx = Math.abs(otherFish.x - rushingPike.x);
+                const dy = Math.abs(otherFish.y - rushingPike.y);
+
+                // Within horizontal and vertical detection range?
+                if (dx < GameConfig.DETECTION_RANGE && dy < GameConfig.VERTICAL_DETECTION_RANGE) {
+                    // Fish sees the pike rush! Make it flee
+                    otherFish.ai.state = Constants.FISH_STATE.FLEEING;
+                    otherFish.ai.decisionCooldown = 3000; // Flee for 3 seconds
+                    scaredCount++;
+                    break; // One pike is enough to scare this fish
+                }
+            }
+        });
+
+        if (scaredCount > 0) {
+            console.log(`Pike rush scared ${scaredCount} other fish away!`);
+        }
+
+        // PUSH BAITFISH CLOUDS AWAY - Apply repulsion force
+        this.baitfishClouds.forEach(cloud => {
+            if (!cloud.visible) return;
+
+            // Find closest pike to this cloud
+            let closestPike = null;
+            let minDistance = Infinity;
+
+            pike.forEach(rushingPike => {
+                const dx = cloud.centerX - rushingPike.x;
+                const dy = cloud.centerY - rushingPike.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                if (dist < minDistance) {
+                    minDistance = dist;
+                    closestPike = rushingPike;
+                }
+            });
+
+            // Apply repulsion if pike is close enough (within 200 pixels)
+            if (closestPike && minDistance < 200) {
+                const dx = cloud.centerX - closestPike.x;
+                const dy = cloud.centerY - closestPike.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                if (dist > 0) {
+                    // Push away from pike - stronger when closer
+                    const repulsionStrength = 1.5 * (1 - minDistance / 200);
+                    cloud.velocity.x += (dx / dist) * repulsionStrength;
+                    cloud.velocity.y += (dy / dist) * repulsionStrength;
+
+                    // Cap velocity to prevent fleeing off screen
+                    const maxVelocity = 2.0;
+                    const currentSpeed = Math.sqrt(cloud.velocity.x ** 2 + cloud.velocity.y ** 2);
+                    if (currentSpeed > maxVelocity) {
+                        cloud.velocity.x = (cloud.velocity.x / currentSpeed) * maxVelocity;
+                        cloud.velocity.y = (cloud.velocity.y / currentSpeed) * maxVelocity;
+                    }
+                }
+            }
+        });
+
+        // Make each pike attack once
+        pike.forEach(fish => {
+            // Force pike into striking behavior
+            fish.ai.state = Constants.FISH_STATE.STRIKING;
+            fish.ai.targetX = this.lure.x;
+            fish.ai.targetY = this.lure.y;
+            fish.ai.decisionCooldown = 50;
+
+            // After strike, force them to flee and return to ambush
+            setTimeout(() => {
+                if (fish.ai.state === Constants.FISH_STATE.STRIKING || fish.ai.state === Constants.FISH_STATE.CHASING) {
+                    fish.ai.state = Constants.FISH_STATE.FLEEING;
+                    fish.ai.decisionCooldown = 2000;
+                    console.log(`Pike ${fish.name} retreating to ambush position`);
+                }
+            }, 1000); // Give them 1 second to strike
+        });
+
+        // Visual/audio feedback
+        this.rumbleGamepad(400, 0.8, 0.4); // Strong rumble
     }
 
     /**
@@ -914,6 +1182,7 @@ export class GameScene extends Phaser.Scene {
             if (confirmPressed) {
                 const selected = this.tackleBoxGear.lineTypes[this.tackleBoxSelected.line];
                 this.fishingLine.setLineType(selected.value, 'neon-green');
+                this.fishingLineModel.setLineType(selected.value);
                 console.log(`🧵 Line type changed to ${selected.label}`);
             }
         }
