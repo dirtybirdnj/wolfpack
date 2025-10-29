@@ -95,6 +95,7 @@ export class GameScene extends Phaser.Scene {
         this.tackleBoxTab = 0; // 0=lure, 1=line
         this.tackleBoxSelected = { lure: 0, line: 0 };
         this.switchingToPauseMenu = false; // Flag to keep game paused when switching menus
+        this.catchPopupActive = false; // Flag to block input when catch popup is displayed
         this.tackleBoxButtonStates = {
             select: false,
             circle: false,
@@ -303,13 +304,15 @@ export class GameScene extends Phaser.Scene {
             return;
         }
 
-        // Check for pause input (but not when tackle box is open - it handles START button)
-        if (!this.tackleBoxOpen && this.inputSystem.checkPauseInput()) {
+        // Check for pause input (but not when tackle box is open or catch popup is active)
+        if (!this.tackleBoxOpen && !this.catchPopupActive && this.inputSystem.checkPauseInput()) {
             this.notificationSystem.togglePause();
         }
 
-        // Always update notification system (handles pause menu input)
-        this.notificationSystem.update(time, delta);
+        // Update notification system (but skip pause menu input if catch popup is active)
+        if (!this.catchPopupActive) {
+            this.notificationSystem.update(time, delta);
+        }
 
         // Check if pause menu requested switch to tackle box
         if (this.notificationSystem.switchToTackleBox) {

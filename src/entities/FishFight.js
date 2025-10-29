@@ -574,8 +574,9 @@ export class FishFight {
     }
 
     showCatchPopup(info) {
-        // Pause the game
+        // Pause the game AND prevent input systems from processing
         this.scene.physics.pause();
+        this.scene.catchPopupActive = true; // Flag to prevent other input handlers
 
         // Create dark overlay
         const overlay = this.scene.add.rectangle(
@@ -585,6 +586,7 @@ export class FishFight {
         );
         overlay.setOrigin(0, 0);
         overlay.setDepth(2000);
+        overlay.setInteractive(); // Block input to objects below
 
         // Create popup background
         const popupWidth = 500;
@@ -693,6 +695,9 @@ export class FishFight {
             // Remove input listeners
             this.scene.input.keyboard.off('keydown', keyboardHandler);
             this.scene.input.gamepad.off('down', gamepadHandler);
+
+            // Clear catch popup flag BEFORE resuming
+            this.scene.catchPopupActive = false;
 
             // Resume game and finish cleanup
             this.scene.physics.resume();

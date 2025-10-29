@@ -97,8 +97,15 @@ export class LakeTrout extends Fish {
     /**
      * Render at a custom position (for catch popup)
      */
-    renderAtPosition(graphics, bodySize) {
+    renderAtPosition(graphics, x, y, bodySize) {
+        // Save graphics state
+        graphics.save();
+        graphics.translateCanvas(x, y);
+
+        // Render body at translated position
         this.renderBody(graphics, bodySize);
+
+        graphics.restore();
     }
 }
 
