@@ -573,6 +573,104 @@ export class FishFight {
         this.showCatchPopup(info);
     }
 
+    /**
+     * Draw a measurement ruler below the fish (simulates real fishing ruler)
+     * Returns array of all created elements for cleanup
+     */
+    drawMeasurementRuler(centerX, centerY, fishLengthInches) {
+        const elements = []; // Track all elements for cleanup
+
+        const rulerGraphics = this.scene.add.graphics();
+        rulerGraphics.setDepth(2002);
+        elements.push(rulerGraphics);
+
+        // Ruler dimensions - scale ruler to fit fish length nicely
+        const pixelsPerInch = 8; // Visual scale
+        const rulerLengthPx = fishLengthInches * pixelsPerInch;
+        const rulerHeight = 20;
+        const rulerStartX = centerX - rulerLengthPx / 2;
+        const rulerEndX = centerX + rulerLengthPx / 2;
+
+        // Draw ruler background (yellow/tan like a real measuring tape)
+        rulerGraphics.fillStyle(0xf4e4c1, 1.0);
+        rulerGraphics.fillRect(rulerStartX, centerY - rulerHeight / 2, rulerLengthPx, rulerHeight);
+
+        // Draw ruler border
+        rulerGraphics.lineStyle(2, 0x8b7355, 1.0);
+        rulerGraphics.strokeRect(rulerStartX, centerY - rulerHeight / 2, rulerLengthPx, rulerHeight);
+
+        // Draw tick marks for each inch
+        rulerGraphics.lineStyle(1, 0x000000, 0.8);
+        for (let i = 0; i <= fishLengthInches; i++) {
+            const tickX = rulerStartX + (i * pixelsPerInch);
+
+            // Major tick marks every 6 inches (longer)
+            if (i % 6 === 0) {
+                rulerGraphics.lineBetween(
+                    tickX, centerY - rulerHeight / 2,
+                    tickX, centerY + rulerHeight / 2
+                );
+
+                // Add number label for major ticks
+                if (i > 0) {
+                    const label = this.scene.add.text(tickX, centerY + rulerHeight / 2 + 5,
+                        `${i}"`,
+                        {
+                            fontSize: '12px',
+                            fontFamily: 'Courier New',
+                            color: '#000000',
+                            align: 'center'
+                        }
+                    );
+                    label.setOrigin(0.5, 0);
+                    label.setDepth(2003);
+                    elements.push(label);
+                }
+            }
+            // Minor tick marks (shorter)
+            else {
+                rulerGraphics.lineBetween(
+                    tickX, centerY - rulerHeight / 4,
+                    tickX, centerY + rulerHeight / 4
+                );
+            }
+        }
+
+        // Add "LENGTH" label on left side
+        const lengthLabel = this.scene.add.text(rulerStartX - 5, centerY,
+            'LENGTH',
+            {
+                fontSize: '10px',
+                fontFamily: 'Courier New',
+                color: '#ffff00',
+                align: 'right',
+                stroke: '#000000',
+                strokeThickness: 2
+            }
+        );
+        lengthLabel.setOrigin(1, 0.5);
+        lengthLabel.setDepth(2003);
+        elements.push(lengthLabel);
+
+        // Add fish length display on right side
+        const lengthValue = this.scene.add.text(rulerEndX + 5, centerY,
+            `${fishLengthInches}"`,
+            {
+                fontSize: '14px',
+                fontFamily: 'Courier New',
+                color: '#00ff00',
+                align: 'left',
+                stroke: '#000000',
+                strokeThickness: 3
+            }
+        );
+        lengthValue.setOrigin(0, 0.5);
+        lengthValue.setDepth(2003);
+        elements.push(lengthValue);
+
+        return elements;
+    }
+
     showCatchPopup(info) {
         // Pause the game AND prevent input systems from processing
         this.scene.physics.pause();
@@ -622,23 +720,19 @@ export class FishFight {
         fishGraphics.setDepth(2002);
 
         // Render enlarged fish (with defensive check)
-        // Scale reduced from 2 to 1 to prevent large fish from appearing too large
         // NOTE: this.fish is the model (LakeTrout, SmallmouthBass, etc.), not the entity wrapper
         // We need to calculate bodySize here to match Fish.js:244
+        const fishRenderY = popupY - 60; // Position fish higher to make room for ruler
         if (this.fish && typeof this.fish.renderAtPosition === 'function') {
-            const scale = 1;
+            const scale = 2.5; // Increased from 1 to make fish more visible
             const bodySize = Math.max(8, this.fish.weight / 2) * scale;
-            console.log('Rendering fish in catch popup:', {
-                species: this.fish.species,
-                weight: this.fish.weight,
-                calculatedBodySize: bodySize,
-                position: { x: popupX, y: popupY - 40 }
-            });
-            this.fish.renderAtPosition(fishGraphics, popupX, popupY - 40, bodySize);
-            console.log('Fish rendered successfully');
+            this.fish.renderAtPosition(fishGraphics, popupX, fishRenderY, bodySize);
         } else {
             console.warn('Fish renderAtPosition method not available, skipping fish rendering in popup');
         }
+
+        // Draw measurement ruler below the fish
+        const rulerElements = this.drawMeasurementRuler(popupX, fishRenderY + 50, this.fish.length);
 
         // Fish stats
         // Format age display (fish.age is already in years from calculateBiologicalAge)
@@ -702,6 +796,9 @@ export class FishFight {
             fishGraphics.destroy();
             statsText.destroy();
             continueText.destroy();
+
+            // Destroy ruler elements
+            rulerElements.forEach(element => element.destroy());
 
             // Remove input listeners
             this.scene.input.keyboard.off('keydown', keyboardHandler);
