@@ -7,8 +7,10 @@
 
 const fs = require('fs');
 const path = require('path');
+const { execSync } = require('child_process');
 
 const BUILD_DIR = 'dist';
+const ZIP_FILE = 'wolfpack-itch-dist.zip';
 
 // ANSI color codes for terminal output
 const colors = {
@@ -206,6 +208,32 @@ Built on ${new Date().toISOString().split('T')[0]}
   logSuccess('Created README.txt');
 }
 
+// Create ZIP archive for itch.io
+function createZipArchive() {
+  logStep('Creating itch.io distribution ZIP...');
+
+  // Remove existing zip if it exists
+  if (fs.existsSync(ZIP_FILE)) {
+    fs.unlinkSync(ZIP_FILE);
+    logSuccess('Removed existing ZIP file');
+  }
+
+  try {
+    // Create zip with contents of dist/ folder (not the folder itself)
+    // Using -r for recursive, -q for quiet, and specifying the dist/* contents
+    execSync(`cd ${BUILD_DIR} && zip -r ../${ZIP_FILE} . -q`, { stdio: 'inherit' });
+
+    const zipStats = fs.statSync(ZIP_FILE);
+    logSuccess(`Created ${ZIP_FILE} (${formatBytes(zipStats.size)})`);
+
+    return zipStats.size;
+  } catch (error) {
+    logError(`Failed to create ZIP: ${error.message}`);
+    logWarning('You can manually create the ZIP with: cd dist && zip -r ../wolfpack-itch-dist.zip .');
+    return 0;
+  }
+}
+
 // Get directory size
 function getDirSize(dirPath) {
   let size = 0;
@@ -260,7 +288,7 @@ function countFiles(dirPath) {
 }
 
 // Print build summary
-function printSummary() {
+function printSummary(zipSize = 0) {
   logStep('Build Summary');
 
   const distSize = getDirSize(BUILD_DIR);
@@ -272,14 +300,22 @@ function printSummary() {
   log(`│  Output: ${BUILD_DIR}/                        │`, colors.bright);
   log(`│  Files:  ${fileCount.toString().padEnd(28)} │`, colors.bright);
   log(`│  Size:   ${formatBytes(distSize).padEnd(28)} │`, colors.bright);
+  if (zipSize > 0) {
+    log(`│  ZIP:    ${ZIP_FILE.padEnd(28)} │`, colors.bright);
+    log(`│          ${formatBytes(zipSize).padEnd(28)} │`, colors.bright);
+  }
   log('└─────────────────────────────────────────┘\n', colors.bright);
 
   log('Next steps:', colors.yellow + colors.bright);
   log('  • Test locally:  npm run preview');
-  log('  • Compress:      zip -r wolfpack-dist.zip dist/');
-  log('  • Upload to:     itch.io, itch.io, or your web server\n');
+  if (zipSize > 0) {
+    log(`  • Upload:        ${ZIP_FILE} to itch.io`);
+  } else {
+    log('  • Compress:      zip -r wolfpack-itch-dist.zip dist/');
+    log('  • Upload to:     itch.io or your web server');
+  }
 
-  log('For itch.io publishing instructions:', colors.blue);
+  log('\nFor itch.io publishing instructions:', colors.blue);
   log('  Read PUBLISH_ITCH.md\n');
 }
 
@@ -294,7 +330,8 @@ async function build() {
     copySources();
     createBuildInfo();
     createDistReadme();
-    printSummary();
+    const zipSize = createZipArchive();
+    printSummary(zipSize);
 
     process.exit(0);
   } catch (error) {
