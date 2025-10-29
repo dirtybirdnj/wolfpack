@@ -1,5 +1,6 @@
 import { Fish } from '../fish.js';
 import { Utils } from '../../utils/Constants.js';
+import GameConfig from '../../config/GameConfig.js';
 
 /**
  * Lake Trout - Slow growth, long-lived cold water predator
@@ -33,6 +34,71 @@ export class LakeTrout extends Fish {
             // Trophy fish: 20-30+ years
             return Math.round(Utils.randomBetween(20, 30));
         }
+    }
+
+    /**
+     * Render lake trout with rotation and position
+     */
+    render(graphics, bodySize, isMovingRight) {
+        graphics.save();
+        graphics.translateCanvas(this.x, this.y);
+
+        if (isMovingRight) {
+            graphics.rotateCanvas(this.angle);
+        } else {
+            graphics.scaleCanvas(-1, 1);
+            graphics.rotateCanvas(-this.angle);
+        }
+
+        this.renderBody(graphics, bodySize);
+
+        graphics.restore();
+    }
+
+    /**
+     * Render lake trout body (shared by render and renderAtPosition)
+     */
+    renderBody(graphics, bodySize) {
+        // Main body - grayish-olive color
+        graphics.fillStyle(GameConfig.COLOR_FISH_BODY, 1.0);
+        graphics.fillEllipse(0, 0, bodySize * 2.5, bodySize * 0.8);
+
+        // Belly - cream/pinkish lighter color
+        graphics.fillStyle(GameConfig.COLOR_FISH_BELLY, 0.8);
+        graphics.fillEllipse(0, bodySize * 0.2, bodySize * 2.2, bodySize * 0.5);
+
+        // Tail fin
+        const tailSize = bodySize * 0.7;
+        const tailX = -bodySize * 1.25;
+
+        graphics.fillStyle(GameConfig.COLOR_FISH_FINS, 0.9);
+        graphics.beginPath();
+        graphics.moveTo(tailX, 0);
+        graphics.lineTo(tailX - tailSize, -tailSize * 0.6);
+        graphics.lineTo(tailX - tailSize, tailSize * 0.6);
+        graphics.closePath();
+        graphics.fillPath();
+
+        // Dorsal and pectoral fins
+        graphics.fillStyle(GameConfig.COLOR_FISH_FINS, 0.7);
+        graphics.fillTriangle(
+            0, -bodySize * 0.5,
+            -bodySize * 0.3, -bodySize * 1.2,
+            bodySize * 0.3, -bodySize * 1.2
+        );
+        const finX = -bodySize * 0.3;
+        graphics.fillTriangle(
+            finX, 0,
+            finX - bodySize * 0.4, -bodySize * 0.3,
+            finX - bodySize * 0.4, bodySize * 0.3
+        );
+    }
+
+    /**
+     * Render at a custom position (for catch popup)
+     */
+    renderAtPosition(graphics, bodySize) {
+        this.renderBody(graphics, bodySize);
     }
 }
 
