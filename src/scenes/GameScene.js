@@ -355,8 +355,7 @@ export class GameScene extends Phaser.Scene {
             } else if (!this.hooksetWindow.hasHookset) {
                 // Check for hookset input (right stick up)
                 if (window.gamepadManager && window.gamepadManager.isConnected()) {
-                    const axes = window.gamepadManager.getAxes();
-                    const rightStickY = axes.rightStickY || 0;
+                    const rightStickY = window.gamepadManager.getAxis(3); // Right stick Y axis
 
                     // Detect upward motion on right stick (negative Y is up)
                     if (rightStickY < -0.5) {
