@@ -22,7 +22,7 @@ export class BootScene extends Phaser.Scene {
         loadingBox.fillRect(120, 200, 400, 40);
 
         // Loading text
-        const loadingText = this.add.text(GameConfig.CANVAS_WIDTH / 2, 175, 'Calibrating Sonar...', {
+        const loadingText = this.add.text(GameConfig.CANVAS_WIDTH / 2, 175, 'Loading...', {
             fontSize: '16px',
             fontFamily: 'Courier New',
             color: '#00ff00'
