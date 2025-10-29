@@ -43,6 +43,10 @@ export class Lure {
         // Stats
         this.maxDepthReached = this.depth;
         this.timeInWater = 0;
+
+        // Drop cooldown - prevents auto-drop after catching fish
+        this.lastResetTime = 0;
+        this.dropCooldownMs = 500; // 500ms cooldown after reset
     }
     
     update() {
@@ -194,6 +198,12 @@ export class Lure {
     }
     
     drop() {
+        // Check cooldown - prevents auto-drop after catching fish
+        const currentTime = this.scene.time.now;
+        if (currentTime - this.lastResetTime < this.dropCooldownMs) {
+            return; // Still in cooldown period, ignore drop command
+        }
+
         // Release spool - lure starts dropping
         if (this.state === Constants.LURE_STATE.SURFACE) {
             this.timeInWater = 0;
@@ -331,6 +341,9 @@ export class Lure {
         this.state = Constants.LURE_STATE.SURFACE;
         this.trail = [];
         this.timeInWater = 0;
+
+        // Set cooldown timestamp to prevent immediate auto-drop
+        this.lastResetTime = this.scene.time.now;
         this.baseY = 0;
         this.jigOffset = 0;
         this.isJigging = false;
