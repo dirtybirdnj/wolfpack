@@ -1,46 +1,64 @@
-import Fish from './fish.js';
-import GameConfig from '../config/GameConfig.js';
-import { Utils } from '../utils/Constants.js';
+import { Fish } from '../fish.js';
+import { Utils } from '../../utils/Constants.js';
+import GameConfig from '../../config/GameConfig.js';
 
 /**
- * Lake Trout - Salvelinus namaycush
- * Cold-water predator, pursuit hunting style
+ * Lake Trout - Slow growth, long-lived cold water predator
+ * Salvelinus namaycush
  */
 export class LakeTrout extends Fish {
     constructor(scene, x, y, size = 'MEDIUM', fishingType = null) {
         super(scene, x, y, size, fishingType, 'lake_trout');
+
+        // Lake trout are MUCH hungrier - voracious predators
+        this.hunger = Utils.randomBetween(80, 100);
     }
 
-    /**
-     * Lake trout length-weight formula
-     * length in inches ≈ 10.5 * weight^0.31
-     */
     calculateLength() {
+        // Lake trout: length in inches ≈ 10.5 * weight^0.31
         return Math.round(10.5 * Math.pow(this.weight, 0.31));
     }
 
-    /**
-     * Lake trout age-weight relationship
-     * Slower growth, longer lived species
-     */
     calculateBiologicalAge() {
+        // Lake trout age-weight relationship (slow growth, long-lived)
         if (this.weight <= 5) {
+            // Small fish: 3-6 years
             return Math.round(Utils.randomBetween(3, 6));
         } else if (this.weight <= 12) {
+            // Medium fish: 6-12 years
             return Math.round(Utils.randomBetween(6, 12));
         } else if (this.weight <= 25) {
+            // Large fish: 12-20 years
             return Math.round(Utils.randomBetween(12, 20));
         } else {
+            // Trophy fish: 20-30+ years
             return Math.round(Utils.randomBetween(20, 30));
         }
     }
 
     /**
-     * Draw lake trout shape - shared rendering code
-     * @param {Object} graphics - Phaser graphics object to draw on
-     * @param {number} bodySize - Size multiplier for the fish body
+     * Render lake trout with rotation and position
      */
-    drawFishShape(graphics, bodySize) {
+    render(graphics, bodySize, isMovingRight) {
+        graphics.save();
+        graphics.translateCanvas(this.x, this.y);
+
+        if (isMovingRight) {
+            graphics.rotateCanvas(this.angle);
+        } else {
+            graphics.scaleCanvas(-1, 1);
+            graphics.rotateCanvas(-this.angle);
+        }
+
+        this.renderBody(graphics, bodySize);
+
+        graphics.restore();
+    }
+
+    /**
+     * Render lake trout body (shared by render and renderAtPosition)
+     */
+    renderBody(graphics, bodySize) {
         // Main body - grayish-olive color
         graphics.fillStyle(GameConfig.COLOR_FISH_BODY, 1.0);
         graphics.fillEllipse(0, 0, bodySize * 2.5, bodySize * 0.8);
@@ -52,13 +70,12 @@ export class LakeTrout extends Fish {
         // Tail fin
         const tailSize = bodySize * 0.7;
         const tailX = -bodySize * 1.25;
-        const tailY = 0;
 
         graphics.fillStyle(GameConfig.COLOR_FISH_FINS, 0.9);
         graphics.beginPath();
-        graphics.moveTo(tailX, tailY);
-        graphics.lineTo(tailX - tailSize, tailY - tailSize * 0.6);
-        graphics.lineTo(tailX - tailSize, tailY + tailSize * 0.6);
+        graphics.moveTo(tailX, 0);
+        graphics.lineTo(tailX - tailSize, -tailSize * 0.6);
+        graphics.lineTo(tailX - tailSize, tailSize * 0.6);
         graphics.closePath();
         graphics.fillPath();
 
@@ -78,29 +95,10 @@ export class LakeTrout extends Fish {
     }
 
     /**
-     * Render lake trout body (for gameplay)
+     * Render at a custom position (for catch popup)
      */
-    renderBody(bodySize, isMovingRight) {
-        this.graphics.save();
-        this.graphics.translateCanvas(this.x, this.y);
-
-        if (isMovingRight) {
-            this.graphics.rotateCanvas(this.angle);
-        } else {
-            this.graphics.scaleCanvas(-1, 1);
-            this.graphics.rotateCanvas(-this.angle);
-        }
-
-        this.drawFishShape(this.graphics, bodySize);
-
-        this.graphics.restore();
-    }
-
-    /**
-     * Render lake trout at position (for catch popup)
-     */
-    renderBodyAtPosition(graphics, bodySize) {
-        this.drawFishShape(graphics, bodySize);
+    renderAtPosition(graphics, bodySize) {
+        this.renderBody(graphics, bodySize);
     }
 }
 

@@ -1,48 +1,62 @@
-import Fish from './fish.js';
-import { Utils } from '../utils/Constants.js';
+import { Fish } from '../fish.js';
+import { Utils } from '../../utils/Constants.js';
 
 /**
- * Northern Pike - Esox lucius
- * Ambush predator with explosive strikes
+ * Northern Pike - Fast growth, ambush predator
+ * Esox lucius
  */
 export class NorthernPike extends Fish {
     constructor(scene, x, y, size = 'MEDIUM', fishingType = null) {
         super(scene, x, y, size, fishingType, 'northern_pike');
     }
 
-    /**
-     * Northern pike length-weight formula
-     * Pike are longer and more slender
-     * length in inches ≈ 13.5 * weight^0.28
-     */
     calculateLength() {
+        // Northern pike: length in inches ≈ 13.5 * weight^0.28 (longer, more slender)
         return Math.round(13.5 * Math.pow(this.weight, 0.28));
     }
 
-    /**
-     * Northern pike age-weight relationship
-     * Faster growth than lake trout, shorter lifespan
-     */
     calculateBiologicalAge() {
+        // Northern pike grow faster than lake trout, shorter lifespan
         if (this.weight <= 6) {
+            // Small pike: 2-4 years
             return Math.round(Utils.randomBetween(2, 4));
         } else if (this.weight <= 15) {
+            // Medium pike: 4-8 years
             return Math.round(Utils.randomBetween(4, 8));
         } else if (this.weight <= 25) {
+            // Large pike: 8-14 years
             return Math.round(Utils.randomBetween(8, 14));
         } else {
+            // Trophy pike: 14-22 years
             return Math.round(Utils.randomBetween(14, 22));
         }
     }
 
     /**
-     * Draw northern pike shape - shared rendering code
-     * @param {Object} graphics - Phaser graphics object to draw on
-     * @param {number} bodySize - Size multiplier for the fish body
+     * Render northern pike with rotation and position
      */
-    drawFishShape(graphics, bodySize) {
+    render(graphics, bodySize, isMovingRight) {
         const colors = this.speciesData.appearance.colorScheme;
 
+        graphics.save();
+        graphics.translateCanvas(this.x, this.y);
+
+        if (isMovingRight) {
+            graphics.rotateCanvas(this.angle);
+        } else {
+            graphics.scaleCanvas(-1, 1);
+            graphics.rotateCanvas(-this.angle);
+        }
+
+        this.renderBody(graphics, bodySize, colors);
+
+        graphics.restore();
+    }
+
+    /**
+     * Render northern pike body (shared by render and renderAtPosition)
+     */
+    renderBody(graphics, bodySize, colors) {
         // Pike body - long and cylindrical (torpedo-shaped)
         const pikeLength = bodySize * 3.2;
         const pikeHeight = bodySize * 0.6;
@@ -105,29 +119,11 @@ export class NorthernPike extends Fish {
     }
 
     /**
-     * Render northern pike body (for gameplay)
+     * Render at a custom position (for catch popup)
      */
-    renderBody(bodySize, isMovingRight) {
-        this.graphics.save();
-        this.graphics.translateCanvas(this.x, this.y);
-
-        if (isMovingRight) {
-            this.graphics.rotateCanvas(this.angle);
-        } else {
-            this.graphics.scaleCanvas(-1, 1);
-            this.graphics.rotateCanvas(-this.angle);
-        }
-
-        this.drawFishShape(this.graphics, bodySize);
-
-        this.graphics.restore();
-    }
-
-    /**
-     * Render northern pike at position (for catch popup)
-     */
-    renderBodyAtPosition(graphics, bodySize) {
-        this.drawFishShape(graphics, bodySize);
+    renderAtPosition(graphics, bodySize) {
+        const colors = this.speciesData.appearance.colorScheme;
+        this.renderBody(graphics, bodySize, colors);
     }
 }
 
