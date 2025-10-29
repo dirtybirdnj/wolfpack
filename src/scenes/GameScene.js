@@ -77,6 +77,7 @@ export class GameScene extends Phaser.Scene {
         this.tackleBoxSelected = { lure: 0, line: 0 };
         this.tackleBoxButtonStates = {
             select: false,
+            start: false,
             left: false,
             right: false,
             up: false,
@@ -307,7 +308,11 @@ export class GameScene extends Phaser.Scene {
         // If tackle box is open, handle its input and render it
         if (this.tackleBoxOpen) {
             this.handleTackleBoxInput();
-            this.renderTackleBox();
+
+            // Only render if still open (might have been closed by input handler)
+            if (this.tackleBoxOpen) {
+                this.renderTackleBox();
+            }
             return; // Skip normal game updates while tackle box is open
         }
 
@@ -771,22 +776,32 @@ export class GameScene extends Phaser.Scene {
      * Handle tackle box input
      */
     handleTackleBoxInput() {
-        // TAB/Select to close
+        // TAB/Select/Start to close
         const tabKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.TAB);
         if (Phaser.Input.Keyboard.JustDown(tabKey)) {
             this.toggleTackleBox();
             return;
         }
 
-        // Gamepad select button
+        // Gamepad select or start button to close
         if (window.gamepadManager && window.gamepadManager.isConnected()) {
             const selectButton = window.gamepadManager.getButton('Select');
+            const startButton = window.gamepadManager.getButton('Start');
+
             if (selectButton && selectButton.pressed && !this.tackleBoxButtonStates.select) {
                 this.toggleTackleBox();
                 this.tackleBoxButtonStates.select = true;
                 return; // Exit early after toggling
             }
+
+            if (startButton && startButton.pressed && !this.tackleBoxButtonStates.start) {
+                this.toggleTackleBox();
+                this.tackleBoxButtonStates.start = true;
+                return; // Exit early after toggling
+            }
+
             this.tackleBoxButtonStates.select = selectButton ? selectButton.pressed : false;
+            this.tackleBoxButtonStates.start = startButton ? startButton.pressed : false;
         }
 
         // Arrow keys for navigation
