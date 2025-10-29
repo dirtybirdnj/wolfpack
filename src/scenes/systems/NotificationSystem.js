@@ -37,7 +37,8 @@ export class NotificationSystem {
             up: false,
             down: false,
             x: false,
-            circle: false
+            circle: false,
+            select: false
         };
 
         // Controls dialog state
@@ -270,7 +271,7 @@ export class NotificationSystem {
 
         // Controls hint
         const hintText = this.scene.add.text(GameConfig.CANVAS_WIDTH / 2, GameConfig.CANVAS_HEIGHT - 60,
-            'D-Pad/Arrows: Navigate | X/Enter: Select | CIRCLE/ESC: Resume', {
+            'D-Pad/Arrows: Navigate | X: Select | SELECT: Tackle Box | CIRCLE: Resume', {
             fontSize: '11px',
             fontFamily: 'Courier New',
             color: '#88ff88',
@@ -434,15 +435,23 @@ export class NotificationSystem {
 
         // Gamepad input
         let circlePressed = false;
+        let selectPressed = false;
 
         if (window.gamepadManager && window.gamepadManager.isConnected()) {
             const circleButton = window.gamepadManager.getButton('Circle');
+            const selectButton = window.gamepadManager.getButton('Select');
 
             // CIRCLE button - close pause menu and return to game
             if (circleButton && circleButton.pressed && !this.buttonStates.circle) {
                 circlePressed = true;
             }
             this.buttonStates.circle = circleButton ? circleButton.pressed : false;
+
+            // SELECT button - open tackle box
+            if (selectButton && selectButton.pressed && !this.buttonStates.select) {
+                selectPressed = true;
+            }
+            this.buttonStates.select = selectButton ? selectButton.pressed : false;
         }
 
         if (this.scene.input.gamepad && this.scene.input.gamepad.total > 0) {
@@ -503,6 +512,11 @@ export class NotificationSystem {
             if (selectedButton && selectedButton.callback) {
                 selectedButton.callback();
             }
+        }
+
+        // SELECT button - open tackle box (same as selecting Tackle Box button)
+        if (selectPressed) {
+            this.openTackleBox();
         }
 
         // CIRCLE button - close pause menu and return to gameplay
