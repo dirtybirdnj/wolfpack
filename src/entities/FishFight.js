@@ -617,8 +617,9 @@ export class FishFight {
         fishGraphics.setDepth(2002);
 
         // Render enlarged fish (with defensive check)
+        // Scale reduced from 4 to 2 to prevent fish from appearing too large
         if (this.fish && typeof this.fish.renderAtPosition === 'function') {
-            this.fish.renderAtPosition(fishGraphics, popupX, popupY - 40, 4);
+            this.fish.renderAtPosition(fishGraphics, popupX, popupY - 40, 2);
         } else {
             console.warn('Fish renderAtPosition method not available, skipping fish rendering in popup');
         }
