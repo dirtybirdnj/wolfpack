@@ -77,6 +77,7 @@ export class GameScene extends Phaser.Scene {
         this.tackleBoxSelected = { lure: 0, line: 0 };
         this.tackleBoxButtonStates = {
             select: false,
+            circle: false,
             start: false,
             left: false,
             right: false,
@@ -276,8 +277,8 @@ export class GameScene extends Phaser.Scene {
             return;
         }
 
-        // Check for pause input
-        if (this.inputSystem.checkPauseInput()) {
+        // Check for pause input (but not when tackle box is open - it handles START button)
+        if (!this.tackleBoxOpen && this.inputSystem.checkPauseInput()) {
             this.notificationSystem.togglePause();
         }
 
@@ -776,31 +777,43 @@ export class GameScene extends Phaser.Scene {
      * Handle tackle box input
      */
     handleTackleBoxInput() {
-        // TAB/Select/Start to close
+        // TAB/Select to close and return to gameplay
         const tabKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.TAB);
         if (Phaser.Input.Keyboard.JustDown(tabKey)) {
             this.toggleTackleBox();
             return;
         }
 
-        // Gamepad select or start button to close
+        // Gamepad buttons
         if (window.gamepadManager && window.gamepadManager.isConnected()) {
             const selectButton = window.gamepadManager.getButton('Select');
+            const circleButton = window.gamepadManager.getButton('Circle'); // B on Xbox, A on 8bitdo
             const startButton = window.gamepadManager.getButton('Start');
 
+            // Select or Circle button - close tackle box and return to gameplay
             if (selectButton && selectButton.pressed && !this.tackleBoxButtonStates.select) {
                 this.toggleTackleBox();
                 this.tackleBoxButtonStates.select = true;
-                return; // Exit early after toggling
+                return;
             }
 
+            if (circleButton && circleButton.pressed && !this.tackleBoxButtonStates.circle) {
+                this.toggleTackleBox();
+                this.tackleBoxButtonStates.circle = true;
+                return;
+            }
+
+            // Start button - close tackle box AND open pause menu
             if (startButton && startButton.pressed && !this.tackleBoxButtonStates.start) {
                 this.toggleTackleBox();
                 this.tackleBoxButtonStates.start = true;
-                return; // Exit early after toggling
+                // Open pause menu after closing tackle box
+                this.notificationSystem.togglePause();
+                return;
             }
 
             this.tackleBoxButtonStates.select = selectButton ? selectButton.pressed : false;
+            this.tackleBoxButtonStates.circle = circleButton ? circleButton.pressed : false;
             this.tackleBoxButtonStates.start = startButton ? startButton.pressed : false;
         }
 
