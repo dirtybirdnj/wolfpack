@@ -777,6 +777,8 @@ export class GameScene extends Phaser.Scene {
             const selectButton = window.gamepadManager.getButton('Select');
             if (selectButton && selectButton.pressed && !this.tackleBoxButtonStates.select) {
                 this.toggleTackleBox();
+                this.tackleBoxButtonStates.select = true;
+                return; // Exit early after toggling
             }
             this.tackleBoxButtonStates.select = selectButton ? selectButton.pressed : false;
         }
