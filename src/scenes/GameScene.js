@@ -298,7 +298,7 @@ export class GameScene extends Phaser.Scene {
         }
 
         // Check for tackle box toggle (TAB key or Select button)
-        if (!this.tackleBoxOpen) {
+        if (!this.tackleBoxOpen && !this.notificationSystem.isPausedState()) {
             const tabKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.TAB);
             if (Phaser.Input.Keyboard.JustDown(tabKey)) {
                 this.toggleTackleBox();
@@ -308,6 +308,9 @@ export class GameScene extends Phaser.Scene {
                 const selectButton = window.gamepadManager.getButton('Select');
                 if (selectButton && selectButton.pressed && !this.tackleBoxButtonStates.select) {
                     this.toggleTackleBox();
+                    this.tackleBoxButtonStates.select = true;
+                    // Don't update button state again until released to prevent double-toggle
+                    return;
                 }
                 this.tackleBoxButtonStates.select = selectButton ? selectButton.pressed : false;
             }

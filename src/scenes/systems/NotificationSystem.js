@@ -31,14 +31,13 @@ export class NotificationSystem {
         this.isPaused = false;
 
         // Menu navigation state
-        this.selectedButtonIndex = 0; // 0 = Resume, 1 = Controls, 2 = Main Menu
+        this.selectedButtonIndex = 0; // 0 = Resume, 1 = Tackle Box, 2 = Controls, 3 = Main Menu
         this.buttons = [];
         this.buttonStates = {
             up: false,
             down: false,
             x: false,
-            circle: false,
-            select: false
+            circle: false
         };
 
         // Controls dialog state
@@ -234,8 +233,8 @@ export class NotificationSystem {
         this.buttons = [];
 
         // Create menu buttons
-        const centerY = GameConfig.CANVAS_HEIGHT / 2 + 30;
-        const buttonSpacing = 70;
+        const centerY = GameConfig.CANVAS_HEIGHT / 2 + 10;
+        const buttonSpacing = 65;
 
         const resumeButton = this.createPauseMenuButton(
             GameConfig.CANVAS_WIDTH / 2,
@@ -245,9 +244,17 @@ export class NotificationSystem {
         );
         this.buttons.push(resumeButton);
 
-        const controlsButton = this.createPauseMenuButton(
+        const tackleBoxButton = this.createPauseMenuButton(
             GameConfig.CANVAS_WIDTH / 2,
             centerY + buttonSpacing,
+            'TACKLE BOX',
+            () => this.openTackleBox()
+        );
+        this.buttons.push(tackleBoxButton);
+
+        const controlsButton = this.createPauseMenuButton(
+            GameConfig.CANVAS_WIDTH / 2,
+            centerY + buttonSpacing * 2,
             'CONTROLS',
             () => this.showControlsDialog()
         );
@@ -255,7 +262,7 @@ export class NotificationSystem {
 
         const mainMenuButton = this.createPauseMenuButton(
             GameConfig.CANVAS_WIDTH / 2,
-            centerY + buttonSpacing * 2,
+            centerY + buttonSpacing * 3,
             'MAIN MENU',
             () => this.goToMainMenu()
         );
@@ -263,7 +270,7 @@ export class NotificationSystem {
 
         // Controls hint
         const hintText = this.scene.add.text(GameConfig.CANVAS_WIDTH / 2, GameConfig.CANVAS_HEIGHT - 60,
-            'D-Pad/Arrows: Navigate | X/Enter: Select | START/ESC: Resume', {
+            'D-Pad/Arrows: Navigate | X/Enter: Select | CIRCLE/ESC: Resume', {
             fontSize: '11px',
             fontFamily: 'Courier New',
             color: '#88ff88',
@@ -426,18 +433,10 @@ export class NotificationSystem {
         }
 
         // Gamepad input
-        let selectPressed = false;
         let circlePressed = false;
 
         if (window.gamepadManager && window.gamepadManager.isConnected()) {
-            const selectButton = window.gamepadManager.getButton('Select');
             const circleButton = window.gamepadManager.getButton('Circle');
-
-            // SELECT button - switch to tackle box
-            if (selectButton && selectButton.pressed && !this.buttonStates.select) {
-                selectPressed = true;
-            }
-            this.buttonStates.select = selectButton ? selectButton.pressed : false;
 
             // CIRCLE button - close pause menu and return to game
             if (circleButton && circleButton.pressed && !this.buttonStates.circle) {
@@ -504,12 +503,6 @@ export class NotificationSystem {
             if (selectedButton && selectedButton.callback) {
                 selectedButton.callback();
             }
-        }
-
-        // SELECT button - close pause menu and signal to open tackle box
-        if (selectPressed) {
-            this.switchToTackleBox = true;
-            this.togglePause(); // Close pause menu but game will stay paused via tackle box
         }
 
         // CIRCLE button - close pause menu and return to gameplay
@@ -761,6 +754,14 @@ export class NotificationSystem {
                 this.controlsDialog.elements.push(child);
             }
         });
+    }
+
+    /**
+     * Open tackle box from pause menu
+     */
+    openTackleBox() {
+        this.switchToTackleBox = true;
+        this.togglePause(); // Close pause menu (game stays paused via tackle box)
     }
 
     /**
