@@ -62,18 +62,25 @@ wolfpack/
 └── src/
     ├── index.js        # Game initialization
     ├── config/
-    │   └── GameConfig.js    # Game constants and settings
+    │   ├── GameConfig.js    # Game constants and settings
+    │   └── SpeciesData.js   # Fish species data and behavior
     ├── scenes/
     │   ├── BootScene.js     # Asset loading
     │   ├── GameScene.js     # Main game logic
     │   └── UIScene.js       # HUD and interface
     ├── entities/
     │   ├── Lure.js          # Player lure logic
-    │   ├── Fish.js          # Fish entity and behavior
+    │   ├── Fish.js          # Fish factory (creates species)
     │   └── FishAI.js        # Fish decision making
+    ├── models/
+    │   ├── fish.js          # Base fish biological model
+    │   ├── lake-trout.js    # Lake Trout species
+    │   ├── northern-pike.js # Northern Pike species
+    │   ├── smallmouth-bass.js # Smallmouth Bass species
+    │   └── yellow-perch.js  # Yellow Perch species
     └── utils/
         ├── SonarDisplay.js  # Sonar rendering logic
-        └── Constants.js      # Game constants
+        └── Constants.js     # Game constants
 ```
 
 ## 🏔️ Setting
