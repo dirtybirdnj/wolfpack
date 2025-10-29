@@ -1,48 +1,62 @@
-import Fish from './fish.js';
-import { Utils } from '../utils/Constants.js';
+import { Fish } from '../fish.js';
+import { Utils } from '../../utils/Constants.js';
 
 /**
- * Smallmouth Bass - Micropterus dolomieu
- * Active pursuit predator, circles before striking
+ * Smallmouth Bass - Moderate growth, aggressive fighter
+ * Micropterus dolomieu
  */
 export class SmallmouthBass extends Fish {
     constructor(scene, x, y, size = 'MEDIUM', fishingType = null) {
         super(scene, x, y, size, fishingType, 'smallmouth_bass');
     }
 
-    /**
-     * Smallmouth bass length-weight formula
-     * Compact, deep-bodied fish
-     * length in inches ≈ 11.2 * weight^0.33
-     */
     calculateLength() {
+        // Smallmouth bass: length in inches ≈ 11.2 * weight^0.33 (compact, deep-bodied)
         return Math.round(11.2 * Math.pow(this.weight, 0.33));
     }
 
-    /**
-     * Smallmouth bass age-weight relationship
-     * Moderate growth, medium lifespan
-     */
     calculateBiologicalAge() {
+        // Smallmouth bass moderate growth, medium lifespan
         if (this.weight <= 2) {
+            // Small bass: 2-4 years
             return Math.round(Utils.randomBetween(2, 4));
         } else if (this.weight <= 4) {
+            // Medium bass: 4-7 years
             return Math.round(Utils.randomBetween(4, 7));
         } else if (this.weight <= 6) {
+            // Large bass: 7-12 years
             return Math.round(Utils.randomBetween(7, 12));
         } else {
+            // Trophy bass: 12-18 years
             return Math.round(Utils.randomBetween(12, 18));
         }
     }
 
     /**
-     * Draw smallmouth bass shape - shared rendering code
-     * @param {Object} graphics - Phaser graphics object to draw on
-     * @param {number} bodySize - Size multiplier for the fish body
+     * Render smallmouth bass with rotation and position
      */
-    drawFishShape(graphics, bodySize) {
+    render(graphics, bodySize, isMovingRight) {
         const colors = this.speciesData.appearance.colorScheme;
 
+        graphics.save();
+        graphics.translateCanvas(this.x, this.y);
+
+        if (isMovingRight) {
+            graphics.rotateCanvas(this.angle);
+        } else {
+            graphics.scaleCanvas(-1, 1);
+            graphics.rotateCanvas(-this.angle);
+        }
+
+        this.renderBody(graphics, bodySize, colors);
+
+        graphics.restore();
+    }
+
+    /**
+     * Render smallmouth bass body (shared by render and renderAtPosition)
+     */
+    renderBody(graphics, bodySize, colors) {
         // Bass body - compact and muscular
         const bassLength = bodySize * 2.2;
         const bassHeight = bodySize * 0.9;
@@ -121,29 +135,11 @@ export class SmallmouthBass extends Fish {
     }
 
     /**
-     * Render smallmouth bass body (for gameplay)
+     * Render at a custom position (for catch popup)
      */
-    renderBody(bodySize, isMovingRight) {
-        this.graphics.save();
-        this.graphics.translateCanvas(this.x, this.y);
-
-        if (isMovingRight) {
-            this.graphics.rotateCanvas(this.angle);
-        } else {
-            this.graphics.scaleCanvas(-1, 1);
-            this.graphics.rotateCanvas(-this.angle);
-        }
-
-        this.drawFishShape(this.graphics, bodySize);
-
-        this.graphics.restore();
-    }
-
-    /**
-     * Render smallmouth bass at position (for catch popup)
-     */
-    renderBodyAtPosition(graphics, bodySize) {
-        this.drawFishShape(graphics, bodySize);
+    renderAtPosition(graphics, bodySize) {
+        const colors = this.speciesData.appearance.colorScheme;
+        this.renderBody(graphics, bodySize, colors);
     }
 }
 

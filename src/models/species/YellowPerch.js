@@ -1,48 +1,62 @@
-import Fish from './fish.js';
-import { Utils } from '../utils/Constants.js';
+import { Fish } from '../fish.js';
+import { Utils } from '../../utils/Constants.js';
 
 /**
- * Yellow Perch - Perca flavescens
- * Opportunistic feeder, beginner-friendly species
+ * Yellow Perch - Fast growth, shorter lifespan
+ * Perca flavescens
  */
 export class YellowPerch extends Fish {
     constructor(scene, x, y, size = 'MEDIUM', fishingType = null) {
         super(scene, x, y, size, fishingType, 'yellow_perch_large');
     }
 
-    /**
-     * Yellow perch length-weight formula
-     * Smaller, deep-bodied fish
-     * length in inches ≈ 9.5 * weight^0.35
-     */
     calculateLength() {
+        // Yellow perch: length in inches ≈ 9.5 * weight^0.35 (smaller, deep-bodied)
         return Math.round(9.5 * Math.pow(this.weight, 0.35));
     }
 
-    /**
-     * Yellow perch age-weight relationship
-     * Fast growth, shorter lifespan
-     */
     calculateBiologicalAge() {
+        // Yellow perch fast growth, shorter lifespan
         if (this.weight <= 0.7) {
+            // Small perch: 1-3 years
             return Math.round(Utils.randomBetween(1, 3));
         } else if (this.weight <= 1.2) {
+            // Medium perch: 3-5 years
             return Math.round(Utils.randomBetween(3, 5));
         } else if (this.weight <= 2.0) {
+            // Large perch: 5-8 years
             return Math.round(Utils.randomBetween(5, 8));
         } else {
+            // Trophy perch: 8-12 years
             return Math.round(Utils.randomBetween(8, 12));
         }
     }
 
     /**
-     * Draw yellow perch shape - shared rendering code
-     * @param {Object} graphics - Phaser graphics object to draw on
-     * @param {number} bodySize - Size multiplier for the fish body
+     * Render yellow perch with rotation and position
      */
-    drawFishShape(graphics, bodySize) {
+    render(graphics, bodySize, isMovingRight) {
         const colors = this.speciesData.appearance.colorScheme;
 
+        graphics.save();
+        graphics.translateCanvas(this.x, this.y);
+
+        if (isMovingRight) {
+            graphics.rotateCanvas(this.angle);
+        } else {
+            graphics.scaleCanvas(-1, 1);
+            graphics.rotateCanvas(-this.angle);
+        }
+
+        this.renderBody(graphics, bodySize, colors);
+
+        graphics.restore();
+    }
+
+    /**
+     * Render yellow perch body (shared by render and renderAtPosition)
+     */
+    renderBody(graphics, bodySize, colors) {
         // Perch body - deep and laterally compressed
         const perchLength = bodySize * 2.0;
         const perchHeight = bodySize * 0.85;
@@ -114,29 +128,11 @@ export class YellowPerch extends Fish {
     }
 
     /**
-     * Render yellow perch body (for gameplay)
+     * Render at a custom position (for catch popup)
      */
-    renderBody(bodySize, isMovingRight) {
-        this.graphics.save();
-        this.graphics.translateCanvas(this.x, this.y);
-
-        if (isMovingRight) {
-            this.graphics.rotateCanvas(this.angle);
-        } else {
-            this.graphics.scaleCanvas(-1, 1);
-            this.graphics.rotateCanvas(-this.angle);
-        }
-
-        this.drawFishShape(this.graphics, bodySize);
-
-        this.graphics.restore();
-    }
-
-    /**
-     * Render yellow perch at position (for catch popup)
-     */
-    renderBodyAtPosition(graphics, bodySize) {
-        this.drawFishShape(graphics, bodySize);
+    renderAtPosition(graphics, bodySize) {
+        const colors = this.speciesData.appearance.colorScheme;
+        this.renderBody(graphics, bodySize, colors);
     }
 }
 
