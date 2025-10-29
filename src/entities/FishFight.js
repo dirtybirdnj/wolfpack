@@ -623,8 +623,19 @@ export class FishFight {
 
         // Render enlarged fish (with defensive check)
         // Scale reduced from 2 to 1 to prevent large fish from appearing too large
+        console.log('Rendering fish in catch popup:', {
+            fishExists: !!this.fish,
+            hasRenderMethod: this.fish && typeof this.fish.renderAtPosition === 'function',
+            fishSpecies: this.fish ? this.fish.species : 'none',
+            weight: this.fish ? this.fish.weight : 0,
+            renderX: popupX,
+            renderY: popupY - 40,
+            scale: 1
+        });
+
         if (this.fish && typeof this.fish.renderAtPosition === 'function') {
             this.fish.renderAtPosition(fishGraphics, popupX, popupY - 40, 1);
+            console.log('Fish renderAtPosition called successfully');
         } else {
             console.warn('Fish renderAtPosition method not available, skipping fish rendering in popup');
         }

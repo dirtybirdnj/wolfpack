@@ -326,7 +326,8 @@ export class GameScene extends Phaser.Scene {
         }
 
         // Check for tackle box toggle (TAB key or Select button)
-        if (!this.tackleBoxOpen && !this.notificationSystem.isPausedState()) {
+        // Block tackle box when catch popup is active
+        if (!this.tackleBoxOpen && !this.notificationSystem.isPausedState() && !this.catchPopupActive) {
             const tabKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.TAB);
             if (Phaser.Input.Keyboard.JustDown(tabKey)) {
                 this.toggleTackleBox();
