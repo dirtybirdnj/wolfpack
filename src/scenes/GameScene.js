@@ -571,10 +571,14 @@ export class GameScene extends Phaser.Scene {
 
         // Roll for whether player feels the bump (based on line sensitivity)
         if (Math.random() <= hapticSensitivity) {
-            // Player feels the bump! Trigger short haptic feedback
-            // Lighter and shorter than a bite (150ms vs 300ms, 0.3/0.15 vs 0.6/0.3)
-            this.rumbleGamepad(150, 0.3, 0.15);
-            console.log(`Fish bump detected! (${(hapticSensitivity * 100).toFixed(0)}% sensitivity - ${this.fishingLine.model.getDisplayName()})`);
+            // Player feels the bump! Scale haptic intensity by line sensitivity
+            // Base haptic for bump: 150ms duration, 0.3/0.15 magnitude
+            // Scale by sensitivity: Braid (100%) = full strength, Mono (40%) = 40% strength
+            const strongMagnitude = 0.3 * hapticSensitivity;
+            const weakMagnitude = 0.15 * hapticSensitivity;
+
+            this.rumbleGamepad(150, strongMagnitude, weakMagnitude);
+            console.log(`Fish bump detected! (${(hapticSensitivity * 100).toFixed(0)}% sensitivity - ${this.fishingLine.model.getDisplayName()}) - Haptic: ${strongMagnitude.toFixed(2)}/${weakMagnitude.toFixed(2)}`);
         } else {
             console.log(`Fish bump occurred but not felt (${(hapticSensitivity * 100).toFixed(0)}% sensitivity)`);
         }
