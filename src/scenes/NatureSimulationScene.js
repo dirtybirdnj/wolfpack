@@ -53,8 +53,9 @@ export class NatureSimulationScene extends Phaser.Scene {
         // Initialize spawning system (no lure needed in nature mode)
         this.spawningSystem = new SpawningSystem(this);
 
-        // Initialize debug system
+        // Initialize debug system (always enabled in nature mode for observation)
         this.debugSystem = new DebugSystem(this);
+        this.debugSystem.setEnabled(true);
 
         // Create depth selection UI
         this.createDepthSelectionUI();
@@ -296,8 +297,9 @@ export class NatureSimulationScene extends Phaser.Scene {
 
         // D to toggle debug mode (only when not in depth selection)
         this.input.keyboard.on('keydown-D', () => {
-            if (!this.depthSelectionActive) {
+            if (!this.depthSelectionActive && this.debugSystem) {
                 this.debugMode = !this.debugMode;
+                this.debugSystem.setEnabled(this.debugMode);
                 console.log('Debug mode:', this.debugMode ? 'ON' : 'OFF');
             }
         });
