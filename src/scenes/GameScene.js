@@ -738,6 +738,74 @@ export class GameScene extends Phaser.Scene {
 
         console.log(`Summoning ${pike.length} pike to attack`);
 
+        // SCARE OTHER PREDATORS - Pike rushing scares other species
+        let scaredCount = 0;
+        this.fishes.forEach(otherFish => {
+            // Skip pike themselves
+            if (otherFish.species === 'northern_pike' || !otherFish.visible) return;
+
+            // Check if this fish can see any of the rushing pike
+            for (const rushingPike of pike) {
+                const dx = Math.abs(otherFish.x - rushingPike.x);
+                const dy = Math.abs(otherFish.y - rushingPike.y);
+
+                // Within horizontal and vertical detection range?
+                if (dx < GameConfig.DETECTION_RANGE && dy < GameConfig.VERTICAL_DETECTION_RANGE) {
+                    // Fish sees the pike rush! Make it flee
+                    otherFish.ai.state = Constants.FISH_STATE.FLEEING;
+                    otherFish.ai.decisionCooldown = 3000; // Flee for 3 seconds
+                    scaredCount++;
+                    break; // One pike is enough to scare this fish
+                }
+            }
+        });
+
+        if (scaredCount > 0) {
+            console.log(`Pike rush scared ${scaredCount} other fish away!`);
+        }
+
+        // PUSH BAITFISH CLOUDS AWAY - Apply repulsion force
+        this.baitfishClouds.forEach(cloud => {
+            if (!cloud.visible) return;
+
+            // Find closest pike to this cloud
+            let closestPike = null;
+            let minDistance = Infinity;
+
+            pike.forEach(rushingPike => {
+                const dx = cloud.centerX - rushingPike.x;
+                const dy = cloud.centerY - rushingPike.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                if (dist < minDistance) {
+                    minDistance = dist;
+                    closestPike = rushingPike;
+                }
+            });
+
+            // Apply repulsion if pike is close enough (within 200 pixels)
+            if (closestPike && minDistance < 200) {
+                const dx = cloud.centerX - closestPike.x;
+                const dy = cloud.centerY - closestPike.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                if (dist > 0) {
+                    // Push away from pike - stronger when closer
+                    const repulsionStrength = 1.5 * (1 - minDistance / 200);
+                    cloud.velocity.x += (dx / dist) * repulsionStrength;
+                    cloud.velocity.y += (dy / dist) * repulsionStrength;
+
+                    // Cap velocity to prevent fleeing off screen
+                    const maxVelocity = 2.0;
+                    const currentSpeed = Math.sqrt(cloud.velocity.x ** 2 + cloud.velocity.y ** 2);
+                    if (currentSpeed > maxVelocity) {
+                        cloud.velocity.x = (cloud.velocity.x / currentSpeed) * maxVelocity;
+                        cloud.velocity.y = (cloud.velocity.y / currentSpeed) * maxVelocity;
+                    }
+                }
+            }
+        });
+
         // Make each pike attack once
         pike.forEach(fish => {
             // Force pike into striking behavior
