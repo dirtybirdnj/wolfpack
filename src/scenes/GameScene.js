@@ -67,6 +67,16 @@ export class GameScene extends Phaser.Scene {
             hasHookset: false
         };
 
+        // Jig detection state (for pike summoning)
+        this.jigDetection = {
+            lastStickY: 0,
+            jigCount: 0,
+            lastJigTime: 0,
+            jigTimeout: 2000, // Reset jig count if 2 seconds pass between jigs
+            needsReset: false, // Track if we need to reset to neutral position
+            threshold: 0.5 // Stick movement threshold
+        };
+
         // Game mode specific
         this.gameMode = null; // 'arcade' or 'unlimited'
         this.timeRemaining = 0;
@@ -353,14 +363,19 @@ export class GameScene extends Phaser.Scene {
                 this.hooksetWindow.fish = null;
                 // Fish escapes (already fleeing from FishAI)
             } else if (!this.hooksetWindow.hasHookset) {
-                // Check for hookset input (right stick up)
+                // Check for hookset input (right stick up OR R trigger full press)
                 if (window.gamepadManager && window.gamepadManager.isConnected()) {
                     const rightStickY = window.gamepadManager.getAxis(3); // Right stick Y axis
+                    const r2Trigger = window.gamepadManager.getButton('R2');
 
-                    // Detect upward motion on right stick (negative Y is up)
-                    if (rightStickY < -0.5) {
+                    // Detect upward motion on right stick (negative Y is up) OR full R trigger press
+                    const stickHookset = rightStickY < -0.5;
+                    const triggerHookset = r2Trigger && r2Trigger.value >= 0.95; // 95%+ trigger press
+
+                    if (stickHookset || triggerHookset) {
                         // Successful hookset!
-                        console.log('HOOKSET! Fish is hooked!');
+                        const method = stickHookset ? 'stick up' : 'full reel';
+                        console.log(`HOOKSET! (${method}) Fish is hooked!`);
                         this.hooksetWindow.hasHookset = true;
 
                         // Mark fish as caught and trigger catch event
@@ -370,6 +385,44 @@ export class GameScene extends Phaser.Scene {
                     }
                 }
             }
+        }
+
+        // Jig detection for pike summoning (only when not fighting)
+        if ((!this.currentFight || !this.currentFight.active) && window.gamepadManager && window.gamepadManager.isConnected()) {
+            const rightStickY = window.gamepadManager.getAxis(3);
+            const currentTime = time;
+
+            // Check if too much time has passed - reset jig count
+            if (currentTime - this.jigDetection.lastJigTime > this.jigDetection.jigTimeout) {
+                this.jigDetection.jigCount = 0;
+                this.jigDetection.needsReset = false;
+            }
+
+            // Detect stick movement
+            if (this.jigDetection.needsReset) {
+                // Waiting for stick to return to neutral
+                if (Math.abs(rightStickY) < 0.2) {
+                    this.jigDetection.needsReset = false;
+                }
+            } else {
+                // Check for up movement (negative Y is up)
+                if (rightStickY < -this.jigDetection.threshold && this.jigDetection.lastStickY > -this.jigDetection.threshold) {
+                    // Upward jig detected!
+                    this.jigDetection.jigCount++;
+                    this.jigDetection.lastJigTime = currentTime;
+                    this.jigDetection.needsReset = true;
+                    console.log(`Jig ${this.jigDetection.jigCount}/5`);
+
+                    // Check if we've reached 5 jigs
+                    if (this.jigDetection.jigCount >= 5) {
+                        this.summonPikeAttack();
+                        this.jigDetection.jigCount = 0;
+                        this.jigDetection.needsReset = false;
+                    }
+                }
+            }
+
+            this.jigDetection.lastStickY = rightStickY;
         }
 
         // Handle fish fight if active
@@ -667,6 +720,44 @@ export class GameScene extends Phaser.Scene {
         } else {
             console.log(`Fish bump occurred but not felt (${(hapticSensitivity * 100).toFixed(0)}% sensitivity)`);
         }
+    }
+
+    /**
+     * Summon all pike on screen to attack the lure once
+     */
+    summonPikeAttack() {
+        console.log('🎣 PIKE SUMMONED! All northern pike are attacking!');
+
+        // Find all northern pike fish
+        const pike = this.fishes.filter(fish => fish.species === 'northern_pike' && fish.visible);
+
+        if (pike.length === 0) {
+            console.log('No pike on screen to summon');
+            return;
+        }
+
+        console.log(`Summoning ${pike.length} pike to attack`);
+
+        // Make each pike attack once
+        pike.forEach(fish => {
+            // Force pike into striking behavior
+            fish.ai.state = Constants.FISH_STATE.STRIKING;
+            fish.ai.targetX = this.lure.x;
+            fish.ai.targetY = this.lure.y;
+            fish.ai.decisionCooldown = 50;
+
+            // After strike, force them to flee and return to ambush
+            setTimeout(() => {
+                if (fish.ai.state === Constants.FISH_STATE.STRIKING || fish.ai.state === Constants.FISH_STATE.CHASING) {
+                    fish.ai.state = Constants.FISH_STATE.FLEEING;
+                    fish.ai.decisionCooldown = 2000;
+                    console.log(`Pike ${fish.name} retreating to ambush position`);
+                }
+            }, 1000); // Give them 1 second to strike
+        });
+
+        // Visual/audio feedback
+        this.rumbleGamepad(400, 0.8, 0.4); // Strong rumble
     }
 
     /**

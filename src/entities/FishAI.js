@@ -429,6 +429,18 @@ export class FishAI {
                 // Stop and just look at the lure
                 this.targetX = this.fish.x; // Stay in place
                 this.targetY = this.fish.y;
+
+                // Smallmouth bass: Higher chance to bump while loitering/investigating
+                if (this.fish.species === 'smallmouth_bass' && distance < strikeDistance * 1.8) {
+                    // 40% chance per loiter cycle to bump the lure
+                    if (Math.random() < 0.4 && !this.hasBumpedLure) {
+                        this.hasBumpedLure = true;
+                        if (this.fish.scene) {
+                            this.fish.scene.events.emit('fishBump', this.fish);
+                            console.log('Smallmouth bass investigating - bump!');
+                        }
+                    }
+                }
             }
 
             return; // Engaged fish don't run normal chase logic
