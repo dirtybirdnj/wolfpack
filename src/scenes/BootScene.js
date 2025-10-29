@@ -55,11 +55,11 @@ export class BootScene extends Phaser.Scene {
         });
 
         // Load sample images for theming
-        this.load.image('logo-wolfpack', 'samples/snes-wolfpack.jpg');
-        this.load.image('bg-ice', 'samples/adirondacks-chunky-ice.jpg');
-        this.load.image('bg-sunset', 'samples/tip-up-sunrise.jpg');
-        this.load.image('bg-rod', 'samples/rod-box-drill-hole-bridge.jpg');
-        this.load.image('fish-trophy', 'samples/20220310_120329.jpg');
+        this.load.image('logo-wolfpack', 'samples/screenshots/pr7-snes-wolfpack-artwork.jpg');
+        this.load.image('bg-ice', 'samples/assets/pr7-adirondacks-chunky-ice.jpg');
+        this.load.image('bg-sunset', 'samples/assets/pr7-tip-up-sunrise.jpg');
+        this.load.image('bg-rod', 'samples/assets/pr7-rod-box-drill-hole-bridge.jpg');
+        this.load.image('fish-trophy', 'samples/assets/pr2-lake-trout-photo-1.jpg');
 
         // Create programmatic assets
         this.createAssets();
