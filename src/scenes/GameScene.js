@@ -449,6 +449,9 @@ export class GameScene extends Phaser.Scene {
         // Update lure (only if not fighting)
         if (!this.currentFight || !this.currentFight.active) {
             this.lure.update();
+        } else {
+            // During fight, still need to render the lure (position is updated by FishFight)
+            this.lure.render();
         }
 
         // Update fishing line

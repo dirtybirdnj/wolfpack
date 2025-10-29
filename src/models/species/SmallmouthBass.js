@@ -56,18 +56,18 @@ export class SmallmouthBass extends Fish {
     /**
      * Render smallmouth bass body (shared by render and renderAtPosition)
      */
-    renderBody(graphics, bodySize, colors) {
+    renderBody(graphics, bodySize, colors, centerX = 0, centerY = 0) {
         // Bass body - compact and muscular
         const bassLength = bodySize * 2.2;
         const bassHeight = bodySize * 0.9;
 
         // Main body - bronze/brown
         graphics.fillStyle(colors.base, 1.0);
-        graphics.fillEllipse(0, 0, bassLength, bassHeight);
+        graphics.fillEllipse(centerX, centerY, bassLength, bassHeight);
 
         // Belly - cream/tan
         graphics.fillStyle(colors.belly, 0.9);
-        graphics.fillEllipse(0, bassHeight * 0.2, bassLength * 0.85, bassHeight * 0.5);
+        graphics.fillEllipse(centerX, centerY + bassHeight * 0.2, bassLength * 0.85, bassHeight * 0.5);
 
         // Vertical bars - distinctive feature of smallmouth
         graphics.fillStyle(colors.bars, 0.7);
@@ -76,33 +76,33 @@ export class SmallmouthBass extends Fish {
         const barSpacing = bassLength / (barCount + 1);
 
         for (let i = 0; i < barCount; i++) {
-            const barX = -bassLength * 0.4 + (i * barSpacing);
+            const barX = centerX - bassLength * 0.4 + (i * barSpacing);
             const heightMultiplier = 1.0 - Math.abs(i - barCount / 2) * 0.15;
             const barHeight = bassHeight * 0.8 * heightMultiplier;
 
             graphics.fillRect(
                 barX - barWidth / 2,
-                -barHeight / 2,
+                centerY - barHeight / 2,
                 barWidth,
                 barHeight
             );
         }
 
         // Red eye - distinctive feature
-        const eyeX = bassLength * 0.35;
-        const eyeY = -bassHeight * 0.25;
+        const eyeX = centerX + bassLength * 0.35;
+        const eyeY = centerY - bassHeight * 0.25;
         graphics.fillStyle(colors.eyes, 1.0);
         graphics.fillCircle(eyeX, eyeY, bodySize * 0.15);
 
         // Tail - slightly forked
         const tailSize = bodySize * 0.75;
-        const tailX = -bassLength * 0.45;
+        const tailX = centerX - bassLength * 0.45;
 
         graphics.fillStyle(colors.fins, 0.9);
         graphics.beginPath();
-        graphics.moveTo(tailX, 0);
-        graphics.lineTo(tailX - tailSize * 0.7, -tailSize * 0.6);
-        graphics.lineTo(tailX - tailSize * 0.7, tailSize * 0.6);
+        graphics.moveTo(tailX, centerY);
+        graphics.lineTo(tailX - tailSize * 0.7, centerY - tailSize * 0.6);
+        graphics.lineTo(tailX - tailSize * 0.7, centerY + tailSize * 0.6);
         graphics.closePath();
         graphics.fillPath();
 
@@ -110,27 +110,27 @@ export class SmallmouthBass extends Fish {
         graphics.fillStyle(colors.fins, 0.8);
 
         // Spiny dorsal (front)
-        const spinyDorsalX = -bassLength * 0.15;
+        const spinyDorsalX = centerX - bassLength * 0.15;
         graphics.fillTriangle(
-            spinyDorsalX, -bassHeight * 0.5,
-            spinyDorsalX - bodySize * 0.4, -bassHeight * 1.3,
-            spinyDorsalX + bodySize * 0.2, -bassHeight * 1.2
+            spinyDorsalX, centerY - bassHeight * 0.5,
+            spinyDorsalX - bodySize * 0.4, centerY - bassHeight * 1.3,
+            spinyDorsalX + bodySize * 0.2, centerY - bassHeight * 1.2
         );
 
         // Soft dorsal (rear)
-        const softDorsalX = bassLength * 0.05;
+        const softDorsalX = centerX + bassLength * 0.05;
         graphics.fillTriangle(
-            softDorsalX, -bassHeight * 0.5,
-            softDorsalX - bodySize * 0.2, -bassHeight * 1.1,
-            softDorsalX + bodySize * 0.3, -bassHeight * 1.0
+            softDorsalX, centerY - bassHeight * 0.5,
+            softDorsalX - bodySize * 0.2, centerY - bassHeight * 1.1,
+            softDorsalX + bodySize * 0.3, centerY - bassHeight * 1.0
         );
 
         // Pectoral fins
-        const finX = -bodySize * 0.2;
+        const finX = centerX - bodySize * 0.2;
         graphics.fillTriangle(
-            finX, 0,
-            finX - bodySize * 0.35, -bassHeight * 0.3,
-            finX - bodySize * 0.35, bassHeight * 0.3
+            finX, centerY,
+            finX - bodySize * 0.35, centerY - bassHeight * 0.3,
+            finX - bodySize * 0.35, centerY + bassHeight * 0.3
         );
     }
 
@@ -139,15 +139,8 @@ export class SmallmouthBass extends Fish {
      */
     renderAtPosition(graphics, x, y, bodySize) {
         const colors = this.speciesData.appearance.colorScheme;
-
-        // Save graphics state
-        graphics.save();
-        graphics.translateCanvas(x, y);
-
-        // Render body at translated position
-        this.renderBody(graphics, bodySize, colors);
-
-        graphics.restore();
+        // Render body directly at the specified position
+        this.renderBody(graphics, bodySize, colors, x, y);
     }
 }
 

@@ -48,7 +48,7 @@ export class NorthernPike extends Fish {
             graphics.rotateCanvas(-this.angle);
         }
 
-        this.renderBody(graphics, bodySize, colors);
+        this.renderBody(graphics, bodySize, colors, 0, 0);
 
         graphics.restore();
     }
@@ -56,18 +56,18 @@ export class NorthernPike extends Fish {
     /**
      * Render northern pike body (shared by render and renderAtPosition)
      */
-    renderBody(graphics, bodySize, colors) {
+    renderBody(graphics, bodySize, colors, centerX = 0, centerY = 0) {
         // Pike body - long and cylindrical (torpedo-shaped)
         const pikeLength = bodySize * 3.2;
         const pikeHeight = bodySize * 0.6;
 
         // Main body - olive green
         graphics.fillStyle(colors.base, 1.0);
-        graphics.fillEllipse(0, 0, pikeLength, pikeHeight);
+        graphics.fillEllipse(centerX, centerY, pikeLength, pikeHeight);
 
         // Belly - light cream
         graphics.fillStyle(colors.belly, 0.9);
-        graphics.fillEllipse(0, pikeHeight * 0.15, pikeLength * 0.9, pikeHeight * 0.4);
+        graphics.fillEllipse(centerX, centerY + pikeHeight * 0.15, pikeLength * 0.9, pikeHeight * 0.4);
 
         // Characteristic cream/white oval spots in horizontal rows
         graphics.fillStyle(colors.spots, 0.8);
@@ -76,45 +76,45 @@ export class NorthernPike extends Fish {
 
         // Upper row of spots
         for (let i = 0; i < spotsPerRow; i++) {
-            const spotX = -pikeLength * 0.4 + (i * spotSpacing);
-            const spotY = -pikeHeight * 0.15;
+            const spotX = centerX - pikeLength * 0.4 + (i * spotSpacing);
+            const spotY = centerY - pikeHeight * 0.15;
             graphics.fillEllipse(spotX, spotY, bodySize * 0.25, bodySize * 0.15);
         }
 
         // Middle row of spots
         for (let i = 0; i < spotsPerRow; i++) {
-            const spotX = -pikeLength * 0.35 + (i * spotSpacing);
-            const spotY = 0;
+            const spotX = centerX - pikeLength * 0.35 + (i * spotSpacing);
+            const spotY = centerY;
             graphics.fillEllipse(spotX, spotY, bodySize * 0.25, bodySize * 0.15);
         }
 
         // Tail - pike have a distinctive forked tail
         const tailSize = bodySize * 0.8;
-        const tailX = -pikeLength * 0.45;
+        const tailX = centerX - pikeLength * 0.45;
 
         graphics.fillStyle(colors.fins, 0.9);
         graphics.beginPath();
-        graphics.moveTo(tailX, 0);
-        graphics.lineTo(tailX - tailSize * 0.8, -tailSize * 0.7);
-        graphics.lineTo(tailX - tailSize * 0.8, tailSize * 0.7);
+        graphics.moveTo(tailX, centerY);
+        graphics.lineTo(tailX - tailSize * 0.8, centerY - tailSize * 0.7);
+        graphics.lineTo(tailX - tailSize * 0.8, centerY + tailSize * 0.7);
         graphics.closePath();
         graphics.fillPath();
 
         // Dorsal fin - far back on pike (near tail)
         graphics.fillStyle(colors.fins, 0.75);
-        const dorsalX = -pikeLength * 0.25;
+        const dorsalX = centerX - pikeLength * 0.25;
         graphics.fillTriangle(
-            dorsalX, -pikeHeight * 0.4,
-            dorsalX - bodySize * 0.5, -pikeHeight * 1.3,
-            dorsalX + bodySize * 0.3, -pikeHeight * 1.0
+            dorsalX, centerY - pikeHeight * 0.4,
+            dorsalX - bodySize * 0.5, centerY - pikeHeight * 1.3,
+            dorsalX + bodySize * 0.3, centerY - pikeHeight * 1.0
         );
 
         // Pectoral fins
-        const finX = -bodySize * 0.2;
+        const finX = centerX - bodySize * 0.2;
         graphics.fillTriangle(
-            finX, 0,
-            finX - bodySize * 0.3, -pikeHeight * 0.25,
-            finX - bodySize * 0.3, pikeHeight * 0.25
+            finX, centerY,
+            finX - bodySize * 0.3, centerY - pikeHeight * 0.25,
+            finX - bodySize * 0.3, centerY + pikeHeight * 0.25
         );
     }
 
@@ -123,15 +123,8 @@ export class NorthernPike extends Fish {
      */
     renderAtPosition(graphics, x, y, bodySize) {
         const colors = this.speciesData.appearance.colorScheme;
-
-        // Save graphics state
-        graphics.save();
-        graphics.translateCanvas(x, y);
-
-        // Render body at translated position
-        this.renderBody(graphics, bodySize, colors);
-
-        graphics.restore();
+        // Render body directly at the specified position
+        this.renderBody(graphics, bodySize, colors, x, y);
     }
 }
 

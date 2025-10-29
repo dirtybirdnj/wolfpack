@@ -58,39 +58,39 @@ export class LakeTrout extends Fish {
     /**
      * Render lake trout body (shared by render and renderAtPosition)
      */
-    renderBody(graphics, bodySize) {
+    renderBody(graphics, bodySize, centerX = 0, centerY = 0) {
         // Main body - grayish-olive color
         graphics.fillStyle(GameConfig.COLOR_FISH_BODY, 1.0);
-        graphics.fillEllipse(0, 0, bodySize * 2.5, bodySize * 0.8);
+        graphics.fillEllipse(centerX, centerY, bodySize * 2.5, bodySize * 0.8);
 
         // Belly - cream/pinkish lighter color
         graphics.fillStyle(GameConfig.COLOR_FISH_BELLY, 0.8);
-        graphics.fillEllipse(0, bodySize * 0.2, bodySize * 2.2, bodySize * 0.5);
+        graphics.fillEllipse(centerX, centerY + bodySize * 0.2, bodySize * 2.2, bodySize * 0.5);
 
         // Tail fin
         const tailSize = bodySize * 0.7;
-        const tailX = -bodySize * 1.25;
+        const tailX = centerX - bodySize * 1.25;
 
         graphics.fillStyle(GameConfig.COLOR_FISH_FINS, 0.9);
         graphics.beginPath();
-        graphics.moveTo(tailX, 0);
-        graphics.lineTo(tailX - tailSize, -tailSize * 0.6);
-        graphics.lineTo(tailX - tailSize, tailSize * 0.6);
+        graphics.moveTo(tailX, centerY);
+        graphics.lineTo(tailX - tailSize, centerY - tailSize * 0.6);
+        graphics.lineTo(tailX - tailSize, centerY + tailSize * 0.6);
         graphics.closePath();
         graphics.fillPath();
 
         // Dorsal and pectoral fins
         graphics.fillStyle(GameConfig.COLOR_FISH_FINS, 0.7);
         graphics.fillTriangle(
-            0, -bodySize * 0.5,
-            -bodySize * 0.3, -bodySize * 1.2,
-            bodySize * 0.3, -bodySize * 1.2
+            centerX, centerY - bodySize * 0.5,
+            centerX - bodySize * 0.3, centerY - bodySize * 1.2,
+            centerX + bodySize * 0.3, centerY - bodySize * 1.2
         );
-        const finX = -bodySize * 0.3;
+        const finX = centerX - bodySize * 0.3;
         graphics.fillTriangle(
-            finX, 0,
-            finX - bodySize * 0.4, -bodySize * 0.3,
-            finX - bodySize * 0.4, bodySize * 0.3
+            finX, centerY,
+            finX - bodySize * 0.4, centerY - bodySize * 0.3,
+            finX - bodySize * 0.4, centerY + bodySize * 0.3
         );
     }
 
@@ -98,14 +98,8 @@ export class LakeTrout extends Fish {
      * Render at a custom position (for catch popup)
      */
     renderAtPosition(graphics, x, y, bodySize) {
-        // Save graphics state
-        graphics.save();
-        graphics.translateCanvas(x, y);
-
-        // Render body at translated position
-        this.renderBody(graphics, bodySize);
-
-        graphics.restore();
+        // Render body directly at the specified position
+        this.renderBody(graphics, bodySize, x, y);
     }
 }
 
