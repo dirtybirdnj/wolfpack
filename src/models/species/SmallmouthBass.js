@@ -140,12 +140,14 @@ export class SmallmouthBass extends Fish {
     renderAtPosition(graphics, x, y, bodySize) {
         const colors = this.speciesData.appearance.colorScheme;
 
-        // Set the graphics position to the desired location
-        graphics.x = x;
-        graphics.y = y;
+        // Use canvas transformation to position the fish
+        graphics.save();
+        graphics.translateCanvas(x, y);
 
-        // Render body at origin (0,0) relative to graphics position
+        // Render body at origin (0,0) relative to translated position
         this.renderBody(graphics, bodySize, colors, 0, 0);
+
+        graphics.restore();
     }
 }
 
