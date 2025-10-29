@@ -664,16 +664,12 @@
 
         // Check Gamepads function - manual diagnostic
         function checkGamepads() {
-            console.log('🔍 Manual gamepad check requested...');
-            console.log('🔍 Gamepad API supported?', !!navigator.getGamepads);
-
             if (!navigator.getGamepads) {
                 alert('❌ Gamepad API not supported in this browser!');
                 return;
             }
 
             const gamepads = navigator.getGamepads();
-            console.log('🔍 Raw navigator.getGamepads():', gamepads);
 
             let foundCount = 0;
             let message = 'Gamepad Check Results:\n\n';
@@ -686,9 +682,6 @@
                     message += `   Connected: ${pad.connected}\n`;
                     message += `   Buttons: ${pad.buttons.length}\n`;
                     message += `   Axes: ${pad.axes.length}\n\n`;
-                    console.log('🔍 Found gamepad:', pad);
-                } else {
-                    console.log(`🔍 Gamepad slot ${i}: null`);
                 }
             }
 
@@ -818,11 +811,6 @@
             });
         });
 
-        // Log initial state
-        console.log('🎮 Gamepad Manager initialized. Waiting for controller connection...');
-        console.log('🎮 Press any button on your controller to connect it.');
-        console.log('🎮 Click the gamepad icon to test your controller.');
-        console.log('📖 Click the book icon to view the species guide.');
     </script>
 
     <!-- Commit Log Modal -->
