@@ -76,13 +76,16 @@ export class DebugSystem {
         this.ensureGraphics();
         this.debugGraphics.clear();
 
-        // Draw detection range around lure
-        this.debugGraphics.lineStyle(2, 0xffff00, 0.3);
-        this.debugGraphics.strokeCircle(this.scene.lure.x, this.scene.lure.y, GameConfig.DETECTION_RANGE);
+        // Draw lure detection ranges (only if lure exists - not in nature simulation mode)
+        if (this.scene.lure) {
+            // Draw detection range around lure
+            this.debugGraphics.lineStyle(2, 0xffff00, 0.3);
+            this.debugGraphics.strokeCircle(this.scene.lure.x, this.scene.lure.y, GameConfig.DETECTION_RANGE);
 
-        // Draw strike distance around lure
-        this.debugGraphics.lineStyle(2, 0xff0000, 0.5);
-        this.debugGraphics.strokeCircle(this.scene.lure.x, this.scene.lure.y, GameConfig.STRIKE_DISTANCE);
+            // Draw strike distance around lure
+            this.debugGraphics.lineStyle(2, 0xff0000, 0.5);
+            this.debugGraphics.strokeCircle(this.scene.lure.x, this.scene.lure.y, GameConfig.STRIKE_DISTANCE);
+        }
 
         // Draw fish debug info
         this.renderFishDebug();
@@ -104,15 +107,17 @@ export class DebugSystem {
         };
 
         this.scene.fishes.forEach(fish => {
-            // Draw line from fish to lure if within detection range
-            const dist = Math.sqrt(
-                Math.pow(fish.x - this.scene.lure.x, 2) +
-                Math.pow(fish.y - this.scene.lure.y, 2)
-            );
+            // Draw line from fish to lure if lure exists and within detection range
+            if (this.scene.lure) {
+                const dist = Math.sqrt(
+                    Math.pow(fish.x - this.scene.lure.x, 2) +
+                    Math.pow(fish.y - this.scene.lure.y, 2)
+                );
 
-            if (dist < GameConfig.DETECTION_RANGE * 2) {
-                this.debugGraphics.lineStyle(1, 0x00ffff, 0.3);
-                this.debugGraphics.lineBetween(fish.x, fish.y, this.scene.lure.x, this.scene.lure.y);
+                if (dist < GameConfig.DETECTION_RANGE * 2) {
+                    this.debugGraphics.lineStyle(1, 0x00ffff, 0.3);
+                    this.debugGraphics.lineBetween(fish.x, fish.y, this.scene.lure.x, this.scene.lure.y);
+                }
             }
 
             // Draw fish state indicator
@@ -135,15 +140,22 @@ export class DebugSystem {
      * @param {number} color - Color for the text
      */
     drawFishInfo(fish, color) {
-        // Only show info for fish within reasonable distance
-        const dist = Math.sqrt(
-            Math.pow(fish.x - this.scene.lure.x, 2) +
-            Math.pow(fish.y - this.scene.lure.y, 2)
-        );
+        // In nature simulation mode (no lure), show info for all visible fish
+        // In normal modes, only show info for fish within reasonable distance of lure
+        let showInfo = true;
 
-        if (dist > GameConfig.DETECTION_RANGE * 3) {
-            return; // Too far away
+        if (this.scene.lure) {
+            const dist = Math.sqrt(
+                Math.pow(fish.x - this.scene.lure.x, 2) +
+                Math.pow(fish.y - this.scene.lure.y, 2)
+            );
+
+            if (dist > GameConfig.DETECTION_RANGE * 3) {
+                showInfo = false; // Too far away from lure
+            }
         }
+
+        if (!showInfo) return;
 
         // Create temporary text object for this frame
         const info = fish.getInfo();
