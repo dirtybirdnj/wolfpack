@@ -75,8 +75,17 @@ export class NavigationScene extends Phaser.Scene {
         // Create UI elements
         this.createUI();
 
-        // Show initial message
-        this.showInstruction('Hold X to move forward, D-pad to steer');
+        // Show initial message based on fishing type
+        if (this.fishingType === GameConfig.FISHING_TYPE_ICE) {
+            // Ice fishing: Open tackle box immediately and show instructions
+            this.menuOpen = true;
+            this.subMenuActive = 'tackleBox';
+            this.tackleBoxTab = 0;
+            this.showInstruction('SELECT TACKLE: Use arrows, Enter to confirm. Triangle to start fishing when ready.');
+        } else {
+            // Kayak/Boat: Show movement instructions
+            this.showInstruction('Press TAB to open Tackle Box menu. Hold X to move forward, D-pad to steer.');
+        }
 
         console.log(`🚤 Starting at position (${this.playerWorldX}, ${this.playerWorldY})`);
         console.log(`   Depth: ${this.bathyData.getDepthAtPosition(this.playerWorldX, this.playerWorldY).toFixed(1)}ft`);
@@ -1657,6 +1666,25 @@ export class NavigationScene extends Phaser.Scene {
             this.buttonStates.select = selectButtonPressed;
         }
 
+        // Triangle button to start fishing (ice fishing only - others need to close menu first)
+        if (this.fishingType === GameConfig.FISHING_TYPE_ICE) {
+            if (Phaser.Input.Keyboard.JustDown(this.keys.triangle)) {
+                console.log('🎣 Starting ice fishing from tackle box...');
+                this.startFishing();
+                return; // Exit early, don't process other inputs
+            }
+            if (this.gamepad) {
+                const triangleButton = this.gamepad.buttons[3];
+                const trianglePressed = triangleButton && triangleButton.pressed;
+                if (trianglePressed && !this.buttonStates.triangle) {
+                    console.log('🎣 Starting ice fishing from tackle box...');
+                    this.startFishing();
+                    return; // Exit early
+                }
+                this.buttonStates.triangle = trianglePressed;
+            }
+        }
+
         // Left/Right to change tabs
         let leftPressed = false;
         let rightPressed = false;
@@ -2103,25 +2131,34 @@ export class NavigationScene extends Phaser.Scene {
 
         console.log('🎣 Starting fishing mode...');
 
-        // Store position in registry for GameScene to use
-        this.registry.set('fishingWorldX', this.playerWorldX);
-        this.registry.set('fishingWorldY', this.playerWorldY);
+        // For ice fishing, use default deep water location (no navigation)
+        if (this.fishingType === GameConfig.FISHING_TYPE_ICE) {
+            this.registry.set('fishingWorldX', null);
+            this.registry.set('fishingWorldY', 5000);
+            this.registry.set('currentDepth', GameConfig.MAX_DEPTH);
+            console.log(`   Ice fishing at default deep water location`);
+        } else {
+            // Store position in registry for GameScene to use (kayak/boat)
+            this.registry.set('fishingWorldX', this.playerWorldX);
+            this.registry.set('fishingWorldY', this.playerWorldY);
+
+            // Get current depth and store in registry
+            const depth = this.bathyData.getDepthAtPosition(this.playerWorldX, this.playerWorldY);
+            this.registry.set('currentDepth', depth);
+
+            console.log(`   Position: (${this.playerWorldX}, ${this.playerWorldY})`);
+            console.log(`   Depth: ${depth.toFixed(1)}ft`);
+        }
 
         // Store game mode and fishing type in registry
         this.registry.set('fishingType', this.fishingType);
         this.registry.set('gameMode', this.gameMode);
-
-        // Get current depth and store in registry
-        const depth = this.bathyData.getDepthAtPosition(this.playerWorldX, this.playerWorldY);
-        this.registry.set('currentDepth', depth);
 
         // Store tackle selections in registry
         this.registry.set('lureWeight', this.currentLureWeight);
         this.registry.set('lineType', this.currentLineType);
         this.registry.set('braidColor', this.currentBraidColor);
 
-        console.log(`   Position: (${this.playerWorldX}, ${this.playerWorldY})`);
-        console.log(`   Depth: ${depth.toFixed(1)}ft`);
         console.log(`   Lure: ${this.currentLureWeight}oz | Line: ${this.currentLineType}`);
 
         // Fade out and transition to GameScene
