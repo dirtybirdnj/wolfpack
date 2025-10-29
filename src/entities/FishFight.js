@@ -623,19 +623,19 @@ export class FishFight {
 
         // Render enlarged fish (with defensive check)
         // Scale reduced from 2 to 1 to prevent large fish from appearing too large
-        console.log('Rendering fish in catch popup:', {
-            fishExists: !!this.fish,
-            hasRenderMethod: this.fish && typeof this.fish.renderAtPosition === 'function',
-            fishSpecies: this.fish ? this.fish.species : 'none',
-            weight: this.fish ? this.fish.weight : 0,
-            renderX: popupX,
-            renderY: popupY - 40,
-            scale: 1
-        });
-
+        // NOTE: this.fish is the model (LakeTrout, SmallmouthBass, etc.), not the entity wrapper
+        // We need to calculate bodySize here to match Fish.js:244
         if (this.fish && typeof this.fish.renderAtPosition === 'function') {
-            this.fish.renderAtPosition(fishGraphics, popupX, popupY - 40, 1);
-            console.log('Fish renderAtPosition called successfully');
+            const scale = 1;
+            const bodySize = Math.max(8, this.fish.weight / 2) * scale;
+            console.log('Rendering fish in catch popup:', {
+                species: this.fish.species,
+                weight: this.fish.weight,
+                calculatedBodySize: bodySize,
+                position: { x: popupX, y: popupY - 40 }
+            });
+            this.fish.renderAtPosition(fishGraphics, popupX, popupY - 40, bodySize);
+            console.log('Fish rendered successfully');
         } else {
             console.warn('Fish renderAtPosition method not available, skipping fish rendering in popup');
         }

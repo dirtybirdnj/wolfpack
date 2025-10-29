@@ -243,18 +243,9 @@ export class Fish {
     renderAtPosition(graphics, x, y, scale = 3) {
         const bodySize = Math.max(8, this.model.weight / 2) * scale;
 
-        console.log('Fish entity renderAtPosition:', {
-            species: this.model.species,
-            weight: this.model.weight,
-            x, y, scale, bodySize,
-            modelType: this.model.constructor.name,
-            hasModelRenderMethod: typeof this.model.renderAtPosition === 'function'
-        });
-
         // Delegate rendering to the model with explicit coordinates
         // Model will render at the specified position without transformations
         this.model.renderAtPosition(graphics, x, y, bodySize);
-        console.log('Model renderAtPosition completed');
     }
 }
 
