@@ -76,16 +76,8 @@ export class Fish {
         // AI controller
         this.ai = new FishAI(this, this.fishingType);
 
-        // Visual properties for sonar display
-        this.sonarTrail = [];
-        this.maxTrailLength = 30;
+        // Sonar properties (visual rendering handled by entity layer)
         this.sonarStrength = this.calculateSonarStrength();
-        this.graphics = scene.add.graphics();
-        this.graphics.setDepth(10);
-
-        // External artwork sprite (if available)
-        this.sprite = null;
-        this.tryLoadArtwork();
 
         // State
         this.caught = false;
@@ -124,7 +116,7 @@ export class Fish {
 
     /**
      * Calculate fish length from weight
-     * Can be overridden by species for species-specific formulas
+     * Should be overridden by species subclasses for species-specific formulas
      */
     calculateLength() {
         // Default: Lake trout formula
@@ -133,7 +125,7 @@ export class Fish {
 
     /**
      * Calculate biological age from weight
-     * Can be overridden by species for species-specific age ranges
+     * Should be overridden by species subclasses for species-specific age ranges
      */
     calculateBiologicalAge() {
         // Default: Lake trout age-weight relationship
@@ -152,31 +144,6 @@ export class Fish {
         if (this.weight > 25) return 'strong';
         if (this.weight > 10) return 'medium';
         return 'weak';
-    }
-
-    tryLoadArtwork() {
-        const sizeCategory = this.weight > 30 ? 'trophy' :
-                           this.weight > 15 ? 'large' :
-                           this.weight > 5 ? 'medium' : 'small';
-
-        const textureKeys = [
-            `fish_${this.species}_${sizeCategory}`,
-            `fish_${this.species}`
-        ];
-
-        for (const key of textureKeys) {
-            if (this.scene.textures.exists(key)) {
-                this.sprite = this.scene.add.sprite(this.x, this.y, key);
-                this.sprite.setDepth(10);
-                this.sprite.setOrigin(0.5, 0.5);
-
-                const baseScale = Math.max(0.3, this.weight / 20);
-                this.sprite.setScale(baseScale);
-
-                console.log(`✓ Loaded artwork for ${this.species} (${sizeCategory}): ${key}`);
-                return;
-            }
-        }
     }
 
     updateBiology() {
@@ -232,8 +199,8 @@ export class Fish {
                              this.scene.currentFight.fish === this;
 
         if (this.caught && !inActiveFight) {
-            this.handleCaught();
-            return;
+            // Fish was caught but fight is over - mark as handled
+            return { caught: true };
         }
 
         this.frameAge++;
@@ -248,6 +215,7 @@ export class Fish {
 
             const movement = this.ai.getMovementVector();
 
+            // Calculate angle based on target direction
             if (this.ai.targetX !== null && this.ai.targetY !== null) {
                 const dx = this.ai.targetX - this.x;
                 const dy = this.ai.targetY - this.y;
@@ -270,29 +238,45 @@ export class Fish {
                 this.angle *= 0.9;
             }
 
+            // Apply movement in world coordinates
             this.worldX += movement.x;
             this.y += movement.y;
             this.depth = this.y / GameConfig.DEPTH_SCALE;
 
+            // Get player's world position (or use nature simulation mode)
             let playerWorldX;
+            let isNatureSimulation = false;
+
             if (this.scene.iceHoleManager) {
                 const currentHole = this.scene.iceHoleManager.getCurrentHole();
                 playerWorldX = currentHole ? currentHole.x : this.worldX;
             } else if (this.scene.boatManager) {
                 playerWorldX = this.scene.boatManager.getPlayerWorldX();
             } else {
-                playerWorldX = this.worldX;
+                // Nature simulation mode - no player to track
+                isNatureSimulation = true;
+                playerWorldX = GameConfig.CANVAS_WIDTH / 2;
             }
 
-            const maxDistanceFromPlayer = 800;
-            const distanceFromPlayer = Math.abs(this.worldX - playerWorldX);
+            // Check if fish has swum too far from player - mark for removal if so
+            if (isNatureSimulation) {
+                // In nature mode, remove fish that swim too far off screen
+                if (this.worldX < -400 || this.worldX > GameConfig.CANVAS_WIDTH + 400) {
+                    this.visible = false;
+                    return { removed: true };
+                }
+            } else {
+                const maxDistanceFromPlayer = 800;
+                const distanceFromPlayer = Math.abs(this.worldX - playerWorldX);
 
-            if (distanceFromPlayer > maxDistanceFromPlayer) {
-                this.visible = false;
-                return;
+                if (distanceFromPlayer > maxDistanceFromPlayer) {
+                    this.visible = false;
+                    return { removed: true };
+                }
             }
 
-            let bottomDepth = GameConfig.MAX_DEPTH;
+            // Get lake bottom depth at fish's current position
+            let bottomDepth = this.scene.maxDepth || GameConfig.MAX_DEPTH;
             if (this.scene.boatManager) {
                 const offsetFromPlayer = this.x - (GameConfig.CANVAS_WIDTH / 2);
                 const gameX = this.scene.boatManager.playerX + offsetFromPlayer;
@@ -307,137 +291,52 @@ export class Fish {
                 }
             }
 
+            // Keep fish above lake bottom (with 5 feet buffer)
             const maxY = (bottomDepth - 5) * GameConfig.DEPTH_SCALE;
             this.y = Math.max(10, Math.min(maxY, this.y));
 
-            const offsetFromPlayer = this.worldX - playerWorldX;
-            this.x = (GameConfig.CANVAS_WIDTH / 2) + offsetFromPlayer;
-
-            this.updateSonarTrail();
-        }
-
-        this.render();
-    }
-
-    updateSonarTrail() {
-        this.sonarTrail.push({
-            x: this.x,
-            y: this.y,
-            strength: this.sonarStrength,
-            age: 0
-        });
-
-        this.sonarTrail = this.sonarTrail.filter(point => {
-            point.age++;
-            return point.age < this.maxTrailLength;
-        });
-    }
-
-    /**
-     * Render the fish - delegates to species-specific rendering
-     * Should be overridden by species classes
-     */
-    render() {
-        this.graphics.clear();
-
-        if (!this.visible) {
-            if (this.sprite) this.sprite.setVisible(false);
-            return;
-        }
-
-        const bodySize = Math.max(8, this.weight / 2);
-        const movement = this.ai.getMovementVector();
-        const isMovingRight = movement.x >= 0;
-
-        if (this.sprite) {
-            this.sprite.setVisible(true);
-            this.sprite.setPosition(this.x, this.y);
-            this.sprite.setFlipX(!isMovingRight);
-        } else {
-            this.renderBody(bodySize, isMovingRight);
-        }
-
-        // Interest flash
-        if (this.interestFlash > 0) {
-            const flashSize = bodySize * (2 + (1 - this.interestFlash) * 1.5);
-            const flashAlpha = this.interestFlash * 0.8;
-
-            this.graphics.lineStyle(3, 0x00ff00, flashAlpha);
-            this.graphics.strokeCircle(this.x, this.y, flashSize);
-
-            if (this.interestFlash > 0.7) {
-                const pulseSize = flashSize + Math.sin(this.frameAge * 0.3) * 4;
-                this.graphics.lineStyle(2, 0x00ff00, flashAlpha * 0.5);
-                this.graphics.strokeCircle(this.x, this.y, pulseSize);
+            // Convert world position to screen position based on player position
+            if (isNatureSimulation) {
+                this.x = this.worldX;
+            } else {
+                const offsetFromPlayer = this.worldX - playerWorldX;
+                this.x = (GameConfig.CANVAS_WIDTH / 2) + offsetFromPlayer;
             }
         }
-    }
 
-    /**
-     * Render fish body - should be overridden by species classes
-     */
-    renderBody(bodySize, isMovingRight) {
-        // Default rendering - should be overridden by species
-        this.graphics.save();
-        this.graphics.translateCanvas(this.x, this.y);
-
-        if (isMovingRight) {
-            this.graphics.rotateCanvas(this.angle);
-        } else {
-            this.graphics.scaleCanvas(-1, 1);
-            this.graphics.rotateCanvas(-this.angle);
-        }
-
-        this.graphics.fillStyle(GameConfig.COLOR_FISH_BODY, 1.0);
-        this.graphics.fillEllipse(0, 0, bodySize * 2.5, bodySize * 0.8);
-
-        this.graphics.restore();
-    }
-
-    /**
-     * Render fish at a custom position and scale (for catch popup)
-     * Should be overridden by species classes
-     */
-    renderAtPosition(graphics, x, y, scale = 3) {
-        const bodySize = Math.max(8, this.weight / 2) * scale;
-
-        graphics.save();
-        graphics.translateCanvas(x, y);
-        graphics.scaleCanvas(1, 1);
-        graphics.rotateCanvas(0);
-
-        this.renderBodyAtPosition(graphics, bodySize);
-
-        graphics.restore();
-    }
-
-    /**
-     * Render fish body at position - should be overridden by species classes
-     */
-    renderBodyAtPosition(graphics, bodySize) {
-        // Default rendering
-        graphics.fillStyle(GameConfig.COLOR_FISH_BODY, 1.0);
-        graphics.fillEllipse(0, 0, bodySize * 2.5, bodySize * 0.8);
-    }
-
-    handleCaught() {
-        this.graphics.clear();
-        this.graphics.lineStyle(3, GameConfig.COLOR_FISH_STRONG, 1);
-        this.graphics.strokeCircle(this.x, this.y, 15);
-        this.graphics.lineStyle(2, GameConfig.COLOR_LURE, 0.8);
-        this.graphics.strokeCircle(this.x, this.y, 20);
-
-        setTimeout(() => {
-            this.visible = false;
-        }, 500);
+        return { updated: true };
     }
 
     feedOnBaitfish(preySpecies = 'alewife') {
+        // Fish has consumed a baitfish, reduce hunger based on prey nutrition value
         const speciesData = getBaitfishSpecies(preySpecies);
-        const nutritionValue = speciesData.nutritionValue || 20;
+        const nutritionValue = speciesData.nutritionValue || 20; // Default to 20 if not specified
 
+        // Different species provide different nutrition:
+        // Cisco: 30 (large, nutritious)
+        // Smelt: 25 (high-fat content)
+        // Alewife: 20 (abundant, standard)
+        // Perch: 18 (moderate)
+        // Sculpin: 15 (small, less nutritious)
+
+        const previousHunger = this.hunger;
         this.hunger = Math.max(0, this.hunger - nutritionValue);
         this.lastFed = this.frameAge;
+
+        // HEALTH RESTORATION: Once hunger reaches 0%, excess food restores health
+        if (previousHunger <= 0 && nutritionValue > 0) {
+            // Fish is already satiated - nutrition goes to healing
+            const healthGain = nutritionValue * 0.5; // 50% of nutrition converts to health
+            const previousHealth = this.health;
+            this.health = Math.min(100, this.health + healthGain);
+            const actualHealthGain = this.health - previousHealth;
+            if (actualHealthGain > 0) {
+                console.log(`${this.name} restored ${actualHealthGain.toFixed(1)} health from eating ${preySpecies} (now ${Math.floor(this.health)}%)`);
+            }
+        }
+
+        // Log feeding for debugging (commented out for production)
+        // console.log(`${this.name} fed on ${preySpecies}, hunger reduced by ${nutritionValue} (now ${Math.floor(this.hunger)}%)`);
     }
 
     getInfo() {
@@ -458,14 +357,16 @@ export class Fish {
         };
     }
 
+    /**
+     * Cleanup model resources
+     * Note: Visual cleanup (graphics, sprites) handled by entity layer
+     */
     destroy() {
-        this.graphics.destroy();
-        if (this.speedPrefText) {
-            this.speedPrefText.destroy();
+        // Cleanup AI
+        if (this.ai) {
+            // AI cleanup if needed
         }
-        if (this.sprite) {
-            this.sprite.destroy();
-        }
+        // Model is ready for garbage collection
     }
 }
 
