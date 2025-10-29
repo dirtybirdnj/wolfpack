@@ -1,5 +1,5 @@
-import { Fish } from './fish.js';
-import { Utils } from '../utils/Constants.js';
+import { Fish } from '../fish.js';
+import { Utils } from '../../utils/Constants.js';
 
 /**
  * Lake Trout - Slow growth, long-lived cold water predator
