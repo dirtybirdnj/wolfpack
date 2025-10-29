@@ -76,7 +76,7 @@ export class NavigationScene extends Phaser.Scene {
         this.createUI();
 
         // Show initial message
-        this.showInstruction('Hold X to move forward, D-pad to steer');
+        this.showInstruction('Hold X to move forward, D-pad to steer. Press Triangle to start fishing.');
 
         console.log(`🚤 Starting at position (${this.playerWorldX}, ${this.playerWorldY})`);
         console.log(`   Depth: ${this.bathyData.getDepthAtPosition(this.playerWorldX, this.playerWorldY).toFixed(1)}ft`);
@@ -2115,13 +2115,14 @@ export class NavigationScene extends Phaser.Scene {
         const depth = this.bathyData.getDepthAtPosition(this.playerWorldX, this.playerWorldY);
         this.registry.set('currentDepth', depth);
 
+        console.log(`   Position: (${this.playerWorldX}, ${this.playerWorldY})`);
+        console.log(`   Depth: ${depth.toFixed(1)}ft`);
+
         // Store tackle selections in registry
         this.registry.set('lureWeight', this.currentLureWeight);
         this.registry.set('lineType', this.currentLineType);
         this.registry.set('braidColor', this.currentBraidColor);
 
-        console.log(`   Position: (${this.playerWorldX}, ${this.playerWorldY})`);
-        console.log(`   Depth: ${depth.toFixed(1)}ft`);
         console.log(`   Lure: ${this.currentLureWeight}oz | Line: ${this.currentLineType}`);
 
         // Fade out and transition to GameScene

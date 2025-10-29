@@ -37,14 +37,16 @@ export class Fish {
         if (scene.iceHoleManager) {
             const currentHole = scene.iceHoleManager.getCurrentHole();
             playerWorldX = currentHole ? currentHole.x : x;
+            const offsetFromPlayer = this.worldX - playerWorldX;
+            this.x = (GameConfig.CANVAS_WIDTH / 2) + offsetFromPlayer;
         } else if (scene.boatManager) {
             playerWorldX = scene.boatManager.getPlayerWorldX();
+            const offsetFromPlayer = this.worldX - playerWorldX;
+            this.x = (GameConfig.CANVAS_WIDTH / 2) + offsetFromPlayer;
         } else {
-            playerWorldX = x;
+            // Nature simulation mode - use worldX directly as screen X (no player to offset from)
+            this.x = this.worldX;
         }
-
-        const offsetFromPlayer = this.worldX - playerWorldX;
-        this.x = (GameConfig.CANVAS_WIDTH / 2) + offsetFromPlayer;
         this.y = y;
         this.depth = y / GameConfig.DEPTH_SCALE;
 

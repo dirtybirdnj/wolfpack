@@ -76,7 +76,7 @@ export class Baitfish {
         this.depth = this.y / GameConfig.DEPTH_SCALE;
 
         // Get lake bottom depth at baitfish's current world position
-        let bottomDepth = GameConfig.MAX_DEPTH;
+        let bottomDepth = this.scene.maxDepth || GameConfig.MAX_DEPTH;
         if (this.scene.boatManager) {
             bottomDepth = this.scene.boatManager.getDepthAtPosition(this.worldX);
         } else if (this.scene.iceHoleManager) {
@@ -88,32 +88,48 @@ export class Baitfish {
                 );
                 bottomDepth = closest.y / GameConfig.DEPTH_SCALE;
             }
+        } else {
+            // Nature simulation mode - bottom profile is drawn at maxDepth - 5 feet (deepest point)
+            // Subtract 5 to match the visual bottom profile from SonarDisplay.generateBottomProfile()
+            bottomDepth = (this.scene.maxDepth || GameConfig.MAX_DEPTH) - 5;
         }
 
-        // Keep above lake bottom (with 5 feet buffer)
-        const maxY = (bottomDepth - 5) * GameConfig.DEPTH_SCALE;
-
-        // Keep in bounds
-        this.y = Math.max(10, Math.min(maxY, this.y));
+        // Keep in vertical bounds based on water depth
+        const minY = 3 * GameConfig.DEPTH_SCALE; // 3 feet from surface (baitfish can be shallower than clouds)
+        const maxY = Math.max(minY + 5, (bottomDepth - 3) * GameConfig.DEPTH_SCALE); // 3 feet from bottom
+        this.y = Math.max(minY, Math.min(maxY, this.y));
 
         // Convert world position to screen position based on player position
-        let playerWorldX;
+        // In nature simulation mode, use worldX directly as screen X
         if (this.scene.iceHoleManager) {
             const currentHole = this.scene.iceHoleManager.getCurrentHole();
-            playerWorldX = currentHole ? currentHole.x : this.worldX;
+            const playerWorldX = currentHole ? currentHole.x : this.worldX;
+            const offsetFromPlayer = this.worldX - playerWorldX;
+            this.x = (GameConfig.CANVAS_WIDTH / 2) + offsetFromPlayer;
+
+            // Remove if too far from player in world coordinates
+            const distanceFromPlayer = Math.abs(this.worldX - playerWorldX);
+            if (distanceFromPlayer > 600) {
+                this.visible = false;
+            }
         } else if (this.scene.boatManager) {
-            playerWorldX = this.scene.boatManager.getPlayerWorldX();
+            const playerWorldX = this.scene.boatManager.getPlayerWorldX();
+            const offsetFromPlayer = this.worldX - playerWorldX;
+            this.x = (GameConfig.CANVAS_WIDTH / 2) + offsetFromPlayer;
+
+            // Remove if too far from player in world coordinates
+            const distanceFromPlayer = Math.abs(this.worldX - playerWorldX);
+            if (distanceFromPlayer > 600) {
+                this.visible = false;
+            }
         } else {
-            playerWorldX = this.worldX; // Fallback
-        }
+            // Nature simulation mode - use worldX directly as screen X (no player to offset from)
+            this.x = this.worldX;
 
-        const offsetFromPlayer = this.worldX - playerWorldX;
-        this.x = (GameConfig.CANVAS_WIDTH / 2) + offsetFromPlayer;
-
-        // Remove if too far from player in world coordinates
-        const distanceFromPlayer = Math.abs(this.worldX - playerWorldX);
-        if (distanceFromPlayer > 600) {
-            this.visible = false;
+            // Remove if actually off screen (not player-relative)
+            if (this.worldX < -400 || this.worldX > GameConfig.CANVAS_WIDTH + 400) {
+                this.visible = false;
+            }
         }
 
         // Update sonar trail

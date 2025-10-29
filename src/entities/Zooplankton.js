@@ -62,7 +62,7 @@ export class Zooplankton {
         this.y += Math.sin(this.driftDirection) * this.driftSpeed * 0.3; // Less vertical movement
 
         // Get actual lake bottom depth at zooplankton's current world position
-        let bottomDepth = GameConfig.MAX_DEPTH;
+        let bottomDepth = this.scene.maxDepth || GameConfig.MAX_DEPTH;
         if (this.scene.boatManager) {
             bottomDepth = this.scene.boatManager.getDepthAtPosition(this.worldX);
         } else if (this.scene.iceHoleManager) {
@@ -75,6 +75,7 @@ export class Zooplankton {
                 bottomDepth = closest.y / GameConfig.DEPTH_SCALE;
             }
         }
+        // If neither manager exists (nature simulation), use scene.maxDepth which was already set above
 
         // Stay near the bottom (within 5-10 feet of actual bottom)
         const bottomY = bottomDepth * GameConfig.DEPTH_SCALE;
@@ -91,23 +92,36 @@ export class Zooplankton {
         this.depth = this.y / GameConfig.DEPTH_SCALE;
 
         // Convert world position to screen position based on player position
-        let playerWorldX;
+        // In nature simulation mode, use worldX directly as screen X
         if (this.scene.iceHoleManager) {
             const currentHole = this.scene.iceHoleManager.getCurrentHole();
-            playerWorldX = currentHole ? currentHole.x : this.worldX;
+            const playerWorldX = currentHole ? currentHole.x : this.worldX;
+            const offsetFromPlayer = this.worldX - playerWorldX;
+            this.x = (GameConfig.CANVAS_WIDTH / 2) + offsetFromPlayer;
+
+            // Remove if too far from player in world coordinates
+            const distanceFromPlayer = Math.abs(this.worldX - playerWorldX);
+            if (distanceFromPlayer > 600) {
+                this.visible = false;
+            }
         } else if (this.scene.boatManager) {
-            playerWorldX = this.scene.boatManager.getPlayerWorldX();
+            const playerWorldX = this.scene.boatManager.getPlayerWorldX();
+            const offsetFromPlayer = this.worldX - playerWorldX;
+            this.x = (GameConfig.CANVAS_WIDTH / 2) + offsetFromPlayer;
+
+            // Remove if too far from player in world coordinates
+            const distanceFromPlayer = Math.abs(this.worldX - playerWorldX);
+            if (distanceFromPlayer > 600) {
+                this.visible = false;
+            }
         } else {
-            playerWorldX = this.worldX; // Fallback
-        }
+            // Nature simulation mode - use worldX directly as screen X (no player to offset from)
+            this.x = this.worldX;
 
-        const offsetFromPlayer = this.worldX - playerWorldX;
-        this.x = (GameConfig.CANVAS_WIDTH / 2) + offsetFromPlayer;
-
-        // Remove if too far from player in world coordinates
-        const distanceFromPlayer = Math.abs(this.worldX - playerWorldX);
-        if (distanceFromPlayer > 600) {
-            this.visible = false;
+            // Remove if off screen in nature mode
+            if (this.worldX < -400 || this.worldX > GameConfig.CANVAS_WIDTH + 400) {
+                this.visible = false;
+            }
         }
     }
 

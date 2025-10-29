@@ -1,9 +1,10 @@
 // Game configuration and constants
 export const GameConfig = {
-    // Fishing types (ice, kayak, boat)
+    // Fishing types (ice, kayak, boat, nature simulation)
     FISHING_TYPE_ICE: 'ice',
     FISHING_TYPE_KAYAK: 'kayak',
     FISHING_TYPE_MOTORBOAT: 'motorboat',
+    FISHING_TYPE_NATURE_SIMULATION: 'nature_simulation',
 
     // Game modes (arcade, unlimited)
     GAME_MODE_ARCADE: 'arcade',

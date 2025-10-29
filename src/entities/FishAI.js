@@ -178,6 +178,27 @@ export class FishAI {
 
         this.lastDecisionTime = currentTime;
 
+        // PRIORITY: Check for baitfish clouds (natural food source)
+        // Fish prioritize real food over lures, especially when hungry
+        const nearbyBaitfishCloud = this.findNearestBaitfishCloud(baitfishClouds);
+
+        // In nature simulation mode (no lure), fish only hunt baitfish or idle
+        if (!lure) {
+            // Nature simulation mode - no lure to track
+            if (nearbyBaitfishCloud && this.shouldHuntBaitfish(nearbyBaitfishCloud)) {
+                this.startHuntingBaitfish(nearbyBaitfishCloud);
+            } else if (this.state === Constants.FISH_STATE.HUNTING_BAITFISH) {
+                this.huntingBaitfishBehavior(baitfishClouds, null);
+            } else if (this.state === Constants.FISH_STATE.FEEDING) {
+                this.feedingBehavior(baitfishClouds, null);
+            } else {
+                // Just idle swim naturally
+                this.state = Constants.FISH_STATE.IDLE;
+            }
+            return;
+        }
+
+        // Normal fishing mode - lure exists
         // Calculate distance and relationship to lure
         const distance = Utils.calculateDistance(
             this.fish.x, this.fish.y,
@@ -189,10 +210,6 @@ export class FishAI {
 
         // Detect frenzy feeding - other fish chasing excites this one
         this.detectFrenzy(lure, allFish);
-
-        // PRIORITY: Check for baitfish clouds (natural food source)
-        // Fish prioritize real food over lures, especially when hungry
-        const nearbyBaitfishCloud = this.findNearestBaitfishCloud(baitfishClouds);
 
         // State machine for fish behavior
         switch (this.state) {
@@ -843,19 +860,22 @@ export class FishAI {
 
         // IMPORTANT: Check if lure is in the baitfish cloud
         // Fish cannot tell the difference between lure and baitfish!
-        const lureInCloud = this.targetBaitfishCloud.isPlayerLureInCloud(lure);
-        if (lureInCloud) {
-            const lureDistance = Utils.calculateDistance(
-                this.fish.x, this.fish.y,
-                lure.x, lure.y
-            );
+        // Only check this if lure exists (not in nature simulation mode)
+        if (lure) {
+            const lureInCloud = this.targetBaitfishCloud.isPlayerLureInCloud(lure);
+            if (lureInCloud) {
+                const lureDistance = Utils.calculateDistance(
+                    this.fish.x, this.fish.y,
+                    lure.x, lure.y
+                );
 
-            // Sometimes target the lure instead of baitfish (can't tell difference)
-            if (Math.random() < 0.5 || lureDistance < result.distance) { // Increased from 0.4 to 0.5
-                this.state = Constants.FISH_STATE.CHASING;
-                this.targetX = lure.x;
-                this.targetY = lure.y;
-                this.decisionCooldown = 100; // Reduced from 200 for faster strike
+                // Sometimes target the lure instead of baitfish (can't tell difference)
+                if (Math.random() < 0.5 || lureDistance < result.distance) { // Increased from 0.4 to 0.5
+                    this.state = Constants.FISH_STATE.CHASING;
+                    this.targetX = lure.x;
+                    this.targetY = lure.y;
+                    this.decisionCooldown = 100; // Reduced from 200 for faster strike
+                }
             }
         }
     }

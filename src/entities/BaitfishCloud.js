@@ -187,7 +187,7 @@ export class BaitfishCloud {
         }
 
         // Get lake bottom depth at cloud's current world position
-        let bottomDepth = GameConfig.MAX_DEPTH;
+        let bottomDepth = this.scene.maxDepth || GameConfig.MAX_DEPTH;
         if (this.scene.boatManager) {
             bottomDepth = this.scene.boatManager.getDepthAtPosition(this.worldX);
         } else if (this.scene.iceHoleManager) {
@@ -199,27 +199,32 @@ export class BaitfishCloud {
                 );
                 bottomDepth = closest.y / GameConfig.DEPTH_SCALE;
             }
+        } else {
+            // Nature simulation mode - bottom profile is drawn at maxDepth - 5 feet (deepest point)
+            // Subtract 5 to match the visual bottom profile from SonarDisplay.generateBottomProfile()
+            bottomDepth = (this.scene.maxDepth || GameConfig.MAX_DEPTH) - 5;
         }
 
-        // Keep cloud above lake bottom (with 10 feet buffer)
-        const maxY = (bottomDepth - 10) * GameConfig.DEPTH_SCALE;
-
-        // Keep cloud in bounds - use same minimum as individual fish (10px)
-        this.centerY = Math.max(10, Math.min(maxY, this.centerY));
+        // Keep cloud in vertical bounds based on water depth
+        const minY = 5 * GameConfig.DEPTH_SCALE; // 5 feet from surface
+        const maxY = Math.max(minY + 10, (bottomDepth - 5) * GameConfig.DEPTH_SCALE); // 5 feet from bottom, but ensure maxY > minY
+        this.centerY = Math.max(minY, Math.min(maxY, this.centerY));
 
         // Convert world position to screen position based on player position
-        let playerWorldX;
+        // In nature simulation mode, use worldX directly as screen X
         if (this.scene.iceHoleManager) {
             const currentHole = this.scene.iceHoleManager.getCurrentHole();
-            playerWorldX = currentHole ? currentHole.x : this.worldX;
+            const playerWorldX = currentHole ? currentHole.x : this.worldX;
+            const offsetFromPlayer = this.worldX - playerWorldX;
+            this.centerX = (GameConfig.CANVAS_WIDTH / 2) + offsetFromPlayer;
         } else if (this.scene.boatManager) {
-            playerWorldX = this.scene.boatManager.getPlayerWorldX();
+            const playerWorldX = this.scene.boatManager.getPlayerWorldX();
+            const offsetFromPlayer = this.worldX - playerWorldX;
+            this.centerX = (GameConfig.CANVAS_WIDTH / 2) + offsetFromPlayer;
         } else {
-            playerWorldX = this.worldX; // Fallback
+            // Nature simulation mode - use worldX directly as screen X (no player to offset from)
+            this.centerX = this.worldX;
         }
-
-        const offsetFromPlayer = this.worldX - playerWorldX;
-        this.centerX = (GameConfig.CANVAS_WIDTH / 2) + offsetFromPlayer;
 
         // Update all baitfish in the cloud
         this.baitfish = this.baitfish.filter(baitfish => {

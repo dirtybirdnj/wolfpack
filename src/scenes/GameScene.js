@@ -70,6 +70,38 @@ export class GameScene extends Phaser.Scene {
         this.debugSystem = null;
         this.scoreSystem = null;
         this.notificationSystem = null;
+
+        // Tackle box state
+        this.tackleBoxOpen = false;
+        this.tackleBoxTab = 0; // 0=lure, 1=line
+        this.tackleBoxSelected = { lure: 0, line: 0 };
+        this.switchingToPauseMenu = false; // Flag to keep game paused when switching menus
+        this.tackleBoxButtonStates = {
+            select: false,
+            circle: false,
+            start: false,
+            left: false,
+            right: false,
+            up: false,
+            down: false,
+            x: false
+        };
+        this.tackleBoxGear = {
+            lureWeights: [
+                { label: '1/4 oz', value: 0.25, desc: 'Ultralight - slow sink' },
+                { label: '1/2 oz', value: 0.5, desc: 'Light - versatile' },
+                { label: '1 oz', value: 1.0, desc: 'Medium - good depth' },
+                { label: '2 oz', value: 2.0, desc: 'Heavy - fast sink' },
+                { label: '3 oz', value: 3.0, desc: 'Very heavy - deep water' },
+                { label: '4 oz', value: 4.0, desc: 'Extreme - deepest water' }
+            ],
+            lineTypes: [
+                { label: 'Braided', value: 'braid', desc: 'No stretch, high visibility' },
+                { label: 'Monofilament', value: 'monofilament', desc: 'Stretchy, invisible' },
+                { label: 'Fluorocarbon', value: 'fluorocarbon', desc: 'Low visibility, abrasion resistant' }
+            ]
+        };
+        this.tackleBoxGraphics = null;
     }
 
     /**
@@ -246,17 +278,53 @@ export class GameScene extends Phaser.Scene {
             return;
         }
 
-        // Check for pause input
-        if (this.inputSystem.checkPauseInput()) {
+        // Check for pause input (but not when tackle box is open - it handles START button)
+        if (!this.tackleBoxOpen && this.inputSystem.checkPauseInput()) {
             this.notificationSystem.togglePause();
         }
 
         // Always update notification system (handles pause menu input)
         this.notificationSystem.update(time, delta);
 
-        // If paused, skip all game updates
-        if (this.notificationSystem.isPausedState()) {
+        // Check if pause menu requested switch to tackle box
+        if (this.notificationSystem.switchToTackleBox) {
+            this.notificationSystem.switchToTackleBox = false;
+            this.toggleTackleBox(); // Open tackle box (will stay paused)
+        }
+
+        // If paused but tackle box is closed, skip all game updates
+        if (this.notificationSystem.isPausedState() && !this.tackleBoxOpen) {
             return;
+        }
+
+        // Check for tackle box toggle (TAB key or Select button)
+        if (!this.tackleBoxOpen && !this.notificationSystem.isPausedState()) {
+            const tabKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.TAB);
+            if (Phaser.Input.Keyboard.JustDown(tabKey)) {
+                this.toggleTackleBox();
+            }
+
+            if (window.gamepadManager && window.gamepadManager.isConnected()) {
+                const selectButton = window.gamepadManager.getButton('Select');
+                if (selectButton && selectButton.pressed && !this.tackleBoxButtonStates.select) {
+                    this.toggleTackleBox();
+                    this.tackleBoxButtonStates.select = true;
+                    // Don't update button state again until released to prevent double-toggle
+                    return;
+                }
+                this.tackleBoxButtonStates.select = selectButton ? selectButton.pressed : false;
+            }
+        }
+
+        // If tackle box is open, handle its input and render it
+        if (this.tackleBoxOpen) {
+            this.handleTackleBoxInput();
+
+            // Only render if still open (might have been closed by input handler)
+            if (this.tackleBoxOpen) {
+                this.renderTackleBox();
+            }
+            return; // Skip normal game updates while tackle box is open
         }
 
         // Handle fish fight if active
@@ -702,6 +770,326 @@ export class GameScene extends Phaser.Scene {
     }
 
     /**
+     * Toggle tackle box menu
+     */
+    toggleTackleBox() {
+        this.tackleBoxOpen = !this.tackleBoxOpen;
+
+        // Pause/unpause game when tackle box opens/closes
+        if (this.tackleBoxOpen) {
+            // Opening tackle box - pause the game
+            this.notificationSystem.isPaused = true;
+        } else {
+            // Closing tackle box - unpause only if not switching to pause menu
+            if (!this.switchingToPauseMenu) {
+                this.notificationSystem.isPaused = false;
+            }
+            // Clear graphics when closing
+            if (this.tackleBoxGraphics) {
+                this.tackleBoxGraphics.clear();
+            }
+        }
+
+        console.log(`Tackle box ${this.tackleBoxOpen ? 'opened' : 'closed'}`);
+    }
+
+    /**
+     * Handle tackle box input
+     */
+    handleTackleBoxInput() {
+        // TAB/Select to close and return to gameplay
+        const tabKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.TAB);
+        if (Phaser.Input.Keyboard.JustDown(tabKey)) {
+            this.toggleTackleBox();
+            return;
+        }
+
+        // Gamepad buttons
+        if (window.gamepadManager && window.gamepadManager.isConnected()) {
+            const selectButton = window.gamepadManager.getButton('Select');
+            const circleButton = window.gamepadManager.getButton('Circle'); // B on Xbox, A on 8bitdo
+            const startButton = window.gamepadManager.getButton('Start');
+
+            // Select or Circle button - close tackle box and return to gameplay
+            if (selectButton && selectButton.pressed && !this.tackleBoxButtonStates.select) {
+                this.toggleTackleBox();
+                this.tackleBoxButtonStates.select = true;
+                return;
+            }
+
+            if (circleButton && circleButton.pressed && !this.tackleBoxButtonStates.circle) {
+                this.toggleTackleBox();
+                this.tackleBoxButtonStates.circle = true;
+                return;
+            }
+
+            // Start button - close tackle box AND open pause menu (stay paused)
+            if (startButton && startButton.pressed && !this.tackleBoxButtonStates.start) {
+                this.switchingToPauseMenu = true;
+                this.toggleTackleBox(); // Close tackle box (stays paused due to flag)
+                this.tackleBoxButtonStates.start = true;
+                // Open pause menu
+                this.notificationSystem.togglePause();
+                this.switchingToPauseMenu = false;
+                return;
+            }
+
+            this.tackleBoxButtonStates.select = selectButton ? selectButton.pressed : false;
+            this.tackleBoxButtonStates.circle = circleButton ? circleButton.pressed : false;
+            this.tackleBoxButtonStates.start = startButton ? startButton.pressed : false;
+        }
+
+        // Arrow keys for navigation
+        const leftKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.LEFT);
+        const rightKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.RIGHT);
+        const upKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.UP);
+        const downKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.DOWN);
+        const xKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.X);
+
+        let leftPressed = Phaser.Input.Keyboard.JustDown(leftKey);
+        let rightPressed = Phaser.Input.Keyboard.JustDown(rightKey);
+        let upPressed = Phaser.Input.Keyboard.JustDown(upKey);
+        let downPressed = Phaser.Input.Keyboard.JustDown(downKey);
+        let confirmPressed = Phaser.Input.Keyboard.JustDown(xKey);
+
+        // Gamepad D-pad
+        if (window.gamepadManager && window.gamepadManager.isConnected()) {
+            const dpadLeft = window.gamepadManager.getButton('DpadLeft');
+            const dpadRight = window.gamepadManager.getButton('DpadRight');
+            const dpadUp = window.gamepadManager.getButton('DpadUp');
+            const dpadDown = window.gamepadManager.getButton('DpadDown');
+            const xButton = window.gamepadManager.getButton('X');
+
+            if (dpadLeft.pressed && !this.tackleBoxButtonStates.left) leftPressed = true;
+            if (dpadRight.pressed && !this.tackleBoxButtonStates.right) rightPressed = true;
+            if (dpadUp.pressed && !this.tackleBoxButtonStates.up) upPressed = true;
+            if (dpadDown.pressed && !this.tackleBoxButtonStates.down) downPressed = true;
+            if (xButton.pressed && !this.tackleBoxButtonStates.x) confirmPressed = true;
+
+            this.tackleBoxButtonStates.left = dpadLeft.pressed;
+            this.tackleBoxButtonStates.right = dpadRight.pressed;
+            this.tackleBoxButtonStates.up = dpadUp.pressed;
+            this.tackleBoxButtonStates.down = dpadDown.pressed;
+            this.tackleBoxButtonStates.x = xButton.pressed;
+        }
+
+        // Tab switching
+        if (leftPressed) {
+            this.tackleBoxTab--;
+            if (this.tackleBoxTab < 0) this.tackleBoxTab = 1;
+        }
+        if (rightPressed) {
+            this.tackleBoxTab++;
+            if (this.tackleBoxTab > 1) this.tackleBoxTab = 0;
+        }
+
+        // Navigate within tab
+        if (this.tackleBoxTab === 0) {
+            // LURE tab
+            const maxIndex = this.tackleBoxGear.lureWeights.length - 1;
+            if (upPressed) {
+                this.tackleBoxSelected.lure--;
+                if (this.tackleBoxSelected.lure < 0) this.tackleBoxSelected.lure = maxIndex;
+            }
+            if (downPressed) {
+                this.tackleBoxSelected.lure++;
+                if (this.tackleBoxSelected.lure > maxIndex) this.tackleBoxSelected.lure = 0;
+            }
+            if (confirmPressed) {
+                const selected = this.tackleBoxGear.lureWeights[this.tackleBoxSelected.lure];
+                this.lure.weight = selected.value;
+                console.log(`🎣 Lure weight changed to ${selected.label}`);
+            }
+        } else if (this.tackleBoxTab === 1) {
+            // LINE tab
+            const maxIndex = this.tackleBoxGear.lineTypes.length - 1;
+            if (upPressed) {
+                this.tackleBoxSelected.line--;
+                if (this.tackleBoxSelected.line < 0) this.tackleBoxSelected.line = maxIndex;
+            }
+            if (downPressed) {
+                this.tackleBoxSelected.line++;
+                if (this.tackleBoxSelected.line > maxIndex) this.tackleBoxSelected.line = 0;
+            }
+            if (confirmPressed) {
+                const selected = this.tackleBoxGear.lineTypes[this.tackleBoxSelected.line];
+                this.fishingLine.setLineType(selected.value, 'neon-green');
+                console.log(`🧵 Line type changed to ${selected.label}`);
+            }
+        }
+    }
+
+    /**
+     * Render tackle box UI
+     */
+    renderTackleBox() {
+        if (!this.tackleBoxGraphics) {
+            this.tackleBoxGraphics = this.add.graphics();
+            this.tackleBoxGraphics.setDepth(2000);
+        }
+
+        this.tackleBoxGraphics.clear();
+
+        // Semi-transparent overlay
+        this.tackleBoxGraphics.fillStyle(0x000000, 0.9);
+        this.tackleBoxGraphics.fillRect(0, 0, GameConfig.CANVAS_WIDTH, GameConfig.CANVAS_HEIGHT);
+
+        // Panel
+        const panelWidth = 600;
+        const panelHeight = 400;
+        const panelX = (GameConfig.CANVAS_WIDTH - panelWidth) / 2;
+        const panelY = (GameConfig.CANVAS_HEIGHT - panelHeight) / 2;
+
+        // Panel background
+        this.tackleBoxGraphics.fillStyle(0x1a2a1a, 1.0);
+        this.tackleBoxGraphics.fillRoundedRect(panelX, panelY, panelWidth, panelHeight, 12);
+
+        // Panel border
+        this.tackleBoxGraphics.lineStyle(3, 0x00ff00, 1.0);
+        this.tackleBoxGraphics.strokeRoundedRect(panelX, panelY, panelWidth, panelHeight, 12);
+
+        // Title
+        const titleText = this.add.text(panelX + panelWidth / 2, panelY + 25, 'TACKLE BOX', {
+            fontSize: '24px',
+            fontFamily: 'Courier New',
+            color: '#00ff00',
+            fontStyle: 'bold'
+        });
+        titleText.setOrigin(0.5, 0.5);
+        titleText.setDepth(2001);
+        this.time.delayedCall(16, () => titleText.destroy());
+
+        // Tab headers
+        const tabs = ['LURE', 'LINE'];
+        const tabWidth = 250;
+        const tabY = panelY + 60;
+
+        tabs.forEach((tab, index) => {
+            const tabX = panelX + 50 + index * (tabWidth + 20);
+            const isActive = index === this.tackleBoxTab;
+
+            if (isActive) {
+                this.tackleBoxGraphics.fillStyle(0x3a5a3a, 1.0);
+                this.tackleBoxGraphics.fillRoundedRect(tabX, tabY, tabWidth, 40, 6);
+                this.tackleBoxGraphics.lineStyle(2, 0x00ffff, 1.0);
+                this.tackleBoxGraphics.strokeRoundedRect(tabX, tabY, tabWidth, 40, 6);
+            }
+
+            const tabText = this.add.text(tabX + tabWidth / 2, tabY + 20, tab, {
+                fontSize: isActive ? '16px' : '14px',
+                fontFamily: 'Courier New',
+                color: isActive ? '#00ffff' : '#88aa88',
+                fontStyle: isActive ? 'bold' : 'normal'
+            });
+            tabText.setOrigin(0.5, 0.5);
+            tabText.setDepth(2001);
+            this.time.delayedCall(16, () => tabText.destroy());
+        });
+
+        // Content area
+        const contentY = panelY + 130;
+        const contentX = panelX + 60;
+
+        if (this.tackleBoxTab === 0) {
+            // LURE tab
+            const titleText = this.add.text(panelX + panelWidth / 2, contentY - 20, 'SELECT LURE WEIGHT', {
+                fontSize: '14px',
+                fontFamily: 'Courier New',
+                color: '#cccccc'
+            });
+            titleText.setOrigin(0.5, 0.5);
+            titleText.setDepth(2001);
+            this.time.delayedCall(16, () => titleText.destroy());
+
+            this.tackleBoxGear.lureWeights.forEach((lure, index) => {
+                const itemY = contentY + index * 35;
+                const isSelected = index === this.tackleBoxSelected.lure;
+                const isCurrent = this.lure.weight === lure.value;
+
+                const labelText = this.add.text(contentX, itemY, lure.label, {
+                    fontSize: isSelected ? '16px' : '14px',
+                    fontFamily: 'Courier New',
+                    color: isSelected ? '#00ffff' : '#00ff00',
+                    fontStyle: isSelected ? 'bold' : 'normal'
+                });
+                labelText.setDepth(2001);
+                this.time.delayedCall(16, () => labelText.destroy());
+
+                const descText = this.add.text(contentX + 150, itemY, lure.desc, {
+                    fontSize: '12px',
+                    fontFamily: 'Courier New',
+                    color: isSelected ? '#cccccc' : '#888888'
+                });
+                descText.setDepth(2001);
+                this.time.delayedCall(16, () => descText.destroy());
+
+                if (isCurrent) {
+                    const currentText = this.add.text(contentX + 400, itemY, '← CURRENT', {
+                        fontSize: '12px',
+                        fontFamily: 'Courier New',
+                        color: '#ffff00'
+                    });
+                    currentText.setDepth(2001);
+                    this.time.delayedCall(16, () => currentText.destroy());
+                }
+            });
+        } else if (this.tackleBoxTab === 1) {
+            // LINE tab
+            const titleText = this.add.text(panelX + panelWidth / 2, contentY - 20, 'SELECT LINE TYPE', {
+                fontSize: '14px',
+                fontFamily: 'Courier New',
+                color: '#cccccc'
+            });
+            titleText.setOrigin(0.5, 0.5);
+            titleText.setDepth(2001);
+            this.time.delayedCall(16, () => titleText.destroy());
+
+            this.tackleBoxGear.lineTypes.forEach((line, index) => {
+                const itemY = contentY + index * 35;
+                const isSelected = index === this.tackleBoxSelected.line;
+                const isCurrent = this.fishingLine.lineType === line.value;
+
+                const labelText = this.add.text(contentX, itemY, line.label, {
+                    fontSize: isSelected ? '16px' : '14px',
+                    fontFamily: 'Courier New',
+                    color: isSelected ? '#00ffff' : '#00ff00',
+                    fontStyle: isSelected ? 'bold' : 'normal'
+                });
+                labelText.setDepth(2001);
+                this.time.delayedCall(16, () => labelText.destroy());
+
+                const descText = this.add.text(contentX + 180, itemY, line.desc, {
+                    fontSize: '12px',
+                    fontFamily: 'Courier New',
+                    color: isSelected ? '#cccccc' : '#888888'
+                });
+                descText.setDepth(2001);
+                this.time.delayedCall(16, () => descText.destroy());
+
+                if (isCurrent) {
+                    const currentText = this.add.text(contentX + 450, itemY, '← CURRENT', {
+                        fontSize: '12px',
+                        fontFamily: 'Courier New',
+                        color: '#ffff00'
+                    });
+                    currentText.setDepth(2001);
+                    this.time.delayedCall(16, () => currentText.destroy());
+                }
+            });
+        }
+
+        // Instructions
+        const hintText = this.add.text(panelX + panelWidth / 2, panelY + panelHeight - 20, 'Arrow Keys: Navigate | X: Select | TAB/Select: Close', {
+            fontSize: '12px',
+            fontFamily: 'Courier New',
+            color: '#aaaaaa'
+        });
+        hintText.setOrigin(0.5, 0.5);
+        hintText.setDepth(2001);
+        this.time.delayedCall(16, () => hintText.destroy());
+    }
+
+    /**
      * Clean up scene resources
      */
     shutdown() {
@@ -741,6 +1129,12 @@ export class GameScene extends Phaser.Scene {
         }
         if (this.notificationSystem) {
             this.notificationSystem.destroy();
+        }
+
+        // Clean up tackle box graphics
+        if (this.tackleBoxGraphics) {
+            this.tackleBoxGraphics.destroy();
+            this.tackleBoxGraphics = null;
         }
     }
 }
