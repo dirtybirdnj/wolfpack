@@ -164,16 +164,20 @@ export class GameScene extends Phaser.Scene {
             // Create fishing line
             this.fishingLine = new FishingLine(this);
 
+            // Initialize fishing line model
+            this.fishingLineModel = new FishingLineModel();
+
             // Apply line type from tackle box selection
             const lineType = this.registry.get('lineType');
             const braidColor = this.registry.get('braidColor');
             if (lineType !== undefined) {
                 this.fishingLine.setLineType(lineType, braidColor);
+                this.fishingLineModel.setLineType(lineType);
+                if (lineType === 'braid' && braidColor) {
+                    this.fishingLineModel.setBraidColor(braidColor);
+                }
                 console.log(`🧵 Line type set to ${lineType}${lineType === 'braid' ? ' (' + braidColor + ')' : ''}`);
             }
-
-            // Initialize fishing line model
-            this.fishingLineModel = new FishingLineModel();
 
             // Set water temperature
             this.initializeWaterTemp();
@@ -567,7 +571,7 @@ export class GameScene extends Phaser.Scene {
      */
     handleFishBump(fish) {
         // Get line type's haptic sensitivity
-        const hapticSensitivity = this.fishingLine.model.getHapticSensitivity();
+        const hapticSensitivity = this.fishingLineModel.getHapticSensitivity();
 
         // Roll for whether player feels the bump (based on line sensitivity)
         if (Math.random() <= hapticSensitivity) {
@@ -578,7 +582,7 @@ export class GameScene extends Phaser.Scene {
             const weakMagnitude = 0.15 * hapticSensitivity;
 
             this.rumbleGamepad(150, strongMagnitude, weakMagnitude);
-            console.log(`Fish bump detected! (${(hapticSensitivity * 100).toFixed(0)}% sensitivity - ${this.fishingLine.model.getDisplayName()}) - Haptic: ${strongMagnitude.toFixed(2)}/${weakMagnitude.toFixed(2)}`);
+            console.log(`Fish bump detected! (${(hapticSensitivity * 100).toFixed(0)}% sensitivity - ${this.fishingLineModel.getDisplayName()}) - Haptic: ${strongMagnitude.toFixed(2)}/${weakMagnitude.toFixed(2)}`);
         } else {
             console.log(`Fish bump occurred but not felt (${(hapticSensitivity * 100).toFixed(0)}% sensitivity)`);
         }
@@ -938,6 +942,7 @@ export class GameScene extends Phaser.Scene {
             if (confirmPressed) {
                 const selected = this.tackleBoxGear.lineTypes[this.tackleBoxSelected.line];
                 this.fishingLine.setLineType(selected.value, 'neon-green');
+                this.fishingLineModel.setLineType(selected.value);
                 console.log(`🧵 Line type changed to ${selected.label}`);
             }
         }
