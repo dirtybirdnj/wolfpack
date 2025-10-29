@@ -43,6 +43,9 @@ export class FishFight {
         this.thrashAmount = 0;
         this.thrashSpeed = 0.15 + (biologicalCondition * 0.1); // Healthier fish thrash faster
 
+        // Store ice hole center position for fish positioning
+        this.centerX = this.lure.x;
+
         console.log(`Fish condition - Health: ${this.fish.health.toFixed(0)}%, Hunger: ${this.fish.hunger.toFixed(0)}%, Strength: ${this.fishStrength.toFixed(1)}, Initial Energy: ${this.fishEnergy.toFixed(1)}`);
 
 
@@ -358,8 +361,8 @@ export class FishFight {
         // Add vertical thrashing component (fish also thrashes up/down)
         const verticalThrash = Math.cos(this.fightTime * this.thrashSpeed * 1.3) * 6 * thrashMultiplier * energyMultiplier;
 
-        // Position fish at depth with thrashing
-        this.fish.x = this.lure.x + actualThrash;
+        // Position fish at depth with thrashing (relative to ice hole center, not current lure position)
+        this.fish.x = this.centerX + actualThrash;
         this.fish.y = targetY + verticalThrash;
         this.fish.depth = this.fish.y / GameConfig.DEPTH_SCALE;
 
@@ -617,9 +620,9 @@ export class FishFight {
         fishGraphics.setDepth(2002);
 
         // Render enlarged fish (with defensive check)
-        // Scale reduced from 4 to 2 to prevent fish from appearing too large
+        // Scale reduced from 2 to 1 to prevent large fish from appearing too large
         if (this.fish && typeof this.fish.renderAtPosition === 'function') {
-            this.fish.renderAtPosition(fishGraphics, popupX, popupY - 40, 2);
+            this.fish.renderAtPosition(fishGraphics, popupX, popupY - 40, 1);
         } else {
             console.warn('Fish renderAtPosition method not available, skipping fish rendering in popup');
         }
