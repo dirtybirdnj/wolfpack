@@ -1,8 +1,8 @@
 import GameConfig from '../config/GameConfig.js';
-import LakeTrout from '../models/LakeTrout.js';
-import NorthernPike from '../models/NorthernPike.js';
-import SmallmouthBass from '../models/SmallmouthBass.js';
-import YellowPerch from '../models/YellowPerch.js';
+import LakeTrout from '../models/species/LakeTrout.js';
+import NorthernPike from '../models/species/NorthernPike.js';
+import SmallmouthBass from '../models/species/SmallmouthBass.js';
+import YellowPerch from '../models/species/YellowPerch.js';
 
 /**
  * Fish - Phaser rendering layer for fish
