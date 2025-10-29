@@ -602,11 +602,25 @@ export class GameScene extends Phaser.Scene {
         this.hooksetWindow.startTime = this.time.now;
         this.hooksetWindow.hasHookset = false;
 
-        // Trigger bump visuals and haptics (strike is a harder bump)
+        // Always show visual feedback - stronger shake for strike
         this.lure.vibrate(5, 30); // Stronger vibration for strike (5px, 30 frames = ~500ms)
 
-        // Always give strong haptic feedback on strike regardless of line type
-        this.rumbleGamepad(200, 0.5, 0.25);
+        // Get line type's haptic sensitivity
+        const hapticSensitivity = this.fishingLineModel.getHapticSensitivity();
+
+        // Roll for whether player feels the strike (based on line sensitivity)
+        if (Math.random() <= hapticSensitivity) {
+            // Player feels the strike! Scale haptic intensity by line sensitivity
+            // Base haptic for strike: 200ms duration, 0.5/0.25 magnitude (stronger than bump)
+            // Scale by sensitivity: Braid (100%) = full strength, Mono (40%) = 40% strength
+            const strongMagnitude = 0.5 * hapticSensitivity;
+            const weakMagnitude = 0.25 * hapticSensitivity;
+
+            this.rumbleGamepad(200, strongMagnitude, weakMagnitude);
+            console.log(`Strike felt! (${(hapticSensitivity * 100).toFixed(0)}% sensitivity - ${this.fishingLineModel.getDisplayName()}) - Haptic: ${strongMagnitude.toFixed(2)}/${weakMagnitude.toFixed(2)}`);
+        } else {
+            console.log(`Strike occurred but not felt! (${(hapticSensitivity * 100).toFixed(0)}% sensitivity) - Better watch the lure!`);
+        }
     }
 
     /**
