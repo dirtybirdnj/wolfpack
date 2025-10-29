@@ -260,42 +260,46 @@ export class Fish {
             this.graphics.rotateCanvas(-this.model.angle);
         }
 
+        // Render body (shared method)
+        this.renderLakeTroutBody(this.graphics, bodySize);
+
+        this.graphics.restore();
+    }
+
+    renderLakeTroutBody(graphics, bodySize) {
         // Main body - grayish-olive color
-        this.graphics.fillStyle(GameConfig.COLOR_FISH_BODY, 1.0);
-        this.graphics.fillEllipse(0, 0, bodySize * 2.5, bodySize * 0.8);
+        graphics.fillStyle(GameConfig.COLOR_FISH_BODY, 1.0);
+        graphics.fillEllipse(0, 0, bodySize * 2.5, bodySize * 0.8);
 
         // Belly - cream/pinkish lighter color
-        this.graphics.fillStyle(GameConfig.COLOR_FISH_BELLY, 0.8);
-        this.graphics.fillEllipse(0, bodySize * 0.2, bodySize * 2.2, bodySize * 0.5);
+        graphics.fillStyle(GameConfig.COLOR_FISH_BELLY, 0.8);
+        graphics.fillEllipse(0, bodySize * 0.2, bodySize * 2.2, bodySize * 0.5);
 
         // Tail fin
         const tailSize = bodySize * 0.7;
         const tailX = -bodySize * 1.25;
-        const tailY = 0;
 
-        this.graphics.fillStyle(GameConfig.COLOR_FISH_FINS, 0.9);
-        this.graphics.beginPath();
-        this.graphics.moveTo(tailX, tailY);
-        this.graphics.lineTo(tailX - tailSize, tailY - tailSize * 0.6);
-        this.graphics.lineTo(tailX - tailSize, tailY + tailSize * 0.6);
-        this.graphics.closePath();
-        this.graphics.fillPath();
+        graphics.fillStyle(GameConfig.COLOR_FISH_FINS, 0.9);
+        graphics.beginPath();
+        graphics.moveTo(tailX, 0);
+        graphics.lineTo(tailX - tailSize, -tailSize * 0.6);
+        graphics.lineTo(tailX - tailSize, tailSize * 0.6);
+        graphics.closePath();
+        graphics.fillPath();
 
         // Dorsal and pectoral fins
-        this.graphics.fillStyle(GameConfig.COLOR_FISH_FINS, 0.7);
-        this.graphics.fillTriangle(
+        graphics.fillStyle(GameConfig.COLOR_FISH_FINS, 0.7);
+        graphics.fillTriangle(
             0, -bodySize * 0.5,
             -bodySize * 0.3, -bodySize * 1.2,
             bodySize * 0.3, -bodySize * 1.2
         );
         const finX = -bodySize * 0.3;
-        this.graphics.fillTriangle(
+        graphics.fillTriangle(
             finX, 0,
             finX - bodySize * 0.4, -bodySize * 0.3,
             finX - bodySize * 0.4, bodySize * 0.3
         );
-
-        this.graphics.restore();
     }
 
     renderNorthernPike(bodySize, isMovingRight) {
@@ -579,39 +583,8 @@ export class Fish {
     }
 
     renderLakeTroutAtPosition(graphics, bodySize) {
-        // Main body - grayish-olive color
-        graphics.fillStyle(GameConfig.COLOR_FISH_BODY, 1.0);
-        graphics.fillEllipse(0, 0, bodySize * 2.5, bodySize * 0.8);
-
-        // Belly - cream/pinkish lighter color
-        graphics.fillStyle(GameConfig.COLOR_FISH_BELLY, 0.8);
-        graphics.fillEllipse(0, bodySize * 0.2, bodySize * 2.2, bodySize * 0.5);
-
-        // Tail fin
-        const tailSize = bodySize * 0.7;
-        const tailX = -bodySize * 1.25;
-
-        graphics.fillStyle(GameConfig.COLOR_FISH_FINS, 0.9);
-        graphics.beginPath();
-        graphics.moveTo(tailX, 0);
-        graphics.lineTo(tailX - tailSize, -tailSize * 0.6);
-        graphics.lineTo(tailX - tailSize, tailSize * 0.6);
-        graphics.closePath();
-        graphics.fillPath();
-
-        // Dorsal and pectoral fins
-        graphics.fillStyle(GameConfig.COLOR_FISH_FINS, 0.7);
-        graphics.fillTriangle(
-            0, -bodySize * 0.5,
-            -bodySize * 0.3, -bodySize * 1.2,
-            bodySize * 0.3, -bodySize * 1.2
-        );
-        const finX = -bodySize * 0.3;
-        graphics.fillTriangle(
-            finX, 0,
-            finX - bodySize * 0.4, -bodySize * 0.3,
-            finX - bodySize * 0.4, bodySize * 0.3
-        );
+        // Use shared body rendering method
+        this.renderLakeTroutBody(graphics, bodySize);
     }
 
     renderNorthernPikeAtPosition(graphics, bodySize) {
