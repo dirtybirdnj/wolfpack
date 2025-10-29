@@ -660,7 +660,7 @@ export class FishFight {
 
         // Continue prompt
         const continueText = this.scene.add.text(popupX, popupY + 180,
-            'Press any button to continue',
+            'Press X button to continue',
             {
                 fontSize: '16px',
                 fontFamily: 'Courier New',
@@ -691,8 +691,8 @@ export class FishFight {
             continueText.destroy();
 
             // Remove input listeners
-            this.scene.input.keyboard.off('keydown', dismissPopup);
-            this.scene.input.gamepad.off('down', dismissPopup);
+            this.scene.input.keyboard.off('keydown', keyboardHandler);
+            this.scene.input.gamepad.off('down', gamepadHandler);
 
             // Resume game and finish cleanup
             this.scene.physics.resume();
@@ -702,12 +702,26 @@ export class FishFight {
             this.fish.destroy();
         };
 
-        // Listen for any keyboard input
-        this.scene.input.keyboard.once('keydown', dismissPopup);
+        // Keyboard handler - accept spacebar or enter
+        const keyboardHandler = (event) => {
+            if (event.keyCode === 32 || event.keyCode === 13) { // Space or Enter
+                dismissPopup();
+            }
+        };
 
-        // Listen for any gamepad button
+        // Gamepad handler - only accept X button (button 2)
+        const gamepadHandler = (pad, button, value) => {
+            if (button.index === 2) { // X button
+                dismissPopup();
+            }
+        };
+
+        // Listen for keyboard input
+        this.scene.input.keyboard.on('keydown', keyboardHandler);
+
+        // Listen for gamepad X button
         if (this.scene.input.gamepad && this.scene.input.gamepad.total > 0) {
-            this.scene.input.gamepad.once('down', dismissPopup);
+            this.scene.input.gamepad.on('down', gamepadHandler);
         }
     }
 
