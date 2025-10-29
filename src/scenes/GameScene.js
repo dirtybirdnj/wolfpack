@@ -183,6 +183,7 @@ export class GameScene extends Phaser.Scene {
 
             // Event listeners
             this.events.on('fishCaught', this.handleFishCaught, this);
+            this.events.on('fishBump', this.handleFishBump, this);
 
             // Fade in
             this.cameras.main.fadeIn(500);
@@ -558,6 +559,25 @@ export class GameScene extends Phaser.Scene {
 
         // Start the fight
         this.currentFight = new FishFight(this, fish, this.lure);
+    }
+
+    /**
+     * Handle fish bump event - haptic feedback based on line sensitivity
+     * @param {Fish} fish - The fish that bumped the lure
+     */
+    handleFishBump(fish) {
+        // Get line type's haptic sensitivity
+        const hapticSensitivity = this.fishingLine.model.getHapticSensitivity();
+
+        // Roll for whether player feels the bump (based on line sensitivity)
+        if (Math.random() <= hapticSensitivity) {
+            // Player feels the bump! Trigger short haptic feedback
+            // Lighter and shorter than a bite (150ms vs 300ms, 0.3/0.15 vs 0.6/0.3)
+            this.rumbleGamepad(150, 0.3, 0.15);
+            console.log(`Fish bump detected! (${(hapticSensitivity * 100).toFixed(0)}% sensitivity - ${this.fishingLine.model.getDisplayName()})`);
+        } else {
+            console.log(`Fish bump occurred but not felt (${(hapticSensitivity * 100).toFixed(0)}% sensitivity)`);
+        }
     }
 
     /**

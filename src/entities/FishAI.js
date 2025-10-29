@@ -60,6 +60,9 @@ export class FishAI {
         } else {
             this.circlesBeforeStrike = false;
         }
+
+        // Fish bump detection - tracks if bump has occurred during this chase
+        this.hasBumpedLure = false;
     }
 
     get aggressiveness() {
@@ -254,6 +257,9 @@ export class FishAI {
     }
     
     idleBehavior(distance, lure, lureSpeed, depthDifference) {
+        // Reset bump flag when returning to idle
+        this.hasBumpedLure = false;
+
         // Lake trout can see 40-70 feet above and below
         const horizontalDist = Math.abs(this.fish.x - lure.x);
         const verticalDist = Math.abs(this.fish.y - lure.y);
@@ -367,6 +373,20 @@ export class FishAI {
     chasingBehavior(distance, lure, lureSpeed, baitfishClouds) {
         // Check if lure is in a baitfish cloud - fish can't tell the difference!
         const lureInBaitfishCloud = this.isLureInBaitfishCloud(lure, baitfishClouds);
+
+        // FISH BUMP DETECTION - Fish bumps the lure when getting close
+        // Bump zone is 1.5x to 2x the strike distance
+        const strikeDistance = this.getStrikeDistance();
+        const bumpZoneMin = strikeDistance * 1.5;
+        const bumpZoneMax = strikeDistance * 2.0;
+
+        if (!this.hasBumpedLure && distance >= bumpZoneMin && distance <= bumpZoneMax) {
+            // Fish has entered the bump zone - emit bump event
+            this.hasBumpedLure = true;
+            if (this.fish.scene) {
+                this.fish.scene.events.emit('fishBump', this.fish);
+            }
+        }
 
         // ENGAGED FISH BEHAVIOR - Special mechanics for fish locked onto lure
         if (this.fish.isEngaged) {
@@ -556,6 +576,9 @@ export class FishAI {
     }
     
     fleeingBehavior(distance) {
+        // Reset bump flag when fleeing
+        this.hasBumpedLure = false;
+
         // FAST FLEEING - Fish ran out of swipes
         if (this.fish.isFastFleeing) {
             // Pick direction based on current position - swim off screen

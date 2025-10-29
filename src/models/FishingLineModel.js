@@ -139,4 +139,17 @@ export class FishingLineModel {
         };
         return names[this.braidColor];
     }
+
+    /**
+     * Get haptic sensitivity for fish bump detection
+     * @returns {number} Haptic sensitivity (0.4 to 1.0)
+     */
+    getHapticSensitivity() {
+        const sensitivities = {
+            [LINE_TYPES.BRAID]: 1.0,          // 100% sensitivity
+            [LINE_TYPES.FLUOROCARBON]: 0.6,   // 60% sensitivity
+            [LINE_TYPES.MONOFILAMENT]: 0.4    // 40% sensitivity
+        };
+        return sensitivities[this.lineType];
+    }
 }
