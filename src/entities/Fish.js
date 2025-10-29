@@ -198,6 +198,7 @@ export class Fish {
     set worldX(value) { this.model.worldX = value; }
 
     get depth() { return this.model.depth; }
+    get depthZone() { return this.model.depthZone; }
     get weight() { return this.model.weight; }
     get length() { return this.model.length; }
     get size() { return this.model.size; }

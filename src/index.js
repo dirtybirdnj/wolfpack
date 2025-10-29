@@ -383,6 +383,12 @@ function updateFishStatus(gameScene) {
     const bottomFish = [];
 
     gameScene.fishes.forEach((fish, index) => {
+        // Defensive check for fish and depthZone
+        if (!fish || !fish.depthZone || !fish.depthZone.name) {
+            console.warn('Fish with invalid depthZone encountered:', fish);
+            return;
+        }
+
         const fishData = { fish, index };
         if (fish.depthZone.name === 'Surface') {
             surfaceFish.push(fishData);
