@@ -758,6 +758,12 @@ export class GameScene extends Phaser.Scene {
      */
     toggleTackleBox() {
         this.tackleBoxOpen = !this.tackleBoxOpen;
+
+        // If closing, clear all graphics immediately
+        if (!this.tackleBoxOpen && this.tackleBoxGraphics) {
+            this.tackleBoxGraphics.clear();
+        }
+
         console.log(`Tackle box ${this.tackleBoxOpen ? 'opened' : 'closed'}`);
     }
 
