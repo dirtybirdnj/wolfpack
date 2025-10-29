@@ -131,16 +131,24 @@ export class YellowPerch extends Fish {
      * Render at a custom position (for catch popup)
      */
     renderAtPosition(graphics, x, y, bodySize) {
+        console.log('YellowPerch renderAtPosition called:', { x, y, bodySize });
+
         const colors = this.speciesData.appearance.colorScheme;
+        console.log('Colors from speciesData:', colors);
 
         // Use canvas transformation to position the fish
         graphics.save();
+        console.log('Saved graphics state');
+
         graphics.translateCanvas(x, y);
+        console.log('Translated canvas to', x, y);
 
         // Render body at origin (0,0) relative to translated position
         this.renderBody(graphics, bodySize, colors, 0, 0);
+        console.log('renderBody completed');
 
         graphics.restore();
+        console.log('Restored graphics state');
     }
 }
 
