@@ -42,7 +42,7 @@ wolfpack/
     │       ├── ScoreSystem.js     # Score tracking + achievements
     │       └── NotificationSystem.js # In-game messages
     ├── entities/
-    │   ├── Fish.js                # Fish entity & species rendering (1,145 lines)
+    │   ├── Fish.js                # Fish factory (creates species) (57 lines)
     │   ├── FishAI.js              # Fish behavior AI (896 lines)
     │   ├── FishFight.js           # Catch minigame (717 lines)
     │   ├── Lure.js                # Player lure mechanics (310 lines)
@@ -51,6 +51,12 @@ wolfpack/
     │   ├── Zooplankton.js         # Bottom organisms (180 lines)
     │   ├── FishingLine.js         # Line rendering (114 lines)
     │   └── FishingLineModel.js    # Line physics (142 lines)
+    ├── models/
+    │   ├── fish.js                # Base fish biological model (471 lines)
+    │   ├── lake-trout.js          # Lake Trout species (131 lines)
+    │   ├── northern-pike.js       # Northern Pike species (184 lines)
+    │   ├── smallmouth-bass.js     # Smallmouth Bass species (217 lines)
+    │   └── yellow-perch.js        # Yellow Perch species (204 lines)
     ├── managers/
     │   ├── IceHoleManager.js      # Ice hole drilling (391 lines)
     │   └── BoatManager.js         # Kayak/motorboat controls (394 lines)
@@ -175,14 +181,51 @@ GameScene delegates to 6 focused systems (down from monolithic 1,519 lines):
 
 Object-oriented entity classes for all game objects:
 
-#### Fish.js (1,145 lines)
-- Fish entity with species-specific rendering
-- 5 predator species: Lake Trout, Northern Pike, Smallmouth Bass, Yellow Perch (Large/Juvenile)
-- Size categories: SMALL, MEDIUM, LARGE, TROPHY (2-40 lbs)
-- Biological stats: hunger, health, age, temperature preferences
-- Individual personality traits (alertness, aggressiveness)
-- Depth preferences (species and seasonal)
-- Anatomically correct colors and features per species
+#### Fish.js (57 lines) - Factory Pattern
+- Factory function that creates species-specific fish instances
+- Maintains backward compatibility with existing code
+- Delegates to modular species classes in `/src/models/`
+- Uses: `new Fish(scene, x, y, size, fishingType, species)`
+- Returns appropriate species instance (LakeTrout, NorthernPike, etc.)
+
+#### Modular Fish Models (`/src/models/`)
+- **fish.js** (471 lines) - Base Fish class with shared biology
+  - Common properties: hunger, health, metabolism, age, weight, length
+  - AI integration, movement, depth zones, state management
+  - Sonar trail rendering, visual feedback
+  - Biological update cycles (hunger, health, frenzy)
+  - Base rendering methods (overridden by species)
+
+- **lake-trout.js** (131 lines) - Lake Trout (*Salvelinus namaycush*)
+  - Cold-water pursuit predator
+  - Length formula: `10.5 * weight^0.31`
+  - Age: 3-30+ years (slow growth, long-lived)
+  - Visual: Grayish-olive body with cream belly
+
+- **northern-pike.js** (184 lines) - Northern Pike (*Esox lucius*)
+  - Ambush predator with explosive strikes
+  - Length formula: `13.5 * weight^0.28` (longer, torpedo-shaped)
+  - Age: 2-22 years (faster growth)
+  - Visual: Olive green with cream oval spots in horizontal rows
+
+- **smallmouth-bass.js** (217 lines) - Smallmouth Bass (*Micropterus dolomieu*)
+  - Active pursuit, circles before striking
+  - Length formula: `11.2 * weight^0.33` (compact, deep-bodied)
+  - Age: 2-18 years (moderate growth)
+  - Visual: Bronze/brown with vertical bars and red eyes
+
+- **yellow-perch.js** (204 lines) - Yellow Perch (*Perca flavescens*)
+  - Opportunistic feeder, beginner-friendly
+  - Length formula: `9.5 * weight^0.35`
+  - Age: 1-12 years (fast growth, shorter lifespan)
+  - Visual: Golden yellow with dark vertical bars
+
+**Benefits of Modular System:**
+- Each species is self-contained (single responsibility)
+- Shared behaviors inherited from base Fish class
+- Species-specific formulas for length, age, and appearance
+- Easy to add new species without affecting existing ones
+- Clear separation between biology (models) and game logic (entities)
 
 #### FishAI.js (896 lines)
 - Complex 7-state machine:
@@ -788,17 +831,26 @@ GameScene
 Largest Files (by lines of code):
 
 1. NavigationScene.js   - 2,146 lines (top-down map, bathymetry integration)
-2. Fish.js              - 1,145 lines (5 species rendering, biological stats)
-3. SpeciesData.js       - 924 lines (10 species definitions, comprehensive)
-4. FishAI.js            - 896 lines (7-state machine, species behaviors)
-5. GameScene.js         - 748 lines (orchestrator, systems management)
-6. FishFight.js         - 717 lines (catch minigame, haptics)
-7. Baitfish.js          - 638 lines (flocking, hunting, panic)
-8. SonarDisplay.js      - 521 lines (retro sonar rendering)
+2. SpeciesData.js       - 924 lines (10 species definitions, comprehensive)
+3. FishAI.js            - 896 lines (7-state machine, species behaviors)
+4. GameScene.js         - 748 lines (orchestrator, systems management)
+5. FishFight.js         - 717 lines (catch minigame, haptics)
+6. Baitfish.js          - 638 lines (flocking, hunting, panic)
+7. SonarDisplay.js      - 521 lines (retro sonar rendering)
+8. fish.js (models)     - 471 lines (base fish biological model)
 9. BaitfishCloud.js     - 464 lines (cloud management, splitting/merging)
 10. MenuScene.js        - 446 lines (mode selection UI)
 
-Total: ~11,700 lines across 30 files
+Fish Models (modular architecture):
+- fish.js              - 471 lines (base biological model)
+- smallmouth-bass.js   - 217 lines (species implementation)
+- yellow-perch.js      - 204 lines (species implementation)
+- northern-pike.js     - 184 lines (species implementation)
+- lake-trout.js        - 131 lines (species implementation)
+- Fish.js (factory)    - 57 lines (factory pattern)
+Total Fish System: ~1,264 lines across 6 files
+
+Total: ~11,700 lines across 35 files
 ```
 
 ## Performance Considerations
