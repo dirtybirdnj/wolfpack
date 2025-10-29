@@ -1,13 +1,12 @@
-# Wolfpack
-![Wolf Pack SNES Box Art](https://github.com/dirtybirdnj/wolfpack/blob/main/samples/snes-wolfpack.jpg?raw=true) "Wolfpack SNES box art")
+![Wolf Pack ](https://github.com/dirtybirdnj/wolfpack/blob/main/samples/snes-wolfpack.jpg?raw=true)
 
-A Lake Champlain ice fishing simulator that mimics the sonar/fish finder view, built with Phaser 3. Hunt for lake trout in packs across the deep, cold waters of Lake Champlain.
+A Lake Champlain ice fishing simulator recreates the experience of vertical jigging, built with Phaser 3. 
 
-## 🎣 About
+Hunt for Lake Trout Wolfpacks across the deep, cold waters of Lake Champlain.
+Observe the ambush behavior of Northern Pike, wait for them to stalk prey and drop your lure to trigger a strike!
+Smallmouth Bass and Yellow Perch are in the mix too, see if you can figure out what makes them strike!
 
-Experience ice fishing on Lake Champlain through the lens of a fish finder display. Target lake trout in the deep waters between Vermont's Green Mountains and New York's Adirondacks.
-
-## 🚀 Quick Start
+## 🚀 Development Quick Start
 
 1. **Install Node.js LTS** (v20 or higher)
 2. **Install dependencies:**
@@ -45,12 +44,10 @@ No build step is required - the game runs directly from static files!
 
 ## 🐟 Gameplay
 
-- Watch the sonar display scroll from right to left
-- Lake trout appear as yellow/orange marks on the display
 - Drop your lure to the right depth
 - Vary your retrieve speed to entice strikes
 - Fish will chase if you're at the right depth with the right action
-- Land as many lake trout as you can!
+- Land as many fish as you can!
 
 ## 📁 Project Structure
 
