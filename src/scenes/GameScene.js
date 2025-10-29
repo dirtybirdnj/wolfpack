@@ -570,6 +570,9 @@ export class GameScene extends Phaser.Scene {
      * @param {Fish} fish - The fish that bumped the lure
      */
     handleFishBump(fish) {
+        // Always show visual feedback - lure vibrates regardless of whether player feels it
+        this.lure.vibrate(3, 20); // 3px intensity, 20 frames (~333ms)
+
         // Get line type's haptic sensitivity
         const hapticSensitivity = this.fishingLineModel.getHapticSensitivity();
 

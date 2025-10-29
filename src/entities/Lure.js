@@ -32,6 +32,14 @@ export class Lure {
         this.trail = [];
         this.maxTrailLength = 20;
 
+        // Vibration effect (for fish bumps)
+        this.vibrating = false;
+        this.vibrationTime = 0;
+        this.vibrationDuration = 0;
+        this.vibrationIntensity = 0;
+        this.vibrationOffsetX = 0;
+        this.vibrationOffsetY = 0;
+
         // Stats
         this.maxDepthReached = this.depth;
         this.timeInWater = 0;
@@ -41,6 +49,27 @@ export class Lure {
         // Update time in water
         if (this.state !== Constants.LURE_STATE.SURFACE) {
             this.timeInWater++;
+        }
+
+        // Update vibration effect
+        if (this.vibrating) {
+            this.vibrationTime++;
+
+            // Calculate decay (vibration gets weaker over time)
+            const progress = this.vibrationTime / this.vibrationDuration;
+            const decay = 1 - progress;
+
+            if (this.vibrationTime >= this.vibrationDuration) {
+                // Vibration finished
+                this.vibrating = false;
+                this.vibrationOffsetX = 0;
+                this.vibrationOffsetY = 0;
+            } else {
+                // Apply random shake with decay
+                const currentIntensity = this.vibrationIntensity * decay;
+                this.vibrationOffsetX = (Math.random() - 0.5) * currentIntensity * 2;
+                this.vibrationOffsetY = (Math.random() - 0.5) * currentIntensity * 2;
+            }
         }
 
         // Apply physics based on state
@@ -135,8 +164,12 @@ export class Lure {
     
     render() {
         this.graphics.clear();
-        
-        // Draw trail (fading effect)
+
+        // Apply vibration offset to render position
+        const renderX = this.x + this.vibrationOffsetX;
+        const renderY = this.y + this.vibrationOffsetY;
+
+        // Draw trail (fading effect) - trail doesn't vibrate, only the lure itself
         for (let i = 0; i < this.trail.length - 1; i++) {
             const alpha = (i / this.trail.length) * 0.5;
             this.graphics.lineStyle(1, GameConfig.COLOR_LURE, alpha);
@@ -145,19 +178,19 @@ export class Lure {
                 this.trail[i + 1].x, this.trail[i + 1].y
             );
         }
-        
-        // Draw lure body (bright spot on sonar)
+
+        // Draw lure body (bright spot on sonar) - with vibration
         this.graphics.fillStyle(GameConfig.COLOR_LURE, 1.0);
-        this.graphics.fillCircle(this.x, this.y, 4);
-        
-        // Glow effect
+        this.graphics.fillCircle(renderX, renderY, 4);
+
+        // Glow effect - with vibration
         this.graphics.lineStyle(2, GameConfig.COLOR_LURE, 0.5);
-        this.graphics.strokeCircle(this.x, this.y, 6);
-        
-        // Pulsing ring (for visibility)
+        this.graphics.strokeCircle(renderX, renderY, 6);
+
+        // Pulsing ring (for visibility) - with vibration
         const pulse = Math.sin(this.scene.time.now * 0.005) * 0.3 + 0.4;
         this.graphics.lineStyle(1, GameConfig.COLOR_LURE, pulse);
-        this.graphics.strokeCircle(this.x, this.y, 8);
+        this.graphics.strokeCircle(renderX, renderY, 8);
     }
     
     drop() {
@@ -275,6 +308,18 @@ export class Lure {
         this.jigOffset = this.jigOffset * 0.7 + clampedOffset * 0.3;
     }
 
+    /**
+     * Trigger a vibration effect on the lure (for fish bumps)
+     * @param {number} intensity - Vibration intensity in pixels (default 3)
+     * @param {number} duration - Duration in frames at 60fps (default 20 = ~333ms)
+     */
+    vibrate(intensity = 3, duration = 20) {
+        this.vibrating = true;
+        this.vibrationTime = 0;
+        this.vibrationDuration = duration;
+        this.vibrationIntensity = intensity;
+    }
+
     reset() {
         // Reset to surface (y=0) and center X position
         // The hole/boat is always rendered at the center of the screen,
@@ -291,6 +336,10 @@ export class Lure {
         this.isJigging = false;
         this.triggerControlActive = false;
         this.currentTriggerSpeed = 0;
+        this.vibrating = false;
+        this.vibrationTime = 0;
+        this.vibrationOffsetX = 0;
+        this.vibrationOffsetY = 0;
     }
     
     getInfo() {
