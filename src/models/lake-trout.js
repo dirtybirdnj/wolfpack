@@ -36,61 +36,11 @@ export class LakeTrout extends Fish {
     }
 
     /**
-     * Render lake trout body
+     * Draw lake trout shape - shared rendering code
+     * @param {Object} graphics - Phaser graphics object to draw on
+     * @param {number} bodySize - Size multiplier for the fish body
      */
-    renderBody(bodySize, isMovingRight) {
-        this.graphics.save();
-        this.graphics.translateCanvas(this.x, this.y);
-
-        if (isMovingRight) {
-            this.graphics.rotateCanvas(this.angle);
-        } else {
-            this.graphics.scaleCanvas(-1, 1);
-            this.graphics.rotateCanvas(-this.angle);
-        }
-
-        // Main body - grayish-olive color
-        this.graphics.fillStyle(GameConfig.COLOR_FISH_BODY, 1.0);
-        this.graphics.fillEllipse(0, 0, bodySize * 2.5, bodySize * 0.8);
-
-        // Belly - cream/pinkish lighter color
-        this.graphics.fillStyle(GameConfig.COLOR_FISH_BELLY, 0.8);
-        this.graphics.fillEllipse(0, bodySize * 0.2, bodySize * 2.2, bodySize * 0.5);
-
-        // Tail fin
-        const tailSize = bodySize * 0.7;
-        const tailX = -bodySize * 1.25;
-        const tailY = 0;
-
-        this.graphics.fillStyle(GameConfig.COLOR_FISH_FINS, 0.9);
-        this.graphics.beginPath();
-        this.graphics.moveTo(tailX, tailY);
-        this.graphics.lineTo(tailX - tailSize, tailY - tailSize * 0.6);
-        this.graphics.lineTo(tailX - tailSize, tailY + tailSize * 0.6);
-        this.graphics.closePath();
-        this.graphics.fillPath();
-
-        // Dorsal and pectoral fins
-        this.graphics.fillStyle(GameConfig.COLOR_FISH_FINS, 0.7);
-        this.graphics.fillTriangle(
-            0, -bodySize * 0.5,
-            -bodySize * 0.3, -bodySize * 1.2,
-            bodySize * 0.3, -bodySize * 1.2
-        );
-        const finX = -bodySize * 0.3;
-        this.graphics.fillTriangle(
-            finX, 0,
-            finX - bodySize * 0.4, -bodySize * 0.3,
-            finX - bodySize * 0.4, bodySize * 0.3
-        );
-
-        this.graphics.restore();
-    }
-
-    /**
-     * Render lake trout at position (for catch popup)
-     */
-    renderBodyAtPosition(graphics, bodySize) {
+    drawFishShape(graphics, bodySize) {
         // Main body - grayish-olive color
         graphics.fillStyle(GameConfig.COLOR_FISH_BODY, 1.0);
         graphics.fillEllipse(0, 0, bodySize * 2.5, bodySize * 0.8);
@@ -102,12 +52,13 @@ export class LakeTrout extends Fish {
         // Tail fin
         const tailSize = bodySize * 0.7;
         const tailX = -bodySize * 1.25;
+        const tailY = 0;
 
         graphics.fillStyle(GameConfig.COLOR_FISH_FINS, 0.9);
         graphics.beginPath();
-        graphics.moveTo(tailX, 0);
-        graphics.lineTo(tailX - tailSize, -tailSize * 0.6);
-        graphics.lineTo(tailX - tailSize, tailSize * 0.6);
+        graphics.moveTo(tailX, tailY);
+        graphics.lineTo(tailX - tailSize, tailY - tailSize * 0.6);
+        graphics.lineTo(tailX - tailSize, tailY + tailSize * 0.6);
         graphics.closePath();
         graphics.fillPath();
 
@@ -124,6 +75,32 @@ export class LakeTrout extends Fish {
             finX - bodySize * 0.4, -bodySize * 0.3,
             finX - bodySize * 0.4, bodySize * 0.3
         );
+    }
+
+    /**
+     * Render lake trout body (for gameplay)
+     */
+    renderBody(bodySize, isMovingRight) {
+        this.graphics.save();
+        this.graphics.translateCanvas(this.x, this.y);
+
+        if (isMovingRight) {
+            this.graphics.rotateCanvas(this.angle);
+        } else {
+            this.graphics.scaleCanvas(-1, 1);
+            this.graphics.rotateCanvas(-this.angle);
+        }
+
+        this.drawFishShape(this.graphics, bodySize);
+
+        this.graphics.restore();
+    }
+
+    /**
+     * Render lake trout at position (for catch popup)
+     */
+    renderBodyAtPosition(graphics, bodySize) {
+        this.drawFishShape(graphics, bodySize);
     }
 }
 

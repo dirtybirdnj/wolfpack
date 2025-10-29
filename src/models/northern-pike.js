@@ -36,91 +36,14 @@ export class NorthernPike extends Fish {
     }
 
     /**
-     * Render northern pike body
+     * Draw northern pike shape - shared rendering code
+     * @param {Object} graphics - Phaser graphics object to draw on
+     * @param {number} bodySize - Size multiplier for the fish body
      */
-    renderBody(bodySize, isMovingRight) {
+    drawFishShape(graphics, bodySize) {
         const colors = this.speciesData.appearance.colorScheme;
-
-        this.graphics.save();
-        this.graphics.translateCanvas(this.x, this.y);
-
-        if (isMovingRight) {
-            this.graphics.rotateCanvas(this.angle);
-        } else {
-            this.graphics.scaleCanvas(-1, 1);
-            this.graphics.rotateCanvas(-this.angle);
-        }
 
         // Pike body - long and cylindrical (torpedo-shaped)
-        const pikeLength = bodySize * 3.2;
-        const pikeHeight = bodySize * 0.6;
-
-        // Main body - olive green
-        this.graphics.fillStyle(colors.base, 1.0);
-        this.graphics.fillEllipse(0, 0, pikeLength, pikeHeight);
-
-        // Belly - light cream
-        this.graphics.fillStyle(colors.belly, 0.9);
-        this.graphics.fillEllipse(0, pikeHeight * 0.15, pikeLength * 0.9, pikeHeight * 0.4);
-
-        // Characteristic cream/white oval spots in horizontal rows
-        this.graphics.fillStyle(colors.spots, 0.8);
-        const spotsPerRow = 5;
-        const spotSpacing = pikeLength / (spotsPerRow + 1);
-
-        // Upper row of spots
-        for (let i = 0; i < spotsPerRow; i++) {
-            const spotX = -pikeLength * 0.4 + (i * spotSpacing);
-            const spotY = -pikeHeight * 0.15;
-            this.graphics.fillEllipse(spotX, spotY, bodySize * 0.25, bodySize * 0.15);
-        }
-
-        // Middle row of spots
-        for (let i = 0; i < spotsPerRow; i++) {
-            const spotX = -pikeLength * 0.35 + (i * spotSpacing);
-            const spotY = 0;
-            this.graphics.fillEllipse(spotX, spotY, bodySize * 0.25, bodySize * 0.15);
-        }
-
-        // Tail - pike have a distinctive forked tail
-        const tailSize = bodySize * 0.8;
-        const tailX = -pikeLength * 0.45;
-
-        this.graphics.fillStyle(colors.fins, 0.9);
-        this.graphics.beginPath();
-        this.graphics.moveTo(tailX, 0);
-        this.graphics.lineTo(tailX - tailSize * 0.8, -tailSize * 0.7);
-        this.graphics.lineTo(tailX - tailSize * 0.8, tailSize * 0.7);
-        this.graphics.closePath();
-        this.graphics.fillPath();
-
-        // Dorsal fin - far back on pike (near tail)
-        this.graphics.fillStyle(colors.fins, 0.75);
-        const dorsalX = -pikeLength * 0.25;
-        this.graphics.fillTriangle(
-            dorsalX, -pikeHeight * 0.4,
-            dorsalX - bodySize * 0.5, -pikeHeight * 1.3,
-            dorsalX + bodySize * 0.3, -pikeHeight * 1.0
-        );
-
-        // Pectoral fins
-        const finX = -bodySize * 0.2;
-        this.graphics.fillTriangle(
-            finX, 0,
-            finX - bodySize * 0.3, -pikeHeight * 0.25,
-            finX - bodySize * 0.3, pikeHeight * 0.25
-        );
-
-        this.graphics.restore();
-    }
-
-    /**
-     * Render northern pike at position (for catch popup)
-     */
-    renderBodyAtPosition(graphics, bodySize) {
-        const colors = this.speciesData.appearance.colorScheme;
-
-        // Pike body - longer and more slender
         const pikeLength = bodySize * 3.2;
         const pikeHeight = bodySize * 0.6;
 
@@ -132,24 +55,26 @@ export class NorthernPike extends Fish {
         graphics.fillStyle(colors.belly, 0.9);
         graphics.fillEllipse(0, pikeHeight * 0.15, pikeLength * 0.9, pikeHeight * 0.4);
 
-        // Cream/white oval spots in horizontal rows
+        // Characteristic cream/white oval spots in horizontal rows
         graphics.fillStyle(colors.spots, 0.8);
         const spotsPerRow = 5;
         const spotSpacing = pikeLength / (spotsPerRow + 1);
 
+        // Upper row of spots
         for (let i = 0; i < spotsPerRow; i++) {
             const spotX = -pikeLength * 0.4 + (i * spotSpacing);
             const spotY = -pikeHeight * 0.15;
             graphics.fillEllipse(spotX, spotY, bodySize * 0.25, bodySize * 0.15);
         }
 
+        // Middle row of spots
         for (let i = 0; i < spotsPerRow; i++) {
             const spotX = -pikeLength * 0.35 + (i * spotSpacing);
             const spotY = 0;
             graphics.fillEllipse(spotX, spotY, bodySize * 0.25, bodySize * 0.15);
         }
 
-        // Tail - forked
+        // Tail - pike have a distinctive forked tail
         const tailSize = bodySize * 0.8;
         const tailX = -pikeLength * 0.45;
 
@@ -161,7 +86,7 @@ export class NorthernPike extends Fish {
         graphics.closePath();
         graphics.fillPath();
 
-        // Dorsal fin - far back
+        // Dorsal fin - far back on pike (near tail)
         graphics.fillStyle(colors.fins, 0.75);
         const dorsalX = -pikeLength * 0.25;
         graphics.fillTriangle(
@@ -177,6 +102,32 @@ export class NorthernPike extends Fish {
             finX - bodySize * 0.3, -pikeHeight * 0.25,
             finX - bodySize * 0.3, pikeHeight * 0.25
         );
+    }
+
+    /**
+     * Render northern pike body (for gameplay)
+     */
+    renderBody(bodySize, isMovingRight) {
+        this.graphics.save();
+        this.graphics.translateCanvas(this.x, this.y);
+
+        if (isMovingRight) {
+            this.graphics.rotateCanvas(this.angle);
+        } else {
+            this.graphics.scaleCanvas(-1, 1);
+            this.graphics.rotateCanvas(-this.angle);
+        }
+
+        this.drawFishShape(this.graphics, bodySize);
+
+        this.graphics.restore();
+    }
+
+    /**
+     * Render northern pike at position (for catch popup)
+     */
+    renderBodyAtPosition(graphics, bodySize) {
+        this.drawFishShape(graphics, bodySize);
     }
 }
 

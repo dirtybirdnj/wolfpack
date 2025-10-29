@@ -36,104 +36,11 @@ export class SmallmouthBass extends Fish {
     }
 
     /**
-     * Render smallmouth bass body
+     * Draw smallmouth bass shape - shared rendering code
+     * @param {Object} graphics - Phaser graphics object to draw on
+     * @param {number} bodySize - Size multiplier for the fish body
      */
-    renderBody(bodySize, isMovingRight) {
-        const colors = this.speciesData.appearance.colorScheme;
-
-        this.graphics.save();
-        this.graphics.translateCanvas(this.x, this.y);
-
-        if (isMovingRight) {
-            this.graphics.rotateCanvas(this.angle);
-        } else {
-            this.graphics.scaleCanvas(-1, 1);
-            this.graphics.rotateCanvas(-this.angle);
-        }
-
-        // Bass body - compact and muscular
-        const bassLength = bodySize * 2.2;
-        const bassHeight = bodySize * 0.9;
-
-        // Main body - bronze/brown
-        this.graphics.fillStyle(colors.base, 1.0);
-        this.graphics.fillEllipse(0, 0, bassLength, bassHeight);
-
-        // Belly - cream/tan
-        this.graphics.fillStyle(colors.belly, 0.9);
-        this.graphics.fillEllipse(0, bassHeight * 0.2, bassLength * 0.85, bassHeight * 0.5);
-
-        // Vertical bars - distinctive feature of smallmouth
-        this.graphics.fillStyle(colors.bars, 0.7);
-        const barCount = 9;
-        const barWidth = bassLength * 0.08;
-        const barSpacing = bassLength / (barCount + 1);
-
-        for (let i = 0; i < barCount; i++) {
-            const barX = -bassLength * 0.4 + (i * barSpacing);
-            const heightMultiplier = 1.0 - Math.abs(i - barCount / 2) * 0.15;
-            const barHeight = bassHeight * 0.8 * heightMultiplier;
-
-            this.graphics.fillRect(
-                barX - barWidth / 2,
-                -barHeight / 2,
-                barWidth,
-                barHeight
-            );
-        }
-
-        // Red eye - distinctive feature
-        const eyeX = bassLength * 0.35;
-        const eyeY = -bassHeight * 0.25;
-        this.graphics.fillStyle(colors.eyes, 1.0);
-        this.graphics.fillCircle(eyeX, eyeY, bodySize * 0.15);
-
-        // Tail - slightly forked
-        const tailSize = bodySize * 0.75;
-        const tailX = -bassLength * 0.45;
-
-        this.graphics.fillStyle(colors.fins, 0.9);
-        this.graphics.beginPath();
-        this.graphics.moveTo(tailX, 0);
-        this.graphics.lineTo(tailX - tailSize * 0.7, -tailSize * 0.6);
-        this.graphics.lineTo(tailX - tailSize * 0.7, tailSize * 0.6);
-        this.graphics.closePath();
-        this.graphics.fillPath();
-
-        // Dorsal fin - spiny front section, soft rear section
-        this.graphics.fillStyle(colors.fins, 0.8);
-
-        // Spiny dorsal (front)
-        const spinyDorsalX = -bassLength * 0.15;
-        this.graphics.fillTriangle(
-            spinyDorsalX, -bassHeight * 0.5,
-            spinyDorsalX - bodySize * 0.4, -bassHeight * 1.3,
-            spinyDorsalX + bodySize * 0.2, -bassHeight * 1.2
-        );
-
-        // Soft dorsal (rear)
-        const softDorsalX = bassLength * 0.05;
-        this.graphics.fillTriangle(
-            softDorsalX, -bassHeight * 0.5,
-            softDorsalX - bodySize * 0.2, -bassHeight * 1.1,
-            softDorsalX + bodySize * 0.3, -bassHeight * 1.0
-        );
-
-        // Pectoral fins
-        const finX = -bodySize * 0.2;
-        this.graphics.fillTriangle(
-            finX, 0,
-            finX - bodySize * 0.35, -bassHeight * 0.3,
-            finX - bodySize * 0.35, bassHeight * 0.3
-        );
-
-        this.graphics.restore();
-    }
-
-    /**
-     * Render smallmouth bass at position (for catch popup)
-     */
-    renderBodyAtPosition(graphics, bodySize) {
+    drawFishShape(graphics, bodySize) {
         const colors = this.speciesData.appearance.colorScheme;
 
         // Bass body - compact and muscular
@@ -148,7 +55,7 @@ export class SmallmouthBass extends Fish {
         graphics.fillStyle(colors.belly, 0.9);
         graphics.fillEllipse(0, bassHeight * 0.2, bassLength * 0.85, bassHeight * 0.5);
 
-        // Vertical bars
+        // Vertical bars - distinctive feature of smallmouth
         graphics.fillStyle(colors.bars, 0.7);
         const barCount = 9;
         const barWidth = bassLength * 0.08;
@@ -167,13 +74,13 @@ export class SmallmouthBass extends Fish {
             );
         }
 
-        // Red eye
+        // Red eye - distinctive feature
         const eyeX = bassLength * 0.35;
         const eyeY = -bassHeight * 0.25;
         graphics.fillStyle(colors.eyes, 1.0);
         graphics.fillCircle(eyeX, eyeY, bodySize * 0.15);
 
-        // Tail
+        // Tail - slightly forked
         const tailSize = bodySize * 0.75;
         const tailX = -bassLength * 0.45;
 
@@ -185,9 +92,10 @@ export class SmallmouthBass extends Fish {
         graphics.closePath();
         graphics.fillPath();
 
-        // Dorsal fins - spiny and soft sections
+        // Dorsal fin - spiny front section, soft rear section
         graphics.fillStyle(colors.fins, 0.8);
 
+        // Spiny dorsal (front)
         const spinyDorsalX = -bassLength * 0.15;
         graphics.fillTriangle(
             spinyDorsalX, -bassHeight * 0.5,
@@ -195,6 +103,7 @@ export class SmallmouthBass extends Fish {
             spinyDorsalX + bodySize * 0.2, -bassHeight * 1.2
         );
 
+        // Soft dorsal (rear)
         const softDorsalX = bassLength * 0.05;
         graphics.fillTriangle(
             softDorsalX, -bassHeight * 0.5,
@@ -209,6 +118,32 @@ export class SmallmouthBass extends Fish {
             finX - bodySize * 0.35, -bassHeight * 0.3,
             finX - bodySize * 0.35, bassHeight * 0.3
         );
+    }
+
+    /**
+     * Render smallmouth bass body (for gameplay)
+     */
+    renderBody(bodySize, isMovingRight) {
+        this.graphics.save();
+        this.graphics.translateCanvas(this.x, this.y);
+
+        if (isMovingRight) {
+            this.graphics.rotateCanvas(this.angle);
+        } else {
+            this.graphics.scaleCanvas(-1, 1);
+            this.graphics.rotateCanvas(-this.angle);
+        }
+
+        this.drawFishShape(this.graphics, bodySize);
+
+        this.graphics.restore();
+    }
+
+    /**
+     * Render smallmouth bass at position (for catch popup)
+     */
+    renderBodyAtPosition(graphics, bodySize) {
+        this.drawFishShape(graphics, bodySize);
     }
 }
 

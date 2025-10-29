@@ -36,99 +36,14 @@ export class YellowPerch extends Fish {
     }
 
     /**
-     * Render yellow perch body
+     * Draw yellow perch shape - shared rendering code
+     * @param {Object} graphics - Phaser graphics object to draw on
+     * @param {number} bodySize - Size multiplier for the fish body
      */
-    renderBody(bodySize, isMovingRight) {
+    drawFishShape(graphics, bodySize) {
         const colors = this.speciesData.appearance.colorScheme;
-
-        this.graphics.save();
-        this.graphics.translateCanvas(this.x, this.y);
-
-        if (isMovingRight) {
-            this.graphics.rotateCanvas(this.angle);
-        } else {
-            this.graphics.scaleCanvas(-1, 1);
-            this.graphics.rotateCanvas(-this.angle);
-        }
 
         // Perch body - deep and laterally compressed
-        const perchLength = bodySize * 2.0;
-        const perchHeight = bodySize * 0.85;
-
-        // Main body - golden yellow
-        this.graphics.fillStyle(colors.base, 1.0);
-        this.graphics.fillEllipse(0, 0, perchLength, perchHeight);
-
-        // Belly - pale yellow/cream
-        this.graphics.fillStyle(colors.belly, 0.9);
-        this.graphics.fillEllipse(0, perchHeight * 0.25, perchLength * 0.8, perchHeight * 0.45);
-
-        // Vertical bars - 6-8 dark bars
-        this.graphics.fillStyle(colors.bars, 0.75);
-        const barCount = 7;
-        const barWidth = perchLength * 0.09;
-        const barSpacing = perchLength / (barCount + 1);
-
-        for (let i = 0; i < barCount; i++) {
-            const barX = -perchLength * 0.4 + (i * barSpacing);
-            const heightMultiplier = 1.0 - Math.abs(i - barCount / 2) * 0.12;
-            const barHeight = perchHeight * 0.75 * heightMultiplier;
-
-            this.graphics.fillRect(
-                barX - barWidth / 2,
-                -barHeight / 2,
-                barWidth,
-                barHeight
-            );
-        }
-
-        // Tail
-        const tailSize = bodySize * 0.7;
-        const tailX = -perchLength * 0.45;
-
-        this.graphics.fillStyle(colors.fins, 0.9);
-        this.graphics.beginPath();
-        this.graphics.moveTo(tailX, 0);
-        this.graphics.lineTo(tailX - tailSize * 0.65, -tailSize * 0.55);
-        this.graphics.lineTo(tailX - tailSize * 0.65, tailSize * 0.55);
-        this.graphics.closePath();
-        this.graphics.fillPath();
-
-        // Spiny dorsal fin (front)
-        this.graphics.fillStyle(colors.fins, 0.85);
-        const spinyDorsalX = -perchLength * 0.15;
-        this.graphics.fillTriangle(
-            spinyDorsalX, -perchHeight * 0.5,
-            spinyDorsalX - bodySize * 0.35, -perchHeight * 1.2,
-            spinyDorsalX + bodySize * 0.15, -perchHeight * 1.1
-        );
-
-        // Soft dorsal fin (rear) - orange/red tinted
-        this.graphics.fillStyle(colors.fins, 0.9);
-        const softDorsalX = perchLength * 0.05;
-        this.graphics.fillTriangle(
-            softDorsalX, -perchHeight * 0.5,
-            softDorsalX - bodySize * 0.15, -perchHeight * 1.0,
-            softDorsalX + bodySize * 0.25, -perchHeight * 0.9
-        );
-
-        // Pectoral fins
-        const finX = -bodySize * 0.15;
-        this.graphics.fillTriangle(
-            finX, 0,
-            finX - bodySize * 0.3, -perchHeight * 0.25,
-            finX - bodySize * 0.3, perchHeight * 0.25
-        );
-
-        this.graphics.restore();
-    }
-
-    /**
-     * Render yellow perch at position (for catch popup)
-     */
-    renderBodyAtPosition(graphics, bodySize) {
-        const colors = this.speciesData.appearance.colorScheme;
-
         const perchLength = bodySize * 2.0;
         const perchHeight = bodySize * 0.85;
 
@@ -140,7 +55,7 @@ export class YellowPerch extends Fish {
         graphics.fillStyle(colors.belly, 0.9);
         graphics.fillEllipse(0, perchHeight * 0.25, perchLength * 0.8, perchHeight * 0.45);
 
-        // Vertical bars
+        // Vertical bars - 6-8 dark bars
         graphics.fillStyle(colors.bars, 0.75);
         const barCount = 7;
         const barWidth = perchLength * 0.09;
@@ -171,7 +86,7 @@ export class YellowPerch extends Fish {
         graphics.closePath();
         graphics.fillPath();
 
-        // Dorsal fins
+        // Spiny dorsal fin (front)
         graphics.fillStyle(colors.fins, 0.85);
         const spinyDorsalX = -perchLength * 0.15;
         graphics.fillTriangle(
@@ -180,6 +95,7 @@ export class YellowPerch extends Fish {
             spinyDorsalX + bodySize * 0.15, -perchHeight * 1.1
         );
 
+        // Soft dorsal fin (rear) - orange/red tinted
         graphics.fillStyle(colors.fins, 0.9);
         const softDorsalX = perchLength * 0.05;
         graphics.fillTriangle(
@@ -195,6 +111,32 @@ export class YellowPerch extends Fish {
             finX - bodySize * 0.3, -perchHeight * 0.25,
             finX - bodySize * 0.3, perchHeight * 0.25
         );
+    }
+
+    /**
+     * Render yellow perch body (for gameplay)
+     */
+    renderBody(bodySize, isMovingRight) {
+        this.graphics.save();
+        this.graphics.translateCanvas(this.x, this.y);
+
+        if (isMovingRight) {
+            this.graphics.rotateCanvas(this.angle);
+        } else {
+            this.graphics.scaleCanvas(-1, 1);
+            this.graphics.rotateCanvas(-this.angle);
+        }
+
+        this.drawFishShape(this.graphics, bodySize);
+
+        this.graphics.restore();
+    }
+
+    /**
+     * Render yellow perch at position (for catch popup)
+     */
+    renderBodyAtPosition(graphics, bodySize) {
+        this.drawFishShape(graphics, bodySize);
     }
 }
 
