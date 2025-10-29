@@ -10,7 +10,8 @@ const path = require('path');
 const { execSync } = require('child_process');
 
 const BUILD_DIR = 'dist';
-const ZIP_FILE = 'wolfpack-itch-dist.zip';
+const PACKAGE_JSON = require('./package.json');
+const ZIP_FILE = `wolfpack-itch-dist-v${PACKAGE_JSON.version}.zip`;
 
 // ANSI color codes for terminal output
 const colors = {
