@@ -75,6 +75,7 @@ export class GameScene extends Phaser.Scene {
         this.tackleBoxOpen = false;
         this.tackleBoxTab = 0; // 0=lure, 1=line
         this.tackleBoxSelected = { lure: 0, line: 0 };
+        this.switchingToPauseMenu = false; // Flag to keep game paused when switching menus
         this.tackleBoxButtonStates = {
             select: false,
             circle: false,
@@ -285,8 +286,14 @@ export class GameScene extends Phaser.Scene {
         // Always update notification system (handles pause menu input)
         this.notificationSystem.update(time, delta);
 
-        // If paused, skip all game updates
-        if (this.notificationSystem.isPausedState()) {
+        // Check if pause menu requested switch to tackle box
+        if (this.notificationSystem.switchToTackleBox) {
+            this.notificationSystem.switchToTackleBox = false;
+            this.toggleTackleBox(); // Open tackle box (will stay paused)
+        }
+
+        // If paused but tackle box is closed, skip all game updates
+        if (this.notificationSystem.isPausedState() && !this.tackleBoxOpen) {
             return;
         }
 
@@ -765,9 +772,19 @@ export class GameScene extends Phaser.Scene {
     toggleTackleBox() {
         this.tackleBoxOpen = !this.tackleBoxOpen;
 
-        // If closing, clear all graphics immediately
-        if (!this.tackleBoxOpen && this.tackleBoxGraphics) {
-            this.tackleBoxGraphics.clear();
+        // Pause/unpause game when tackle box opens/closes
+        if (this.tackleBoxOpen) {
+            // Opening tackle box - pause the game
+            this.notificationSystem.isPaused = true;
+        } else {
+            // Closing tackle box - unpause only if not switching to pause menu
+            if (!this.switchingToPauseMenu) {
+                this.notificationSystem.isPaused = false;
+            }
+            // Clear graphics when closing
+            if (this.tackleBoxGraphics) {
+                this.tackleBoxGraphics.clear();
+            }
         }
 
         console.log(`Tackle box ${this.tackleBoxOpen ? 'opened' : 'closed'}`);
@@ -803,12 +820,14 @@ export class GameScene extends Phaser.Scene {
                 return;
             }
 
-            // Start button - close tackle box AND open pause menu
+            // Start button - close tackle box AND open pause menu (stay paused)
             if (startButton && startButton.pressed && !this.tackleBoxButtonStates.start) {
-                this.toggleTackleBox();
+                this.switchingToPauseMenu = true;
+                this.toggleTackleBox(); // Close tackle box (stays paused due to flag)
                 this.tackleBoxButtonStates.start = true;
-                // Open pause menu after closing tackle box
+                // Open pause menu
                 this.notificationSystem.togglePause();
+                this.switchingToPauseMenu = false;
                 return;
             }
 

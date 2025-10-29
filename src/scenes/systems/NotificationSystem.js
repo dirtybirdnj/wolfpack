@@ -37,11 +37,15 @@ export class NotificationSystem {
             up: false,
             down: false,
             x: false,
-            circle: false
+            circle: false,
+            select: false
         };
 
         // Controls dialog state
         this.controlsDialogOpen = false;
+
+        // Flag to signal switching to tackle box
+        this.switchToTackleBox = false;
     }
 
     /**
@@ -422,6 +426,26 @@ export class NotificationSystem {
         }
 
         // Gamepad input
+        let selectPressed = false;
+        let circlePressed = false;
+
+        if (window.gamepadManager && window.gamepadManager.isConnected()) {
+            const selectButton = window.gamepadManager.getButton('Select');
+            const circleButton = window.gamepadManager.getButton('Circle');
+
+            // SELECT button - switch to tackle box
+            if (selectButton && selectButton.pressed && !this.buttonStates.select) {
+                selectPressed = true;
+            }
+            this.buttonStates.select = selectButton ? selectButton.pressed : false;
+
+            // CIRCLE button - close pause menu and return to game
+            if (circleButton && circleButton.pressed && !this.buttonStates.circle) {
+                circlePressed = true;
+            }
+            this.buttonStates.circle = circleButton ? circleButton.pressed : false;
+        }
+
         if (this.scene.input.gamepad && this.scene.input.gamepad.total > 0) {
             const gamepad = this.scene.input.gamepad.getPad(0);
 
@@ -480,6 +504,17 @@ export class NotificationSystem {
             if (selectedButton && selectedButton.callback) {
                 selectedButton.callback();
             }
+        }
+
+        // SELECT button - close pause menu and signal to open tackle box
+        if (selectPressed) {
+            this.switchToTackleBox = true;
+            this.togglePause(); // Close pause menu but game will stay paused via tackle box
+        }
+
+        // CIRCLE button - close pause menu and return to gameplay
+        if (circlePressed) {
+            this.togglePause(); // Unpause and return to game
         }
     }
 
