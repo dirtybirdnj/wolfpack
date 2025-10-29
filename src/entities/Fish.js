@@ -104,6 +104,10 @@ export class Fish {
 
         // Biological properties - fish are hungrier and have faster metabolism
         this.hunger = Utils.randomBetween(50, 90); // 0-100, higher = more hungry (increased from 20-80)
+        // Lake trout spawn MUCH hungrier
+        if (this.species === 'lake_trout') {
+            this.hunger = Utils.randomBetween(80, 100); // Lakers are voracious predators
+        }
         this.health = Utils.randomBetween(60, 100); // 0-100, higher = healthier
         this.lastFed = 0; // Game time when last fed
         this.metabolism = Utils.randomBetween(0.8, 1.2); // Individual metabolism rate
@@ -857,8 +861,21 @@ export class Fish {
         // Perch: 18 (moderate)
         // Sculpin: 15 (small, less nutritious)
 
+        const previousHunger = this.hunger;
         this.hunger = Math.max(0, this.hunger - nutritionValue);
         this.lastFed = this.frameAge;
+
+        // HEALTH RESTORATION: Once hunger reaches 0%, excess food restores health
+        if (previousHunger <= 0 && nutritionValue > 0) {
+            // Fish is already satiated - nutrition goes to healing
+            const healthGain = nutritionValue * 0.5; // 50% of nutrition converts to health
+            const previousHealth = this.health;
+            this.health = Math.min(100, this.health + healthGain);
+            const actualHealthGain = this.health - previousHealth;
+            if (actualHealthGain > 0) {
+                console.log(`${this.name} restored ${actualHealthGain.toFixed(1)} health from eating ${preySpecies} (now ${Math.floor(this.health)}%)`);
+            }
+        }
 
         // Log feeding for debugging (commented out for production)
         // console.log(`${this.name} fed on ${preySpecies}, hunger reduced by ${nutritionValue} (now ${Math.floor(this.hunger)}%)`);
