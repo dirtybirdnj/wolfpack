@@ -529,14 +529,14 @@ export class FishAI {
                 return;
             }
 
-            // Fish has caught the lure!
-            this.fish.caught = true;
-            this.state = Constants.FISH_STATE.FLEEING;
-
-            // Trigger catch event in the fish
+            // Fish strikes at lure - trigger bite attempt (player must hookset to catch)
             if (this.fish.scene) {
-                this.fish.scene.events.emit('fishCaught', this.fish);
+                this.fish.scene.events.emit('fishStrike', this.fish);
             }
+
+            // Fish will flee after striking (waiting for hookset)
+            this.state = Constants.FISH_STATE.FLEEING;
+            this.decisionCooldown = 1000; // Longer cooldown while waiting for hookset
         } else if (distance > this.getStrikeDistance() * 2) {
             // Missed the strike!
 

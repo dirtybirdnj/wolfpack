@@ -58,6 +58,15 @@ export class GameScene extends Phaser.Scene {
         this.controllerTestMode = false;
         this.controllerTestUI = null;
 
+        // Hookset window state
+        this.hooksetWindow = {
+            active: false,
+            fish: null,
+            startTime: 0,
+            duration: 45, // frames (~750ms at 60fps) to perform hookset
+            hasHookset: false
+        };
+
         // Game mode specific
         this.gameMode = null; // 'arcade' or 'unlimited'
         this.timeRemaining = 0;
@@ -186,6 +195,7 @@ export class GameScene extends Phaser.Scene {
             this.initializeSystems();
 
             // Event listeners
+            this.events.on('fishStrike', this.handleFishStrike, this);
             this.events.on('fishCaught', this.handleFishCaught, this);
             this.events.on('fishBump', this.handleFishBump, this);
 
@@ -330,6 +340,37 @@ export class GameScene extends Phaser.Scene {
                 this.renderTackleBox();
             }
             return; // Skip normal game updates while tackle box is open
+        }
+
+        // Handle hookset window
+        if (this.hooksetWindow.active) {
+            const elapsed = time - this.hooksetWindow.startTime;
+
+            // Check if window expired
+            if (elapsed > this.hooksetWindow.duration * (1000 / 60)) {
+                console.log('Hookset window expired - fish got away!');
+                this.hooksetWindow.active = false;
+                this.hooksetWindow.fish = null;
+                // Fish escapes (already fleeing from FishAI)
+            } else if (!this.hooksetWindow.hasHookset) {
+                // Check for hookset input (right stick up)
+                if (window.gamepadManager && window.gamepadManager.isConnected()) {
+                    const axes = window.gamepadManager.getAxes();
+                    const rightStickY = axes.rightStickY || 0;
+
+                    // Detect upward motion on right stick (negative Y is up)
+                    if (rightStickY < -0.5) {
+                        // Successful hookset!
+                        console.log('HOOKSET! Fish is hooked!');
+                        this.hooksetWindow.hasHookset = true;
+
+                        // Mark fish as caught and trigger catch event
+                        const fish = this.hooksetWindow.fish;
+                        fish.caught = true;
+                        this.events.emit('fishCaught', fish);
+                    }
+                }
+            }
         }
 
         // Handle fish fight if active
@@ -549,13 +590,37 @@ export class GameScene extends Phaser.Scene {
     }
 
     /**
+     * Handle fish strike event - opens hookset window
+     * @param {Fish} fish - The fish that struck at the lure
+     */
+    handleFishStrike(fish) {
+        console.log(`Fish ${fish.name} strikes! Hookset window opening...`);
+
+        // Open hookset window
+        this.hooksetWindow.active = true;
+        this.hooksetWindow.fish = fish;
+        this.hooksetWindow.startTime = this.time.now;
+        this.hooksetWindow.hasHookset = false;
+
+        // Trigger bump visuals and haptics (strike is a harder bump)
+        this.lure.vibrate(5, 30); // Stronger vibration for strike (5px, 30 frames = ~500ms)
+
+        // Always give strong haptic feedback on strike regardless of line type
+        this.rumbleGamepad(200, 0.5, 0.25);
+    }
+
+    /**
      * Handle fish caught event (start fish fight)
      * @param {Fish} fish - The fish that was caught
      */
     handleFishCaught(fish) {
         console.log('Fish hooked! Starting fight...');
 
-        // Rumble on fish bite
+        // Close hookset window
+        this.hooksetWindow.active = false;
+        this.hooksetWindow.fish = null;
+
+        // Rumble on successful hookset
         this.rumbleGamepad(300, 0.6, 0.3);
 
         // Show hook notification
