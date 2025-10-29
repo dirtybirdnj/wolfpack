@@ -746,14 +746,13 @@ export class FishFight {
             ageDisplay = `${this.fish.age} years`;
         }
 
-        const statsText = this.scene.add.text(popupX, popupY + 100,
-            `${info.name} (${info.gender})\n\n` +
-            `Weight: ${info.weight}\n` +
-            `Length: ${info.length}\n` +
-            `Age: ${ageDisplay}\n\n` +
+        const statsText = this.scene.add.text(popupX, popupY + 55,
+            `${info.name} (${info.gender})\n` +
+            `Weight: ${info.weight}  |  Length: ${info.length}\n` +
+            `Age: ${ageDisplay}\n` +
             `Points: +${this.fish.points}`,
             {
-                fontSize: '20px',
+                fontSize: '18px',
                 fontFamily: 'Courier New',
                 color: '#ffffff',
                 align: 'center',
@@ -762,11 +761,11 @@ export class FishFight {
                 lineSpacing: 8
             }
         );
-        statsText.setOrigin(0.5, 0.5);
+        statsText.setOrigin(0.5, 0);  // Anchor at top-center instead of center
         statsText.setDepth(2002);
 
-        // Continue prompt
-        const continueText = this.scene.add.text(popupX, popupY + 180,
+        // Continue prompt - positioned well below stats
+        const continueText = this.scene.add.text(popupX, popupY + 165,
             'Press X button to continue',
             {
                 fontSize: '16px',
