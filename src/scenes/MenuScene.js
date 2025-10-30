@@ -28,13 +28,13 @@ export class MenuScene extends Phaser.Scene {
             bgImage.setDisplaySize(width, height);
         }
 
-        // Title - Wolfpack Logo
-        const wolfpackLogo = this.add.image(width / 2, 100, 'wolfpack-logo');
+        // Title - Wolfpack Logo (moved down 1 inch = 96 pixels)
+        const wolfpackLogo = this.add.image(width / 2, 196, 'wolfpack-logo');
         wolfpackLogo.setOrigin(0.5);
         wolfpackLogo.setScale(0.5); // Adjust scale as needed
 
-        // Subtitle - VTJ Logo
-        const vtjLogo = this.add.image(width / 2, 180, 'vtj-logo');
+        // Subtitle - VTJ Logo (positioned in bottom right corner)
+        const vtjLogo = this.add.image(width - 80, height - 80, 'vtj-logo');
         vtjLogo.setOrigin(0.5);
         vtjLogo.setScale(0.15); // Adjust scale as needed (VTJ is a circle logo)
 
