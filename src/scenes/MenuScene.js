@@ -3,7 +3,7 @@ import GameConfig from '../config/GameConfig.js';
 export class MenuScene extends Phaser.Scene {
     constructor() {
         super({ key: 'MenuScene' });
-        this.selectedMode = 0; // 0-6 for 7 game combinations (6 + nature simulation)
+        this.selectedMode = 1; // Start with Unlimited mode (index 1) pre-selected
         this.buttons = [];
     }
 
@@ -152,7 +152,7 @@ export class MenuScene extends Phaser.Scene {
         this.gamepadDetected = false;
         if (window.gamepadManager && window.gamepadManager.isConnected()) {
             this.gamepadDetected = true;
-            this.gamepadText = this.add.text(width / 2, 590, '← → or D-Pad to select | X or A to confirm', {
+            this.gamepadText = this.add.text(width / 2, 590, 'L1/R1 or D-Pad to select | X or A to confirm', {
                 fontSize: '11px',
                 fontFamily: 'Courier New',
                 color: '#00ffff'
@@ -162,13 +162,15 @@ export class MenuScene extends Phaser.Scene {
             this.gamepadState = {
                 lastDpadLeft: false,
                 lastDpadRight: false,
+                lastL1: false,
+                lastR1: false,
                 lastX: false,
                 lastA: false,
                 lastAnalogLeft: false,
                 lastAnalogRight: false
             };
 
-            // Highlight the first button
+            // Highlight the selected button (Unlimited mode by default)
             this.updateSelection();
         }
 
@@ -326,6 +328,29 @@ export class MenuScene extends Phaser.Scene {
 
             this.gamepadState.lastDpadLeft = dpadLeft.pressed;
             this.gamepadState.lastDpadRight = dpadRight.pressed;
+
+            // L1/R1 Bumper navigation - single horizontal row with wrap-around
+            const l1Btn = window.gamepadManager.getButton('L1');
+            const r1Btn = window.gamepadManager.getButton('R1');
+
+            if (l1Btn.pressed && !this.gamepadState.lastL1) {
+                this.selectedMode--;
+                if (this.selectedMode < 0) {
+                    this.selectedMode = this.buttons.length - 1; // Wrap to last button
+                }
+                this.updateSelection();
+            }
+
+            if (r1Btn.pressed && !this.gamepadState.lastR1) {
+                this.selectedMode++;
+                if (this.selectedMode >= this.buttons.length) {
+                    this.selectedMode = 0; // Wrap to first button
+                }
+                this.updateSelection();
+            }
+
+            this.gamepadState.lastL1 = l1Btn.pressed;
+            this.gamepadState.lastR1 = r1Btn.pressed;
 
             // Analog stick navigation - single horizontal row with wrap-around
             const leftStickX = window.gamepadManager.getAxis('LeftStickX');
