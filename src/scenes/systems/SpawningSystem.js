@@ -3,6 +3,7 @@ import { Constants, Utils } from '../../utils/Constants.js';
 import Fish from '../../entities/Fish.js';
 import BaitfishCloud from '../../entities/BaitfishCloud.js';
 import Zooplankton from '../../entities/Zooplankton.js';
+import Crayfish from '../../entities/Crayfish.js';
 import { getBaitfishSpecies, selectRandomSpecies, getPredatorSpecies } from '../../config/SpeciesData.js';
 
 /**
@@ -14,6 +15,7 @@ import { getBaitfishSpecies, selectRandomSpecies, getPredatorSpecies } from '../
  * - Spawn fish at appropriate depths and locations
  * - Spawn baitfish clouds with varied sizes
  * - Spawn zooplankton near lake bottom
+ * - Spawn and maintain crayfish population on bottom
  * - Handle emergency fish spawning in arcade mode
  * - Manage spawn rates and entity limits
  *
@@ -28,6 +30,9 @@ export class SpawningSystem {
     constructor(scene) {
         this.scene = scene;
         this.emergencyFishSpawned = false;
+
+        // Spawn initial crayfish population (3 on load)
+        this.spawnInitialCrayfish();
 
         // Set up spawn timers
         this.setupSpawnTimers();
@@ -54,6 +59,14 @@ export class SpawningSystem {
         this.scene.time.addEvent({
             delay: 1500,
             callback: () => this.trySpawnZooplankton(),
+            callbackScope: this,
+            loop: true
+        });
+
+        // Maintain crayfish population (check every 30 seconds)
+        this.scene.time.addEvent({
+            delay: 30000, // 30 seconds
+            callback: () => this.maintainCrayfishPopulation(),
             callbackScope: this,
             loop: true
         });
@@ -391,6 +404,80 @@ export class SpawningSystem {
         }
 
         return spawnCount;
+    }
+
+    /**
+     * Spawn initial crayfish population (3 on game load)
+     */
+    spawnInitialCrayfish() {
+        const initialCount = 3;
+
+        for (let i = 0; i < initialCount; i++) {
+            this.spawnSingleCrayfish();
+        }
+
+        console.log(`🦞 Spawned ${initialCount} initial crayfish`);
+    }
+
+    /**
+     * Maintain crayfish population (called every 30 seconds)
+     * Spawns crayfish to reach maximum of 5 total
+     */
+    maintainCrayfishPopulation() {
+        const maxCrayfish = 5;
+        const currentCount = this.scene.crayfish.length;
+
+        if (currentCount < maxCrayfish) {
+            const toSpawn = maxCrayfish - currentCount;
+
+            for (let i = 0; i < toSpawn; i++) {
+                this.spawnSingleCrayfish();
+            }
+
+            console.log(`🦞 Maintained crayfish population: added ${toSpawn}, now ${maxCrayfish} total`);
+        }
+    }
+
+    /**
+     * Spawn a single crayfish on the lake bottom
+     * @returns {Crayfish|null} The spawned crayfish or null if spawn failed
+     */
+    spawnSingleCrayfish() {
+        // Get player world position
+        let playerWorldX;
+        let isNatureSimulation = false;
+
+        if (this.scene.iceHoleManager) {
+            const currentHole = this.scene.iceHoleManager.getCurrentHole();
+            playerWorldX = currentHole ? currentHole.x : 0;
+        } else if (this.scene.boatManager) {
+            playerWorldX = this.scene.boatManager.getPlayerWorldX();
+        } else {
+            isNatureSimulation = true;
+            playerWorldX = GameConfig.CANVAS_WIDTH / 2;
+        }
+
+        // Random horizontal position
+        let worldX;
+        if (isNatureSimulation) {
+            const screenLeft = -200;
+            const screenRight = GameConfig.CANVAS_WIDTH + 200;
+            worldX = Utils.randomBetween(screenLeft, screenRight);
+        } else {
+            // Spawn around player (wider range than zooplankton)
+            const offsetX = Utils.randomBetween(-400, 400);
+            worldX = playerWorldX + offsetX;
+        }
+
+        // Spawn on the bottom (95-100 feet depth - very bottom)
+        const depth = Utils.randomBetween(95, 100);
+        const y = depth * GameConfig.DEPTH_SCALE;
+
+        // Create crayfish
+        const crayfish = new Crayfish(this.scene, worldX, y);
+        this.scene.crayfish.push(crayfish);
+
+        return crayfish;
     }
 
     /**
