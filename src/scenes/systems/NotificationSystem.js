@@ -174,7 +174,7 @@ export class NotificationSystem {
         overlay.setDepth(3000);
 
         // Warning title
-        const title = this.scene.add.text(GameConfig.CANVAS_WIDTH / 2, 200, '⚠️ CONTROLLER DISCONNECTED', {
+        const title = this.scene.add.text(GameConfig.CANVAS_WIDTH / 2, 130, '⚠️ CONTROLLER DISCONNECTED', {
             fontSize: '32px',
             fontFamily: 'Courier New',
             color: '#ff6600',
@@ -186,7 +186,7 @@ export class NotificationSystem {
         title.setDepth(3001);
 
         // Warning message
-        const message = this.scene.add.text(GameConfig.CANVAS_WIDTH / 2, 280,
+        const message = this.scene.add.text(GameConfig.CANVAS_WIDTH / 2, 210,
             'Your controller has been disconnected.\n\n' +
             'Check battery or connection, then press\n' +
             'any button on the controller to reconnect.\n\n' +
@@ -205,7 +205,7 @@ export class NotificationSystem {
         message.setDepth(3001);
 
         // Continue hint
-        const hint = this.scene.add.text(GameConfig.CANVAS_WIDTH / 2, 400,
+        const hint = this.scene.add.text(GameConfig.CANVAS_WIDTH / 2, 330,
             'Press SPACEBAR or ESC to dismiss',
             {
                 fontSize: '14px',
