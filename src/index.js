@@ -2,6 +2,7 @@
 // Main entry point
 
 import GameConfig from './config/GameConfig.js';
+import BootScene from './scenes/BootScene.js';
 import MenuScene from './scenes/MenuScene.js';
 import NavigationScene from './scenes/NavigationScene.js';
 import GameScene from './scenes/GameScene.js';
@@ -25,7 +26,7 @@ const config = {
             debug: false
         }
     },
-    scene: [MenuScene, NavigationScene, GameScene, GameOverScene, UIScene, NatureSimulationScene],
+    scene: [BootScene, MenuScene, NavigationScene, GameScene, GameOverScene, UIScene, NatureSimulationScene],
     render: {
         pixelArt: false,
         antialias: true,
