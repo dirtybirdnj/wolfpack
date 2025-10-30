@@ -7,7 +7,7 @@ export class FishFight {
         this.fish = fish;
         this.lure = lure;
         this.fishingLine = fishingLineModel;
-        this.reel = reelModel;
+        this.reelModel = reelModel;
 
         // Fight state
         this.active = true;
@@ -50,14 +50,14 @@ export class FishFight {
         this.centerX = this.lure.x;
 
         // Initialize line out based on fish depth
-        if (this.reel) {
+        if (this.reelModel) {
             const initialLineOut = this.fishDistance / GameConfig.DEPTH_SCALE; // Convert pixels to feet
-            this.reel.lineOut = initialLineOut;
+            this.reelModel.lineOut = initialLineOut;
         }
 
         console.log(`Fish condition - Health: ${this.fish.health.toFixed(0)}%, Hunger: ${this.fish.hunger.toFixed(0)}%, Strength: ${this.fishStrength.toFixed(1)}, Initial Energy: ${this.fishEnergy.toFixed(1)}`);
-        if (this.reel && this.fishingLine) {
-            console.log(`Reel: ${this.reel.getDisplayName()}, Drag: ${this.reel.dragSetting}% (${this.reel.getCurrentDragForce().toFixed(1)} lbs), Line: ${this.reel.lineTestStrength} lb test ${this.fishingLine.getDisplayName()}`);
+        if (this.reelModel && this.fishingLine) {
+            console.log(`Reel: ${this.reelModel.getDisplayName()}, Drag: ${this.reelModel.dragSetting}% (${this.reelModel.getCurrentDragForce().toFixed(1)} lbs), Line: ${this.reelModel.lineTestStrength} lb test ${this.fishingLine.getDisplayName()}`);
         }
 
 
@@ -94,8 +94,8 @@ export class FishFight {
 
         // Check for line break - scientifically accurate formula
         // Line breaks when tension exceeds test strength, modified by shock absorption
-        if (this.reel && this.fishingLine) {
-            const testStrength = this.reel.lineTestStrength; // pounds
+        if (this.reelModel && this.fishingLine) {
+            const testStrength = this.reelModel.lineTestStrength; // pounds
             const shockAbsorptionMult = this.fishingLine.getShockAbsorptionMultiplier();
 
             // Convert tension percentage to approximate force
@@ -286,20 +286,20 @@ export class FishFight {
         // Only reel in if tension is manageable
         if (this.lineTension < GameConfig.TENSION_BREAK_THRESHOLD - 10) {
             // Calculate reel distance based on gear ratio
-            const gearRatio = this.reel ? this.reel.getGearRatio() : 6.0;
+            const gearRatio = this.reelModel ? this.reelModel.getGearRatio() : 6.0;
             const reelDistance = GameConfig.REEL_DISTANCE_PER_TAP * (gearRatio / 6.0);
 
             this.fishDistance -= reelDistance;
             this.fishDistance = Math.max(0, this.fishDistance);
 
             // Track line being retrieved
-            if (this.reel) {
-                this.reel.retrieveLine(reelDistance / GameConfig.DEPTH_SCALE); // Convert pixels to feet
+            if (this.reelModel) {
+                this.reelModel.retrieveLine(reelDistance / GameConfig.DEPTH_SCALE); // Convert pixels to feet
             }
         }
 
         // Drain fish energy based on drag setting
-        const dragMultiplier = this.reel ? (this.reel.dragSetting / 100) : 0.5;
+        const dragMultiplier = this.reelModel ? (this.reelModel.dragSetting / 100) : 0.5;
         const energyDrain = GameConfig.FISH_TIRE_RATE * (0.5 + dragMultiplier);
         // Higher drag = fish tires faster
         this.fishEnergy -= energyDrain;
@@ -365,14 +365,14 @@ export class FishFight {
         this.lineTension = Math.min(GameConfig.MAX_LINE_TENSION, this.lineTension);
 
         // Check if fish pull exceeds drag setting - line slips instead of breaking
-        if (this.reel) {
-            const currentDragForce = this.reel.getCurrentDragForce();
+        if (this.reelModel) {
+            const currentDragForce = this.reelModel.getCurrentDragForce();
             const fishPullForce = pullStrength; // Pull strength is already in appropriate scale
 
             // If fish pull exceeds drag, line slips (fish takes line)
-            if (fishPullForce > currentDragForce && this.reel.dragSetting < 100) {
+            if (fishPullForce > currentDragForce && this.reelModel.dragSetting < 100) {
                 const lineSlip = (fishPullForce - currentDragForce) * 0.05; // feet of line going out
-                const spoolEmpty = this.reel.addLineOut(lineSlip);
+                const spoolEmpty = this.reelModel.addLineOut(lineSlip);
 
                 // If spool empties, line breaks automatically
                 if (spoolEmpty) {
@@ -528,8 +528,8 @@ export class FishFight {
         // Calculate line remaining color
         let lineRemainingPercent = 100;
         let lineRemainingColor = '#00ff00';
-        if (this.reel) {
-            lineRemainingPercent = this.reel.getLineRemainingPercent();
+        if (this.reelModel) {
+            lineRemainingPercent = this.reelModel.getLineRemainingPercent();
             if (lineRemainingPercent < 25) {
                 lineRemainingColor = '#ff6666'; // Red - critical
             } else if (lineRemainingPercent < 50) {
@@ -540,7 +540,7 @@ export class FishFight {
         }
 
         const statsText = this.scene.add.text(barX, barY + barHeight + 8,
-            `Fish: ${this.fish.weight.toFixed(1)} lbs | Energy: ${Math.floor(this.fishEnergy)}% | Dist: ${Math.floor(this.fishDistance / GameConfig.DEPTH_SCALE)} ft | Line: ${this.reel ? Math.floor(this.reel.lineCapacity - this.reel.lineOut) : '?'}/${this.reel ? this.reel.lineCapacity : '?'} ft`,
+            `Fish: ${this.fish.weight.toFixed(1)} lbs | Energy: ${Math.floor(this.fishEnergy)}% | Dist: ${Math.floor(this.fishDistance / GameConfig.DEPTH_SCALE)} ft | Line: ${this.reelModel ? Math.floor(this.reelModel.lineCapacity - this.reelModel.lineOut) : '?'}/${this.reelModel ? this.reelModel.lineCapacity : '?'} ft`,
             {
                 fontSize: '10px',
                 fontFamily: 'Courier New',
@@ -551,7 +551,7 @@ export class FishFight {
 
         // Add drag and line info
         const dragText = this.scene.add.text(barX + 300, barY + barHeight + 8,
-            `Drag: ${this.reel ? this.reel.dragSetting : '?'}% (${this.reel ? this.reel.getCurrentDragForce().toFixed(1) : '?'} lbs)`,
+            `Drag: ${this.reelModel ? this.reelModel.dragSetting : '?'}% (${this.reelModel ? this.reelModel.getCurrentDragForce().toFixed(1) : '?'} lbs)`,
             {
                 fontSize: '10px',
                 fontFamily: 'Courier New',
