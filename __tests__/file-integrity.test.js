@@ -8,11 +8,11 @@
  */
 
 import fs from 'fs';
-import { globSync } from 'glob';
+import glob from 'glob';
 import { execSync } from 'child_process';
 
 describe('File Integrity', () => {
-  const srcFiles = globSync('src/**/*.js');
+  const srcFiles = glob.sync('src/**/*.js');
 
   test('All JS files have valid syntax', () => {
     srcFiles.forEach(file => {
