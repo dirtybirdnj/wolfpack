@@ -61,8 +61,8 @@ export class BootScene extends Phaser.Scene {
             duration: 500,
             ease: 'Power2',
             onComplete: () => {
-                // Wait 1.5 seconds at full opacity (half of original 3 seconds)
-                this.time.delayedCall(1500, () => {
+                // Wait 2.5 seconds at full opacity
+                this.time.delayedCall(2500, () => {
                     // Fade out logo and text
                     this.tweens.add({
                         targets: [this.vtjLogo, this.websiteText, this.taglineText],

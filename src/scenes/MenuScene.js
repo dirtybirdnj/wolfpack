@@ -86,8 +86,8 @@ export class MenuScene extends Phaser.Scene {
             window.open('https://www.verticaltubejig.com', '_blank');
         });
 
-        // Game mode selection (moved down 1 inch = 96 pixels from 280)
-        const gameModeText = this.add.text(width / 2, 376, 'SELECT GAME MODE', {
+        // Game mode selection (moved up 1/4 inch = 24 pixels from 376)
+        const gameModeText = this.add.text(width / 2, 352, 'SELECT GAME MODE', {
             fontSize: '18px',
             fontFamily: 'Courier New',
             color: '#00ffff',
