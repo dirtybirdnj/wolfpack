@@ -144,8 +144,6 @@ __tests__/
 ├── config/
 │   ├── GameConfig.test.js
 │   └── SpeciesData.test.js
-├── systems/
-│   └── ScoreSystem.test.js
 └── [existing files]
     ├── config-validation.test.js
     ├── spawning-logic.test.js
@@ -182,7 +180,6 @@ npm test -- __tests__/models/FishingLineModel.test.js
 
 ### If you have another 12-16 hours:
 - AquaticOrganism.test.js (2-3 hours, 125 lines)
-- ScoreSystem.test.js (3-4 hours, 80+ lines)
 - Fish.test.js (3-4 hours, 150+ lines)
 - Baitfish.test.js (2-3 hours, 100+ lines)
 

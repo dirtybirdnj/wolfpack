@@ -21,7 +21,7 @@ I've completed a comprehensive analysis of the Wolfpack codebase to understand t
 - Core game mechanics (FishingLineModel, ReelModel)
 - Species data validation
 - Manager classes (IceHoleManager)
-- Game systems (ScoreSystem, CollisionSystem, etc.)
+- Game systems (CollisionSystem, etc.)
 - Model initialization (Fish, Baitfish, etc.)
 - Utility functions beyond what's in Constants
 
@@ -63,7 +63,7 @@ Total: 9-16 hours → 1,020+ lines → 6%+ coverage gain → Easy wins!
 **TIER 2 (Medium, Good Impact)** - 12-16 hours for ~625 lines
 - Minimal Phaser mocking required
 - Isolated logic, good boundaries
-- Examples: AquaticOrganism, ScoreSystem, Fish, Baitfish
+- Examples: AquaticOrganism, Fish, Baitfish
 
 **TIER 3 (Advanced, Optional)** - 8-10 hours for ~200+ lines
 - System-level logic testing
@@ -102,7 +102,7 @@ Total: 9-16 hours → 1,020+ lines → 6%+ coverage gain → Easy wins!
 ### Long Term (Sprint-Based)
 
 After reaching 6% coverage:
-- Add Tier 2 tests (AquaticOrganism, ScoreSystem, etc.)
+- Add Tier 2 tests (AquaticOrganism, Fish, Baitfish, etc.)
 - Target: 10% coverage in 2-3 weeks total
 
 ## Critical Insights

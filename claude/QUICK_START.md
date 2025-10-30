@@ -66,7 +66,6 @@ A Lake Champlain fishing simulator built with Phaser 3.80.1 featuring:
 - `src/scenes/systems/NotificationSystem.js` (847 lines) - UI messages
 - `src/scenes/systems/CollisionSystem.js` (146 lines) - Cloud split/merge
 - `src/scenes/systems/DebugSystem.js` (200 lines) - Debug visualization
-- `src/scenes/systems/ScoreSystem.js` (210 lines) - Scoring
 
 **Core Entities**:
 - `src/entities/Lure.js` (372 lines) - Player lure physics
@@ -369,7 +368,7 @@ npm start
 - **Lines of Code**: 16,114
 - **Files**: 36 JavaScript files
 - **Scenes**: 7 (Boot, Menu, Navigation, Game, GameOver, UI, NatureSimulation)
-- **Systems**: 6 (Spawning, Input, Collision, Debug, Score, Notification)
+- **Systems**: 5 (Spawning, Input, Collision, Debug, Notification)
 - **Species**: 10 (5 predators, 5 baitfish)
 - **Game Modes**: 7 combinations (3 fishing types × 2 game modes + nature sim)
 
