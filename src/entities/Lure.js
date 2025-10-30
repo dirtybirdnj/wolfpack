@@ -131,10 +131,7 @@ export class Lure {
             bottomDepth = this.scene.iceHoleManager.getDepthAtPosition(this.x);
         }
 
-        // Get dynamic depth scale from sonar display (adapts to window size)
-        const depthScale = this.scene.sonarDisplay ? this.scene.sonarDisplay.getDepthScale() : GameConfig.DEPTH_SCALE;
-
-        // Stop lure at actual lake bottom
+        // Stop lure at actual lake bottom (reuse depthScale from above)
         const bottomY = bottomDepth * depthScale;
         if (this.y >= bottomY) {
             this.y = bottomY;
