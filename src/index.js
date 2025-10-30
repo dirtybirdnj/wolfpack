@@ -105,8 +105,18 @@ function setupResizeHandler(game) {
         console.log(`🎮 Game resized to fill container: ${Math.round(newWidth)}x${Math.round(newHeight)}`);
     }
 
-    // Initial resize
+    // Initial resize - do it immediately AND after delay to catch both early and late cases
+    resizeGame();
     setTimeout(resizeGame, 100);
+
+    // Force MenuScene to recreate itself after resize to fix layout issues
+    setTimeout(() => {
+        resizeGame();
+        const menuScene = game.scene.getScene('MenuScene');
+        if (menuScene && menuScene.scene.isActive()) {
+            menuScene.scene.restart();
+        }
+    }, 200);
 
     // Debounced resize handler to avoid excessive calls
     let resizeTimeout;
