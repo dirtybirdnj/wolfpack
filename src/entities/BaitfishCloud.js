@@ -192,9 +192,7 @@ export class BaitfishCloud {
 
         // Get lake bottom depth at cloud's current world position
         let bottomDepth = this.scene.maxDepth || GameConfig.MAX_DEPTH;
-        if (this.scene.boatManager) {
-            bottomDepth = this.scene.boatManager.getDepthAtPosition(this.worldX);
-        } else if (this.scene.iceHoleManager) {
+        if (this.scene.iceHoleManager) {
             // For ice fishing, use hole manager's depth calculation
             bottomDepth = this.scene.iceHoleManager.getDepthAtPosition(this.centerX);
         } else {
@@ -214,10 +212,6 @@ export class BaitfishCloud {
         if (this.scene.iceHoleManager) {
             const currentHole = this.scene.iceHoleManager.getCurrentHole();
             const playerWorldX = currentHole ? currentHole.x : this.worldX;
-            const offsetFromPlayer = this.worldX - playerWorldX;
-            this.centerX = (GameConfig.CANVAS_WIDTH / 2) + offsetFromPlayer;
-        } else if (this.scene.boatManager) {
-            const playerWorldX = this.scene.boatManager.getPlayerWorldX();
             const offsetFromPlayer = this.worldX - playerWorldX;
             this.centerX = (GameConfig.CANVAS_WIDTH / 2) + offsetFromPlayer;
         } else {
@@ -364,8 +358,6 @@ export class BaitfishCloud {
         if (this.scene.iceHoleManager) {
             const currentHole = this.scene.iceHoleManager.getCurrentHole();
             playerWorldX = currentHole ? currentHole.x : 0;
-        } else if (this.scene.boatManager) {
-            playerWorldX = this.scene.boatManager.getPlayerWorldX();
         } else {
             return false;
         }

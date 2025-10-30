@@ -1,5 +1,4 @@
 import GameConfig from '../config/GameConfig.js';
-import { getBathymetricData } from '../utils/BathymetricData.js';
 
 /**
  * Manages ice fishing holes and player position on the ice
@@ -8,10 +7,7 @@ export class IceHoleManager {
     constructor(scene) {
         this.scene = scene;
 
-        // Get bathymetric data for realistic terrain
-        this.bathyData = getBathymetricData();
-
-        // Get world position from navigation (if coming from NavigationScene)
+        // Get world position from registry (for future use)
         this.worldX = this.scene.registry.get('fishingWorldX') || null;
         this.worldY = this.scene.registry.get('fishingWorldY') || 5000;
 
@@ -51,36 +47,33 @@ export class IceHoleManager {
 
     generateLakeBedProfile() {
         /**
-         * Generate lake bottom depth profile using real bathymetric data
-         * If we have a world position from navigation, use that area
-         * Otherwise, use a default location
+         * Generate lake bottom depth profile using procedural generation
+         * Creates varied terrain with different depth zones
          */
         const profile = [];
 
-        // Determine the center world X position for this fishing session
-        let centerWorldX;
-        if (this.worldX !== null) {
-            // Use position from NavigationScene
-            centerWorldX = this.worldX;
-            console.log(`🗺️ Using bathymetric data from navigation position: ${centerWorldX}`);
-        } else {
-            // Default to mid-depth ice fishing area
-            centerWorldX = 5000;
-        }
+        // Base depth for this session (from registry or default)
+        const baseDepth = this.scene.registry.get('currentDepth') || 90;
 
-        // Generate profile centered on world position
+        // Generate profile with some variation
         for (let x = 0; x < 10000; x += 50) {
-            // Convert local game X to world X
-            const offsetFromCenter = x - 5000;
-            const worldX = centerWorldX + offsetFromCenter;
+            // Add some sinusoidal variation to create natural contours
+            const largeCurve = Math.sin(x * 0.0003) * 20; // Large-scale depth changes
+            const mediumCurve = Math.sin(x * 0.002) * 10; // Medium-scale features
+            const smallBumps = Math.sin(x * 0.01) * 5; // Small bumps and dips
 
-            // Get depth from bathymetric data
-            const depth = this.bathyData.getDepthAtPosition(worldX, this.worldY);
+            // Random variation for realism
+            const randomVariation = (Math.random() - 0.5) * 3;
+
+            // Calculate depth with variation, clamped to reasonable range
+            const depth = Math.max(20, Math.min(150,
+                baseDepth + largeCurve + mediumCurve + smallBumps + randomVariation
+            ));
 
             profile.push({
                 x,
                 depth,
-                worldX // Store world coordinate for reference
+                worldX: x // Store coordinate for reference
             });
         }
 

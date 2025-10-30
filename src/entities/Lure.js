@@ -122,12 +122,9 @@ export class Lure {
             this.state = Constants.LURE_STATE.SURFACE;
         }
 
-        // Get actual bottom depth from bathymetric data based on fishing type
+        // Get actual bottom depth from ice hole manager
         let bottomDepth = GameConfig.MAX_DEPTH; // Default fallback
-        if (this.scene.boatManager) {
-            // Boat/kayak mode: get depth at player's current position
-            bottomDepth = this.scene.boatManager.getDepthAtPosition(this.scene.boatManager.playerX);
-        } else if (this.scene.iceHoleManager) {
+        if (this.scene.iceHoleManager) {
             // Ice fishing mode: use hole manager's depth calculation
             bottomDepth = this.scene.iceHoleManager.getDepthAtPosition(this.x);
         }
@@ -326,8 +323,8 @@ export class Lure {
 
     reset() {
         // Reset to surface (y=0) and center X position
-        // The hole/boat is always rendered at the center of the screen,
-        // so the lure should drop from the center regardless of mode
+        // The ice hole is always rendered at the center of the screen,
+        // so the lure should drop from the center
         this.x = GameConfig.CANVAS_WIDTH / 2;
         this.y = 0;
         this.depth = 0;
