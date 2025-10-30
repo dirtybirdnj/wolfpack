@@ -200,9 +200,9 @@ export class BaitfishCloud {
         }
 
         // Keep cloud in vertical bounds based on water depth
-        // Allow baitfish clouds to swim near surface (1 foot minimum) now that ice rendering is removed
-        const minY = 1 * GameConfig.DEPTH_SCALE; // 1 foot from surface
-        const maxY = Math.max(minY + 10, (bottomDepth - 5) * GameConfig.DEPTH_SCALE); // 5 feet from bottom, but ensure maxY > minY
+        // Allow baitfish clouds to swim all the way to surface (no minimum constraint)
+        const minY = 0; // No minimum - can reach surface
+        const maxY = (bottomDepth - 5) * GameConfig.DEPTH_SCALE; // 5 feet from bottom
         this.centerY = Math.max(minY, Math.min(maxY, this.centerY));
 
         // Convert world position to screen position based on player position

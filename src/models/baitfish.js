@@ -83,9 +83,9 @@ export class Baitfish extends AquaticOrganism {
 
         // Keep in vertical bounds based on water depth
         const bottomDepth = this.getBottomDepthAtPosition();
-        // Allow baitfish to swim near surface (0.5 feet minimum) now that ice rendering is removed
-        const minY = 0.5 * GameConfig.DEPTH_SCALE; // 0.5 feet from surface
-        const maxY = Math.max(minY + 5, (bottomDepth - 3) * GameConfig.DEPTH_SCALE); // 3 feet from bottom
+        // Allow baitfish to swim all the way to surface (no minimum constraint)
+        const minY = 0; // No minimum - can reach surface
+        const maxY = (bottomDepth - 3) * GameConfig.DEPTH_SCALE; // 3 feet from bottom
         this.y = Math.max(minY, Math.min(maxY, this.y));
 
         // Update screen position and check if too far from player
