@@ -45,82 +45,42 @@ export class MenuScene extends Phaser.Scene {
         }).setOrigin(0.5);
 
         // Game mode selection
-        this.add.text(width / 2, 280, 'SELECT FISHING TYPE & MODE', {
+        this.add.text(width / 2, 280, 'SELECT GAME MODE', {
             fontSize: '18px',
             fontFamily: 'Courier New',
             color: '#00ffff',
             fontStyle: 'bold'
         }).setOrigin(0.5);
 
-        // Single horizontal row layout for all 7 game modes
-        const buttonWidth = 130;
-        const buttonHeight = 70;
-        const buttonSpacing = 25;
+        // Two button layout centered on screen
+        const buttonWidth = 150;
+        const buttonHeight = 80;
+        const buttonSpacing = 40;
         const centerX = width / 2;
         const buttonY = 400;
 
-        // Calculate starting X position to center all buttons
-        const totalWidth = (buttonWidth * 7) + (buttonSpacing * 6);
+        // Calculate starting X position to center both buttons
+        const totalWidth = (buttonWidth * 2) + buttonSpacing;
         const startX = centerX - (totalWidth / 2) + (buttonWidth / 2);
 
-        // Create all 7 buttons in a single row
+        // Create only Ice Arcade and Ice Unlimited buttons
         const iceArcade = this.createModeButton(
-            startX + (buttonWidth + buttonSpacing) * 0, buttonY,
-            'ICE',
+            startX, buttonY,
+            'ICE FISHING',
             'Arcade',
             { fishingType: GameConfig.FISHING_TYPE_ICE, gameMode: GameConfig.GAME_MODE_ARCADE },
             0
         );
 
         const iceUnlimited = this.createModeButton(
-            startX + (buttonWidth + buttonSpacing) * 1, buttonY,
-            'ICE',
+            startX + buttonWidth + buttonSpacing, buttonY,
+            'ICE FISHING',
             'Unlimited',
             { fishingType: GameConfig.FISHING_TYPE_ICE, gameMode: GameConfig.GAME_MODE_UNLIMITED },
             1
         );
 
-        const kayakArcade = this.createModeButton(
-            startX + (buttonWidth + buttonSpacing) * 2, buttonY,
-            'KAYAK',
-            'Arcade',
-            { fishingType: GameConfig.FISHING_TYPE_KAYAK, gameMode: GameConfig.GAME_MODE_ARCADE },
-            2
-        );
-
-        const kayakUnlimited = this.createModeButton(
-            startX + (buttonWidth + buttonSpacing) * 3, buttonY,
-            'KAYAK',
-            'Unlimited',
-            { fishingType: GameConfig.FISHING_TYPE_KAYAK, gameMode: GameConfig.GAME_MODE_UNLIMITED },
-            3
-        );
-
-        const boatArcade = this.createModeButton(
-            startX + (buttonWidth + buttonSpacing) * 4, buttonY,
-            'BOAT',
-            'Arcade',
-            { fishingType: GameConfig.FISHING_TYPE_MOTORBOAT, gameMode: GameConfig.GAME_MODE_ARCADE },
-            4
-        );
-
-        const boatUnlimited = this.createModeButton(
-            startX + (buttonWidth + buttonSpacing) * 5, buttonY,
-            'BOAT',
-            'Unlimited',
-            { fishingType: GameConfig.FISHING_TYPE_MOTORBOAT, gameMode: GameConfig.GAME_MODE_UNLIMITED },
-            5
-        );
-
-        const natureSimulation = this.createModeButton(
-            startX + (buttonWidth + buttonSpacing) * 6, buttonY,
-            'NATURE',
-            'Simulation',
-            { fishingType: GameConfig.FISHING_TYPE_NATURE_SIMULATION, gameMode: null },
-            6
-        );
-
-        this.buttons = [iceArcade, iceUnlimited, kayakArcade, kayakUnlimited, boatArcade, boatUnlimited, natureSimulation];
+        this.buttons = [iceArcade, iceUnlimited];
 
         // Controls hint
         const controlsY = 570;
@@ -372,7 +332,7 @@ export class MenuScene extends Phaser.Scene {
             // Clear previous navigation position data to use default deep water location
             this.registry.set('fishingWorldX', null);
             this.registry.set('fishingWorldY', 5000);
-            this.registry.set('currentDepth', GameConfig.MAX_DEPTH);
+            this.registry.set('currentDepth', 90); // Start ice fishing at 90ft depth
             startingScene = 'GameScene';
         }
 
