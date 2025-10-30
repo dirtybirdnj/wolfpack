@@ -214,9 +214,6 @@ export class BaitfishCloud {
             const playerWorldX = currentHole ? currentHole.x : this.worldX;
             const offsetFromPlayer = this.worldX - playerWorldX;
             this.centerX = (GameConfig.CANVAS_WIDTH / 2) + offsetFromPlayer;
-            const playerWorldX = this.scene.boatManager.getPlayerWorldX();
-            const offsetFromPlayer = this.worldX - playerWorldX;
-            this.centerX = (GameConfig.CANVAS_WIDTH / 2) + offsetFromPlayer;
         } else {
             // Nature simulation mode - use worldX directly as screen X (no player to offset from)
             this.centerX = this.worldX;
@@ -361,3 +358,105 @@ export class BaitfishCloud {
         if (this.scene.iceHoleManager) {
             const currentHole = this.scene.iceHoleManager.getCurrentHole();
             playerWorldX = currentHole ? currentHole.x : 0;
+        } else {
+            return false;
+        }
+
+        const distanceFromPlayer = Math.abs(this.worldX - playerWorldX);
+        return distanceFromPlayer > 600;
+    }
+
+    getInfo() {
+        return {
+            count: this.baitfish.length,
+            consumed: this.consumedCount,
+            depth: Math.floor(this.depth),
+            lakersChasing: this.lakersChasing.length,
+            position: { x: this.centerX, y: this.centerY }
+        };
+    }
+
+    split() {
+        // Split this cloud in half, return the new cloud
+        if (this.baitfish.length < 4) {
+            // Too small to split
+            return null;
+        }
+
+        // Split baitfish array in half
+        const halfIndex = Math.floor(this.baitfish.length / 2);
+        const newCloudBaitfish = this.baitfish.splice(halfIndex);
+
+        // Create new cloud slightly offset (use world coordinates!)
+        const offsetDirection = Math.random() < 0.5 ? 1 : -1;
+        const newCloud = new BaitfishCloud(
+            this.scene,
+            this.worldX + (offsetDirection * 40), // Use worldX, not centerX
+            this.centerY,
+            0, // Don't spawn new fish, we'll add the split ones
+            this.speciesType // Preserve species type
+        );
+
+        // Clear the auto-spawned baitfish and add our split ones
+        newCloud.baitfish.forEach(b => b.destroy());
+        newCloud.baitfish = newCloudBaitfish;
+
+        // Update cloudId for the split baitfish
+        newCloudBaitfish.forEach(baitfish => {
+            baitfish.cloudId = newCloud.id;
+        });
+
+        // Give clouds opposite velocities to separate
+        this.velocity.x = -offsetDirection * 1.5;
+        newCloud.velocity.x = offsetDirection * 1.5;
+
+        console.log(`Cloud split! ${this.baitfish.length} + ${newCloud.baitfish.length} baitfish`);
+
+        return newCloud;
+    }
+
+    mergeWith(otherCloud) {
+        // Merge another cloud into this one
+        if (!otherCloud || !otherCloud.visible) return;
+
+        // Calculate new center position BEFORE merging (weighted average based on baitfish count)
+        const thisFishCount = this.baitfish.length;
+        const otherFishCount = otherCloud.baitfish.length;
+        const totalFish = thisFishCount + otherFishCount;
+
+        if (totalFish > 0) {
+            this.centerX = (this.centerX * thisFishCount + otherCloud.centerX * otherFishCount) / totalFish;
+            this.centerY = (this.centerY * thisFishCount + otherCloud.centerY * otherFishCount) / totalFish;
+            // Get dynamic depth scale from scene
+            const depthScale = this.scene.sonarDisplay ? this.scene.sonarDisplay.getDepthScale() : GameConfig.DEPTH_SCALE;
+            this.depth = this.centerY / depthScale;
+        }
+
+        // Transfer all baitfish from other cloud to this cloud
+        otherCloud.baitfish.forEach(baitfish => {
+            // Update the baitfish's cloud ID to point to this cloud
+            baitfish.cloudId = this.id;
+            this.baitfish.push(baitfish);
+        });
+
+        // Update consumed count
+        this.consumedCount += otherCloud.consumedCount;
+
+        // Average the velocities
+        this.velocity.x = (this.velocity.x + otherCloud.velocity.x) / 2;
+        this.velocity.y = (this.velocity.y + otherCloud.velocity.y) / 2;
+
+        // Clear the other cloud's baitfish array so destroy doesn't kill them
+        otherCloud.baitfish = [];
+        otherCloud.visible = false;
+    }
+
+    destroy() {
+        // Clean up all baitfish
+        this.baitfish.forEach(baitfish => baitfish.destroy());
+        this.baitfish = [];
+        this.visible = false;
+    }
+}
+
+export default BaitfishCloud;
