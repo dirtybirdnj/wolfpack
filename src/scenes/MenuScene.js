@@ -33,10 +33,14 @@ export class MenuScene extends Phaser.Scene {
         wolfpackLogo.setOrigin(0.5);
         wolfpackLogo.setScale(0.5); // Adjust scale as needed
 
-        // Subtitle - VTJ Logo (positioned in bottom right corner)
-        const vtjLogo = this.add.image(width - 80, height - 80, 'vtj-logo');
+        // VTJ Logo (bottom right, moved left 1 inch, half size, clickable)
+        const vtjLogo = this.add.image(width - 176, height - 80, 'vtj-logo');
         vtjLogo.setOrigin(0.5);
-        vtjLogo.setScale(0.15); // Adjust scale as needed (VTJ is a circle logo)
+        vtjLogo.setScale(0.075); // Half the original size
+        vtjLogo.setInteractive({ useHandCursor: true });
+        vtjLogo.on('pointerdown', () => {
+            window.open('https://www.verticaltubejig.com', '_blank');
+        });
 
         // Game mode selection (moved down 0.5 inch = 48 pixels)
         this.add.text(width / 2, 328, 'SELECT GAME MODE', {
@@ -46,18 +50,18 @@ export class MenuScene extends Phaser.Scene {
             fontStyle: 'bold'
         }).setOrigin(0.5);
 
-        // Two button layout centered on screen
+        // Three button layout centered on screen
         const buttonWidth = 150;
         const buttonHeight = 80;
         const buttonSpacing = 40;
         const centerX = width / 2;
-        const buttonY = 400;
+        const buttonY = 496; // Moved down 1 inch (96 pixels)
 
-        // Calculate starting X position to center both buttons
-        const totalWidth = (buttonWidth * 2) + buttonSpacing;
+        // Calculate starting X position to center all three buttons
+        const totalWidth = (buttonWidth * 3) + (buttonSpacing * 2);
         const startX = centerX - (totalWidth / 2) + (buttonWidth / 2);
 
-        // Create only Ice Arcade and Ice Unlimited buttons
+        // Create Ice Arcade, Ice Unlimited, and Nature Simulation buttons
         const iceArcade = this.createModeButton(
             startX, buttonY,
             'ICE FISHING',
@@ -67,14 +71,22 @@ export class MenuScene extends Phaser.Scene {
         );
 
         const iceUnlimited = this.createModeButton(
-            startX + buttonWidth + buttonSpacing, buttonY,
+            startX + (buttonWidth + buttonSpacing), buttonY,
             'ICE FISHING',
             'Unlimited',
             { fishingType: GameConfig.FISHING_TYPE_ICE, gameMode: GameConfig.GAME_MODE_UNLIMITED },
             1
         );
 
-        this.buttons = [iceArcade, iceUnlimited];
+        const natureSimulation = this.createModeButton(
+            startX + (buttonWidth + buttonSpacing) * 2, buttonY,
+            'NATURE',
+            'Simulation',
+            { fishingType: GameConfig.FISHING_TYPE_NATURE_SIMULATION, gameMode: null },
+            2
+        );
+
+        this.buttons = [iceArcade, iceUnlimited, natureSimulation];
 
         // Controls hint
         const controlsY = 570;
