@@ -38,14 +38,8 @@ export class MenuScene extends Phaser.Scene {
         vtjLogo.setOrigin(0.5);
         vtjLogo.setScale(0.15); // Adjust scale as needed (VTJ is a circle logo)
 
-        this.add.text(width / 2, 220, 'Lake Champlain Ice Fishing', {
-            fontSize: '16px',
-            fontFamily: 'Courier New',
-            color: '#00ff00'
-        }).setOrigin(0.5);
-
-        // Game mode selection
-        this.add.text(width / 2, 280, 'SELECT GAME MODE', {
+        // Game mode selection (moved down 0.5 inch = 48 pixels)
+        this.add.text(width / 2, 328, 'SELECT GAME MODE', {
             fontSize: '18px',
             fontFamily: 'Courier New',
             color: '#00ffff',
