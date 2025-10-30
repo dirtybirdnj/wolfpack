@@ -1147,6 +1147,1001 @@ activityByTime: {
 
 ---
 
+## Vermont Panfish Species - Detailed Research
+
+Vermont Fish & Wildlife Department recognizes several panfish species in Lake Champlain. These smaller species (rarely exceeding 10 inches) are abundant, excellent eating, and fun to catch. Vermont regulations propose daily bag limits of 50 fish total, with no more than 25 of any given species.
+
+---
+
+### 9. Bluegill ✅ **HIGH PRIORITY**
+**Scientific Name:** *Lepomis macrochirus*
+**Common Names:** Bluegill, Bream, Brim, Copper Nose
+**Status:** Native to Lake Champlain, abundant
+
+#### Why Add This Species?
+- Most popular panfish in North America
+- Perfect beginner species (easy to catch, abundant)
+- Schools of 10-20 fish (exciting action)
+- Different niche than yellow perch (structure vs. open water)
+- Active all day (accessible for all players)
+
+#### Physical Characteristics
+- **Size Range:** 4-8 inches typical (10-15 cm)
+- **Weight Range:** 4-12 oz typical (0.25-0.75 lbs)
+- **Maximum Size:** 16 inches, 4.5 lbs (rare)
+- **Common Length:** 7.5 inches (19.1 cm)
+- **Maximum Weight:** 2.2 kg (4.8 lbs)
+- **Lifespan:** 5-8 years average, up to 11 years
+
+#### Size Categories (Game Implementation)
+```javascript
+small: {
+    weightRange: [0.15, 0.4],    // lbs
+    lengthRange: [4, 6],         // inches
+    depthPreference: [5, 15],    // feet
+    biologicalAge: [1, 3]        // years
+}
+medium: {
+    weightRange: [0.4, 0.7],
+    lengthRange: [6, 8],
+    depthPreference: [8, 20],
+    biologicalAge: [3, 5]
+}
+large: {
+    weightRange: [0.7, 1.2],
+    lengthRange: [8, 10],
+    depthPreference: [10, 25],
+    biologicalAge: [5, 8]
+}
+trophy: {
+    weightRange: [1.2, 2.5],
+    lengthRange: [10, 14],
+    depthPreference: [15, 30],
+    biologicalAge: [8, 11]
+}
+```
+
+#### Temperature & Depth Preferences
+- **Temperature Tolerance:** 1-36°C (34-97°F) - VERY tolerant!
+- **Spawning Temperature:** 65-80°F (18-26°C)
+- **Depth Range:** 1-30 feet (nests in <1m, big fish to 30 feet)
+- **Optimal Depth:** Shallow to moderate (5-20 feet typical)
+
+#### Habitat Preferences
+- **Primary:** Lakes, slow-moving rocky streams
+- **Secondary:** Deep weed beds, submerged structure
+- **Substrate:** Mud, sand, gravel (versatile)
+- **Cover:** Aquatic vegetation, fallen timber, docks
+- **Water Clarity:** Prefers clear water
+
+#### Behavioral Characteristics
+- **Hunting Style:** Opportunistic sight feeder
+- **Schooling:** Schools of 10-20 fish
+- **Activity Pattern:** Most active at dawn, hidden during day, shallow at night
+- **Feeding Aggression:** Medium (investigates before striking)
+- **Spawning:** Colony spawner (50+ males nest together)
+- **Nest Guarding:** Males aggressively defend nests
+
+#### Diet Composition
+```javascript
+dietPreferences: {
+    aquatic_insects: 0.40,    // Primary - larvae, nymphs
+    zooplankton: 0.20,
+    small_fish: 0.15,         // Minnows, fry
+    snails: 0.10,
+    worms: 0.08,
+    algae: 0.05,             // Some plant material
+    small_crayfish: 0.02
+}
+```
+**Note:** Omnivorous - will consume anything that fits in mouth
+
+#### Fight Characteristics
+- **Initial Run:** Weak-moderate (pulls hard for size)
+- **Tactics:** Circling, diving, head shakes
+- **Stamina:** Low-medium (short fights)
+- **Difficulty:** Easy (perfect beginner fish)
+- **Acrobatic:** No
+- **Fighting Style:** "Pound for pound" fighter (scrappy for size)
+
+#### Activity by Time of Day
+```javascript
+activityByTime: {
+    dawn: 1.6,       // 5-7 AM - PEAK feeding
+    morning: 1.0,    // 7-11 AM - hidden under cover
+    midday: 0.7,     // 11 AM-3 PM - hiding
+    afternoon: 1.0,  // 3-6 PM - starting to emerge
+    dusk: 1.3,       // 6-8 PM - active feeding
+    night: 1.2       // 8 PM-5 AM - shallow feeding
+}
+```
+
+#### Visual Characteristics (DISTINCTIVE!)
+- **Body Shape:** Deep, laterally compressed, oval
+- **Base Color:** Olive to dark blue-green on back
+- **Sides:** Silver to yellow-green with purple/blue iridescence
+- **Belly:** Yellow to bright orange (breeding males)
+- **Distinctive Features:**
+  - Dark blue/purple "gill flap" (opercular flap) - SIGNATURE!
+  - Dark vertical bars on sides (6-8 faint bars)
+  - Black spot at rear of dorsal fin base
+  - Orange/yellow breast (especially males)
+  - Small mouth
+  - Long, pointed pectoral fins
+
+#### Game Implementation Strategy
+```javascript
+spawnWeight: 25,  // 25% spawn rate (very abundant, beginner-friendly)
+
+behavior: {
+    huntingStyle: 'opportunistic',
+    schoolingBehavior: true,
+    schoolSize: [10, 20],
+    aggressivenessMultiplier: 1.1,
+    cautiousness: 0.5,           // Not very cautious
+    structureOriented: true,
+    nestGuarding: true,          // Very aggressive when guarding (May-August)
+    curiosityLevel: 'high',      // Investigates lures
+}
+
+fightCharacteristics: {
+    difficulty: 'easy',
+    stamina: 'low',
+    poundForPound: 'high',       // Scrappy for their size
+    fightDuration: 'short'
+}
+
+seasonalBehavior: {
+    spring: {
+        behavior: 'spawning',
+        aggressiveness: 2.0,      // Males very aggressive guarding nests
+        depthRange: [1, 5]
+    },
+    summer: {
+        behavior: 'active_feeding',
+        depthRange: [10, 25]
+    }
+}
+```
+
+#### Why This Works in Game
+1. **Beginner-friendly:** Easy to catch, abundant (confidence builder)
+2. **Schooling:** Multiple catches in one area (exciting)
+3. **Visual appeal:** Beautiful colors, distinctive dark gill flap
+4. **All-day activity:** Players can catch them anytime
+5. **Different niche:** Structure-oriented vs. yellow perch (open water)
+6. **Educational:** Most popular panfish in America
+
+#### Ecological Notes
+- **Tolerance:** Can survive wide range of environmental conditions (advantage over natives)
+- **Competition:** Sometimes displaces native sunfish species
+- **Angler Value:** #1 panfish target in North America
+- **Table Fare:** Excellent eating (sweet, white flesh)
+
+---
+
+### 10. Pumpkinseed ✅ **HIGH PRIORITY**
+**Scientific Name:** *Lepomis gibbosus*
+**Common Names:** Pumpkinseed, Common Sunfish, Pond Perch, Sunny
+**Status:** Native to Lake Champlain, abundant
+
+#### Why Add This Species?
+- Native Vermont panfish (authentic to region)
+- Most colorful sunfish (beautiful appearance)
+- Different habitat than bluegill (shallower, more vegetation)
+- Low oxygen tolerance (unique niche)
+- Distinctive "red-orange ear flap" is iconic
+
+#### Physical Characteristics
+- **Size Range:** 4-6 inches typical (10 cm average)
+- **Weight Range:** 4-12 oz typical (<1 lb)
+- **Maximum Size:** 11 inches, 1.5 lbs
+- **Usual Length:** 4-6 inches (100-150 mm)
+- **World Record:** 1 lb 8 oz (680 g)
+- **Lifespan:** 6-8 years typical
+
+#### Size Categories (Game Implementation)
+```javascript
+small: {
+    weightRange: [0.1, 0.3],
+    lengthRange: [3, 5],
+    depthPreference: [3, 10],
+    biologicalAge: [1, 2]
+}
+medium: {
+    weightRange: [0.3, 0.6],
+    lengthRange: [5, 7],
+    depthPreference: [5, 12],
+    biologicalAge: [2, 4]
+}
+large: {
+    weightRange: [0.6, 1.0],
+    lengthRange: [7, 9],
+    depthPreference: [6, 15],
+    biologicalAge: [4, 6]
+}
+trophy: {
+    weightRange: [1.0, 1.5],
+    lengthRange: [9, 11],
+    depthPreference: [8, 20],
+    biologicalAge: [6, 8]
+}
+```
+
+#### Temperature & Depth Preferences
+- **Optimal Temperature:** 18-24°C (65-75°F)
+- **Preferred Water Temp:** 21-24°C (ideal)
+- **Low Oxygen Tolerance:** HIGH (more tolerant than bluegill!)
+- **Warm Water Tolerance:** LOWER than bluegill
+- **Depth Range:** 1-2 meters typical (3-7 feet)
+- **Prefer:** Shallow, protected areas
+
+#### Habitat Preferences
+- **Primary:** Warm, calm lakes, ponds, protected bays
+- **Secondary:** Pools in creeks and small rivers
+- **Water Clarity:** Prefer clear water
+- **Vegetation:** LOTS - abundant vegetation for cover
+- **Structure:** Submerged logs, rocks, docks
+- **Shoreline:** Tend to stay near shore
+
+#### Behavioral Characteristics
+- **Hunting Style:** Visual sight feeder
+- **Schooling:** Travel in schools with bluegills and other sunfish
+- **Activity Pattern:** Active throughout day, REST AT NIGHT (unlike bluegill!)
+- **Feeding:** All water levels (surface to bottom) during daylight
+- **Peak Feeding:** Afternoon
+- **Night Behavior:** Rest near bottom or in shelter
+
+#### Diet Composition
+```javascript
+dietPreferences: {
+    snails: 0.30,            // PRIMARY - can crush shells!
+    aquatic_insects: 0.25,   // Chironomidae
+    small_crustaceans: 0.20,
+    mollusks: 0.15,          // Strong at crushing shells
+    zooplankton: 0.08,
+    small_fish: 0.02
+}
+```
+**Special:** Pharyngeal teeth adapted for crushing snails (different from bluegill)
+
+#### Fight Characteristics
+- **Initial Run:** Weak (smaller than bluegill typically)
+- **Tactics:** Circling, slight head shakes
+- **Stamina:** Low
+- **Difficulty:** Easy (beginner-friendly)
+- **Acrobatic:** No
+- **Fighting Style:** Minimal resistance
+
+#### Activity by Time of Day
+```javascript
+activityByTime: {
+    dawn: 1.3,
+    morning: 1.2,
+    midday: 1.1,
+    afternoon: 1.5,      // PEAK - heaviest feeding
+    dusk: 1.2,
+    night: 0.3           // RESTS at night (different from bluegill!)
+}
+```
+
+#### Visual Characteristics (MOST COLORFUL!)
+- **Body Shape:** Deep, compressed, rounded (more so than bluegill)
+- **Base Color:** Olive-green to brassy green on back
+- **Sides:** Golden yellow with blue/green vertical bars
+- **Belly:** Yellow-orange to bright orange
+- **Distinctive Features:**
+  - BRIGHT RED-ORANGE spot on black "ear flap" (SIGNATURE!)
+  - Wavy blue lines on face and gill covers (unique!)
+  - 7-10 olive vertical bars on sides
+  - Orange/yellow breast
+  - Most colorful freshwater fish!
+
+#### Game Implementation Strategy
+```javascript
+spawnWeight: 20,  // 20% spawn rate (abundant, beginner-friendly)
+
+behavior: {
+    huntingStyle: 'opportunistic',
+    schoolingBehavior: true,
+    schoolMixed: true,           // Schools with bluegills
+    aggressivenessMultiplier: 1.0,
+    cautiousness: 0.6,
+    structureOriented: true,
+    vegetationDependent: true,   // More than bluegill
+    lowOxygenTolerance: true,    // Unique trait
+    dayActiveOnly: true          // Rests at night (unlike bluegill)
+}
+
+fightCharacteristics: {
+    difficulty: 'easy',
+    stamina: 'low',
+    fightDuration: 'very_short'
+}
+```
+
+#### Why This Works in Game
+1. **Visual beauty:** Most colorful fish - rewarding to catch
+2. **Easy target:** Perfect beginner species
+3. **Native status:** Authentic to Lake Champlain
+4. **Different niche:** Shallower, more vegetated than bluegill
+5. **Unique trait:** Low oxygen tolerance (can spawn where others can't)
+6. **Mixed schools:** Can catch with bluegills (variety)
+
+#### Ecological Notes
+- **Native Range:** Eastern North America
+- **Importance:** Indicator species for healthy vegetation
+- **Competition:** Sometimes outcompeted by bluegill in open water
+- **Advantage:** Thrives in low-oxygen, weedy areas where bluegills struggle
+- **Table Fare:** Good eating, though bonier than bluegill
+
+---
+
+### 11. Rock Bass ✅ **MEDIUM-HIGH PRIORITY**
+**Scientific Name:** *Ambloplites rupestris*
+**Common Names:** Rock Bass, Redeye, Goggle-Eye
+**Status:** Native to Lake Champlain, common
+
+#### Why Add This Species?
+- Native species with distinctive red eyes
+- Different behavior from sunfish (more aggressive, bass-like)
+- Structure specialist (rocky areas)
+- Ambush predator (not schooling like sunfish)
+- Larger than other panfish (closer to small bass)
+
+#### Physical Characteristics
+- **Size Range:** 6-10 inches typical (20-40 cm)
+- **Weight Range:** 8 oz - 1.5 lbs typical
+- **Maximum Size:** 17 inches, 3.1 lbs
+- **Common Size:** 8-10 inches
+- **Lifespan:** 10-12 years
+
+#### Size Categories (Game Implementation)
+```javascript
+small: {
+    weightRange: [0.3, 0.8],
+    lengthRange: [5, 8],
+    depthPreference: [5, 15],
+    biologicalAge: [1, 3]
+}
+medium: {
+    weightRange: [0.8, 1.5],
+    lengthRange: [8, 10],
+    depthPreference: [8, 18],
+    biologicalAge: [3, 6]
+}
+large: {
+    weightRange: [1.5, 2.5],
+    lengthRange: [10, 13],
+    depthPreference: [10, 21],
+    biologicalAge: [6, 10]
+}
+trophy: {
+    weightRange: [2.5, 3.5],
+    lengthRange: [13, 17],
+    depthPreference: [12, 21],
+    biologicalAge: [10, 12]
+}
+```
+
+#### Temperature & Depth Preferences
+- **Temperature Range:** 10-29°C (50-84°F)
+- **Spawning Temperature:** 12-15°C (54-59°F)
+- **Depth Range:** 0-21 meters (0-70 feet)
+- **Typical Depth:** 5-20 feet
+- **Prefer:** Clear water
+
+#### Habitat Preferences
+- **Primary:** ROCKY areas (name derives from habitat!)
+- **Secondary:** Sandy bottoms with structure
+- **Water Clarity:** Clear water preferred (sight hunter)
+- **Structure:** Cracks, crevices, rock piles (hiding/ambush spots)
+- **Demersal:** Bottom-oriented lifestyle
+- **Current:** Tolerates mild current (streams and rivers)
+
+#### Behavioral Characteristics
+- **Hunting Style:** AMBUSH predator (bass-like, not sunfish-like)
+- **Temperament:** "Relatively peaceful" but predatory
+- **Schooling:** NO - solitary or pairs (different from sunfish!)
+- **Activity:** Crepuscular (dawn/dusk) but opportunistic
+- **Hiding:** Shy - uses cracks and crevices
+- **Ambush Strategy:** Stages attacks from hiding spots
+- **Maturity:** 2-3 years
+- **Breeding:** Polygynandrous (multiple mates)
+
+#### Diet Composition
+```javascript
+dietPreferences: {
+    small_fish: 0.40,        // PRIMARY - more piscivorous than sunfish!
+    aquatic_insects: 0.30,
+    crayfish: 0.15,          // Important prey
+    worms: 0.10,
+    zooplankton: 0.05
+}
+```
+**Note:** More carnivorous than sunfish - closer to bass in diet
+
+#### Fight Characteristics
+- **Initial Run:** Moderate (stronger than sunfish)
+- **Tactics:** Diving to rocks, head shakes
+- **Stamina:** Medium (longer fight than sunfish)
+- **Difficulty:** Easy-Medium
+- **Acrobatic:** No
+- **Structure Advantage:** Tries to reach rocks/crevices
+
+#### Activity by Time of Day
+```javascript
+activityByTime: {
+    dawn: 1.5,       // Peak feeding
+    morning: 1.1,
+    midday: 0.8,     // Less active
+    afternoon: 1.0,
+    dusk: 1.5,       // Peak feeding
+    night: 0.9       // Some night activity
+}
+```
+
+#### Visual Characteristics (DISTINCTIVE RED EYES!)
+- **Body Shape:** Deep, robust, bass-like (not as compressed as sunfish)
+- **Base Color:** Brassy brown to olive-brown
+- **Pattern:** Dark brown horizontal rows of spots (unique!)
+- **Belly:** Cream to yellow
+- **Eyes:** BRIGHT RED (most distinctive feature!)
+- **Distinctive Features:**
+  - Red eyes (SIGNATURE - "Redeye" common name)
+  - Rows of dark spots in horizontal lines
+  - Larger mouth than sunfish (predatory)
+  - 5-7 spines in anal fin (more than sunfish)
+
+#### Game Implementation Strategy
+```javascript
+spawnWeight: 15,  // 15% spawn rate (common but not as abundant as sunfish)
+
+behavior: {
+    huntingStyle: 'ambush',
+    schoolingBehavior: false,        // SOLITARY (different from sunfish!)
+    aggressivenessMultiplier: 1.3,   // More aggressive than sunfish
+    cautiousness: 0.8,               // Fairly shy
+    structureOriented: true,
+    rockyHabitatSpecialist: true,    // Unique niche
+    ambushBehavior: {
+        hideInCrevices: true,
+        burstSpeed: 1.8,
+        strikeRange: 15
+    }
+}
+
+fightCharacteristics: {
+    difficulty: 'easy-medium',       // Harder than sunfish, easier than bass
+    stamina: 'medium',
+    structureAdvantage: true
+}
+```
+
+#### Why This Works in Game
+1. **Unique appearance:** Red eyes are distinctive and memorable
+2. **Different behavior:** Ambush predator, not schooling (variety)
+3. **Rocky habitat:** Fills rocky structure niche
+4. **Native species:** Authentic to Lake Champlain
+5. **Size bridge:** Between panfish and bass (progression)
+6. **Stronger fight:** More challenging than sunfish (skill building)
+
+#### Ecological Notes
+- **Native Status:** Native to eastern North America
+- **Habitat Indicator:** Presence indicates clean, clear, rocky habitat
+- **Angler Value:** Fun to catch, decent fight
+- **Table Fare:** Good eating (similar to sunfish)
+- **Competition:** Can compete with smallmouth bass for habitat
+
+---
+
+### 12. Black Crappie ✅ **HIGH PRIORITY**
+**Scientific Name:** *Pomoxis nigromaculatus*
+**Common Names:** Black Crappie, Calico Bass, Speckled Bass, Papermouth
+**Status:** Native to Lake Champlain, schooling species
+
+#### Why Add This Species?
+- Schooling behavior (exciting multi-catch opportunities)
+- Larger panfish (10-12 inches common)
+- Different depth strategy (suspended, not bottom)
+- Clear water specialist
+- Excellent table fare (highly sought by anglers)
+
+#### Physical Characteristics
+- **Size Range:** 4-8 inches typical, 10-12 inches common catch
+- **Weight Range:** 0.5-2 lbs typical
+- **Maximum Size:** 19.3 inches, 6 lbs
+- **Common Length:** 10.8 inches
+- **Lifespan:** 8-10 years
+
+#### Size Categories (Game Implementation)
+```javascript
+small: {
+    weightRange: [0.3, 0.8],
+    lengthRange: [6, 9],
+    depthPreference: [5, 15],
+    biologicalAge: [1, 3]
+}
+medium: {
+    weightRange: [0.8, 1.5],
+    lengthRange: [9, 12],
+    depthPreference: [8, 20],
+    biologicalAge: [3, 5]
+}
+large: {
+    weightRange: [1.5, 3.0],
+    lengthRange: [12, 15],
+    depthPreference: [10, 25],
+    biologicalAge: [5, 8]
+}
+trophy: {
+    weightRange: [3.0, 6.0],
+    lengthRange: [15, 19],
+    depthPreference: [12, 30],
+    biologicalAge: [8, 10]
+}
+```
+
+#### Temperature & Depth Preferences
+- **Breeding Temperature:** 14-20°C (58-68°F)
+- **Preferred Waters:** Cool, deep, clear lakes
+- **Depth Range:** 1-30 feet (1-6 feet breeding, up to 30 feet adults)
+- **Depth Strategy:** SUSPENDED (not bottom-dwelling)
+- **Structure:** Submerged timber, aquatic vegetation
+
+#### Habitat Preferences
+- **Primary:** Clear water lakes with little/no current
+- **Secondary:** Cool, deep reservoirs, borrow pits
+- **Water Clarity:** Prefer CLEAR water (key difference from white crappie)
+- **Substrate:** Sand or mud bottom
+- **Cover:** Abundant cover (submerged timber, vegetation)
+- **Current:** Avoid current
+
+#### Behavioral Characteristics
+- **Hunting Style:** Suspended predator (not bottom feeder)
+- **Schooling:** YES - form schools (exciting multi-catch!)
+- **Activity:** Feed early morning and midnight-2am
+- **Feeding Time:** Dawn and late night peak
+- **Spawning:** Males build nests in shallow water (1-6 feet)
+- **Post-Spawn:** Remain in shallow water into early summer
+
+#### Diet Composition
+```javascript
+dietPreferences: {
+    small_fish: 0.45,        // Minnows, young fish
+    aquatic_insects: 0.25,   // Larvae
+    zooplankton: 0.15,
+    small_crayfish: 0.10,
+    minnows: 0.05
+}
+```
+
+#### Fight Characteristics
+- **Initial Run:** Moderate (good fight for size)
+- **Tactics:** Circling, diving, head shakes
+- **Stamina:** Medium
+- **Difficulty:** Easy-Medium
+- **Acrobatic:** No
+- **Mouth:** "Papermouth" - delicate, hooks tear easily!
+
+#### Activity by Time of Day
+```javascript
+activityByTime: {
+    dawn: 1.8,       // 5-7 AM - PEAK
+    morning: 1.0,
+    midday: 0.6,     // Low activity
+    afternoon: 0.7,
+    dusk: 1.2,
+    night: 1.6       // Midnight-2am PEAK
+}
+```
+
+#### Visual Characteristics
+- **Body Shape:** Deep, laterally compressed, oval (similar to sunfish)
+- **Base Color:** Silver-white to greenish
+- **Pattern:** IRREGULAR BLACK SPOTS scattered across body (calico pattern!)
+- **Fins:** Dark spots on dorsal, anal, and tail fins
+- **Distinctive Features:**
+  - 7-8 dorsal spines (more than white crappie's 5-6)
+  - Scattered black mottling (not vertical bars)
+  - Upturned mouth (feeding on suspended prey)
+  - "Calico" appearance
+
+#### Game Implementation Strategy
+```javascript
+spawnWeight: 18,  // 18% spawn rate (common, popular target)
+
+behavior: {
+    huntingStyle: 'suspended_predator',
+    schoolingBehavior: true,
+    schoolSize: [5, 15],
+    aggressivenessMultiplier: 1.2,
+    cautiousness: 0.6,
+    suspendedDepth: true,         // Hangs in water column (not bottom)
+    clearWaterPreference: true,
+    structureOriented: true,
+    paperMouth: true              // Hooks tear easily (mechanic?)
+}
+
+fightCharacteristics: {
+    difficulty: 'easy-medium',
+    stamina: 'medium',
+    delicateMouth: true,          // Special mechanic: can lose fish if too aggressive
+    fightDuration: 'medium'
+}
+
+feedingWindows: {
+    earlyMorning: 1.8,
+    lateNight: 1.6               // Two distinct feeding periods
+}
+```
+
+#### Why This Works in Game
+1. **Schooling:** Multi-catch opportunities (exciting!)
+2. **Suspended depth:** Different strategy than bottom feeders
+3. **Size:** Larger panfish (12-15 inches satisfying)
+4. **Clear water:** Different habitat than white crappie
+5. **"Papermouth" mechanic:** Risk of losing fish adds tension
+6. **Peak times:** Dawn and late-night fishing (variety)
+
+#### Ecological Notes
+- **Habitat Quality:** Indicator of clean, clear water
+- **Angler Value:** Highly sought (excellent eating)
+- **Table Fare:** Sweet, white, flaky flesh - top-tier!
+- **Competition:** Prefer cooler, clearer water than white crappie
+
+---
+
+### 13. White Crappie ✅ **MEDIUM-HIGH PRIORITY**
+**Scientific Name:** *Pomoxis annularis*
+**Common Names:** White Crappie, Silver Crappie, Sac-a-lait
+**Status:** Present in Lake Champlain
+
+#### Why Add This Species?
+- Different niche than black crappie (turbid vs. clear water)
+- Shallower preference than black crappie
+- Complements black crappie (two similar species, different habitats)
+- Schooling (exciting fishing)
+
+#### Physical Characteristics
+- **Size Range:** 7-21 inches (17-53 cm)
+- **Weight Range:** 1-2 lbs typical
+- **Average Weight:** 0.91 kg (2 lbs)
+- **Maximum Size:** 2.35 kg (5.2 lbs) world record
+- **Lifespan:** 6-8 years typical
+
+#### Size Categories (Game Implementation)
+```javascript
+small: {
+    weightRange: [0.5, 1.0],
+    lengthRange: [7, 10],
+    depthPreference: [3, 10],
+    biologicalAge: [1, 2]
+}
+medium: {
+    weightRange: [1.0, 1.5],
+    lengthRange: [10, 13],
+    depthPreference: [6, 12],
+    biologicalAge: [2, 4]
+}
+large: {
+    weightRange: [1.5, 2.5],
+    lengthRange: [13, 17],
+    depthPreference: [8, 15],
+    biologicalAge: [4, 6]
+}
+trophy: {
+    weightRange: [2.5, 5.0],
+    lengthRange: [17, 21],
+    depthPreference: [10, 20],
+    biologicalAge: [6, 8]
+}
+```
+
+#### Temperature & Depth Preferences
+- **Spawning Temperature:** 56-70°F (13-21°C)
+- **Water Preference:** Warmer and more turbid than black crappie
+- **Depth Range:** Shallow (not deeper than thermocline)
+- **Typical Depth:** 6-12 feet during day, 5m max breeding, 6-10m winter
+- **Seasonal:** Shallower in breeding, deeper in winter
+
+#### Habitat Preferences
+- **Primary:** Reservoirs and freshwater lakes (>2 hectares)
+- **Secondary:** Smaller ponds, slow-moving streams/rivers
+- **Water Clarity:** MORE tolerant of turbid (murky) water than black crappie
+- **Substrate:** Sand or mud bottoms
+- **Structure:** Quiet waters with structure
+
+#### Behavioral Characteristics
+- **Hunting Style:** Suspended predator
+- **Schooling:** Form schools (smaller than black crappie schools)
+- **Activity:** Feed early morning and late night
+- **Depth Behavior:** Move to shallow, quiet waters during day
+- **Spawning:** Similar to black crappie
+- **Post-Spawn:** Move to deep water FASTER than black crappie
+
+#### Diet Composition
+```javascript
+dietPreferences: {
+    small_fish: 0.50,        // More piscivorous than black crappie
+    aquatic_insects: 0.20,
+    zooplankton: 0.15,
+    minnows: 0.10,
+    crustaceans: 0.05
+}
+```
+
+#### Fight Characteristics
+- **Initial Run:** Moderate
+- **Tactics:** Similar to black crappie
+- **Stamina:** Medium
+- **Difficulty:** Easy-Medium
+- **Acrobatic:** No
+- **Mouth:** Papermouth (delicate like black crappie)
+
+#### Activity by Time of Day
+```javascript
+activityByTime: {
+    dawn: 1.7,       // Early morning peak
+    morning: 0.9,
+    midday: 0.5,
+    afternoon: 0.7,
+    dusk: 1.1,
+    night: 1.5       // Late night feeding
+}
+```
+
+#### Visual Characteristics
+- **Body Shape:** Deep, compressed (similar to black crappie)
+- **Base Color:** Silvery-white to light green
+- **Pattern:** 5-10 dark VERTICAL BARS (key difference from black crappie!)
+- **Fins:** Dark markings
+- **Distinctive Features:**
+  - 5-6 dorsal spines (fewer than black crappie's 7-8)
+  - Vertical bars vs. black crappie's scattered spots
+  - More elongated body than black crappie
+  - Upturned mouth
+
+#### Game Implementation Strategy
+```javascript
+spawnWeight: 12,  // 12% spawn rate (less common than black crappie)
+
+behavior: {
+    huntingStyle: 'suspended_predator',
+    schoolingBehavior: true,
+    schoolSize: [4, 10],         // Smaller schools than black crappie
+    aggressivenessMultiplier: 1.1,
+    cautiousness: 0.6,
+    turbidWaterTolerance: true,  // KEY DIFFERENCE from black crappie
+    shallowerPreference: true,
+    fasterDeepening: true,       // Post-spawn move to deep faster
+    paperMouth: true
+}
+
+fightCharacteristics: {
+    difficulty: 'easy-medium',
+    stamina: 'medium',
+    delicateMouth: true
+}
+```
+
+#### Why This Works in Game
+1. **Habitat diversity:** Murky water tolerance (different zones than black crappie)
+2. **Visual distinction:** Vertical bars vs. scattered spots
+3. **Schooling:** Still offers multi-catch excitement
+4. **Shallower:** More accessible to beginners
+5. **Complements black crappie:** Two similar species, different niches
+
+#### Ecological Notes
+- **Turbidity Tolerance:** Can thrive in murkier water than black crappie
+- **Habitat Competition:** Less competition with black crappie due to different water clarity preferences
+- **Angler Value:** Equally good eating as black crappie
+- **Management:** Often stocked together with black crappie
+
+---
+
+### 14. Redbreast Sunfish 🔄 **MEDIUM PRIORITY**
+**Scientific Name:** *Lepomis auritus*
+**Common Names:** Redbreast Sunfish, Yellowbelly Sunfish, River Bream
+**Status:** Present in Vermont (primarily streams, occasionally Lake Champlain)
+
+#### Why Add This Species?
+- Different from other sunfish (prefers CURRENT/streams)
+- Beautiful appearance (red/orange breast)
+- Native species
+- Could add stream fishing variety
+
+#### Physical Characteristics
+- **Size Range:** 4-9 inches typical (11 cm average)
+- **Weight Range:** 6 oz - 1 lb typical
+- **Maximum Size:** 12 inches, 2.5 lbs
+- **Common Size:** 9 inches, 1 lb
+- **Record Weight:** 0.79 kg (1.7 lbs)
+
+#### Size Categories (Game Implementation)
+```javascript
+small: {
+    weightRange: [0.2, 0.5],
+    lengthRange: [4, 6],
+    depthPreference: [3, 12],
+    biologicalAge: [1, 2]
+}
+medium: {
+    weightRange: [0.5, 0.9],
+    lengthRange: [6, 9],
+    depthPreference: [5, 15],
+    biologicalAge: [2, 4]
+}
+large: {
+    weightRange: [0.9, 1.5],
+    lengthRange: [9, 11],
+    depthPreference: [6, 20],
+    biologicalAge: [4, 7]
+}
+trophy: {
+    weightRange: [1.5, 2.5],
+    lengthRange: [11, 12],
+    depthPreference: [8, 30],
+    biologicalAge: [7, 10]
+}
+```
+
+#### Temperature & Depth Preferences
+- **Temperature Range:** 60.8-78.8°F (16-26°C)
+- **Spawning Temperature:** 65-75°F
+- **Depth Range:** Shallow (<20 feet most of year)
+- **Winter/Cool Weather:** Up to 30 feet
+- **Prefer:** Cool rivers and streams
+
+#### Habitat Preferences
+- **Primary:** STREAMS, SWAMPS, and RIVERS with currents (unique!)
+- **Secondary:** Sandy and rocky creeks
+- **Water:** Prefers MOVING water (key difference from other sunfish!)
+- **pH:** 7.0-7.5
+- **Rarely:** Ponds or large lakes (doesn't like still water)
+- **Structure:** Fallen trees, large rocks in pools
+
+#### Behavioral Characteristics
+- **Hunting Style:** Opportunistic feeder
+- **Schooling:** Less schooling than pumpkinseed/bluegill
+- **Activity:** Found in deeper, calmer pools (when not nesting)
+- **Structure:** Stacks near fallen trees or large rocks
+- **Competition:** Competes with other sunfish and larger predators
+- **Spawning:** Males guard eggs (~1000) in substrate depression
+
+#### Diet Composition
+```javascript
+dietPreferences: {
+    aquatic_insects: 0.40,   // Mayflies PRIMARY
+    dragonfly_larvae: 0.20,
+    small_fish: 0.15,
+    small_crayfish: 0.15,
+    mollusks: 0.08,
+    terrestrial_insects: 0.02
+}
+```
+
+#### Fight Characteristics
+- **Initial Run:** Moderate (good for size)
+- **Tactics:** Head shakes, diving
+- **Stamina:** Medium
+- **Difficulty:** Easy-Medium
+- **Acrobatic:** No
+- **Fly Rod:** Popular with fly anglers (cooler weather)
+
+#### Visual Characteristics (BEAUTIFUL!)
+- **Body Shape:** Deep, compressed (typical sunfish)
+- **Base Color:** Olive to bronze-green on back
+- **Breast:** BRIGHT red to orange (SIGNATURE!)
+- **Belly:** Yellow-orange
+- **Distinctive Features:**
+  - Long, narrow black "ear flap" with red/orange border
+  - Bright red/orange breast (especially males)
+  - Blue and orange wavy lines on face
+  - More elongated than other sunfish
+
+#### Game Implementation Strategy
+```javascript
+spawnWeight: 8,  // 8% spawn rate (less common - stream specialist)
+
+behavior: {
+    huntingStyle: 'opportunistic',
+    schoolingBehavior: false,    // Less schooling than other sunfish
+    currentPreference: true,     // UNIQUE - prefers moving water
+    structureOriented: true,
+    poolDweller: true,           // Calmer pools in streams
+    lakeRarity: true,            // Rarely in large lakes
+}
+
+fightCharacteristics: {
+    difficulty: 'easy-medium',
+    stamina: 'medium',
+    flyFishing: true             // Popular fly rod target
+}
+```
+
+#### 🔄 Implementation Considerations
+**Pros:**
+- Beautiful coloration (red breast)
+- Native species
+- Different habitat (streams/current)
+- Could add stream fishing locations
+
+**Cons:**
+- Primarily a stream fish (less relevant for Lake Champlain focus)
+- Less common in lakes than other sunfish
+- Overlaps with other sunfish gameplay
+
+**Recommendation:** Medium priority - Better suited if game expands to include tributary streams. Lower priority for main lake gameplay.
+
+---
+
+## Panfish Species Priority Summary
+
+### ✅ Highest Priority (Implement First)
+1. **Bluegill** - Most popular panfish, abundant, schooling, perfect beginner species
+2. **Pumpkinseed** - Native, most colorful, shallow/weedy niche
+3. **Black Crappie** - Larger panfish, schooling, suspended depth strategy
+4. **Rock Bass** - Solitary ambush predator, rocky habitat specialist, red eyes
+
+### 🔄 Medium Priority (Future Updates)
+5. **White Crappie** - Complements black crappie (turbid water niche)
+6. **Redbreast Sunfish** - Stream specialist (better for tributary expansion)
+
+---
+
+## Panfish Implementation Strategy
+
+### Phase 1: Core Panfish (3 species)
+**Recommend:** Bluegill + Pumpkinseed + Black Crappie
+
+**Why This Combination:**
+- **Diversity:** Schooling (bluegill, crappie) + solitary/pairs (pumpkinseed)
+- **Size Range:** Small (4-6") to medium (10-12")
+- **Habitat Spread:** Shallow weeds (pumpkinseed), structure (bluegill), suspended (crappie)
+- **Visual Variety:** Blue gill flap, red ear spot, calico pattern
+- **Beginner-Friendly:** All easy to catch, abundant
+- **Schooling Excitement:** Bluegill and crappie offer multi-catch action
+
+### Phase 2: Specialty Panfish (2 species)
+**Recommend:** Rock Bass + White Crappie
+
+**Why This Combination:**
+- **Rock Bass:** Different behavior (ambush, non-schooling), rocky habitat
+- **White Crappie:** Complements black crappie, turbid water tolerance
+
+### Unique Panfish Gameplay Mechanics
+
+1. **Schooling Behavior**
+   - Bluegill schools of 10-20
+   - Black crappie schools of 5-15
+   - Finding one = finding many (exciting!)
+
+2. **Papermouth Mechanic**
+   - Crappie have delicate mouths
+   - Too aggressive = hook tears out, fish lost
+   - Teaches gentle rod control
+
+3. **Mixed Schools**
+   - Pumpkinseed + Bluegill school together
+   - Variety in single location
+
+4. **Suspended vs. Bottom**
+   - Crappie suspend in water column
+   - Bluegill/pumpkinseed near bottom/structure
+   - Different jigging techniques
+
+5. **Time-Based Feeding**
+   - Crappie: Dawn and midnight-2am
+   - Bluegill: Dawn and night
+   - Pumpkinseed: Afternoon peak
+
+6. **Nest Guarding Aggression**
+   - Spring/summer = ultra-aggressive males
+   - Easy catches during spawn period
+
+---
+
 ## Additional Species Worth Investigating
 
 Based on research, these species are also present in Lake Champlain and could be considered:
@@ -1155,11 +2150,7 @@ Based on research, these species are also present in Lake Champlain and could be
 - **Channel Catfish** (introduced) - Bottom feeder, night fishing
 - **Brown Trout** (introduced, stocked) - Coldwater gamefish
 - **Rainbow Trout/Steelhead** (introduced, stocked) - Coldwater gamefish
-- **Rock Bass** (native) - Small panfish
-- **Pumpkinseed Sunfish** (native) - Small panfish
-- **Bluegill** (status unclear) - Small panfish
-- **Black Crappie** (native) - Schooling panfish
 - **White Perch** (invasive) - Schooling, controversial
 - **White Sucker** (native) - Bottom feeder, spawning runs
 
-**Note:** Most of these are either small panfish (already have perch) or bottom feeders (less exciting gameplay). Priority should be given to species with unique gameplay mechanics or ecological stories.
+**Note:** Most of these are either less exciting gameplay or would compete with existing species. Priority should be given to species with unique gameplay mechanics or ecological stories.

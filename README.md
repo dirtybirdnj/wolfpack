@@ -93,6 +93,23 @@ Set in the deep, cold waters of Lake Champlain - the sixth largest freshwater la
 - Canvas-based rendering
 - No build step required - runs directly in browser
 
+## 🐠 Species Development
+
+### Currently Implemented
+- Lake Trout (*Salvelinus namaycush*) - Deep cold water apex predator
+- Northern Pike (*Esox lucius*) - Shallow water ambush predator
+- Smallmouth Bass (*Micropterus dolomieu*) - Rocky structure specialist
+- Yellow Perch (*Perca flavescens*) - Abundant beginner species
+
+### Species Waitlist
+Future species under consideration for implementation:
+- **Chain Pickerel** (*Esox niger*) - Smaller, more aggressive pike relative
+- **Bowfin** (*Amia calva*) - Living fossil with fierce "death roll" fight mechanic
+- **Longnose Gar** (*Lepisosteus osseus*) - Prehistoric appearance, unique low hook-rate challenge
+- **Muskellunge** (*Esox masquinongy*) - Legendary "fish of 10,000 casts" endgame species
+
+See `docs/NEW_SPECIES_TRACKING.md` for detailed species research and implementation plans.
+
 ## 📝 License
 
 MIT License - Feel free to modify and share!
