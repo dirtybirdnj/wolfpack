@@ -42,13 +42,23 @@ export class MenuScene extends Phaser.Scene {
             window.open('https://www.verticaltubejig.com', '_blank');
         });
 
-        // Game mode selection (moved down 0.5 inch = 48 pixels)
-        this.add.text(width / 2, 328, 'SELECT GAME MODE', {
+        // Game mode selection (moved up 0.5 inch = 48 pixels, was 328)
+        const gameModeText = this.add.text(width / 2, 280, 'SELECT GAME MODE', {
             fontSize: '18px',
             fontFamily: 'Courier New',
             color: '#00ffff',
             fontStyle: 'bold'
         }).setOrigin(0.5);
+
+        // Add fade in/out animation to indicate readiness
+        this.tweens.add({
+            targets: gameModeText,
+            alpha: 0.3,
+            duration: 1500,
+            yoyo: true,
+            repeat: -1,
+            ease: 'Sine.easeInOut'
+        });
 
         // Three button layout centered on screen
         const buttonWidth = 150;
@@ -61,32 +71,32 @@ export class MenuScene extends Phaser.Scene {
         const totalWidth = (buttonWidth * 3) + (buttonSpacing * 2);
         const startX = centerX - (totalWidth / 2) + (buttonWidth / 2);
 
-        // Create Ice Arcade, Ice Unlimited, and Nature Simulation buttons
-        const iceArcade = this.createModeButton(
+        // Create Arcade, Unlimited, and Nature Simulation buttons
+        const arcade = this.createModeButton(
             startX, buttonY,
-            'ICE FISHING',
-            'Arcade',
+            'ARCADE',
+            'timed challenge',
             { fishingType: GameConfig.FISHING_TYPE_ICE, gameMode: GameConfig.GAME_MODE_ARCADE },
             0
         );
 
-        const iceUnlimited = this.createModeButton(
+        const unlimited = this.createModeButton(
             startX + (buttonWidth + buttonSpacing), buttonY,
-            'ICE FISHING',
-            'Unlimited',
+            'UNLIMITED',
+            'no time limit',
             { fishingType: GameConfig.FISHING_TYPE_ICE, gameMode: GameConfig.GAME_MODE_UNLIMITED },
             1
         );
 
-        const natureSimulation = this.createModeButton(
+        const simulation = this.createModeButton(
             startX + (buttonWidth + buttonSpacing) * 2, buttonY,
-            'NATURE',
-            'Simulation',
+            'SIMULATION',
+            'observe behavior',
             { fishingType: GameConfig.FISHING_TYPE_NATURE_SIMULATION, gameMode: null },
             2
         );
 
-        this.buttons = [iceArcade, iceUnlimited, natureSimulation];
+        this.buttons = [arcade, unlimited, simulation];
 
         // Controls hint
         const controlsY = 570;
