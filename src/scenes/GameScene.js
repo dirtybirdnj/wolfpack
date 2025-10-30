@@ -93,8 +93,9 @@ export class GameScene extends Phaser.Scene {
 
         // Tackle box state
         this.tackleBoxOpen = false;
-        this.tackleBoxTab = 0; // 0=lure, 1=line
-        this.tackleBoxSelected = { lure: 0, line: 0 };
+        this.tackleBoxTab = 0; // 0=lure, 1=line, 2=reel
+        this.tackleBoxSelected = { lure: 0, line: 0, reel: 0, lineTest: 3 }; // Default to 10 lb test (index 3)
+        this.reelTabFocus = 0; // 0=reel type section, 1=line test section
         this.switchingToPauseMenu = false; // Flag to keep game paused when switching menus
         this.catchPopupActive = false; // Flag to block input when catch popup is displayed
         this.tackleBoxButtonStates = {
@@ -120,6 +121,19 @@ export class GameScene extends Phaser.Scene {
                 { label: 'Braided', value: 'braid', desc: 'No stretch, high visibility' },
                 { label: 'Monofilament', value: 'monofilament', desc: 'Stretchy, invisible' },
                 { label: 'Fluorocarbon', value: 'fluorocarbon', desc: 'Low visibility, abrasion resistant' }
+            ],
+            lineTestStrengths: [
+                { label: '4 lb', value: 4, desc: 'Ultralight - panfish, perch' },
+                { label: '6 lb', value: 6, desc: 'Light - small fish' },
+                { label: '8 lb', value: 8, desc: 'Light-medium - versatile' },
+                { label: '10 lb', value: 10, desc: 'Medium - general purpose' },
+                { label: '15 lb', value: 15, desc: 'Medium-heavy - lake trout' },
+                { label: '20 lb', value: 20, desc: 'Heavy - big fish' },
+                { label: '30 lb', value: 30, desc: 'Extra heavy - trophy fish' }
+            ],
+            reelTypes: [
+                { label: 'Baitcaster', value: 'baitcaster', desc: 'High performance, backlash risk' },
+                { label: 'Spincaster', value: 'spincaster', desc: 'Beginner-friendly, forgiving' }
             ]
         };
         this.tackleBoxGraphics = null;
@@ -190,6 +204,20 @@ export class GameScene extends Phaser.Scene {
 
             // Initialize reel model
             this.reelModel = new ReelModel();
+
+            // Apply reel type from tackle box selection
+            const reelType = this.registry.get('reelType');
+            if (reelType !== undefined) {
+                this.reelModel.setReelType(reelType);
+                console.log(`🎣 Reel type set to ${this.reelModel.getDisplayName()}`);
+            }
+
+            // Apply line test strength from tackle box selection
+            const lineTestStrength = this.registry.get('lineTestStrength');
+            if (lineTestStrength !== undefined) {
+                this.reelModel.setLineTestStrength(lineTestStrength);
+                console.log(`🧵 Line test strength set to ${lineTestStrength} lb`);
+            }
 
             // Apply line type from tackle box selection
             const lineType = this.registry.get('lineType');
@@ -1168,14 +1196,16 @@ export class GameScene extends Phaser.Scene {
             this.tackleBoxButtonStates.x = xButton.pressed;
         }
 
-        // Tab switching
-        if (leftPressed) {
-            this.tackleBoxTab--;
-            if (this.tackleBoxTab < 0) this.tackleBoxTab = 1;
-        }
-        if (rightPressed) {
-            this.tackleBoxTab++;
-            if (this.tackleBoxTab > 1) this.tackleBoxTab = 0;
+        // Tab switching (except in reel tab where L/R switches sections)
+        if (this.tackleBoxTab !== 2) {
+            if (leftPressed) {
+                this.tackleBoxTab--;
+                if (this.tackleBoxTab < 0) this.tackleBoxTab = 2;
+            }
+            if (rightPressed) {
+                this.tackleBoxTab++;
+                if (this.tackleBoxTab > 2) this.tackleBoxTab = 0;
+            }
         }
 
         // Navigate within tab
@@ -1211,6 +1241,49 @@ export class GameScene extends Phaser.Scene {
                 this.fishingLine.setLineType(selected.value, 'neon-green');
                 this.fishingLineModel.setLineType(selected.value);
                 console.log(`🧵 Line type changed to ${selected.label}`);
+            }
+        } else if (this.tackleBoxTab === 2) {
+            // REEL tab - has two sections: reel type and line test
+            // Use left/right to switch between sections (overrides tab switching in this tab)
+            if (leftPressed) {
+                this.reelTabFocus = 0; // Focus on reel type
+            }
+            if (rightPressed) {
+                this.reelTabFocus = 1; // Focus on line test
+            }
+
+            if (this.reelTabFocus === 0) {
+                // Navigating reel type
+                const maxIndex = this.tackleBoxGear.reelTypes.length - 1;
+                if (upPressed) {
+                    this.tackleBoxSelected.reel--;
+                    if (this.tackleBoxSelected.reel < 0) this.tackleBoxSelected.reel = maxIndex;
+                }
+                if (downPressed) {
+                    this.tackleBoxSelected.reel++;
+                    if (this.tackleBoxSelected.reel > maxIndex) this.tackleBoxSelected.reel = 0;
+                }
+                if (confirmPressed) {
+                    const selected = this.tackleBoxGear.reelTypes[this.tackleBoxSelected.reel];
+                    this.reelModel.setReelType(selected.value);
+                    console.log(`🎣 Reel type changed to ${selected.label}`);
+                }
+            } else if (this.reelTabFocus === 1) {
+                // Navigating line test strength
+                const maxIndex = this.tackleBoxGear.lineTestStrengths.length - 1;
+                if (upPressed) {
+                    this.tackleBoxSelected.lineTest--;
+                    if (this.tackleBoxSelected.lineTest < 0) this.tackleBoxSelected.lineTest = maxIndex;
+                }
+                if (downPressed) {
+                    this.tackleBoxSelected.lineTest++;
+                    if (this.tackleBoxSelected.lineTest > maxIndex) this.tackleBoxSelected.lineTest = 0;
+                }
+                if (confirmPressed) {
+                    const selected = this.tackleBoxGear.lineTestStrengths[this.tackleBoxSelected.lineTest];
+                    this.reelModel.setLineTestStrength(selected.value);
+                    console.log(`🧵 Line test changed to ${selected.label}`);
+                }
             }
         }
     }
@@ -1256,8 +1329,8 @@ export class GameScene extends Phaser.Scene {
         this.time.delayedCall(16, () => titleText.destroy());
 
         // Tab headers
-        const tabs = ['LURE', 'LINE'];
-        const tabWidth = 250;
+        const tabs = ['LURE', 'LINE', 'REEL'];
+        const tabWidth = 180;
         const tabY = panelY + 60;
 
         tabs.forEach((tab, index) => {
@@ -1372,10 +1445,114 @@ export class GameScene extends Phaser.Scene {
                     this.time.delayedCall(16, () => currentText.destroy());
                 }
             });
+        } else if (this.tackleBoxTab === 2) {
+            // REEL tab - shows reel type and line test strength
+            const titleText = this.add.text(panelX + panelWidth / 2, contentY - 20, 'SELECT REEL & LINE TEST', {
+                fontSize: '14px',
+                fontFamily: 'Courier New',
+                color: '#cccccc'
+            });
+            titleText.setOrigin(0.5, 0.5);
+            titleText.setDepth(2001);
+            this.time.delayedCall(16, () => titleText.destroy());
+
+            // Reel Type Section
+            const reelSectionY = contentY;
+            const reelSectionActive = this.reelTabFocus === 0;
+            const reelHeaderText = this.add.text(contentX, reelSectionY, reelSectionActive ? '→ REEL TYPE:' : 'REEL TYPE:', {
+                fontSize: '12px',
+                fontFamily: 'Courier New',
+                color: reelSectionActive ? '#00ffff' : '#ffaa00',
+                fontStyle: 'bold'
+            });
+            reelHeaderText.setDepth(2001);
+            this.time.delayedCall(16, () => reelHeaderText.destroy());
+
+            this.tackleBoxGear.reelTypes.forEach((reel, index) => {
+                const itemY = reelSectionY + 25 + index * 30;
+                const isSelected = index === this.tackleBoxSelected.reel;
+                const isCurrent = this.reelModel.reelType === reel.value;
+
+                const labelText = this.add.text(contentX + 10, itemY, reel.label, {
+                    fontSize: isSelected ? '15px' : '13px',
+                    fontFamily: 'Courier New',
+                    color: isSelected ? '#00ffff' : '#00ff00',
+                    fontStyle: isSelected ? 'bold' : 'normal'
+                });
+                labelText.setDepth(2001);
+                this.time.delayedCall(16, () => labelText.destroy());
+
+                const descText = this.add.text(contentX + 160, itemY, reel.desc, {
+                    fontSize: '11px',
+                    fontFamily: 'Courier New',
+                    color: isSelected ? '#cccccc' : '#888888'
+                });
+                descText.setDepth(2001);
+                this.time.delayedCall(16, () => descText.destroy());
+
+                if (isCurrent) {
+                    const currentText = this.add.text(contentX + 420, itemY, '← CURRENT', {
+                        fontSize: '11px',
+                        fontFamily: 'Courier New',
+                        color: '#ffff00'
+                    });
+                    currentText.setDepth(2001);
+                    this.time.delayedCall(16, () => currentText.destroy());
+                }
+            });
+
+            // Line Test Strength Section
+            const lineTestSectionY = contentY + 100;
+            const lineTestSectionActive = this.reelTabFocus === 1;
+            const lineTestHeaderText = this.add.text(contentX, lineTestSectionY, lineTestSectionActive ? '→ LINE TEST STRENGTH:' : 'LINE TEST STRENGTH:', {
+                fontSize: '12px',
+                fontFamily: 'Courier New',
+                color: lineTestSectionActive ? '#00ffff' : '#ffaa00',
+                fontStyle: 'bold'
+            });
+            lineTestHeaderText.setDepth(2001);
+            this.time.delayedCall(16, () => lineTestHeaderText.destroy());
+
+            this.tackleBoxGear.lineTestStrengths.forEach((lineTest, index) => {
+                const itemY = lineTestSectionY + 25 + index * 25;
+                const isSelected = index === this.tackleBoxSelected.lineTest;
+                const isCurrent = this.reelModel.lineTestStrength === lineTest.value;
+
+                const labelText = this.add.text(contentX + 10, itemY, lineTest.label, {
+                    fontSize: isSelected ? '14px' : '12px',
+                    fontFamily: 'Courier New',
+                    color: isSelected ? '#00ffff' : '#00ff00',
+                    fontStyle: isSelected ? 'bold' : 'normal'
+                });
+                labelText.setDepth(2001);
+                this.time.delayedCall(16, () => labelText.destroy());
+
+                const descText = this.add.text(contentX + 100, itemY, lineTest.desc, {
+                    fontSize: '10px',
+                    fontFamily: 'Courier New',
+                    color: isSelected ? '#cccccc' : '#888888'
+                });
+                descText.setDepth(2001);
+                this.time.delayedCall(16, () => descText.destroy());
+
+                if (isCurrent) {
+                    const currentText = this.add.text(contentX + 420, itemY, '← CURRENT', {
+                        fontSize: '10px',
+                        fontFamily: 'Courier New',
+                        color: '#ffff00'
+                    });
+                    currentText.setDepth(2001);
+                    this.time.delayedCall(16, () => currentText.destroy());
+                }
+            });
         }
 
-        // Instructions
-        const hintText = this.add.text(panelX + panelWidth / 2, panelY + panelHeight - 20, 'Arrow Keys: Navigate | X: Select | TAB/Select: Close', {
+        // Instructions - different for reel tab
+        let hintMessage = 'Arrow Keys: Navigate | X: Select | TAB/Select: Close';
+        if (this.tackleBoxTab === 2) {
+            hintMessage = 'L/R: Switch Section | Up/Down: Navigate | X: Select | TAB: Close';
+        }
+        const hintText = this.add.text(panelX + panelWidth / 2, panelY + panelHeight - 20, hintMessage, {
             fontSize: '12px',
             fontFamily: 'Courier New',
             color: '#aaaaaa'
