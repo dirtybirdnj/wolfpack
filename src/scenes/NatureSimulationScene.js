@@ -22,6 +22,7 @@ export class NatureSimulationScene extends Phaser.Scene {
         this.fishes = [];
         this.baitfishClouds = [];
         this.zooplankton = [];
+        this.crayfish = [];
 
         // Simulation state
         this.waterTemp = 40;
@@ -602,6 +603,32 @@ export class NatureSimulationScene extends Phaser.Scene {
             plankton.update();
         });
 
+        // Update crayfish
+        this.crayfish = this.crayfish.filter(cf => {
+            if (cf.visible && !cf.consumed) {
+                // Find nearby zooplankton for hunting
+                const nearbyZooplankton = this.zooplankton.filter(zp => {
+                    const dx = cf.x - zp.x;
+                    const dy = cf.y - zp.y;
+                    return Math.sqrt(dx * dx + dy * dy) < 150;
+                });
+
+                // Check if smallmouth bass nearby (predators)
+                const predatorsNearby = this.fishes.some(f => {
+                    if (f.species !== 'smallmouth_bass') return false;
+                    const dx = cf.x - f.x;
+                    const dy = cf.y - f.y;
+                    return Math.sqrt(dx * dx + dy * dy) < 200;
+                });
+
+                cf.update(nearbyZooplankton, predatorsNearby);
+                return true;
+            } else {
+                cf.destroy();
+                return false;
+            }
+        });
+
         // Update debug system
         if (this.debugSystem) {
             this.debugSystem.update();
@@ -611,6 +638,7 @@ export class NatureSimulationScene extends Phaser.Scene {
         this.fishes = this.fishes.filter(f => f.visible);
         this.baitfishClouds = this.baitfishClouds.filter(c => c.visible);
         this.zooplankton = this.zooplankton.filter(p => p.visible);
+        this.crayfish = this.crayfish.filter(cf => cf.visible);
     }
 }
 
