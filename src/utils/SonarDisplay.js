@@ -42,13 +42,10 @@ export class SonarDisplay {
             // Boat/kayak mode: get depth at player's current position
             return this.scene.boatManager.getDepthAtPosition(this.scene.boatManager.playerX);
         } else if (this.scene.iceHoleManager) {
-            // Ice fishing mode: get maximum depth from current hole's bottom profile
+            // Ice fishing mode: get depth from current hole
             const currentHole = this.scene.iceHoleManager.getCurrentHole();
-            if (currentHole && currentHole.bottomProfile) {
-                const maxPoint = currentHole.bottomProfile.reduce((max, curr) =>
-                    curr.y > max.y ? curr : max
-                );
-                return maxPoint.y / GameConfig.DEPTH_SCALE;
+            if (currentHole) {
+                return currentHole.depth;
             }
         }
         return GameConfig.MAX_DEPTH; // Fallback

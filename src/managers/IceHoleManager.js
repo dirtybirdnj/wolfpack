@@ -31,7 +31,7 @@ export class IceHoleManager {
 
         // Graphics
         this.iceGraphics = scene.add.graphics();
-        this.iceGraphics.setDepth(1000); // On top of most things
+        this.iceGraphics.setDepth(5); // Above background but below fish
 
         // Ice surface height (in pixels from top)
         this.iceHeight = 54;
@@ -179,7 +179,7 @@ export class IceHoleManager {
             // Position lure at center of screen (at the hole)
             if (this.scene.lure) {
                 this.scene.lure.x = GameConfig.CANVAS_WIDTH / 2;
-                this.scene.lure.y = this.iceHeight; // Just below ice surface
+                this.scene.lure.y = 40; // Just below the hole at top of screen
                 this.scene.lure.depth = 0;
                 this.scene.lure.state = 'SURFACE';
             }
@@ -225,8 +225,8 @@ export class IceHoleManager {
     render() {
         this.iceGraphics.clear();
 
-        // Draw ice surface
-        this.drawIceSurface();
+        // Draw ice surface - REMOVED: ice surface was blocking fish in arcade mode
+        // this.drawIceSurface();
 
         // Draw all holes
         this.holes.forEach((hole, index) => {
@@ -273,30 +273,33 @@ export class IceHoleManager {
 
         const isCurrent = index === this.currentHoleIndex && !this.movementMode;
 
+        // Hole position at top of screen (since ice surface is removed)
+        const holeY = 20;
+
         // Hole opening (dark circle)
         this.iceGraphics.fillStyle(0x1a3a4a, 1.0);
-        this.iceGraphics.fillCircle(screenX, this.iceHeight / 2, 16);
+        this.iceGraphics.fillCircle(screenX, holeY, 16);
 
         // Hole rim (lighter)
         this.iceGraphics.lineStyle(2, 0xffffff, 0.8);
-        this.iceGraphics.strokeCircle(screenX, this.iceHeight / 2, 16);
+        this.iceGraphics.strokeCircle(screenX, holeY, 16);
 
         // Current hole indicator
         if (isCurrent) {
             this.iceGraphics.lineStyle(3, 0x00ff00, 1.0);
-            this.iceGraphics.strokeCircle(screenX, this.iceHeight / 2, 20);
+            this.iceGraphics.strokeCircle(screenX, holeY, 20);
         }
 
         // Hole number
         const textColor = isCurrent ? '#00ff00' : '#ffffff';
-        const text = this.scene.add.text(screenX, this.iceHeight / 2, `${index + 1}`, {
+        const text = this.scene.add.text(screenX, holeY, `${index + 1}`, {
             fontSize: '10px',
             fontFamily: 'Courier New',
             color: textColor,
             fontStyle: 'bold'
         });
         text.setOrigin(0.5, 0.5);
-        text.setDepth(1001);
+        text.setDepth(100); // Above everything for visibility
 
         // Clean up text after next frame (since graphics clear each frame)
         this.scene.time.delayedCall(50, () => text.destroy());
@@ -304,27 +307,28 @@ export class IceHoleManager {
 
     drawPlayerOnIce() {
         const screenX = GameConfig.CANVAS_WIDTH / 2; // Player always centered when moving
+        const playerY = 20; // Position at top of screen (since ice surface is removed)
 
         // Player figure (simple person icon)
         // Head
         this.iceGraphics.fillStyle(0xff6600, 1.0);
-        this.iceGraphics.fillCircle(screenX, this.iceHeight / 2 - 10, 5);
+        this.iceGraphics.fillCircle(screenX, playerY - 10, 5);
 
         // Body
         this.iceGraphics.lineStyle(3, 0xff6600, 1.0);
-        this.iceGraphics.lineBetween(screenX, this.iceHeight / 2 - 5, screenX, this.iceHeight / 2 + 5);
+        this.iceGraphics.lineBetween(screenX, playerY - 5, screenX, playerY + 5);
 
         // Legs
-        this.iceGraphics.lineBetween(screenX, this.iceHeight / 2 + 5, screenX - 4, this.iceHeight / 2 + 12);
-        this.iceGraphics.lineBetween(screenX, this.iceHeight / 2 + 5, screenX + 4, this.iceHeight / 2 + 12);
+        this.iceGraphics.lineBetween(screenX, playerY + 5, screenX - 4, playerY + 12);
+        this.iceGraphics.lineBetween(screenX, playerY + 5, screenX + 4, playerY + 12);
 
         // Arms (holding drill)
-        this.iceGraphics.lineBetween(screenX, this.iceHeight / 2, screenX - 6, this.iceHeight / 2 + 3);
-        this.iceGraphics.lineBetween(screenX, this.iceHeight / 2, screenX + 6, this.iceHeight / 2 - 2);
+        this.iceGraphics.lineBetween(screenX, playerY, screenX - 6, playerY + 3);
+        this.iceGraphics.lineBetween(screenX, playerY, screenX + 6, playerY - 2);
 
         // Position indicator below
         const depthHere = this.getDepthAtPosition(this.playerX);
-        const text = this.scene.add.text(screenX, this.iceHeight + 15, `Depth: ${depthHere.toFixed(0)}ft`, {
+        const text = this.scene.add.text(screenX, playerY + 35, `Depth: ${depthHere.toFixed(0)}ft`, {
             fontSize: '8px',
             fontFamily: 'Courier New',
             color: '#ffff00',
@@ -332,7 +336,7 @@ export class IceHoleManager {
             padding: { x: 4, y: 2 }
         });
         text.setOrigin(0.5, 0);
-        text.setDepth(1001);
+        text.setDepth(100); // Above everything for visibility
 
         this.scene.time.delayedCall(50, () => text.destroy());
     }

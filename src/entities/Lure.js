@@ -128,14 +128,8 @@ export class Lure {
             // Boat/kayak mode: get depth at player's current position
             bottomDepth = this.scene.boatManager.getDepthAtPosition(this.scene.boatManager.playerX);
         } else if (this.scene.iceHoleManager) {
-            // Ice fishing mode: get depth from current hole's bottom profile
-            const currentHole = this.scene.iceHoleManager.getCurrentHole();
-            if (currentHole && currentHole.bottomProfile) {
-                const closest = currentHole.bottomProfile.reduce((prev, curr) =>
-                    Math.abs(curr.x - this.x) < Math.abs(prev.x - this.x) ? curr : prev
-                );
-                bottomDepth = closest.y / GameConfig.DEPTH_SCALE;
-            }
+            // Ice fishing mode: use hole manager's depth calculation
+            bottomDepth = this.scene.iceHoleManager.getDepthAtPosition(this.x);
         }
 
         // Stop lure at actual lake bottom

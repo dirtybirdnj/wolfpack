@@ -191,14 +191,8 @@ export class BaitfishCloud {
         if (this.scene.boatManager) {
             bottomDepth = this.scene.boatManager.getDepthAtPosition(this.worldX);
         } else if (this.scene.iceHoleManager) {
-            // For ice fishing, get bottom from current hole's profile
-            const currentHole = this.scene.iceHoleManager.getCurrentHole();
-            if (currentHole && currentHole.bottomProfile) {
-                const closest = currentHole.bottomProfile.reduce((prev, curr) =>
-                    Math.abs(curr.x - this.centerX) < Math.abs(prev.x - this.centerX) ? curr : prev
-                );
-                bottomDepth = closest.y / GameConfig.DEPTH_SCALE;
-            }
+            // For ice fishing, use hole manager's depth calculation
+            bottomDepth = this.scene.iceHoleManager.getDepthAtPosition(this.centerX);
         } else {
             // Nature simulation mode - bottom profile is drawn at maxDepth - 5 feet (deepest point)
             // Subtract 5 to match the visual bottom profile from SonarDisplay.generateBottomProfile()
@@ -206,7 +200,8 @@ export class BaitfishCloud {
         }
 
         // Keep cloud in vertical bounds based on water depth
-        const minY = 5 * GameConfig.DEPTH_SCALE; // 5 feet from surface
+        // Allow baitfish clouds to swim near surface (1 foot minimum) now that ice rendering is removed
+        const minY = 1 * GameConfig.DEPTH_SCALE; // 1 foot from surface
         const maxY = Math.max(minY + 10, (bottomDepth - 5) * GameConfig.DEPTH_SCALE); // 5 feet from bottom, but ensure maxY > minY
         this.centerY = Math.max(minY, Math.min(maxY, this.centerY));
 

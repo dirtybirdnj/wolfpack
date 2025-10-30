@@ -2,7 +2,6 @@
 // Main entry point
 
 import GameConfig from './config/GameConfig.js';
-import BootScene from './scenes/BootScene.js';
 import MenuScene from './scenes/MenuScene.js';
 import NavigationScene from './scenes/NavigationScene.js';
 import GameScene from './scenes/GameScene.js';
@@ -24,7 +23,7 @@ const config = {
             debug: false
         }
     },
-    scene: [BootScene, MenuScene, NavigationScene, GameScene, GameOverScene, UIScene, NatureSimulationScene],
+    scene: [MenuScene, NavigationScene, GameScene, GameOverScene, UIScene, NatureSimulationScene],
     render: {
         pixelArt: false,
         antialias: true,
@@ -187,6 +186,21 @@ function setupDevTools(game) {
 
                     // Update percentage text
                     dropSpeedPercent.textContent = dropPercent;
+                }
+
+                // Update drag setting meter
+                const dragSettingFill = document.getElementById('drag-setting-fill');
+                const dragSettingPercent = document.getElementById('drag-setting-percent');
+
+                if (dragSettingFill && dragSettingPercent && gameScene.reelModel) {
+                    // Get current drag setting (0-100%)
+                    const dragPercent = Math.round(gameScene.reelModel.dragSetting || 50);
+
+                    // Update bar width
+                    dragSettingFill.style.width = `${dragPercent}%`;
+
+                    // Update percentage text
+                    dragSettingPercent.textContent = dragPercent;
                 }
             }
 
