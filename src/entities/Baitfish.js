@@ -35,6 +35,7 @@ export class Baitfish {
     get age() { return this.model.age; }
     get panicMode() { return this.model.panicMode; }
     get cloudId() { return this.model.cloudId; }
+    set cloudId(value) { this.model.cloudId = value; }
     get velocityX() { return this.model.velocityX; }
     get velocityY() { return this.model.velocityY; }
     get currentTarget() { return this.model.currentTarget; }
