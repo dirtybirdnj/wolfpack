@@ -586,16 +586,16 @@
     <!-- Keyboard Shortcuts -->
     <script>
         document.addEventListener('keydown', (event) => {
-            // 'm' key to toggle sidebar menu
+            // 'm' key to toggle top bar (same as down arrow)
             if (event.key === 'm' || event.key === 'M') {
                 // Don't trigger if user is typing in an input field
                 if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') {
                     return;
                 }
 
-                const sidebarToggle = document.getElementById('sidebar-toggle');
-                if (sidebarToggle) {
-                    sidebarToggle.click();
+                const topbarToggle = document.getElementById('topbar-toggle');
+                if (topbarToggle) {
+                    topbarToggle.click();
                 }
             }
         });
