@@ -586,54 +586,46 @@ export class FishFight {
         rulerGraphics.setDepth(2002);
         elements.push(rulerGraphics);
 
-        // Ruler dimensions - exact scale matching fish
+        // Ruler dimensions - exact scale matching fish (larger for 4x fish)
         const rulerLengthPx = fishLengthInches * pixelsPerInch;
-        const rulerHeight = 20;
+        const rulerHeight = 30; // Taller ruler for larger fish
         const rulerStartX = startX;
         const rulerEndX = startX + rulerLengthPx;
 
-        // Draw ruler background (yellow/tan like a real measuring tape)
-        rulerGraphics.fillStyle(0xf4e4c1, 1.0);
+        // Draw ruler background (white like a real fishing ruler)
+        rulerGraphics.fillStyle(0xffffff, 1.0);
         rulerGraphics.fillRect(rulerStartX, centerY - rulerHeight / 2, rulerLengthPx, rulerHeight);
 
-        // Draw ruler border
-        rulerGraphics.lineStyle(2, 0x8b7355, 1.0);
+        // Draw ruler border (black)
+        rulerGraphics.lineStyle(3, 0x000000, 1.0);
         rulerGraphics.strokeRect(rulerStartX, centerY - rulerHeight / 2, rulerLengthPx, rulerHeight);
 
-        // Draw tick marks for each inch
-        rulerGraphics.lineStyle(1, 0x000000, 0.8);
+        // Draw tick marks and numbers for EVERY inch
+        rulerGraphics.lineStyle(2, 0x000000, 1.0);
         for (let i = 0; i <= fishLengthInches; i++) {
             const tickX = rulerStartX + (i * pixelsPerInch);
 
-            // Major tick marks every 6 inches (longer)
-            if (i % 6 === 0) {
-                rulerGraphics.lineBetween(
-                    tickX, centerY - rulerHeight / 2,
-                    tickX, centerY + rulerHeight / 2
-                );
+            // Full-height tick marks at every inch
+            rulerGraphics.lineBetween(
+                tickX, centerY - rulerHeight / 2,
+                tickX, centerY + rulerHeight / 2
+            );
 
-                // Add number label for major ticks
-                if (i > 0) {
-                    const label = this.scene.add.text(tickX, centerY + rulerHeight / 2 + 5,
-                        `${i}"`,
-                        {
-                            fontSize: '12px',
-                            fontFamily: 'Courier New',
-                            color: '#000000',
-                            align: 'center'
-                        }
-                    );
-                    label.setOrigin(0.5, 0);
-                    label.setDepth(2003);
-                    elements.push(label);
-                }
-            }
-            // Minor tick marks (shorter)
-            else {
-                rulerGraphics.lineBetween(
-                    tickX, centerY - rulerHeight / 4,
-                    tickX, centerY + rulerHeight / 4
+            // Add number label for every inch
+            if (i > 0) {
+                const label = this.scene.add.text(tickX, centerY,
+                    `${i}`,
+                    {
+                        fontSize: '14px',
+                        fontFamily: 'Courier New',
+                        color: '#000000',
+                        align: 'center',
+                        fontStyle: 'bold'
+                    }
                 );
+                label.setOrigin(0.5, 0.5);
+                label.setDepth(2003);
+                elements.push(label);
             }
         }
 
@@ -674,9 +666,10 @@ export class FishFight {
 
     /**
      * Draw size classification ruler showing SMALL/MEDIUM/LARGE/TROPHY zones
+     * Greys out size classes the fish hasn't reached yet
      * Returns array of all created elements for cleanup
      */
-    drawClassificationRuler(startX, centerY, speciesName, pixelsPerInch) {
+    drawClassificationRuler(startX, centerY, speciesName, fishLength, pixelsPerInch) {
         const elements = [];
 
         // Get species data from imported PREDATOR_SPECIES
@@ -690,7 +683,7 @@ export class FishFight {
         rulerGraphics.setDepth(2002);
         elements.push(rulerGraphics);
 
-        const rulerHeight = 25;
+        const rulerHeight = 35; // Taller for larger fish
         const categories = speciesData.sizeCategories;
 
         // Size classification colors
@@ -719,25 +712,32 @@ export class FishFight {
             const zoneStartX = startX + (minLength * pixelsPerInch);
             const zoneWidth = (maxLength - minLength) * pixelsPerInch;
 
+            // Check if fish has reached this size class
+            const fishReachedClass = fishLength >= minLength;
+            const opacity = fishReachedClass ? 0.7 : 0.2; // Grey out unreached classes
+            const borderOpacity = fishReachedClass ? 1.0 : 0.3;
+
             // Draw zone background
-            rulerGraphics.fillStyle(colors[sizeName], 0.6);
+            rulerGraphics.fillStyle(colors[sizeName], opacity);
             rulerGraphics.fillRect(zoneStartX, centerY - rulerHeight / 2, zoneWidth, rulerHeight);
 
             // Draw zone border
-            rulerGraphics.lineStyle(2, colors[sizeName], 1.0);
+            rulerGraphics.lineStyle(3, colors[sizeName], borderOpacity);
             rulerGraphics.strokeRect(zoneStartX, centerY - rulerHeight / 2, zoneWidth, rulerHeight);
 
-            // Add zone label
+            // Add zone label (greyed text for unreached classes)
             const labelX = zoneStartX + zoneWidth / 2;
+            const labelColor = fishReachedClass ? textColors[sizeName] : '#666666';
             const labelText = this.scene.add.text(labelX, centerY,
                 sizeName.toUpperCase(),
                 {
-                    fontSize: '10px',
+                    fontSize: '12px',
                     fontFamily: 'Courier New',
-                    color: textColors[sizeName],
+                    color: labelColor,
                     align: 'center',
                     stroke: '#000000',
-                    strokeThickness: 3
+                    strokeThickness: 3,
+                    fontStyle: 'bold'
                 }
             );
             labelText.setOrigin(0.5, 0.5);
@@ -746,13 +746,15 @@ export class FishFight {
 
             // Add length markers at boundaries
             if (sizeName !== 'small') { // Don't draw start marker for small (it's at 0)
-                const markerText = this.scene.add.text(zoneStartX, centerY + rulerHeight / 2 + 3,
+                const markerColor = fishReachedClass ? '#ffffff' : '#666666';
+                const markerText = this.scene.add.text(zoneStartX, centerY + rulerHeight / 2 + 5,
                     `${minLength}"`,
                     {
-                        fontSize: '9px',
+                        fontSize: '11px',
                         fontFamily: 'Courier New',
-                        color: '#ffffff',
-                        align: 'center'
+                        color: markerColor,
+                        align: 'center',
+                        fontStyle: 'bold'
                     }
                 );
                 markerText.setOrigin(0.5, 0);
@@ -795,9 +797,9 @@ export class FishFight {
         overlay.setDepth(2000);
         overlay.setInteractive(); // Block input to objects below
 
-        // Create popup background
-        const popupWidth = 500;
-        const popupHeight = 400;
+        // Create larger popup background (was 500x400, now 900x600)
+        const popupWidth = 900;
+        const popupHeight = 600;
         const popupX = GameConfig.CANVAS_WIDTH / 2;
         const popupY = GameConfig.CANVAS_HEIGHT / 2;
 
@@ -810,15 +812,15 @@ export class FishFight {
         popupBg.setDepth(2001);
 
         // Title
-        const title = this.scene.add.text(popupX, popupY - 160,
+        const title = this.scene.add.text(popupX, popupY - 260,
             'FISH CAUGHT!',
             {
-                fontSize: '32px',
+                fontSize: '48px',
                 fontFamily: 'Courier New',
                 color: '#00ff00',
                 align: 'center',
                 stroke: '#000000',
-                strokeThickness: 4
+                strokeThickness: 6
             }
         );
         title.setOrigin(0.5, 0.5);
@@ -830,11 +832,11 @@ export class FishFight {
 
         // Tournament-style fish photo: scale fish to match ruler exactly
         // NOTE: this.fish is the model (LakeTrout, SmallmouthBass, etc.), not the entity wrapper
-        const fishRenderY = popupY - 60;
+        const fishRenderY = popupY - 140; // Positioned higher in larger popup
 
         // Calculate proper scale: fish body should match ruler length
-        // Fish body is roughly 2.5x bodySize in length for most species
-        const desiredPixelsPerInch = 6; // Tournament ruler scale (6 pixels per inch)
+        // 4x larger than before (was 6, now 24 pixels per inch)
+        const desiredPixelsPerInch = 24; // Tournament ruler scale (24 pixels per inch for 4x size)
         const fishLengthInches = this.fish.length;
         const desiredFishLengthPx = fishLengthInches * desiredPixelsPerInch;
 
@@ -854,12 +856,12 @@ export class FishFight {
 
         // Draw measurement ruler below the fish, starting at fish mouth
         const rulerElements = this.drawMeasurementRuler(
-            fishMouthX, fishRenderY + 45, fishLengthInches, desiredPixelsPerInch
+            fishMouthX, fishRenderY + 80, fishLengthInches, desiredPixelsPerInch
         );
 
         // Draw size classification ruler below the measurement ruler
         const classificationElements = this.drawClassificationRuler(
-            fishMouthX, fishRenderY + 75, this.fish.species, desiredPixelsPerInch
+            fishMouthX, fishRenderY + 120, this.fish.species, this.fish.length, desiredPixelsPerInch
         );
 
         // Fish stats
@@ -874,29 +876,29 @@ export class FishFight {
             ageDisplay = `${this.fish.age} years`;
         }
 
-        const statsText = this.scene.add.text(popupX, popupY + 55,
+        const statsText = this.scene.add.text(popupX, popupY + 100,
             `${info.name} (${info.gender})\n` +
             `Weight: ${info.weight}  |  Length: ${info.length}\n` +
             `Age: ${ageDisplay}\n` +
             `Points: +${this.fish.points}`,
             {
-                fontSize: '18px',
+                fontSize: '22px',
                 fontFamily: 'Courier New',
                 color: '#ffffff',
                 align: 'center',
                 stroke: '#000000',
-                strokeThickness: 3,
-                lineSpacing: 8
+                strokeThickness: 4,
+                lineSpacing: 10
             }
         );
         statsText.setOrigin(0.5, 0);  // Anchor at top-center instead of center
         statsText.setDepth(2002);
 
         // Continue prompt - positioned well below stats
-        const continueText = this.scene.add.text(popupX, popupY + 165,
+        const continueText = this.scene.add.text(popupX, popupY + 240,
             'Press X button to continue',
             {
-                fontSize: '16px',
+                fontSize: '20px',
                 fontFamily: 'Courier New',
                 color: '#ffff00',
                 align: 'center'
