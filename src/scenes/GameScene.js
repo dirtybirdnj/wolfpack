@@ -245,19 +245,23 @@ export class GameScene extends Phaser.Scene {
             this.events.on('fishBump', this.handleFishBump, this);
 
             // Gamepad disconnect listener - show warning when controller dies
+            // Store references for cleanup
             if (window.gamepadManager) {
-                window.gamepadManager.on('disconnected', (gamepad) => {
+                this.gamepadDisconnectedHandler = (gamepad) => {
                     console.log('🎮 Controller disconnected during gameplay');
                     this.notificationSystem.showGamepadDisconnected();
-                });
+                };
 
-                window.gamepadManager.on('connected', (gamepad) => {
+                this.gamepadConnectedHandler = (gamepad) => {
                     console.log('🎮 Controller reconnected');
                     // Auto-dismiss warning if it's showing
                     if (this.notificationSystem.hasDisconnectWarning()) {
                         this.notificationSystem.dismissDisconnectWarning();
                     }
-                });
+                };
+
+                window.gamepadManager.on('disconnected', this.gamepadDisconnectedHandler);
+                window.gamepadManager.on('connected', this.gamepadConnectedHandler);
             }
 
             // Fade in
@@ -1594,6 +1598,21 @@ export class GameScene extends Phaser.Scene {
      * Clean up scene resources
      */
     shutdown() {
+        // Remove event listeners first to prevent memory leaks
+        this.events.off('fishStrike', this.handleFishStrike, this);
+        this.events.off('fishCaught', this.handleFishCaught, this);
+        this.events.off('fishBump', this.handleFishBump, this);
+
+        // Remove gamepad event listeners
+        if (window.gamepadManager) {
+            if (this.gamepadDisconnectedHandler) {
+                window.gamepadManager.off('disconnected', this.gamepadDisconnectedHandler);
+            }
+            if (this.gamepadConnectedHandler) {
+                window.gamepadManager.off('connected', this.gamepadConnectedHandler);
+            }
+        }
+
         // Clean up entities
         this.fishes.forEach(fish => fish.destroy());
         this.baitfishClouds.forEach(cloud => cloud.destroy());
