@@ -206,7 +206,7 @@ export class BaitfishCloud {
         }
 
         // Keep cloud in vertical bounds based on water depth
-        const minY = 5 * GameConfig.DEPTH_SCALE; // 5 feet from surface
+        const minY = 1 * GameConfig.DEPTH_SCALE; // 1 foot from surface
         const maxY = Math.max(minY + 10, (bottomDepth - 5) * GameConfig.DEPTH_SCALE); // 5 feet from bottom, but ensure maxY > minY
         this.centerY = Math.max(minY, Math.min(maxY, this.centerY));
 
