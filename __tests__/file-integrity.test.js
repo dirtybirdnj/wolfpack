@@ -8,11 +8,28 @@
  */
 
 import fs from 'fs';
-import { globSync } from 'glob';
+import path from 'path';
 import { execSync } from 'child_process';
 
+// Helper function to recursively find all .js files
+function findJsFiles(dir) {
+  const files = [];
+  const items = fs.readdirSync(dir, { withFileTypes: true });
+
+  for (const item of items) {
+    const fullPath = path.join(dir, item.name);
+    if (item.isDirectory()) {
+      files.push(...findJsFiles(fullPath));
+    } else if (item.isFile() && item.name.endsWith('.js')) {
+      files.push(fullPath);
+    }
+  }
+
+  return files;
+}
+
 describe('File Integrity', () => {
-  const srcFiles = globSync('src/**/*.js');
+  const srcFiles = findJsFiles('src');
 
   test('All JS files have valid syntax', () => {
     srcFiles.forEach(file => {
