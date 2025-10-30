@@ -11,6 +11,47 @@ export class MenuScene extends Phaser.Scene {
         // Load logo assets
         this.load.image('wolfpack-logo', 'samples/assets/wolfpack-text-transparent.png');
         this.load.image('vtj-logo', 'samples/assets/vtj-circle-thickborder.png');
+
+        // Load sample images for theming (previously loaded by BootScene)
+        this.load.image('logo-wolfpack', 'samples/screenshots/pr7-snes-wolfpack-artwork.jpg');
+        this.load.image('bg-ice', 'samples/assets/pr7-adirondacks-chunky-ice.jpg');
+        this.load.image('bg-sunset', 'samples/assets/pr7-tip-up-sunrise.jpg');
+        this.load.image('bg-rod', 'samples/assets/pr7-rod-box-drill-hole-bridge.jpg');
+        this.load.image('fish-trophy', 'samples/assets/pr2-lake-trout-photo-1.jpg');
+
+        // Create programmatic assets (previously created by BootScene)
+        this.load.on('complete', () => {
+            this.createProgrammaticAssets();
+        });
+    }
+
+    createProgrammaticAssets() {
+        // Create simple textures programmatically
+
+        // Lure texture
+        const lureGraphics = this.add.graphics();
+        lureGraphics.fillStyle(GameConfig.COLOR_LURE, 1);
+        lureGraphics.fillCircle(16, 16, 8);
+        lureGraphics.generateTexture('lure', 32, 32);
+        lureGraphics.destroy();
+
+        // Fish texture (different sizes)
+        const fishSizes = ['small', 'medium', 'large'];
+        fishSizes.forEach((size, index) => {
+            const fishGraphics = this.add.graphics();
+            const sizeMultiplier = (index + 1) * 5;
+            fishGraphics.fillStyle(GameConfig.COLOR_FISH_MEDIUM, 1);
+            fishGraphics.fillEllipse(20, 16, sizeMultiplier * 2, sizeMultiplier);
+            fishGraphics.generateTexture(`fish_${size}`, 40, 32);
+            fishGraphics.destroy();
+        });
+
+        // Particle texture for effects
+        const particleGraphics = this.add.graphics();
+        particleGraphics.fillStyle(0xffffff, 1);
+        particleGraphics.fillCircle(4, 4, 4);
+        particleGraphics.generateTexture('particle', 8, 8);
+        particleGraphics.destroy();
     }
 
     create() {
