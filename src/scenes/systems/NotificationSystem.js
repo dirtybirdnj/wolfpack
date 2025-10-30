@@ -49,6 +49,8 @@ export class NotificationSystem {
 
         // Gamepad disconnect warning state
         this.disconnectWarning = null;
+        this.controllerReconnected = false; // Track when controller reconnects
+        this.xButtonWasPressed = false; // Track X button state for disconnect warning
     }
 
     /**
@@ -235,8 +237,11 @@ export class NotificationSystem {
             hint: hint
         };
 
-        // Pause the game
-        this.scene.physics.pause();
+        // Pause the game using the same system as START button
+        // This freezes the game state so player doesn't lose fish
+        this.isPaused = true;
+        this.controllerReconnected = false;
+        this.xButtonWasPressed = false;
 
         return this.disconnectWarning;
     }
@@ -253,9 +258,10 @@ export class NotificationSystem {
         this.disconnectWarning.hint.destroy();
 
         this.disconnectWarning = null;
+        this.controllerReconnected = false;
 
-        // Resume the game
-        this.scene.physics.resume();
+        // Resume the game using the same system as START button
+        this.isPaused = false;
     }
 
     /**
@@ -934,23 +940,62 @@ export class NotificationSystem {
      * @param {number} delta - Time since last frame
      */
     update(time, delta) {
-        // Handle pause menu input when paused
-        if (this.isPaused) {
+        // Handle pause menu input when paused (but NOT when disconnect warning is showing)
+        if (this.isPaused && !this.hasDisconnectWarning()) {
             this.handlePauseMenuInput();
         }
 
         // Handle disconnect warning dismissal
         if (this.hasDisconnectWarning()) {
-            const spaceKey = this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
-            const escKey = this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ESC);
+            // Check if controller reconnected
+            if (window.gamepadManager && window.gamepadManager.isConnected() && !this.controllerReconnected) {
+                // Controller just reconnected - update message to show "Press X to continue"
+                this.controllerReconnected = true;
 
-            if (Phaser.Input.Keyboard.JustDown(spaceKey) || Phaser.Input.Keyboard.JustDown(escKey)) {
-                this.dismissDisconnectWarning();
+                // Update the hint text
+                this.disconnectWarning.hint.setText('🎮 Controller Reconnected!\nPress X to continue');
+                this.disconnectWarning.hint.setColor('#00ff00');
+
+                // Stop the title pulsing animation (controller is back!)
+                this.scene.tweens.killTweensOf(this.disconnectWarning.title);
+                this.disconnectWarning.title.setAlpha(1);
+                this.disconnectWarning.title.setColor('#00ff00');
             }
 
-            // Auto-dismiss if controller reconnects
-            if (window.gamepadManager && window.gamepadManager.isConnected()) {
-                this.dismissDisconnectWarning();
+            // If controller is reconnected, wait for X button to continue
+            if (this.controllerReconnected) {
+                let xButtonPressed = false;
+                let dismissWarning = false;
+
+                // Check X button on gamepad (with JustDown logic)
+                if (window.gamepadManager && window.gamepadManager.isConnected()) {
+                    const xButton = window.gamepadManager.getButton('X');
+                    xButtonPressed = xButton && xButton.pressed;
+
+                    // JustDown = pressed now but wasn't pressed before
+                    if (xButtonPressed && !this.xButtonWasPressed) {
+                        dismissWarning = true;
+                    }
+                }
+
+                // Update button state for next frame
+                this.xButtonWasPressed = xButtonPressed;
+
+                // Also allow keyboard X or SPACE
+                const xKey = this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.X);
+                const spaceKey = this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+
+                if (Phaser.Input.Keyboard.JustDown(xKey) || Phaser.Input.Keyboard.JustDown(spaceKey) || dismissWarning) {
+                    this.dismissDisconnectWarning();
+                }
+            } else {
+                // Controller still disconnected - allow keyboard dismissal
+                const spaceKey = this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+                const escKey = this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ESC);
+
+                if (Phaser.Input.Keyboard.JustDown(spaceKey) || Phaser.Input.Keyboard.JustDown(escKey)) {
+                    this.dismissDisconnectWarning();
+                }
             }
         }
     }
