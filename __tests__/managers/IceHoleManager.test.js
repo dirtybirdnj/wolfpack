@@ -5,6 +5,7 @@
  * Tests focus on pure logic that can be isolated from Phaser rendering.
  */
 
+import { jest } from '@jest/globals';
 import { IceHoleManager } from '../../src/managers/IceHoleManager.js';
 import GameConfig from '../../src/config/GameConfig.js';
 

@@ -6,6 +6,7 @@
  * All tests are Phaser-independent using minimal mocks.
  */
 
+import { jest } from '@jest/globals';
 import { Fish } from '../../src/models/fish.js';
 import { Constants } from '../../src/utils/Constants.js';
 import GameConfig from '../../src/config/GameConfig.js';

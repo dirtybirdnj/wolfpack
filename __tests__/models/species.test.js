@@ -6,6 +6,7 @@
  * Pure math tests with no Phaser dependencies.
  */
 
+import { jest } from '@jest/globals';
 import { LakeTrout } from '../../src/models/species/LakeTrout.js';
 import { NorthernPike } from '../../src/models/species/NorthernPike.js';
 import { SmallmouthBass } from '../../src/models/species/SmallmouthBass.js';

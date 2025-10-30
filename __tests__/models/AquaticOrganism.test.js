@@ -5,6 +5,7 @@
  * Focus on position calculations, distance checks, and coordinate transformations.
  */
 
+import { jest } from '@jest/globals';
 import { AquaticOrganism } from '../../src/models/AquaticOrganism.js';
 import GameConfig from '../../src/config/GameConfig.js';
 
