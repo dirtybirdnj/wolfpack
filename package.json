@@ -10,6 +10,7 @@
     "game": "http-server . -p 8080 -c-1",
     "api": "node scripts/api-server.js",
     "kill-ports": "node scripts/kill-ports.js",
+    "git:wtf": "bash scripts/git-wtf.sh",
     "build": "node build.js",
     "build:electron": "node build.js && npm run package:electron",
     "package:electron": "electron-builder --config electron-builder.json",
