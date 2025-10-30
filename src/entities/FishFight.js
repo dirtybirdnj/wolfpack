@@ -668,9 +668,10 @@ export class FishFight {
      * Draw size classification ruler showing SMALL/MEDIUM/LARGE/TROPHY zones
      * Greys out size classes the fish hasn't reached yet
      * Shows ALL size classes (including unreached ones) for visual progress tracking
+     * Clipped to popup width to prevent overflow on the right side
      * Returns array of all created elements for cleanup
      */
-    drawClassificationRuler(startX, centerY, speciesName, fishLength, pixelsPerInch, maxRulerLength) {
+    drawClassificationRuler(startX, centerY, speciesName, fishLength, pixelsPerInch, popupWidth) {
         const elements = [];
 
         // Get species data from imported PREDATOR_SPECIES
@@ -684,7 +685,7 @@ export class FishFight {
         rulerGraphics.setDepth(2002);
         elements.push(rulerGraphics);
 
-        const rulerHeight = 35; // Taller for larger fish
+        const rulerHeight = 35;
         const categories = speciesData.sizeCategories;
 
         // Size classification colors
@@ -702,7 +703,11 @@ export class FishFight {
             trophy: '#ffff00'
         };
 
-        // Draw each size zone - show ALL zones (including unreached greyed ones)
+        // Calculate max available width for ruler (popup center +/- half width, with margin)
+        const popupCenterX = GameConfig.CANVAS_WIDTH / 2;
+        const maxRulerEndX = popupCenterX + (popupWidth / 2) - 10; // 10px margin from popup edge
+
+        // Draw each size zone - show ALL zones, clip on right side if needed
         ['small', 'medium', 'large', 'trophy'].forEach(sizeName => {
             const category = categories[sizeName];
             if (!category || !category.lengthRange) return;
@@ -711,42 +716,53 @@ export class FishFight {
             const maxLength = category.lengthRange[1];
 
             const zoneStartX = startX + (minLength * pixelsPerInch);
-            const zoneWidth = (maxLength - minLength) * pixelsPerInch;
+            let zoneWidth = (maxLength - minLength) * pixelsPerInch;
+            const zoneEndX = zoneStartX + zoneWidth;
+
+            // Skip if zone starts beyond popup boundary
+            if (zoneStartX >= maxRulerEndX) return;
+
+            // Clip zone width if it extends beyond popup boundary
+            if (zoneEndX > maxRulerEndX) {
+                zoneWidth = maxRulerEndX - zoneStartX;
+            }
 
             // Check if fish has reached this size class
             const fishReachedClass = fishLength >= minLength;
             const opacity = fishReachedClass ? 0.7 : 0.2; // Grey out unreached classes
             const borderOpacity = fishReachedClass ? 1.0 : 0.3;
 
-            // Draw zone background
+            // Draw zone background (clipped)
             rulerGraphics.fillStyle(colors[sizeName], opacity);
             rulerGraphics.fillRect(zoneStartX, centerY - rulerHeight / 2, zoneWidth, rulerHeight);
 
-            // Draw zone border
+            // Draw zone border (clipped)
             rulerGraphics.lineStyle(3, colors[sizeName], borderOpacity);
             rulerGraphics.strokeRect(zoneStartX, centerY - rulerHeight / 2, zoneWidth, rulerHeight);
 
-            // Add zone label (greyed text for unreached classes)
+            // Add zone label (greyed text for unreached classes) - only if visible
             const labelX = zoneStartX + zoneWidth / 2;
-            const labelColor = fishReachedClass ? textColors[sizeName] : '#666666';
-            const labelText = this.scene.add.text(labelX, centerY,
-                sizeName.toUpperCase(),
-                {
-                    fontSize: '12px',
-                    fontFamily: 'Courier New',
-                    color: labelColor,
-                    align: 'center',
-                    stroke: '#000000',
-                    strokeThickness: 3,
-                    fontStyle: 'bold'
-                }
-            );
-            labelText.setOrigin(0.5, 0.5);
-            labelText.setDepth(2003);
-            elements.push(labelText);
+            if (labelX < maxRulerEndX) {
+                const labelColor = fishReachedClass ? textColors[sizeName] : '#666666';
+                const labelText = this.scene.add.text(labelX, centerY,
+                    sizeName.toUpperCase(),
+                    {
+                        fontSize: '12px',
+                        fontFamily: 'Courier New',
+                        color: labelColor,
+                        align: 'center',
+                        stroke: '#000000',
+                        strokeThickness: 3,
+                        fontStyle: 'bold'
+                    }
+                );
+                labelText.setOrigin(0.5, 0.5);
+                labelText.setDepth(2003);
+                elements.push(labelText);
+            }
 
-            // Add length markers at boundaries
-            if (sizeName !== 'small') { // Don't draw start marker for small (it's at 0)
+            // Add length markers at boundaries - only if visible
+            if (sizeName !== 'small' && zoneStartX < maxRulerEndX) {
                 const markerColor = fishReachedClass ? '#ffffff' : '#666666';
                 const markerText = this.scene.add.text(zoneStartX, centerY + rulerHeight / 2 + 5,
                     `${minLength}"`,
@@ -831,26 +847,34 @@ export class FishFight {
         const fishGraphics = this.scene.add.graphics();
         fishGraphics.setDepth(2002);
 
-        // Tournament-style fish photo: scale fish to match ruler exactly
+        // Tournament-style fish photo: fish above ruler with nose at ruler start
         // NOTE: this.fish is the model (LakeTrout, SmallmouthBass, etc.), not the entity wrapper
 
-        // Align to layout guides: red line for left alignment, blue line for vertical position
-        const rulerStartX = popupX - 360; // Red line: ruler starts here (fish nose touches this)
-        const rulerY = popupY + 100; // Blue line: vertical position for rulers
+        // NEW LAYOUT:
+        // 1. Center white ruler horizontally and vertically in popup
+        // 2. Move ruler down 1 inch (24px)
+        // 3. Ruler extends 4 inches past fish tail
+        // 4. Fish nose exactly at ruler start, above ruler
+        // 5. Trophy scale below white ruler, clipped to popup width
 
-        // Calculate proper scale: fish body should match ruler length
-        // 4x larger than before (was 6, now 24 pixels per inch)
-        const desiredPixelsPerInch = 24; // Tournament ruler scale (24 pixels per inch for 4x size)
+        const desiredPixelsPerInch = 24; // 24 pixels per inch scale
         const fishLengthInches = this.fish.length;
-        const desiredFishLengthPx = fishLengthInches * desiredPixelsPerInch;
+        const extraInches = 4; // Ruler extends 4 inches past fish tail
+        const rulerLengthInches = fishLengthInches + extraInches;
+        const rulerLengthPx = rulerLengthInches * desiredPixelsPerInch;
+
+        // Center ruler horizontally and vertically, then move down 1 inch
+        const rulerCenterY = popupY + (1 * desiredPixelsPerInch); // Center + 1 inch down = 24px
+        const rulerStartX = popupX - (rulerLengthPx / 2); // Centered horizontally
 
         // Fish body is drawn at roughly 2.5-3.2x bodySize depending on species
         // Use average of 2.8x as estimate
+        const desiredFishLengthPx = fishLengthInches * desiredPixelsPerInch;
         const bodySize = desiredFishLengthPx / 2.8;
 
-        // Fish center X is at ruler start + half the fish length
+        // Fish positioned above ruler with nose exactly at ruler start
         const fishCenterX = rulerStartX + (desiredFishLengthPx / 2);
-        const fishRenderY = rulerY - 80; // Fish positioned above rulers
+        const fishRenderY = rulerCenterY - 80; // Fish positioned above ruler
 
         if (this.fish && typeof this.fish.renderAtPosition === 'function') {
             // Render fish facing LEFT (tournament photo style)
@@ -860,15 +884,17 @@ export class FishFight {
             console.warn('Fish renderAtPosition method not available, skipping fish rendering in popup');
         }
 
-        // Draw measurement ruler at blue line position, starting at red line (fish mouth)
+        // Draw white measurement ruler (centered, extends 4 inches past fish tail)
         const rulerElements = this.drawMeasurementRuler(
-            rulerStartX, rulerY, fishLengthInches, desiredPixelsPerInch
+            rulerStartX, rulerCenterY, rulerLengthInches, desiredPixelsPerInch
         );
 
-        // Draw size classification ruler below the measurement ruler - SAME LENGTH as white ruler
-        // Show ALL size classes (including greyed out ones the fish hasn't reached)
+        // Draw size classification ruler below the white ruler
+        // Clip to popup width to prevent overflow
+        const classificationY = rulerCenterY + 40;
         const classificationElements = this.drawClassificationRuler(
-            rulerStartX, rulerY + 40, this.fish.species, this.fish.length, desiredPixelsPerInch, fishLengthInches
+            rulerStartX, classificationY, this.fish.species, this.fish.length,
+            desiredPixelsPerInch, popupWidth
         );
 
         // Fish stats - moved to TOP LEFT with smaller font
