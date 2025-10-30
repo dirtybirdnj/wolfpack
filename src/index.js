@@ -17,7 +17,7 @@ const config = {
     width: GameConfig.CANVAS_WIDTH,
     height: GameConfig.CANVAS_HEIGHT,
     parent: 'game-container',
-    backgroundColor: GameConfig.COLOR_BACKGROUND,
+    backgroundColor: 0x000000, // Black background to match boot screen
     banner: false, // Disable Phaser boot banner
     physics: {
         default: 'arcade',

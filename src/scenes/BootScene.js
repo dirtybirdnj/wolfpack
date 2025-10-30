@@ -5,6 +5,11 @@ export class BootScene extends Phaser.Scene {
         super({ key: 'BootScene' });
     }
 
+    init() {
+        // Set camera background to black immediately
+        this.cameras.main.setBackgroundColor(0x000000);
+    }
+
     preload() {
         // Load VTJ logo
         this.load.image('vtj-logo', 'samples/assets/vtj-circle-thickborder.png');
