@@ -725,6 +725,44 @@ export class NatureSimulationScene extends Phaser.Scene {
         this.zooplankton = this.zooplankton.filter(p => p.visible);
         this.crayfish = this.crayfish.filter(cf => cf.visible);
     }
+
+    /**
+     * Clean up scene resources to prevent memory leaks
+     */
+    shutdown() {
+        // Remove keyboard event listeners
+        if (this.input && this.input.keyboard) {
+            this.input.keyboard.off('keydown-ESC');
+            this.input.keyboard.off('keydown-D');
+            this.input.keyboard.off('keydown-B');
+        }
+
+        // Remove input event listeners
+        if (this.input) {
+            this.input.off('drag');
+        }
+
+        // Clean up entities
+        this.fishes.forEach(fish => fish.destroy());
+        this.baitfishClouds.forEach(cloud => cloud.destroy());
+        this.zooplankton.forEach(zp => zp.destroy());
+        this.crayfish.forEach(cf => cf.destroy());
+
+        // Clean up systems
+        if (this.spawningSystem) {
+            this.spawningSystem.destroy();
+        }
+        if (this.debugSystem) {
+            this.debugSystem.destroy();
+        }
+
+        // Clean up graphics
+        if (this.sonarDisplay) {
+            this.sonarDisplay.destroy();
+        }
+
+        console.log('🧹 NatureSimulationScene cleanup complete');
+    }
 }
 
 export default NatureSimulationScene;

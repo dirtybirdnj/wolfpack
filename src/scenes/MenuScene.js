@@ -474,6 +474,16 @@ export class MenuScene extends Phaser.Scene {
             }
         });
     }
+
+    /**
+     * Clean up scene resources to prevent memory leaks
+     */
+    shutdown() {
+        // Remove scale event listener
+        this.scale.off('resize', this.handleResize, this);
+
+        console.log('🧹 MenuScene cleanup complete');
+    }
 }
 
 export default MenuScene;
