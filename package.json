@@ -10,7 +10,10 @@
     "build:electron": "node build.js && npm run package:electron",
     "package:electron": "electron-builder --config electron-builder.json",
     "electron": "electron .",
-    "preview": "npm run build && http-server dist -p 8081 -c-1"
+    "preview": "npm run build && http-server dist -p 8081 -c-1",
+    "lint": "eslint src/**/*.js",
+    "lint:fix": "eslint src/**/*.js --fix",
+    "verify": "./verify_codebase.sh && npm run lint"
   },
   "keywords": [
     "phaser",
@@ -24,6 +27,7 @@
   "devDependencies": {
     "electron": "^28.0.0",
     "electron-builder": "^24.9.1",
+    "eslint": "^9.38.0",
     "http-server": "^14.1.1"
   },
   "engines": {

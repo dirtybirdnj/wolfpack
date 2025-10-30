@@ -87,7 +87,7 @@ export class FishAI {
         // Lake trout get excited when they see others chasing OR feeding on baitfish
         // Count other fish that are actively engaged (lure or baitfish)
         const excitedFish = allFish.filter(otherFish => {
-            if (otherFish === this.fish) return false; // Don't count self
+            if (otherFish === this.fish) {return false;} // Don't count self
 
             // Include HUNTING_BAITFISH and FEEDING states - makes frenzy much more likely!
             const isExcited = otherFish.ai.state === Constants.FISH_STATE.INTERESTED ||
@@ -739,7 +739,7 @@ export class FishAI {
         let minDistance = Infinity;
 
         for (const cloud of baitfishClouds) {
-            if (!cloud.visible || cloud.baitfish.length === 0) continue;
+            if (!cloud.visible || cloud.baitfish.length === 0) {continue;}
 
             const distance = Utils.calculateDistance(
                 this.fish.x, this.fish.y,
@@ -762,7 +762,7 @@ export class FishAI {
     }
 
     shouldHuntBaitfish(cloudInfo) {
-        if (!cloudInfo) return false;
+        if (!cloudInfo) {return false;}
 
         // Hunger is the primary driver (0-100 scale, higher = hungrier)
         const hungerFactor = this.fish.hunger / 100;

@@ -80,7 +80,7 @@ export class BaitfishCloud {
     }
 
     update(lakers = [], zooplankton = []) {
-        if (!this.visible) return null;
+        if (!this.visible) {return null;}
 
         this.age++;
 
@@ -261,10 +261,10 @@ export class BaitfishCloud {
             let maxX = -Infinity;
 
             this.baitfish.forEach(fish => {
-                if (fish.y < minY) minY = fish.y;
-                if (fish.y > maxY) maxY = fish.y;
-                if (fish.worldX < minX) minX = fish.worldX;
-                if (fish.worldX > maxX) maxX = fish.worldX;
+                if (fish.y < minY) {minY = fish.y;}
+                if (fish.y > maxY) {maxY = fish.y;}
+                if (fish.worldX < minX) {minX = fish.worldX;}
+                if (fish.worldX > maxX) {maxX = fish.worldX;}
             });
 
             const verticalSpread = maxY - minY;
@@ -304,7 +304,7 @@ export class BaitfishCloud {
         const detectionRange = 200; // Baitfish can detect zooplankton from up to 200 pixels away
 
         return zooplankton.filter(zp => {
-            if (!zp.visible || zp.consumed) return false;
+            if (!zp.visible || zp.consumed) {return false;}
 
             const distance = Utils.calculateDistance(
                 zp.x, zp.y,
@@ -340,7 +340,7 @@ export class BaitfishCloud {
         let minDistance = Infinity;
 
         for (const baitfish of this.baitfish) {
-            if (baitfish.consumed) continue;
+            if (baitfish.consumed) {continue;}
 
             const distance = Utils.calculateDistance(x, y, baitfish.x, baitfish.y);
             if (distance < minDistance) {
@@ -417,7 +417,7 @@ export class BaitfishCloud {
 
     mergeWith(otherCloud) {
         // Merge another cloud into this one
-        if (!otherCloud || !otherCloud.visible) return;
+        if (!otherCloud || !otherCloud.visible) {return;}
 
         // Calculate new center position BEFORE merging (weighted average based on baitfish count)
         const thisFishCount = this.baitfish.length;

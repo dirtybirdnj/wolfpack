@@ -126,7 +126,7 @@ export class Baitfish extends AquaticOrganism {
         const neighborRadius = 50; // Detection range for cohesion and alignment
 
         otherBaitfish.forEach(other => {
-            if (other === this || !other.visible || other.consumed) return;
+            if (other === this || !other.visible || other.consumed) {return;}
 
             const dx = this.worldX - other.worldX;
             const dy = this.y - other.y;
@@ -246,7 +246,7 @@ export class Baitfish extends AquaticOrganism {
                     let bestScore = currentDist;
 
                     nearbyZooplankton.forEach(zp => {
-                        if (!zp.visible || zp.consumed || zp === this.currentTarget) return;
+                        if (!zp.visible || zp.consumed || zp === this.currentTarget) {return;}
 
                         const distance = Math.sqrt(
                             Math.pow(this.x - zp.x, 2) + Math.pow(this.y - zp.y, 2)
@@ -255,11 +255,11 @@ export class Baitfish extends AquaticOrganism {
                         // Count competitors
                         let competitorCount = 0;
                         otherBaitfish.forEach(other => {
-                            if (other === this || !other.visible || other.consumed) return;
+                            if (other === this || !other.visible || other.consumed) {return;}
                             const otherDist = Math.sqrt(
                                 Math.pow(other.x - zp.x, 2) + Math.pow(other.y - zp.y, 2)
                             );
-                            if (otherDist < 20) competitorCount++;
+                            if (otherDist < 20) {competitorCount++;}
                         });
 
                         const score = distance + (competitorCount * 15);
@@ -290,7 +290,7 @@ export class Baitfish extends AquaticOrganism {
             let bestScore = Infinity;
 
             nearbyZooplankton.forEach(zp => {
-                if (!zp.visible || zp.consumed) return;
+                if (!zp.visible || zp.consumed) {return;}
 
                 const distance = Math.sqrt(
                     Math.pow(this.x - zp.x, 2) + Math.pow(this.y - zp.y, 2)
@@ -299,11 +299,11 @@ export class Baitfish extends AquaticOrganism {
                 // Count competitors
                 let competitorCount = 0;
                 otherBaitfish.forEach(other => {
-                    if (other === this || !other.visible || other.consumed) return;
+                    if (other === this || !other.visible || other.consumed) {return;}
                     const otherDist = Math.sqrt(
                         Math.pow(other.x - zp.x, 2) + Math.pow(other.y - zp.y, 2)
                     );
-                    if (otherDist < 20) competitorCount++;
+                    if (otherDist < 20) {competitorCount++;}
                 });
 
                 const score = distance + (competitorCount * 15);
@@ -318,7 +318,7 @@ export class Baitfish extends AquaticOrganism {
             this.targetLockTime = 0;
         }
 
-        let bestZooplankton = this.currentTarget;
+        const bestZooplankton = this.currentTarget;
 
         if (bestZooplankton) {
             const targetDistance = Math.sqrt(
@@ -347,7 +347,7 @@ export class Baitfish extends AquaticOrganism {
             const neighborRadius = 50;
 
             otherBaitfish.forEach(other => {
-                if (other === this || !other.visible || other.consumed) return;
+                if (other === this || !other.visible || other.consumed) {return;}
 
                 const dx = this.worldX - other.worldX;
                 const dy = this.y - other.y;
@@ -417,7 +417,7 @@ export class Baitfish extends AquaticOrganism {
      * @param {Array} sonarTrail - Trail points for motion blur effect
      */
     render(graphics, sonarTrail) {
-        if (!this.visible || this.consumed) return;
+        if (!this.visible || this.consumed) {return;}
 
         // Flicker effect (baitfish shimmer on sonar)
         this.flickerPhase += 0.1;

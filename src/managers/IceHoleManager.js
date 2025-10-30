@@ -149,7 +149,7 @@ export class IceHoleManager {
     }
 
     enterMovementMode() {
-        if (this.movementMode) return;
+        if (this.movementMode) {return;}
 
         this.movementMode = true;
         console.log('🚶 Entering movement mode - walking on ice');
@@ -163,7 +163,7 @@ export class IceHoleManager {
     }
 
     exitMovementMode() {
-        if (!this.movementMode) return;
+        if (!this.movementMode) {return;}
 
         // Check if at an existing hole
         const nearestHole = this.findNearestHole();
@@ -194,7 +194,7 @@ export class IceHoleManager {
     }
 
     findNearestHole() {
-        if (this.holes.length === 0) return null;
+        if (this.holes.length === 0) {return null;}
 
         return this.holes.reduce((nearest, hole) => {
             const distToCurrent = Math.abs(hole.x - this.playerX);
@@ -204,7 +204,7 @@ export class IceHoleManager {
     }
 
     movePlayer(deltaX) {
-        if (!this.movementMode) return;
+        if (!this.movementMode) {return;}
 
         this.playerX += deltaX;
         this.playerX = Math.max(100, Math.min(9900, this.playerX)); // Keep in bounds
@@ -265,7 +265,7 @@ export class IceHoleManager {
         // This makes holes move around the stationary player
         const screenX = this.calculateScreenX(hole.x);
 
-        if (screenX < -50 || screenX > GameConfig.CANVAS_WIDTH + 50) return; // Off screen
+        if (screenX < -50 || screenX > GameConfig.CANVAS_WIDTH + 50) {return;} // Off screen
 
         const isCurrent = index === this.currentHoleIndex && !this.movementMode;
 

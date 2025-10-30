@@ -276,9 +276,9 @@ export class GameScene extends Phaser.Scene {
         const kayakPanel = document.getElementById('kayak-tiredness-panel');
         const boatPanel = document.getElementById('motorboat-gas-panel');
 
-        if (iceDrillPanel) iceDrillPanel.style.display = 'block';
-        if (kayakPanel) kayakPanel.style.display = 'none';
-        if (boatPanel) boatPanel.style.display = 'none';
+        if (iceDrillPanel) {iceDrillPanel.style.display = 'block';}
+        if (kayakPanel) {kayakPanel.style.display = 'none';}
+        if (boatPanel) {boatPanel.style.display = 'none';}
     }
 
     /**
@@ -511,10 +511,10 @@ export class GameScene extends Phaser.Scene {
         console.log('🎵 Fish whistle: Spawning trophy fish and large bait clouds...');
 
         // Get player position from ice hole
-        if (!this.iceHoleManager) return;
+        if (!this.iceHoleManager) {return;}
 
         const currentHole = this.iceHoleManager.getCurrentHole();
-        if (!currentHole) return;
+        if (!currentHole) {return;}
         const playerWorldX = currentHole.x;
 
         // Spawn 1 trophy fish of each species
@@ -604,7 +604,7 @@ export class GameScene extends Phaser.Scene {
 
                 // Check if smallmouth bass nearby (predators)
                 const predatorsNearby = this.fishes.some(f => {
-                    if (f.species !== 'smallmouth_bass') return false;
+                    if (f.species !== 'smallmouth_bass') {return false;}
                     const dx = cf.x - f.x;
                     const dy = cf.y - f.y;
                     return Math.sqrt(dx * dx + dy * dy) < 200;
@@ -778,7 +778,7 @@ export class GameScene extends Phaser.Scene {
         let scaredCount = 0;
         this.fishes.forEach(otherFish => {
             // Skip pike themselves
-            if (otherFish.species === 'northern_pike' || !otherFish.visible) return;
+            if (otherFish.species === 'northern_pike' || !otherFish.visible) {return;}
 
             // Check if this fish can see any of the rushing pike
             for (const rushingPike of pike) {
@@ -802,7 +802,7 @@ export class GameScene extends Phaser.Scene {
 
         // PUSH BAITFISH CLOUDS AWAY - Apply repulsion force
         this.baitfishClouds.forEach(cloud => {
-            if (!cloud.visible) return;
+            if (!cloud.visible) {return;}
 
             // Find closest pike to this cloud
             let closestPike = null;
@@ -904,7 +904,7 @@ export class GameScene extends Phaser.Scene {
      * Show controller test window (debug feature)
      */
     showControllerTest() {
-        if (!window.gamepadManager || !window.gamepadManager.isConnected() || this.controllerTestMode) return;
+        if (!window.gamepadManager || !window.gamepadManager.isConnected() || this.controllerTestMode) {return;}
 
         this.controllerTestMode = true;
 
@@ -1004,7 +1004,7 @@ export class GameScene extends Phaser.Scene {
 
         // Update loop for controller test using native API
         this.controllerTestUpdate = () => {
-            if (!this.controllerTestMode || !window.gamepadManager || !window.gamepadManager.isConnected()) return;
+            if (!this.controllerTestMode || !window.gamepadManager || !window.gamepadManager.isConnected()) {return;}
 
             const DEAD_ZONE = 0.2;
 
@@ -1055,7 +1055,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     closeControllerTest() {
-        if (!this.controllerTestUI) return;
+        if (!this.controllerTestUI) {return;}
 
         // Destroy all UI elements
         const ui = this.controllerTestUI;
@@ -1164,11 +1164,11 @@ export class GameScene extends Phaser.Scene {
             const dpadDown = window.gamepadManager.getButton('DpadDown');
             const xButton = window.gamepadManager.getButton('X');
 
-            if (dpadLeft.pressed && !this.tackleBoxButtonStates.left) leftPressed = true;
-            if (dpadRight.pressed && !this.tackleBoxButtonStates.right) rightPressed = true;
-            if (dpadUp.pressed && !this.tackleBoxButtonStates.up) upPressed = true;
-            if (dpadDown.pressed && !this.tackleBoxButtonStates.down) downPressed = true;
-            if (xButton.pressed && !this.tackleBoxButtonStates.x) confirmPressed = true;
+            if (dpadLeft.pressed && !this.tackleBoxButtonStates.left) {leftPressed = true;}
+            if (dpadRight.pressed && !this.tackleBoxButtonStates.right) {rightPressed = true;}
+            if (dpadUp.pressed && !this.tackleBoxButtonStates.up) {upPressed = true;}
+            if (dpadDown.pressed && !this.tackleBoxButtonStates.down) {downPressed = true;}
+            if (xButton.pressed && !this.tackleBoxButtonStates.x) {confirmPressed = true;}
 
             this.tackleBoxButtonStates.left = dpadLeft.pressed;
             this.tackleBoxButtonStates.right = dpadRight.pressed;
@@ -1181,11 +1181,11 @@ export class GameScene extends Phaser.Scene {
         if (this.tackleBoxTab !== 2) {
             if (leftPressed) {
                 this.tackleBoxTab--;
-                if (this.tackleBoxTab < 0) this.tackleBoxTab = 2;
+                if (this.tackleBoxTab < 0) {this.tackleBoxTab = 2;}
             }
             if (rightPressed) {
                 this.tackleBoxTab++;
-                if (this.tackleBoxTab > 2) this.tackleBoxTab = 0;
+                if (this.tackleBoxTab > 2) {this.tackleBoxTab = 0;}
             }
         }
 
@@ -1195,11 +1195,11 @@ export class GameScene extends Phaser.Scene {
             const maxIndex = this.tackleBoxGear.lureWeights.length - 1;
             if (upPressed) {
                 this.tackleBoxSelected.lure--;
-                if (this.tackleBoxSelected.lure < 0) this.tackleBoxSelected.lure = maxIndex;
+                if (this.tackleBoxSelected.lure < 0) {this.tackleBoxSelected.lure = maxIndex;}
             }
             if (downPressed) {
                 this.tackleBoxSelected.lure++;
-                if (this.tackleBoxSelected.lure > maxIndex) this.tackleBoxSelected.lure = 0;
+                if (this.tackleBoxSelected.lure > maxIndex) {this.tackleBoxSelected.lure = 0;}
             }
             if (confirmPressed) {
                 const selected = this.tackleBoxGear.lureWeights[this.tackleBoxSelected.lure];
@@ -1211,11 +1211,11 @@ export class GameScene extends Phaser.Scene {
             const maxIndex = this.tackleBoxGear.lineTypes.length - 1;
             if (upPressed) {
                 this.tackleBoxSelected.line--;
-                if (this.tackleBoxSelected.line < 0) this.tackleBoxSelected.line = maxIndex;
+                if (this.tackleBoxSelected.line < 0) {this.tackleBoxSelected.line = maxIndex;}
             }
             if (downPressed) {
                 this.tackleBoxSelected.line++;
-                if (this.tackleBoxSelected.line > maxIndex) this.tackleBoxSelected.line = 0;
+                if (this.tackleBoxSelected.line > maxIndex) {this.tackleBoxSelected.line = 0;}
             }
             if (confirmPressed) {
                 const selected = this.tackleBoxGear.lineTypes[this.tackleBoxSelected.line];
@@ -1238,11 +1238,11 @@ export class GameScene extends Phaser.Scene {
                 const maxIndex = this.tackleBoxGear.reelTypes.length - 1;
                 if (upPressed) {
                     this.tackleBoxSelected.reel--;
-                    if (this.tackleBoxSelected.reel < 0) this.tackleBoxSelected.reel = maxIndex;
+                    if (this.tackleBoxSelected.reel < 0) {this.tackleBoxSelected.reel = maxIndex;}
                 }
                 if (downPressed) {
                     this.tackleBoxSelected.reel++;
-                    if (this.tackleBoxSelected.reel > maxIndex) this.tackleBoxSelected.reel = 0;
+                    if (this.tackleBoxSelected.reel > maxIndex) {this.tackleBoxSelected.reel = 0;}
                 }
                 if (confirmPressed) {
                     const selected = this.tackleBoxGear.reelTypes[this.tackleBoxSelected.reel];
@@ -1254,11 +1254,11 @@ export class GameScene extends Phaser.Scene {
                 const maxIndex = this.tackleBoxGear.lineTestStrengths.length - 1;
                 if (upPressed) {
                     this.tackleBoxSelected.lineTest--;
-                    if (this.tackleBoxSelected.lineTest < 0) this.tackleBoxSelected.lineTest = maxIndex;
+                    if (this.tackleBoxSelected.lineTest < 0) {this.tackleBoxSelected.lineTest = maxIndex;}
                 }
                 if (downPressed) {
                     this.tackleBoxSelected.lineTest++;
-                    if (this.tackleBoxSelected.lineTest > maxIndex) this.tackleBoxSelected.lineTest = 0;
+                    if (this.tackleBoxSelected.lineTest > maxIndex) {this.tackleBoxSelected.lineTest = 0;}
                 }
                 if (confirmPressed) {
                     const selected = this.tackleBoxGear.lineTestStrengths[this.tackleBoxSelected.lineTest];

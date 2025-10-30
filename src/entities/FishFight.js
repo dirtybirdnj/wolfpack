@@ -72,7 +72,7 @@ export class FishFight {
     }
 
     update(currentTime, spacePressed) {
-        if (!this.active) return;
+        if (!this.active) {return;}
 
         this.fightTime++;
         this.stateTimer++;
@@ -819,7 +819,7 @@ export class FishFight {
         // Draw each size zone - show ALL zones, clip on right side if needed
         ['small', 'medium', 'large', 'trophy'].forEach(sizeName => {
             const category = categories[sizeName];
-            if (!category || !category.lengthRange) return;
+            if (!category || !category.lengthRange) {return;}
 
             const minLength = category.lengthRange[0];
             const maxLength = category.lengthRange[1];
@@ -829,7 +829,7 @@ export class FishFight {
             const zoneEndX = zoneStartX + zoneWidth;
 
             // Skip if zone starts beyond popup boundary
-            if (zoneStartX >= maxRulerEndX) return;
+            if (zoneStartX >= maxRulerEndX) {return;}
 
             // Clip zone width if it extends beyond popup boundary
             if (zoneEndX > maxRulerEndX) {

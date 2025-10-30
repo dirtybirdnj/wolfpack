@@ -120,8 +120,8 @@ export class Fish extends AquaticOrganism {
     }
 
     calculateSonarStrength() {
-        if (this.weight > 25) return 'strong';
-        if (this.weight > 10) return 'medium';
+        if (this.weight > 25) {return 'strong';}
+        if (this.weight > 10) {return 'medium';}
         return 'weak';
     }
 

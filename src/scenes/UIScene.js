@@ -37,7 +37,7 @@ export class UIScene extends Phaser.Scene {
 
     updateLureInfo(info) {
         // Data stored for compatibility
-        if (!info) return;
+        if (!info) {return;}
     }
 
     updateRetrieveIndicator(speed) {
