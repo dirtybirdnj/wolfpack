@@ -31,18 +31,41 @@ export class BootScene extends Phaser.Scene {
         this.vtjLogo.setDepth(1001); // Above black box
         this.vtjLogo.setAlpha(0); // Start invisible
 
-        // Fade in logo
+        // Add website text 1 inch (96 pixels) above logo
+        this.websiteText = this.add.text(width / 2, height / 2 - 96, 'www.verticaltubejig.com', {
+            fontSize: '16px',
+            fontFamily: 'Courier New',
+            color: '#ffffff',
+            align: 'center'
+        });
+        this.websiteText.setOrigin(0.5);
+        this.websiteText.setDepth(1001);
+        this.websiteText.setAlpha(0); // Start invisible
+
+        // Add tagline text 1 inch (96 pixels) below logo
+        this.taglineText = this.add.text(width / 2, height / 2 + 96, 'make big aggressive fish chase', {
+            fontSize: '14px',
+            fontFamily: 'Courier New',
+            fontStyle: 'italic',
+            color: '#ffffff',
+            align: 'center'
+        });
+        this.taglineText.setOrigin(0.5);
+        this.taglineText.setDepth(1001);
+        this.taglineText.setAlpha(0); // Start invisible
+
+        // Fade in logo and text
         this.tweens.add({
-            targets: this.vtjLogo,
+            targets: [this.vtjLogo, this.websiteText, this.taglineText],
             alpha: 1,
             duration: 500,
             ease: 'Power2',
             onComplete: () => {
-                // Wait 3 seconds at full opacity
-                this.time.delayedCall(3000, () => {
-                    // Fade out logo
+                // Wait 1.5 seconds at full opacity (half of original 3 seconds)
+                this.time.delayedCall(1500, () => {
+                    // Fade out logo and text
                     this.tweens.add({
-                        targets: this.vtjLogo,
+                        targets: [this.vtjLogo, this.websiteText, this.taglineText],
                         alpha: 0,
                         duration: 500,
                         ease: 'Power2',
