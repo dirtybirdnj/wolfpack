@@ -191,14 +191,8 @@ export class BaitfishCloud {
         if (this.scene.boatManager) {
             bottomDepth = this.scene.boatManager.getDepthAtPosition(this.worldX);
         } else if (this.scene.iceHoleManager) {
-            // For ice fishing, get bottom from current hole's profile
-            const currentHole = this.scene.iceHoleManager.getCurrentHole();
-            if (currentHole && currentHole.bottomProfile) {
-                const closest = currentHole.bottomProfile.reduce((prev, curr) =>
-                    Math.abs(curr.x - this.centerX) < Math.abs(prev.x - this.centerX) ? curr : prev
-                );
-                bottomDepth = closest.y / GameConfig.DEPTH_SCALE;
-            }
+            // For ice fishing, use hole manager's depth calculation
+            bottomDepth = this.scene.iceHoleManager.getDepthAtPosition(this.centerX);
         } else {
             // Nature simulation mode - bottom profile is drawn at maxDepth - 5 feet (deepest point)
             // Subtract 5 to match the visual bottom profile from SonarDisplay.generateBottomProfile()

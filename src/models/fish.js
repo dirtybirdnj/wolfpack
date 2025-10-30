@@ -261,13 +261,8 @@ export class Fish extends AquaticOrganism {
                 const gameX = this.scene.boatManager.playerX + offsetFromPlayer;
                 bottomDepth = this.scene.boatManager.getDepthAtPosition(gameX);
             } else if (this.scene.iceHoleManager) {
-                const currentHole = this.scene.iceHoleManager.getCurrentHole();
-                if (currentHole && currentHole.bottomProfile) {
-                    const closest = currentHole.bottomProfile.reduce((prev, curr) =>
-                        Math.abs(curr.x - this.x) < Math.abs(prev.x - this.x) ? curr : prev
-                    );
-                    bottomDepth = closest.y / GameConfig.DEPTH_SCALE;
-                }
+                // Use ice hole manager's depth calculation
+                bottomDepth = this.scene.iceHoleManager.getDepthAtPosition(this.x);
             }
 
             // Keep fish above lake bottom (with 5 feet buffer)

@@ -71,14 +71,8 @@ export class AquaticOrganism {
         if (this.scene.boatManager) {
             bottomDepth = this.scene.boatManager.getDepthAtPosition(this.worldX);
         } else if (this.scene.iceHoleManager) {
-            // For ice fishing, get bottom from current hole's profile
-            const currentHole = this.scene.iceHoleManager.getCurrentHole();
-            if (currentHole && currentHole.bottomProfile) {
-                const closest = currentHole.bottomProfile.reduce((prev, curr) =>
-                    Math.abs(curr.x - this.x) < Math.abs(prev.x - this.x) ? curr : prev
-                );
-                bottomDepth = closest.y / GameConfig.DEPTH_SCALE;
-            }
+            // For ice fishing, use the hole manager's depth calculation
+            bottomDepth = this.scene.iceHoleManager.getDepthAtPosition(this.x);
         } else {
             // Nature simulation mode - bottom profile is drawn at maxDepth - 5 feet
             bottomDepth = (this.scene.maxDepth || GameConfig.MAX_DEPTH) - 5;
