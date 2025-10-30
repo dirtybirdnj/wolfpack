@@ -107,6 +107,11 @@ export class DebugSystem {
         };
 
         this.scene.fishes.forEach(fish => {
+            // Defensive check: Only Fish objects have AI - skip if not a fish
+            if (!fish.ai || typeof fish.hunger === 'undefined') {
+                return; // Skip non-fish entities
+            }
+
             // Draw line from fish to lure if lure exists and within detection range
             if (this.scene.lure) {
                 const dist = Math.sqrt(
@@ -140,6 +145,11 @@ export class DebugSystem {
      * @param {number} color - Color for the text
      */
     drawFishInfo(fish, color) {
+        // Defensive check: Only Fish objects have AI and hunger - skip if not a fish
+        if (!fish.ai || typeof fish.hunger === 'undefined') {
+            return; // Not a fish, skip debug info
+        }
+
         // In nature simulation mode (no lure), show info for all visible fish
         // In normal modes, only show info for fish within reasonable distance of lure
         let showInfo = true;

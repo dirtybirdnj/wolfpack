@@ -1,7 +1,8 @@
 import GameConfig from '../config/GameConfig.js';
 import { Constants, Utils } from '../utils/Constants.js';
 import FishAI from '../entities/FishAI.js';
-import { getBaitfishSpecies, getPredatorSpecies } from '../config/SpeciesData.js';
+import { getPredatorSpecies, getBaitfishSpecies } from '../config/SpeciesData.js';
+import AquaticOrganism from './AquaticOrganism.js';
 
 // Fish name pools
 const MALE_NAMES = [
@@ -17,40 +18,20 @@ const FEMALE_NAMES = [
 ];
 
 /**
- * Base Fish class - biological model for all fish species
- * This class contains the common properties and behaviors shared by all fish
+ * Fish class - Predator fish model extending AquaticOrganism
+ * Adds AI, catching mechanics, and predator-specific behaviors
  */
-export class Fish {
+export class Fish extends AquaticOrganism {
     constructor(scene, x, y, size = 'MEDIUM', fishingType = null, species = 'lake_trout') {
-        this.scene = scene;
+        // Get species data for super constructor
+        const speciesData = getPredatorSpecies(species);
+
+        // Call parent constructor with base properties
+        super(scene, x, y, species, speciesData);
+
         this.fishingType = fishingType || scene.fishingType;
 
-        // Species data
-        this.species = species;
-        this.speciesData = getPredatorSpecies(species);
-
-        // World coordinates (actual position in the lake)
-        this.worldX = x;
-
-        // Screen coordinates (for rendering - calculated based on player position)
-        let playerWorldX;
-        if (scene.iceHoleManager) {
-            const currentHole = scene.iceHoleManager.getCurrentHole();
-            playerWorldX = currentHole ? currentHole.x : x;
-            const offsetFromPlayer = this.worldX - playerWorldX;
-            this.x = (GameConfig.CANVAS_WIDTH / 2) + offsetFromPlayer;
-        } else if (scene.boatManager) {
-            playerWorldX = scene.boatManager.getPlayerWorldX();
-            const offsetFromPlayer = this.worldX - playerWorldX;
-            this.x = (GameConfig.CANVAS_WIDTH / 2) + offsetFromPlayer;
-        } else {
-            // Nature simulation mode - use worldX directly as screen X (no player to offset from)
-            this.x = this.worldX;
-        }
-        this.y = y;
-        this.depth = y / GameConfig.DEPTH_SCALE;
-
-        // Fish properties
+        // Fish-specific size and weight properties
         this.size = Constants.FISH_SIZE[size];
         this.weight = Utils.randomBetween(this.size.min, this.size.max);
 
@@ -73,7 +54,7 @@ export class Fish {
         this.depthZone = this.getDepthZone();
         this.speed = this.baseSpeed * this.depthZone.speedMultiplier;
 
-        // AI controller
+        // AI controller (heavy - not used by baitfish)
         this.ai = new FishAI(this, this.fishingType);
 
         // Sonar properties (visual rendering handled by entity layer)
@@ -81,10 +62,9 @@ export class Fish {
 
         // State
         this.caught = false;
-        this.visible = true;
         this.frameAge = 0;
 
-        // Biological properties
+        // Biological properties (heavy - not used by baitfish)
         this.hunger = Utils.randomBetween(50, 90);
         this.health = Utils.randomBetween(60, 100);
         this.lastFed = 0;
@@ -99,11 +79,10 @@ export class Fish {
         this.interestFlash = 0;
         this.interestFlashDecay = 0.02;
 
-        // Movement angle for realistic rotation
-        this.angle = 0;
+        // Movement angle for realistic rotation (angle is in parent, targetAngle is fish-specific)
         this.targetAngle = 0;
 
-        // Chase mechanics
+        // Chase mechanics (heavy - not used by baitfish)
         this.speedPreference = Utils.randomBetween(1.0, 4.0);
         this.swipeChances = 0;
         this.maxSwipeChances = 0;
@@ -308,6 +287,11 @@ export class Fish {
     }
 
     feedOnBaitfish(preySpecies = 'alewife') {
+        // Defensive check: Only predatory fish have hunger and health properties
+        if (this.hunger === undefined || this.health === undefined) {
+            return; // Not a predatory fish, skip feeding logic
+        }
+
         // Fish has consumed a baitfish, reduce hunger based on prey nutrition value
         const speciesData = getBaitfishSpecies(preySpecies);
         const nutritionValue = speciesData.nutritionValue || 20; // Default to 20 if not specified
