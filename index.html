@@ -124,9 +124,9 @@
         }
 
         #game-container canvas {
-            max-width: 100%;
-            max-height: 100%;
-            object-fit: contain;
+            width: 100%;
+            height: 100%;
+            display: block;
         }
 
         .controller-status-hidden {
@@ -1118,39 +1118,13 @@
         // Setup camera icon click handler (Screenshot Feature)
         document.getElementById('camera-icon-container').addEventListener('click', async () => {
             try {
-                // Show loading indicator
-                const loadingOverlay = document.createElement('div');
-                loadingOverlay.style.cssText = `
-                    position: fixed;
-                    top: 0;
-                    left: 0;
-                    width: 100%;
-                    height: 100%;
-                    background: rgba(0, 0, 0, 0.8);
-                    z-index: 9999;
-                    display: flex;
-                    justify-content: center;
-                    align-items: center;
-                    color: var(--text-primary);
-                    font-family: 'Courier New', monospace;
-                    font-size: 18px;
-                `;
-                loadingOverlay.innerHTML = '📸 Capturing screenshot...';
-                document.body.appendChild(loadingOverlay);
-
-                // Wait a moment for the loading overlay to render
-                await new Promise(resolve => setTimeout(resolve, 100));
-
-                // Capture screenshot of the entire page
+                // Capture screenshot FIRST (before showing any UI)
                 const canvas = await html2canvas(document.body, {
                     backgroundColor: '#000000',
                     scale: 1,
                     logging: false,
                     useCORS: true
                 });
-
-                // Remove loading overlay
-                loadingOverlay.remove();
 
                 // Convert canvas to data URL
                 const screenshotDataUrl = canvas.toDataURL('image/png');
@@ -1209,7 +1183,7 @@
 
                         <div style="display: flex; gap: 10px; justify-content: center;">
                             <button id="save-screenshot-btn" style="background: var(--button-bg); color: var(--button-text); border: none; padding: 12px 30px; font-size: 14px; font-family: 'Courier New', monospace; font-weight: bold; border-radius: 5px; cursor: pointer; transition: transform 0.1s;">
-                                💾 Save Screenshot Data
+                                🐛 Create GitHub Issue
                             </button>
                             <button id="close-screenshot-btn" style="background: #ff6666; color: #000; border: none; padding: 12px 30px; font-size: 14px; font-family: 'Courier New', monospace; font-weight: bold; border-radius: 5px; cursor: pointer; transition: transform 0.1s;">
                                 ✖ Close (ESC)
@@ -1245,7 +1219,7 @@
                 }
 
                 // Save button handler
-                saveBtn.addEventListener('click', () => {
+                saveBtn.addEventListener('click', async () => {
                     const title = titleInput.value.trim();
                     const description = descriptionInput.value.trim();
 
@@ -1261,31 +1235,73 @@
                         return;
                     }
 
-                    // Store screenshot data in localStorage for future GitHub issue creation
-                    const screenshotData = {
-                        title: title,
-                        description: description,
-                        imageData: screenshotDataUrl,
-                        timestamp: new Date().toISOString()
-                    };
-
-                    // Save to localStorage (can be retrieved later for GitHub issue creation)
-                    const existingScreenshots = JSON.parse(localStorage.getItem('wolfpack-screenshots') || '[]');
-                    existingScreenshots.push(screenshotData);
-                    localStorage.setItem('wolfpack-screenshots', JSON.stringify(existingScreenshots));
-
-                    showStatus('✅ Screenshot data saved successfully! Ready for GitHub issue creation.', true);
-
-                    // Disable save button and change text
+                    // Disable button while processing
                     saveBtn.disabled = true;
-                    saveBtn.style.opacity = '0.5';
-                    saveBtn.style.cursor = 'not-allowed';
-                    saveBtn.textContent = '✓ Saved';
+                    saveBtn.textContent = '⏳ Creating issue...';
 
-                    // Auto-close after 2 seconds
-                    setTimeout(() => {
-                        overlay.remove();
-                    }, 2000);
+                    try {
+                        // Save to localStorage as backup
+                        const screenshotData = {
+                            title: title,
+                            description: description,
+                            imageData: screenshotDataUrl,
+                            timestamp: new Date().toISOString()
+                        };
+                        const existingScreenshots = JSON.parse(localStorage.getItem('wolfpack-screenshots') || '[]');
+                        existingScreenshots.push(screenshotData);
+                        localStorage.setItem('wolfpack-screenshots', JSON.stringify(existingScreenshots));
+
+                        // Call API to create GitHub issue
+                        const apiUrl = 'http://localhost:3000/api/issues/create';
+                        const response = await fetch(apiUrl, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                title: title,
+                                description: description,
+                                imageData: screenshotDataUrl,
+                                labels: ['bug', 'screenshot']
+                            })
+                        });
+
+                        const result = await response.json();
+
+                        if (result.success) {
+                            showStatus(`✅ GitHub issue created: #${result.issue.number}`, true);
+
+                            // Add link to issue
+                            const issueLink = document.createElement('a');
+                            issueLink.href = result.issue.url;
+                            issueLink.target = '_blank';
+                            issueLink.textContent = 'View Issue';
+                            issueLink.style.cssText = 'display: block; margin-top: 10px; color: var(--text-primary); text-decoration: underline;';
+                            statusMessage.appendChild(issueLink);
+
+                            // Update button
+                            saveBtn.style.opacity = '0.5';
+                            saveBtn.style.cursor = 'not-allowed';
+                            saveBtn.textContent = '✓ Issue Created';
+
+                            // Auto-close after 3 seconds
+                            setTimeout(() => {
+                                overlay.remove();
+                            }, 3000);
+                        } else {
+                            throw new Error(result.error || 'Failed to create issue');
+                        }
+
+                    } catch (error) {
+                        console.error('Failed to create issue:', error);
+
+                        // Show error with fallback option
+                        showStatus(`⚠️ API Error: ${error.message}. Screenshot saved to localStorage for manual submission.`, false);
+
+                        // Re-enable button
+                        saveBtn.disabled = false;
+                        saveBtn.textContent = '💾 Retry';
+                    }
                 });
 
                 // Close button handler

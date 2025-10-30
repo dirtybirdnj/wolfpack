@@ -16,9 +16,13 @@ Smallmouth Bass and Yellow Perch are in the mix too, see if you can figure out w
    ```
 3. **Run the game:**
    ```bash
-   npm start
+   npm run dev
    ```
+   This starts **both** the game server (port 8080) and API server (port 3000) for the screenshot feature.
+
 4. **Open your browser to:** `http://localhost:8080`
+
+📖 **See [QUICK_START.md](QUICK_START.md) for detailed setup instructions and troubleshooting.**
 
 ## 🌐 Deployment
 
