@@ -1,4 +1,5 @@
 import GameConfig from '../config/GameConfig.js';
+import { PREDATOR_SPECIES } from '../config/SpeciesData.js';
 
 export class FishFight {
     constructor(scene, fish, lure) {
@@ -678,9 +679,8 @@ export class FishFight {
     drawClassificationRuler(startX, centerY, speciesName, pixelsPerInch) {
         const elements = [];
 
-        // Get species data from SpeciesData
-        const SpeciesData = require('../config/SpeciesData.js');
-        const speciesData = SpeciesData.PREDATOR_SPECIES[speciesName];
+        // Get species data from imported PREDATOR_SPECIES
+        const speciesData = PREDATOR_SPECIES[speciesName];
 
         if (!speciesData || !speciesData.sizeCategories) {
             return elements; // No classification data available
