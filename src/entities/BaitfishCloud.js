@@ -214,3 +214,150 @@ export class BaitfishCloud {
             const playerWorldX = currentHole ? currentHole.x : this.worldX;
             const offsetFromPlayer = this.worldX - playerWorldX;
             this.centerX = (GameConfig.CANVAS_WIDTH / 2) + offsetFromPlayer;
+            const playerWorldX = this.scene.boatManager.getPlayerWorldX();
+            const offsetFromPlayer = this.worldX - playerWorldX;
+            this.centerX = (GameConfig.CANVAS_WIDTH / 2) + offsetFromPlayer;
+        } else {
+            // Nature simulation mode - use worldX directly as screen X (no player to offset from)
+            this.centerX = this.worldX;
+        }
+
+        // Update all baitfish in the cloud
+        this.baitfish = this.baitfish.filter(baitfish => {
+            if (!baitfish.consumed && baitfish.visible) {
+                // Pass other baitfish in cloud for separation logic
+                baitfish.update(
+                    { worldX: this.worldX, x: this.centerX, y: this.centerY },
+                    lakersNearby,
+                    this.spreadMultiplier,
+                    this.scaredLevel,
+                    nearbyZooplankton,
+                    this.baitfish // Pass all baitfish for separation
+                );
+                return true;
+            } else if (baitfish.consumed) {
+                baitfish.destroy();
+                this.consumedCount++;
+                return false;
+            } else if (!baitfish.visible) {
+                baitfish.destroy();
+                return false;
+            }
+            return true;
+        });
+
+        // If cloud is mostly consumed or too old, mark for removal
+        if (this.baitfish.length === 0 || this.age > 30000 || this.isOffScreen()) {
+            this.visible = false;
+        }
+
+        // HORIZONTAL LINE DETECTION - Despawn cloud if compressed into unrealistic formation
+        // This simulates natural cloud dispersal behavior
+        const surfaceDepthLimit = 15; // Feet from surface
+        const surfaceYLimit = surfaceDepthLimit * depthScale;
+
+        if (this.centerY <= surfaceYLimit && this.baitfish.length >= 8) {
+            // Cloud is near surface - check if compressed into horizontal line
+            let minY = Infinity;
+            let maxY = -Infinity;
+            let minX = Infinity;
+            let maxX = -Infinity;
+
+            this.baitfish.forEach(fish => {
+                if (fish.y < minY) minY = fish.y;
+                if (fish.y > maxY) maxY = fish.y;
+                if (fish.worldX < minX) minX = fish.worldX;
+                if (fish.worldX > maxX) maxX = fish.worldX;
+            });
+
+            const verticalSpread = maxY - minY;
+            const horizontalSpread = maxX - minX;
+
+            // If horizontal spread is much larger than vertical spread, we have a line
+            const compressionRatio = horizontalSpread / (verticalSpread + 1);
+
+            if (compressionRatio > 3.5) {
+                // Cloud compressed into horizontal line - despawn it!
+                console.log(`Cloud compressed (ratio: ${compressionRatio.toFixed(2)}) - dispersing naturally`);
+                this.visible = false; // Cloud disperses
+                return null;
+            }
+        }
+
+        return null; // No split occurred
+    }
+
+    checkForLakersNearby(lakers) {
+        // Check if any lakers are within detection range of the cloud
+        const detectionRange = GameConfig.BAITFISH_CLOUD_RADIUS + 50;
+
+        this.lakersChasing = lakers.filter(laker => {
+            const distance = Utils.calculateDistance(
+                laker.x, laker.y,
+                this.centerX, this.centerY
+            );
+            return distance < detectionRange;
+        });
+
+        return this.lakersChasing.length > 0;
+    }
+
+    findNearbyZooplankton(zooplankton) {
+        // Find zooplankton within detection range of the cloud
+        const detectionRange = 200; // Baitfish can detect zooplankton from up to 200 pixels away
+
+        return zooplankton.filter(zp => {
+            if (!zp.visible || zp.consumed) return false;
+
+            const distance = Utils.calculateDistance(
+                zp.x, zp.y,
+                this.centerX, this.centerY
+            );
+            return distance < detectionRange;
+        });
+    }
+
+    consumeBaitfish() {
+        // Find a random unconsumed baitfish and consume it
+        const available = this.baitfish.filter(b => !b.consumed);
+        if (available.length > 0) {
+            const target = available[Math.floor(Math.random() * available.length)];
+            target.consume();
+            return target;
+        }
+        return null;
+    }
+
+    isPlayerLureInCloud(lure) {
+        // Check if the player's lure is within the baitfish cloud
+        const distance = Utils.calculateDistance(
+            lure.x, lure.y,
+            this.centerX, this.centerY
+        );
+        return distance < GameConfig.BAITFISH_CLOUD_RADIUS;
+    }
+
+    getClosestBaitfish(x, y) {
+        // Find the closest baitfish to a given position
+        let closest = null;
+        let minDistance = Infinity;
+
+        for (const baitfish of this.baitfish) {
+            if (baitfish.consumed) continue;
+
+            const distance = Utils.calculateDistance(x, y, baitfish.x, baitfish.y);
+            if (distance < minDistance) {
+                minDistance = distance;
+                closest = baitfish;
+            }
+        }
+
+        return { baitfish: closest, distance: minDistance };
+    }
+
+    isOffScreen() {
+        // Check if cloud is too far from player in world coordinates
+        let playerWorldX;
+        if (this.scene.iceHoleManager) {
+            const currentHole = this.scene.iceHoleManager.getCurrentHole();
+            playerWorldX = currentHole ? currentHole.x : 0;
