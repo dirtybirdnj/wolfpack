@@ -2,12 +2,14 @@
 // Main entry point
 
 import GameConfig from './config/GameConfig.js';
+import BootScene from './scenes/BootScene.js';
 import MenuScene from './scenes/MenuScene.js';
 import NavigationScene from './scenes/NavigationScene.js';
 import GameScene from './scenes/GameScene.js';
 import GameOverScene from './scenes/GameOverScene.js';
 import UIScene from './scenes/UIScene.js';
 import NatureSimulationScene from './scenes/NatureSimulationScene.js';
+import gamepadManager from './utils/GamepadManager.js';
 
 // Phaser game configuration
 const config = {
@@ -15,7 +17,8 @@ const config = {
     width: GameConfig.CANVAS_WIDTH,
     height: GameConfig.CANVAS_HEIGHT,
     parent: 'game-container',
-    backgroundColor: GameConfig.COLOR_BACKGROUND,
+    backgroundColor: 0x000000, // Black background to match boot screen
+    banner: false, // Disable Phaser boot banner
     physics: {
         default: 'arcade',
         arcade: {
@@ -23,7 +26,7 @@ const config = {
             debug: false
         }
     },
-    scene: [MenuScene, NavigationScene, GameScene, GameOverScene, UIScene, NatureSimulationScene],
+    scene: [BootScene, MenuScene, NavigationScene, GameScene, GameOverScene, UIScene, NatureSimulationScene],
     render: {
         pixelArt: false,
         antialias: true,
@@ -53,9 +56,13 @@ const config = {
 
 // Initialize the game
 window.addEventListener('load', () => {
+    // Initialize gamepad manager globally
+    window.gamepadManager = gamepadManager;
+    console.log('🎮 Gamepad Manager initialized');
+
     // Create the game instance
     const game = new Phaser.Game(config);
-    
+
     // Game initialized
     console.log('Lake Champlain Fishing Game - Ready');
 
@@ -64,7 +71,7 @@ window.addEventListener('load', () => {
         e.preventDefault();
         return false;
     });
-    
+
     // Add game to window for debugging (optional)
     if (typeof window !== 'undefined') {
         window.game = game;

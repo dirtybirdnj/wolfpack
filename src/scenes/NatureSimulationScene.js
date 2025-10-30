@@ -39,10 +39,8 @@ export class NatureSimulationScene extends Phaser.Scene {
         // Set initial depth (can be changed via UI)
         this.maxDepth = this.selectedDepth;
 
-        // Calculate depth scale
-        this.updateDepthScale();
-
         // Set up the sonar display (no fishing type, just observation)
+        // SonarDisplay will calculate dynamic depth scale based on maxDepth
         this.sonarDisplay = new SonarDisplay(this, 'observation');
 
         // Set water temperature based on season (use winter temps by default)
@@ -81,19 +79,6 @@ export class NatureSimulationScene extends Phaser.Scene {
             },
             loop: true
         });
-    }
-
-    updateDepthScale() {
-        // In nature mode, always keep bottom at exactly 20px from bottom of screen
-        // This ensures consistent visualization regardless of depth chosen
-        const BOTTOM_MARGIN = 20; // pixels from bottom
-        const availableHeight = GameConfig.CANVAS_HEIGHT - BOTTOM_MARGIN;
-
-        // Calculate scale so that maxDepth fits exactly in availableHeight
-        GameConfig.DEPTH_SCALE = availableHeight / this.maxDepth;
-        this.displayRange = this.maxDepth;
-
-        console.log(`Depth set to ${this.maxDepth}ft (${GameConfig.DEPTH_SCALE.toFixed(2)} px/ft, bottom at ${(this.maxDepth * GameConfig.DEPTH_SCALE).toFixed(1)}px)`);
     }
 
     createDepthSelectionUI() {
@@ -290,12 +275,12 @@ export class NatureSimulationScene extends Phaser.Scene {
     selectDepth(depth) {
         this.selectedDepth = depth;
         this.maxDepth = depth;
-        this.updateDepthScale();
 
         // Hide depth selection UI
         this.hideDepthSelectionUI();
 
         // Update sonar display with new depth
+        // SonarDisplay will automatically calculate correct dynamic depth scale
         if (this.sonarDisplay) {
             this.sonarDisplay.destroy();
             this.sonarDisplay = new SonarDisplay(this, 'observation');

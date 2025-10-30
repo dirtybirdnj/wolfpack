@@ -3,8 +3,11 @@ import GameConfig from '../config/GameConfig.js';
 export class MenuScene extends Phaser.Scene {
     constructor() {
         super({ key: 'MenuScene' });
-        this.selectedMode = 1; // Start with Unlimited mode (index 1) pre-selected
+        this.selectedMode = 2; // Start with Nature Simulation mode (index 2) pre-selected
         this.buttons = [];
+
+        // Configurable fade-in duration for smooth transition from boot screen (in milliseconds)
+        this.MENU_FADE_IN_DURATION = 1000; // 1 second
     }
 
     preload() {
@@ -78,8 +81,8 @@ export class MenuScene extends Phaser.Scene {
         wolfpackLogo.setOrigin(0.5);
         wolfpackLogo.setScale(0.5); // Adjust scale as needed
 
-        // VTJ Logo (bottom right, moved left 1 inch, half size, clickable)
-        const vtjLogo = this.add.image(width - 176, height - 80, 'vtj-logo');
+        // VTJ Logo (bottom right, moved down 1/4 inch, half size, clickable)
+        const vtjLogo = this.add.image(width - 80, height - 56, 'vtj-logo');
         vtjLogo.setOrigin(0.5);
         vtjLogo.setScale(0.075); // Half the original size
         vtjLogo.setInteractive({ useHandCursor: true });
@@ -87,8 +90,8 @@ export class MenuScene extends Phaser.Scene {
             window.open('https://www.verticaltubejig.com', '_blank');
         });
 
-        // Game mode selection (moved up 0.5 inch = 48 pixels, was 328)
-        const gameModeText = this.add.text(width / 2, 280, 'SELECT GAME MODE', {
+        // Game mode selection (moved up 1/4 inch = 24 pixels from 352)
+        const gameModeText = this.add.text(width / 2, 328, 'SELECT GAME MODE', {
             fontSize: '18px',
             fontFamily: 'Courier New',
             color: '#00ffff',
@@ -182,6 +185,23 @@ export class MenuScene extends Phaser.Scene {
         this.cursors = this.input.keyboard.createCursorKeys();
         this.enterKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER);
         this.spaceKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+
+        // Add black overlay for smooth transition from boot screen
+        this.blackOverlay = this.add.graphics();
+        this.blackOverlay.fillStyle(0x000000, 1);
+        this.blackOverlay.fillRect(0, 0, width, height);
+        this.blackOverlay.setDepth(10000); // Ensure it's on top of everything
+
+        // Fade out the black overlay
+        this.tweens.add({
+            targets: this.blackOverlay,
+            alpha: 0,
+            duration: this.MENU_FADE_IN_DURATION,
+            ease: 'Power2',
+            onComplete: () => {
+                this.blackOverlay.destroy(); // Clean up after fade
+            }
+        });
     }
 
     createModeButton(x, y, title, description, modeConfig, index) {

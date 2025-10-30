@@ -62,10 +62,12 @@ export class SonarDisplay {
         /**
          * Calculate pixels per foot based on actual max depth and current canvas height
          * This ensures the sonar display scales proportionally
+         * Water column height = canvasHeight - LAKE_BOTTOM_RESERVE_PX (96px for brown bottom)
          * @returns {number} Pixels per foot of depth
          */
         const maxDepth = this.getActualMaxDepth();
-        return this.canvasHeight / maxDepth;
+        const waterColumnHeight = this.canvasHeight - GameConfig.LAKE_BOTTOM_RESERVE_PX;
+        return waterColumnHeight / maxDepth;
     }
     
     initNoiseParticles() {
@@ -81,21 +83,25 @@ export class SonarDisplay {
     }
     
     generateBottomProfile() {
-        // Generate a realistic lakebed profile using actual water depth
-        const maxDepth = this.scene.maxDepth || GameConfig.MAX_DEPTH;
+        // Generate a realistic lakebed profile at fixed Y position
+        // Bottom is rendered at canvasHeight - LAKE_BOTTOM_RESERVE_PX (96px from bottom)
+        // This ensures the water column fills the screen and bottom area is exactly 96 pixels
         const profile = [];
-        let depth = maxDepth - 10;
+        const baseBottomY = this.canvasHeight - GameConfig.LAKE_BOTTOM_RESERVE_PX;
+        let yOffset = 0; // Variation in bottom contour
 
         for (let x = 0; x < this.canvasWidth + 200; x += 20) {
             // Add some variation to simulate rocks, drop-offs, etc.
-            depth += (Math.random() - 0.5) * 3;
-            depth = Math.max(maxDepth - 20, Math.min(maxDepth - 5, depth));
+            yOffset += (Math.random() - 0.5) * 2;
+            yOffset = Math.max(-10, Math.min(10, yOffset)); // Keep variation within ±10 pixels
+
+            const bottomY = baseBottomY + yOffset;
 
             // Occasional structure (rocks, logs)
             if (Math.random() < 0.1) {
-                profile.push({ x: x, y: depth * this.getDepthScale(), type: 'structure' });
+                profile.push({ x: x, y: bottomY, type: 'structure' });
             } else {
-                profile.push({ x: x, y: depth * this.getDepthScale(), type: 'normal' });
+                profile.push({ x: x, y: bottomY, type: 'normal' });
             }
         }
 
@@ -148,6 +154,9 @@ export class SonarDisplay {
 
         // Draw surface line
         this.drawSurfaceLine();
+
+        // Draw debug boundaries (fish constraints)
+        this.drawDebugBoundaries();
     }
     
     drawBackgroundGradient() {
@@ -173,21 +182,23 @@ export class SonarDisplay {
     drawDepthZones() {
         // Draw subtle visual indicators for depth behavior zones
         const zones = GameConfig.DEPTH_ZONES;
+        const depthScale = this.getDepthScale();
 
         // Surface zone - slight yellow tint
-        const surfaceY = zones.SURFACE.max * GameConfig.DEPTH_SCALE;
+        const surfaceY = zones.SURFACE.max * depthScale;
         this.graphics.fillStyle(0xffff00, 0.02);
         this.graphics.fillRect(0, 0, this.canvasWidth, surfaceY);
 
         // Mid-column zone - slight green tint
-        const midY = zones.MID_COLUMN.min * GameConfig.DEPTH_SCALE;
-        const midHeight = (zones.MID_COLUMN.max - zones.MID_COLUMN.min) * GameConfig.DEPTH_SCALE;
+        const midY = zones.MID_COLUMN.min * depthScale;
+        const midHeight = (zones.MID_COLUMN.max - zones.MID_COLUMN.min) * depthScale;
         this.graphics.fillStyle(0x00ff00, 0.02);
         this.graphics.fillRect(0, midY, this.canvasWidth, midHeight);
 
         // Bottom zone - slight gray tint
-        const bottomY = zones.BOTTOM.min * GameConfig.DEPTH_SCALE;
-        const bottomHeight = this.canvasHeight - bottomY;
+        const bottomY = zones.BOTTOM.min * depthScale;
+        const waterColumnBottom = this.canvasHeight - GameConfig.LAKE_BOTTOM_RESERVE_PX;
+        const bottomHeight = waterColumnBottom - bottomY;
         this.graphics.fillStyle(0x888888, 0.02);
         this.graphics.fillRect(0, bottomY, this.canvasWidth, bottomHeight);
 
@@ -207,9 +218,12 @@ export class SonarDisplay {
         }
 
         // Horizontal lines (static - depth markers) using actual water depth
-        const maxDepth = this.scene.maxDepth || GameConfig.MAX_DEPTH;
-        for (let y = 0; y < this.canvasHeight; y += GameConfig.GRID_SIZE * 2) {
-            const depth = y / GameConfig.DEPTH_SCALE;
+        const maxDepth = this.getActualMaxDepth();
+        const depthScale = this.getDepthScale();
+        const waterColumnBottom = this.canvasHeight - GameConfig.LAKE_BOTTOM_RESERVE_PX;
+
+        for (let y = 0; y < waterColumnBottom; y += GameConfig.GRID_SIZE * 2) {
+            const depth = y / depthScale;
             if (depth <= maxDepth) {
                 this.graphics.lineStyle(1, GameConfig.COLOR_GRID, 0.15);
                 this.graphics.lineBetween(0, y, this.canvasWidth, y);
@@ -220,10 +234,11 @@ export class SonarDisplay {
     drawThermoclines() {
         const isSummerMode = this.fishingType === GameConfig.FISHING_TYPE_KAYAK ||
                              this.fishingType === GameConfig.FISHING_TYPE_MOTORBOAT;
+        const depthScale = this.getDepthScale();
 
         if (isSummerMode) {
             // Summer: Draw prominent thermocline at specified depth
-            const thermoclineY = GameConfig.THERMOCLINE_DEPTH * GameConfig.DEPTH_SCALE;
+            const thermoclineY = GameConfig.THERMOCLINE_DEPTH * depthScale;
             this.graphics.lineStyle(3, 0xff6600, 0.6); // Orange, more visible
 
             // Wavy line to show thermocline with stronger effect
@@ -254,7 +269,7 @@ export class SonarDisplay {
         } else {
             // Winter: Draw subtle temperature layers
             this.thermoclines.forEach(layer => {
-                const y = layer.depth * GameConfig.DEPTH_SCALE;
+                const y = layer.depth * depthScale;
                 this.graphics.lineStyle(1, 0x0099ff, layer.strength * 0.3);
 
                 // Wavy line to show thermocline
@@ -327,6 +342,7 @@ export class SonarDisplay {
         // Draw lake bed that scrolls with player position (for boat/kayak modes)
         const playerWorldX = this.scene.boatManager.playerX;
         const lakeBedProfile = this.scene.boatManager.lakeBedProfile;
+        const depthScale = this.getDepthScale();
 
         // Collect all visible points
         const visiblePoints = [];
@@ -334,7 +350,7 @@ export class SonarDisplay {
             const point = lakeBedProfile[i];
             const offsetFromPlayer = point.x - playerWorldX;
             const screenX = (this.canvasWidth / 2) + offsetFromPlayer;
-            const screenY = point.depth * GameConfig.DEPTH_SCALE;
+            const screenY = point.depth * depthScale;
 
             if (screenX >= -50 && screenX <= this.canvasWidth + 50) {
                 visiblePoints.push({ x: screenX, y: screenY });
@@ -405,17 +421,19 @@ export class SonarDisplay {
     createDepthMarkers() {
         // Create depth text objects once during initialization using display range
         // Display range is calculated in GameScene to show appropriate depth window
-        const displayRange = this.scene.displayRange || GameConfig.MAX_DEPTH;
+        const maxDepth = this.getActualMaxDepth();
+        const depthScale = this.getDepthScale();
+        const waterColumnBottom = this.canvasHeight - GameConfig.LAKE_BOTTOM_RESERVE_PX;
         const textStyle = {
             fontSize: '10px',
             fontFamily: 'Courier New',
             color: '#00ff00'
         };
 
-        // Create markers at 25ft intervals throughout the display range
-        for (let depth = 0; depth <= displayRange; depth += 25) {
-            const y = depth * GameConfig.DEPTH_SCALE;
-            if (y <= this.canvasHeight - 20) {
+        // Create markers at 25ft intervals throughout the water column
+        for (let depth = 0; depth <= maxDepth; depth += 25) {
+            const y = depth * depthScale;
+            if (y <= waterColumnBottom - 10) {
                 const text = this.scene.add.text(5, y - 6, depth + 'ft', textStyle);
                 text.setAlpha(0.7);
                 text.setDepth(100); // Ensure depth markers are visible
@@ -512,6 +530,128 @@ export class SonarDisplay {
             const text = this.scene.add.text(legendX + 12, y, sp.name + sp.rarity, textStyle);
             text.setDepth(100);
             this.scene.time.delayedCall(50, () => text.destroy());
+        });
+    }
+
+    drawDebugBoundaries() {
+        // Draw visual debug boundaries to show fish movement constraints
+        const maxDepth = this.getActualMaxDepth();
+        const depthScale = this.getDepthScale();
+
+        // BAITFISH CONSTRAINTS
+        // Minimum Y for baitfish (0.25 feet from surface)
+        const baitfishMinY = 0.25 * depthScale;
+        this.graphics.lineStyle(3, 0xff0000, 0.8); // RED line - baitfish minimum
+        this.graphics.lineBetween(0, baitfishMinY, this.canvasWidth, baitfishMinY);
+
+        // Add label for baitfish minimum
+        const baitfishMinLabel = this.scene.add.text(10, baitfishMinY + 5, 'BAITFISH MIN (0.25ft)', {
+            fontSize: '10px',
+            fontFamily: 'Courier New',
+            color: '#ff0000',
+            backgroundColor: '#000000'
+        });
+        baitfishMinLabel.setDepth(1000);
+        this.scene.time.delayedCall(50, () => baitfishMinLabel.destroy());
+
+        // BAITFISH CLOUD CONSTRAINTS
+        // Minimum Y for baitfish clouds (0.5 feet from surface)
+        const baitfishCloudMinY = 0.5 * depthScale;
+        this.graphics.lineStyle(3, 0xff8800, 0.8); // ORANGE line - baitfish cloud minimum
+        this.graphics.lineBetween(0, baitfishCloudMinY, GameConfig.CANVAS_WIDTH, baitfishCloudMinY);
+
+        // Add label for baitfish cloud minimum
+        const cloudMinLabel = this.scene.add.text(10, baitfishCloudMinY + 5, 'BAITFISH CLOUD MIN (0.5ft)', {
+            fontSize: '10px',
+            fontFamily: 'Courier New',
+            color: '#ff8800',
+            backgroundColor: '#000000'
+        });
+        cloudMinLabel.setDepth(1000);
+        this.scene.time.delayedCall(50, () => cloudMinLabel.destroy());
+
+        // FISH CONSTRAINTS (Regular fish like lakers)
+        // Minimum Y for fish (0 feet - can reach surface)
+        const fishMinY = 0;
+        this.graphics.lineStyle(2, 0x00ff00, 0.6); // GREEN line - fish minimum (at surface)
+        this.graphics.lineBetween(0, fishMinY, GameConfig.CANVAS_WIDTH, fishMinY);
+
+        // Add label for fish minimum
+        const fishMinLabel = this.scene.add.text(10, fishMinY + 2, 'FISH MIN (0ft - SURFACE)', {
+            fontSize: '10px',
+            fontFamily: 'Courier New',
+            color: '#00ff00',
+            backgroundColor: '#000000'
+        });
+        fishMinLabel.setDepth(1000);
+        this.scene.time.delayedCall(50, () => fishMinLabel.destroy());
+
+        // MAXIMUM CONSTRAINTS
+        // Maximum Y for baitfish (3 feet from bottom)
+        const baitfishMaxY = (maxDepth - 3) * depthScale;
+        this.graphics.lineStyle(2, 0x00ffff, 0.6); // CYAN line - baitfish maximum
+        this.graphics.lineBetween(0, baitfishMaxY, GameConfig.CANVAS_WIDTH, baitfishMaxY);
+
+        // Add label for baitfish maximum
+        const baitfishMaxLabel = this.scene.add.text(10, baitfishMaxY - 15, `BAITFISH MAX (${maxDepth-3}ft)`, {
+            fontSize: '10px',
+            fontFamily: 'Courier New',
+            color: '#00ffff',
+            backgroundColor: '#000000'
+        });
+        baitfishMaxLabel.setDepth(1000);
+        this.scene.time.delayedCall(50, () => baitfishMaxLabel.destroy());
+
+        // Maximum Y for fish (5 feet from bottom)
+        const fishMaxY = (maxDepth - 5) * depthScale;
+        this.graphics.lineStyle(2, 0x0088ff, 0.6); // BLUE line - fish maximum
+        this.graphics.lineBetween(0, fishMaxY, GameConfig.CANVAS_WIDTH, fishMaxY);
+
+        // Add label for fish maximum
+        const fishMaxLabel = this.scene.add.text(10, fishMaxY - 15, `FISH MAX (${maxDepth-5}ft)`, {
+            fontSize: '10px',
+            fontFamily: 'Courier New',
+            color: '#0088ff',
+            backgroundColor: '#000000'
+        });
+        fishMaxLabel.setDepth(1000);
+        this.scene.time.delayedCall(50, () => fishMaxLabel.destroy());
+
+        // Draw legend box for debug boundaries
+        const legendX = GameConfig.CANVAS_WIDTH - 250;
+        const legendY = GameConfig.CANVAS_HEIGHT - 120;
+
+        this.graphics.fillStyle(0x000000, 0.8);
+        this.graphics.fillRect(legendX - 5, legendY - 5, 240, 110);
+        this.graphics.lineStyle(2, 0xffff00, 0.8);
+        this.graphics.strokeRect(legendX - 5, legendY - 5, 240, 110);
+
+        const legendTitle = this.scene.add.text(legendX, legendY, '🐟 DEBUG: FISH BOUNDARIES', {
+            fontSize: '11px',
+            fontFamily: 'Courier New',
+            color: '#ffff00',
+            fontStyle: 'bold'
+        });
+        legendTitle.setDepth(1000);
+        this.scene.time.delayedCall(50, () => legendTitle.destroy());
+
+        const legendItems = [
+            { color: '#ff0000', text: 'Baitfish Min (0.25ft)' },
+            { color: '#ff8800', text: 'Cloud Min (0.5ft)' },
+            { color: '#00ff00', text: 'Fish Min (Surface)' },
+            { color: '#00ffff', text: 'Baitfish Max (3ft from bottom)' },
+            { color: '#0088ff', text: 'Fish Max (5ft from bottom)' }
+        ];
+
+        legendItems.forEach((item, index) => {
+            const y = legendY + 18 + (index * 16);
+            const legendItem = this.scene.add.text(legendX, y, `█ ${item.text}`, {
+                fontSize: '9px',
+                fontFamily: 'Courier New',
+                color: item.color
+            });
+            legendItem.setDepth(1000);
+            this.scene.time.delayedCall(50, () => legendItem.destroy());
         });
     }
 

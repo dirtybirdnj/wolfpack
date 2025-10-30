@@ -185,7 +185,11 @@ export class SpawningSystem {
             worldX = playerWorldX + (fromLeft ? -spawnDistance : spawnDistance);
         }
 
-        const y = depth * GameConfig.DEPTH_SCALE;
+        // Use dynamic depth scale from scene
+        const depthScale = this.scene.sonarDisplay ?
+            this.scene.sonarDisplay.getDepthScale() :
+            GameConfig.DEPTH_SCALE;
+        const y = depth * depthScale;
 
         // Create the fish with species parameter (worldX will be used internally, x will be calculated for screen)
         const fish = new Fish(this.scene, worldX, y, size, this.scene.fishingType || 'observation', species);
@@ -318,7 +322,11 @@ export class SpawningSystem {
             worldX = playerWorldX + (fromLeft ? -spawnDistance : spawnDistance);
         }
 
-        const y = depth * GameConfig.DEPTH_SCALE;
+        // Use dynamic depth scale from scene
+        const depthScale = this.scene.sonarDisplay ?
+            this.scene.sonarDisplay.getDepthScale() :
+            GameConfig.DEPTH_SCALE;
+        const y = depth * depthScale;
 
         // Create the baitfish cloud with species type
         const cloud = new BaitfishCloud(this.scene, worldX, y, cloudSize, speciesType);
@@ -396,7 +404,12 @@ export class SpawningSystem {
                 // Mid-depth layer - less common but available for shallow feeders
                 depth = Utils.randomBetween(60, 85);
             }
-            const y = depth * GameConfig.DEPTH_SCALE;
+
+            // Use dynamic depth scale from scene
+            const depthScale = this.scene.sonarDisplay ?
+                this.scene.sonarDisplay.getDepthScale() :
+                GameConfig.DEPTH_SCALE;
+            const y = depth * depthScale;
 
             // Create zooplankton
             const zp = new Zooplankton(this.scene, worldX, y);
@@ -471,7 +484,12 @@ export class SpawningSystem {
 
         // Spawn on the bottom (95-100 feet depth - very bottom)
         const depth = Utils.randomBetween(95, 100);
-        const y = depth * GameConfig.DEPTH_SCALE;
+
+        // Use dynamic depth scale from scene
+        const depthScale = this.scene.sonarDisplay ?
+            this.scene.sonarDisplay.getDepthScale() :
+            GameConfig.DEPTH_SCALE;
+        const y = depth * depthScale;
 
         // Create crayfish
         const crayfish = new Crayfish(this.scene, worldX, y);
@@ -510,10 +528,15 @@ export class SpawningSystem {
         const spawnDistance = 300;
         const worldX = playerWorldX + (fromLeft ? -spawnDistance : spawnDistance);
 
+        // Use dynamic depth scale from scene
+        const depthScale = this.scene.sonarDisplay ?
+            this.scene.sonarDisplay.getDepthScale() :
+            GameConfig.DEPTH_SCALE;
+
         // Spawn at mid-column depth (preferred lake trout zone)
         const y = Utils.randomBetween(
-            GameConfig.DEPTH_ZONES.MID_COLUMN.min * GameConfig.DEPTH_SCALE,
-            GameConfig.DEPTH_ZONES.MID_COLUMN.max * GameConfig.DEPTH_SCALE
+            GameConfig.DEPTH_ZONES.MID_COLUMN.min * depthScale,
+            GameConfig.DEPTH_ZONES.MID_COLUMN.max * depthScale
         );
 
         // Create fish with max hunger and low health (size MEDIUM for balance)

@@ -1,117 +1,86 @@
-import GameConfig, { LAKE_CHAMPLAIN_FACTS } from '../config/GameConfig.js';
+import GameConfig from '../config/GameConfig.js';
 
 export class BootScene extends Phaser.Scene {
     constructor() {
         super({ key: 'BootScene' });
     }
-    
+
+    init() {
+        // Set camera background to black immediately
+        this.cameras.main.setBackgroundColor(0x000000);
+    }
+
     preload() {
-        // Create loading bar
-        const loadingBar = this.add.graphics({
-            fillStyle: {
-                color: GameConfig.COLOR_TEXT
-            }
-        });
+        // Load VTJ logo
+        this.load.image('vtj-logo', 'samples/assets/vtj-circle-thickborder.png');
+    }
 
-        const loadingBox = this.add.graphics({
-            fillStyle: {
-                color: 0x222222
-            }
-        });
+    create() {
+        const { width, height } = this.cameras.main;
 
-        loadingBox.fillRect(120, 200, 400, 40);
+        // Create black background box
+        this.blackBox = this.add.graphics();
+        this.blackBox.fillStyle(0x000000, 1);
+        this.blackBox.fillRect(0, 0, width, height);
+        this.blackBox.setDepth(1000); // Ensure it's on top
 
-        // Loading text
-        const loadingText = this.add.text(GameConfig.CANVAS_WIDTH / 2, 175, 'Loading...', {
+        // Add VTJ logo in the center
+        this.vtjLogo = this.add.image(width / 2, height / 2, 'vtj-logo');
+        this.vtjLogo.setOrigin(0.5);
+        this.vtjLogo.setScale(0.15); // Adjust size as needed
+        this.vtjLogo.setDepth(1001); // Above black box
+        this.vtjLogo.setAlpha(0); // Start invisible
+
+        // Add website text 1 inch (96 pixels) above logo
+        this.websiteText = this.add.text(width / 2, height / 2 - 96, 'www.verticaltubejig.com', {
             fontSize: '16px',
             fontFamily: 'Courier New',
-            color: '#00ff00'
+            color: '#ffffff',
+            align: 'center'
         });
-        loadingText.setOrigin(0.5, 0.5);
+        this.websiteText.setOrigin(0.5);
+        this.websiteText.setDepth(1001);
+        this.websiteText.setAlpha(0); // Start invisible
 
-        // Lake Champlain fact display
-        const randomFact = LAKE_CHAMPLAIN_FACTS[Math.floor(Math.random() * LAKE_CHAMPLAIN_FACTS.length)];
-        const factText = this.add.text(GameConfig.CANVAS_WIDTH / 2, 280, randomFact, {
-            fontSize: '11px',
+        // Add tagline text 1 inch (96 pixels) below logo
+        this.taglineText = this.add.text(width / 2, height / 2 + 96, 'make big aggressive fish chase', {
+            fontSize: '14px',
             fontFamily: 'Courier New',
-            color: '#88ff88',
-            align: 'center',
-            wordWrap: { width: 480 }
+            fontStyle: 'italic',
+            color: '#ffffff',
+            align: 'center'
         });
-        factText.setOrigin(0.5, 0.5);
+        this.taglineText.setOrigin(0.5);
+        this.taglineText.setDepth(1001);
+        this.taglineText.setAlpha(0); // Start invisible
 
-        // Progress handling
-        this.load.on('progress', (value) => {
-            loadingBar.clear();
-            loadingBar.fillStyle(GameConfig.COLOR_TEXT, 1);
-            loadingBar.fillRect(124, 204, 392 * value, 32);
-        });
-
-        this.load.on('complete', () => {
-            loadingBar.destroy();
-            loadingBox.destroy();
-            loadingText.destroy();
-            factText.destroy();
-        });
-
-        // Load sample images for theming
-        this.load.image('logo-wolfpack', 'samples/screenshots/pr7-snes-wolfpack-artwork.jpg');
-        this.load.image('bg-ice', 'samples/assets/pr7-adirondacks-chunky-ice.jpg');
-        this.load.image('bg-sunset', 'samples/assets/pr7-tip-up-sunrise.jpg');
-        this.load.image('bg-rod', 'samples/assets/pr7-rod-box-drill-hole-bridge.jpg');
-        this.load.image('fish-trophy', 'samples/assets/pr2-lake-trout-photo-1.jpg');
-
-        // Create programmatic assets
-        this.createAssets();
-    }
-    
-    createAssets() {
-        // Create simple textures programmatically
-        
-        // Lure texture
-        const lureGraphics = this.add.graphics();
-        lureGraphics.fillStyle(GameConfig.COLOR_LURE, 1);
-        lureGraphics.fillCircle(16, 16, 8);
-        lureGraphics.generateTexture('lure', 32, 32);
-        lureGraphics.destroy();
-        
-        // Fish texture (different sizes)
-        const fishSizes = ['small', 'medium', 'large'];
-        fishSizes.forEach((size, index) => {
-            const fishGraphics = this.add.graphics();
-            const sizeMultiplier = (index + 1) * 5;
-            fishGraphics.fillStyle(GameConfig.COLOR_FISH_MEDIUM, 1);
-            fishGraphics.fillEllipse(20, 16, sizeMultiplier * 2, sizeMultiplier);
-            fishGraphics.generateTexture(`fish_${size}`, 40, 32);
-            fishGraphics.destroy();
-        });
-        
-        // Particle texture for effects
-        const particleGraphics = this.add.graphics();
-        particleGraphics.fillStyle(0xffffff, 1);
-        particleGraphics.fillCircle(4, 4, 4);
-        particleGraphics.generateTexture('particle', 8, 8);
-        particleGraphics.destroy();
-    }
-    
-    create() {
-        // Auto-proceed to menu after a brief moment
-        // No "press space" wait screen - just go straight to mode select
-        this.time.delayedCall(100, () => {
-            this.startGame();
+        // Fade in logo and text
+        this.tweens.add({
+            targets: [this.vtjLogo, this.websiteText, this.taglineText],
+            alpha: 1,
+            duration: 500,
+            ease: 'Power2',
+            onComplete: () => {
+                // Wait 2.5 seconds at full opacity
+                this.time.delayedCall(2500, () => {
+                    // Fade out logo and text, then start menu
+                    this.tweens.add({
+                        targets: [this.vtjLogo, this.websiteText, this.taglineText],
+                        alpha: 0,
+                        duration: 500,
+                        ease: 'Power2',
+                        onComplete: () => {
+                            // Start menu scene directly (MenuScene has black overlay that will fade out)
+                            this.scene.start('MenuScene');
+                        }
+                    });
+                });
+            }
         });
     }
 
     update() {
-        // No update needed - auto-proceeds in create()
-    }
-    
-    startGame() {
-        // Fade out and start menu
-        this.cameras.main.fadeOut(500);
-        this.cameras.main.once('camerafadeoutcomplete', () => {
-            this.scene.start('MenuScene');
-        });
+        // No update needed - tweens handle everything
     }
 }
 
