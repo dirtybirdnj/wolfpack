@@ -31,7 +31,7 @@ class GamepadManager {
         for (let i = 0; i < gamepads.length; i++) {
             const gamepad = gamepads[i];
             if (gamepad) {
-                console.log('🎮 Found existing gamepad:', gamepad.id);
+                console.log('🎮 Gamepad connected:', gamepad.id);
                 this.connectedGamepad = gamepad;
                 this.updateControllerStatus(true, gamepad.id);
                 this.notifyListeners('connected', gamepad);
@@ -51,7 +51,6 @@ class GamepadManager {
         });
 
         window.addEventListener('gamepaddisconnected', (e) => {
-            console.log('🎮 Gamepad disconnected:', e.gamepad.id);
             if (this.connectedGamepad && this.connectedGamepad.index === e.gamepad.index) {
                 this.connectedGamepad = null;
             }
@@ -59,8 +58,6 @@ class GamepadManager {
             this.notifyListeners('disconnected', e.gamepad);
             this.updateControllerStatus(false, 'No controller detected');
         });
-
-        console.log('🎮 GamepadManager: Event listeners attached');
     }
 
     /**

@@ -1,4 +1,4 @@
-![Wolf Pack ](https://github.com/dirtybirdnj/wolfpack/blob/main/samples/snes-wolfpack.jpg?raw=true)
+![Wolf Pack ](https://github.com/dirtybirdnj/wolfpack/blob/main/samples/screenshots/pr7-snes-wolfpack-artwork.jpg?raw=true)
 
 A Lake Champlain ice fishing simulator recreates the experience of vertical jigging, built with Phaser 3. 
 
