@@ -270,7 +270,7 @@
 
         /* Top Bar Toggle Button */
         #topbar-toggle {
-            font-size: 24px;
+            font-size: 16px;
             line-height: 1;
             cursor: pointer;
             user-select: none;
@@ -461,7 +461,7 @@
                     </div>
                     <!-- Top Bar Toggle (integrated into info bar) -->
                     <div id="topbar-toggle-container" style="position: relative;" title="Toggle top bar">
-                        <div id="topbar-toggle">▼</div>
+                        <div id="topbar-toggle">▲</div>
                     </div>
                     <!-- Sidebar Toggle (integrated into info bar) -->
                     <div id="sidebar-toggle-container" style="position: relative;" title="Toggle sidebar">
@@ -549,18 +549,14 @@
                 // Save preference
                 localStorage.setItem('sidebarCollapsed', isCollapsed);
 
-                // Update icon
-                sidebarToggle.textContent = isCollapsed ? '☰' : '×';
+                // Keep hamburger icon consistent (don't change to X)
+                sidebarToggle.textContent = '☰';
 
                 console.log(isCollapsed ? '📱 Sidebar collapsed - Full screen mode' : '📊 Sidebar expanded');
             });
 
-            // Set initial icon based on state
-            if (sidebarCollapsed) {
-                sidebarToggle.textContent = '☰';
-            } else {
-                sidebarToggle.textContent = '×';
-            }
+            // Set initial icon (always hamburger)
+            sidebarToggle.textContent = '☰';
         });
     </script>
 
@@ -582,18 +578,14 @@
                 // Save preference
                 localStorage.setItem('topbarCollapsed', isCollapsed);
 
-                // Update icon
-                topbarToggle.textContent = isCollapsed ? '▲' : '▼';
+                // Keep up arrow consistent (don't change to down)
+                topbarToggle.textContent = '▲';
 
                 console.log(isCollapsed ? '🎬 Top bar hidden - Cinema mode' : '📊 Top bar visible');
             });
 
-            // Set initial icon based on state
-            if (topbarCollapsed) {
-                topbarToggle.textContent = '▲';
-            } else {
-                topbarToggle.textContent = '▼';
-            }
+            // Set initial icon (always up arrow)
+            topbarToggle.textContent = '▲';
         });
     </script>
 
