@@ -120,13 +120,19 @@ export class NorthernPike extends Fish {
 
     /**
      * Render at a custom position (for catch popup)
+     * @param {boolean} facingLeft - If true, fish faces left (tournament photo style)
      */
-    renderAtPosition(graphics, x, y, bodySize) {
+    renderAtPosition(graphics, x, y, bodySize, facingLeft = false) {
         const colors = this.speciesData.appearance.colorScheme;
 
         // Use canvas transformation to position the fish
         graphics.save();
         graphics.translateCanvas(x, y);
+
+        // Flip fish to face left if requested
+        if (facingLeft) {
+            graphics.scaleCanvas(-1, 1);
+        }
 
         // Render body at origin (0,0) relative to translated position
         this.renderBody(graphics, bodySize, colors, 0, 0);

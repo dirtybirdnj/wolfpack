@@ -575,21 +575,21 @@ export class FishFight {
 
     /**
      * Draw a measurement ruler below the fish (simulates real fishing ruler)
+     * Tournament style: starts at fish mouth (left edge)
      * Returns array of all created elements for cleanup
      */
-    drawMeasurementRuler(centerX, centerY, fishLengthInches) {
+    drawMeasurementRuler(startX, centerY, fishLengthInches, pixelsPerInch) {
         const elements = []; // Track all elements for cleanup
 
         const rulerGraphics = this.scene.add.graphics();
         rulerGraphics.setDepth(2002);
         elements.push(rulerGraphics);
 
-        // Ruler dimensions - scale ruler to fit fish length nicely
-        const pixelsPerInch = 8; // Visual scale
+        // Ruler dimensions - exact scale matching fish
         const rulerLengthPx = fishLengthInches * pixelsPerInch;
         const rulerHeight = 20;
-        const rulerStartX = centerX - rulerLengthPx / 2;
-        const rulerEndX = centerX + rulerLengthPx / 2;
+        const rulerStartX = startX;
+        const rulerEndX = startX + rulerLengthPx;
 
         // Draw ruler background (yellow/tan like a real measuring tape)
         rulerGraphics.fillStyle(0xf4e4c1, 1.0);
@@ -671,6 +671,115 @@ export class FishFight {
         return elements;
     }
 
+    /**
+     * Draw size classification ruler showing SMALL/MEDIUM/LARGE/TROPHY zones
+     * Returns array of all created elements for cleanup
+     */
+    drawClassificationRuler(startX, centerY, speciesName, pixelsPerInch) {
+        const elements = [];
+
+        // Get species data from SpeciesData
+        const SpeciesData = require('../config/SpeciesData.js');
+        const speciesData = SpeciesData.PREDATOR_SPECIES[speciesName];
+
+        if (!speciesData || !speciesData.sizeCategories) {
+            return elements; // No classification data available
+        }
+
+        const rulerGraphics = this.scene.add.graphics();
+        rulerGraphics.setDepth(2002);
+        elements.push(rulerGraphics);
+
+        const rulerHeight = 25;
+        const categories = speciesData.sizeCategories;
+
+        // Size classification colors
+        const colors = {
+            small: 0x4a7c59,    // Green
+            medium: 0xf4a460,   // Sandy brown
+            large: 0xff6b35,    // Orange-red
+            trophy: 0xffd700    // Gold
+        };
+
+        const textColors = {
+            small: '#88ff88',
+            medium: '#ffdd88',
+            large: '#ffaa66',
+            trophy: '#ffff00'
+        };
+
+        // Draw each size zone
+        ['small', 'medium', 'large', 'trophy'].forEach(sizeName => {
+            const category = categories[sizeName];
+            if (!category || !category.lengthRange) return;
+
+            const minLength = category.lengthRange[0];
+            const maxLength = category.lengthRange[1];
+
+            const zoneStartX = startX + (minLength * pixelsPerInch);
+            const zoneWidth = (maxLength - minLength) * pixelsPerInch;
+
+            // Draw zone background
+            rulerGraphics.fillStyle(colors[sizeName], 0.6);
+            rulerGraphics.fillRect(zoneStartX, centerY - rulerHeight / 2, zoneWidth, rulerHeight);
+
+            // Draw zone border
+            rulerGraphics.lineStyle(2, colors[sizeName], 1.0);
+            rulerGraphics.strokeRect(zoneStartX, centerY - rulerHeight / 2, zoneWidth, rulerHeight);
+
+            // Add zone label
+            const labelX = zoneStartX + zoneWidth / 2;
+            const labelText = this.scene.add.text(labelX, centerY,
+                sizeName.toUpperCase(),
+                {
+                    fontSize: '10px',
+                    fontFamily: 'Courier New',
+                    color: textColors[sizeName],
+                    align: 'center',
+                    stroke: '#000000',
+                    strokeThickness: 3
+                }
+            );
+            labelText.setOrigin(0.5, 0.5);
+            labelText.setDepth(2003);
+            elements.push(labelText);
+
+            // Add length markers at boundaries
+            if (sizeName !== 'small') { // Don't draw start marker for small (it's at 0)
+                const markerText = this.scene.add.text(zoneStartX, centerY + rulerHeight / 2 + 3,
+                    `${minLength}"`,
+                    {
+                        fontSize: '9px',
+                        fontFamily: 'Courier New',
+                        color: '#ffffff',
+                        align: 'center'
+                    }
+                );
+                markerText.setOrigin(0.5, 0);
+                markerText.setDepth(2003);
+                elements.push(markerText);
+            }
+        });
+
+        // Add "SIZE CLASS" label on left
+        const classLabel = this.scene.add.text(startX - 5, centerY,
+            'SIZE',
+            {
+                fontSize: '10px',
+                fontFamily: 'Courier New',
+                color: '#ffff00',
+                align: 'right',
+                stroke: '#000000',
+                strokeThickness: 2
+            }
+        );
+        classLabel.setOrigin(1, 0.5);
+        classLabel.setDepth(2003);
+        elements.push(classLabel);
+
+        return elements;
+    }
+
     showCatchPopup(info) {
         // Pause the game AND prevent input systems from processing
         this.scene.physics.pause();
@@ -719,20 +828,39 @@ export class FishFight {
         const fishGraphics = this.scene.add.graphics();
         fishGraphics.setDepth(2002);
 
-        // Render enlarged fish (with defensive check)
+        // Tournament-style fish photo: scale fish to match ruler exactly
         // NOTE: this.fish is the model (LakeTrout, SmallmouthBass, etc.), not the entity wrapper
-        // We need to calculate bodySize here to match Fish.js:244
-        const fishRenderY = popupY - 60; // Position fish higher to make room for ruler
+        const fishRenderY = popupY - 60;
+
+        // Calculate proper scale: fish body should match ruler length
+        // Fish body is roughly 2.5x bodySize in length for most species
+        const desiredPixelsPerInch = 6; // Tournament ruler scale (6 pixels per inch)
+        const fishLengthInches = this.fish.length;
+        const desiredFishLengthPx = fishLengthInches * desiredPixelsPerInch;
+
+        // Fish body is drawn at roughly 2.5-3.2x bodySize depending on species
+        // Use average of 2.8x as estimate
+        const bodySize = desiredFishLengthPx / 2.8;
+
+        // Calculate fish mouth position (left edge where ruler should start)
+        const fishMouthX = popupX - (desiredFishLengthPx / 2);
+
         if (this.fish && typeof this.fish.renderAtPosition === 'function') {
-            const scale = 2.5; // Increased from 1 to make fish more visible
-            const bodySize = Math.max(8, this.fish.weight / 2) * scale;
-            this.fish.renderAtPosition(fishGraphics, popupX, fishRenderY, bodySize);
+            // Render fish facing LEFT (tournament photo style)
+            this.fish.renderAtPosition(fishGraphics, popupX, fishRenderY, bodySize, true);
         } else {
             console.warn('Fish renderAtPosition method not available, skipping fish rendering in popup');
         }
 
-        // Draw measurement ruler below the fish
-        const rulerElements = this.drawMeasurementRuler(popupX, fishRenderY + 50, this.fish.length);
+        // Draw measurement ruler below the fish, starting at fish mouth
+        const rulerElements = this.drawMeasurementRuler(
+            fishMouthX, fishRenderY + 45, fishLengthInches, desiredPixelsPerInch
+        );
+
+        // Draw size classification ruler below the measurement ruler
+        const classificationElements = this.drawClassificationRuler(
+            fishMouthX, fishRenderY + 75, this.fish.species, desiredPixelsPerInch
+        );
 
         // Fish stats
         // Format age display (fish.age is already in years from calculateBiologicalAge)
@@ -798,6 +926,7 @@ export class FishFight {
 
             // Destroy ruler elements
             rulerElements.forEach(element => element.destroy());
+            classificationElements.forEach(element => element.destroy());
 
             // Remove input listeners
             this.scene.input.keyboard.off('keydown', keyboardHandler);
