@@ -99,7 +99,8 @@
         }
 
         #gamepad-icon:hover,
-        #book-icon:hover {
+        #book-icon:hover,
+        #camera-icon:hover {
             transform: scale(1.1);
         }
 
@@ -396,7 +397,7 @@
         <div id="top-bar-container">
             <!-- Game Info Panel -->
             <div id="game-info-panel" class="panel">
-                <div style="display: grid; grid-template-columns: repeat(11, 1fr) auto auto; gap: 8px; font-size: 10px; align-items: center;">
+                <div style="display: grid; grid-template-columns: repeat(11, 1fr) auto auto auto; gap: 8px; font-size: 10px; align-items: center;">
                     <div>
                         <div style="color: var(--text-muted); font-size: 8px;">SCORE</div>
                         <div style="font-weight: bold; color: var(--text-primary); font-size: 11px;"><span id="ui-score">0</span></div>
@@ -467,14 +468,21 @@
                         <div style="color: var(--text-muted); font-size: 8px;">FUEL</div>
                         <div style="font-weight: bold; color: var(--text-primary); font-size: 11px;"><span id="ui-boat-fuel">100</span>%</div>
                     </div>
-                    <!-- Gamepad Icon (integrated into info bar) -->
-                    <div id="gamepad-icon-container" style="position: relative;">
-                        <div id="gamepad-icon" style="font-size: 24px; line-height: 1; cursor: pointer;">🎮</div>
-                        <div id="gamepad-connection-indicator" style="position: absolute; bottom: 0; right: 0; width: 8px; height: 8px; background: #00ff00; border-radius: 50%; border: 2px solid var(--bg-gradient-1); display: none; box-shadow: 0 0 8px rgba(0, 255, 0, 0.8);"></div>
-                    </div>
-                    <!-- Book Icon (integrated into info bar) -->
-                    <div id="book-icon-container" style="position: relative;">
-                        <div id="book-icon" style="font-size: 24px; line-height: 1; cursor: pointer;">📖</div>
+                    <!-- Icon Group (condensed into one cell) -->
+                    <div id="icon-group-container" style="display: flex; gap: 6px; align-items: center;">
+                        <!-- Gamepad Icon -->
+                        <div id="gamepad-icon-container" style="position: relative;">
+                            <div id="gamepad-icon" style="font-size: 24px; line-height: 1; cursor: pointer;">🎮</div>
+                            <div id="gamepad-connection-indicator" style="position: absolute; bottom: 0; right: 0; width: 8px; height: 8px; background: #00ff00; border-radius: 50%; border: 2px solid var(--bg-gradient-1); display: none; box-shadow: 0 0 8px rgba(0, 255, 0, 0.8);"></div>
+                        </div>
+                        <!-- Book Icon -->
+                        <div id="book-icon-container" style="position: relative;">
+                            <div id="book-icon" style="font-size: 24px; line-height: 1; cursor: pointer;">📖</div>
+                        </div>
+                        <!-- Camera Icon -->
+                        <div id="camera-icon-container" style="position: relative;">
+                            <div id="camera-icon" style="font-size: 24px; line-height: 1; cursor: pointer;" title="Take screenshot">📷</div>
+                        </div>
                     </div>
                     <!-- Top Bar Toggle (integrated into info bar) -->
                     <div id="topbar-toggle-container" style="position: relative;" title="Toggle top bar">
@@ -526,6 +534,9 @@
 
     <!-- Load Phaser from CDN -->
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js"></script>
+
+    <!-- Load html2canvas for screenshot functionality -->
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 
     <!-- Load game modules -->
     <script type="module" src="src/index.js"></script>
@@ -1102,6 +1113,211 @@
                     overlay.remove();
                 }
             });
+        });
+
+        // Setup camera icon click handler (Screenshot Feature)
+        document.getElementById('camera-icon-container').addEventListener('click', async () => {
+            try {
+                // Show loading indicator
+                const loadingOverlay = document.createElement('div');
+                loadingOverlay.style.cssText = `
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background: rgba(0, 0, 0, 0.8);
+                    z-index: 9999;
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    color: var(--text-primary);
+                    font-family: 'Courier New', monospace;
+                    font-size: 18px;
+                `;
+                loadingOverlay.innerHTML = '📸 Capturing screenshot...';
+                document.body.appendChild(loadingOverlay);
+
+                // Wait a moment for the loading overlay to render
+                await new Promise(resolve => setTimeout(resolve, 100));
+
+                // Capture screenshot of the entire page
+                const canvas = await html2canvas(document.body, {
+                    backgroundColor: '#000000',
+                    scale: 1,
+                    logging: false,
+                    useCORS: true
+                });
+
+                // Remove loading overlay
+                loadingOverlay.remove();
+
+                // Convert canvas to data URL
+                const screenshotDataUrl = canvas.toDataURL('image/png');
+
+                // Create screenshot modal
+                const overlay = document.createElement('div');
+                overlay.id = 'screenshot-overlay';
+                overlay.style.cssText = `
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background: rgba(0, 0, 0, 0.95);
+                    z-index: 10000;
+                    overflow-y: auto;
+                    padding: 40px;
+                    box-sizing: border-box;
+                `;
+
+                overlay.innerHTML = `
+                    <div style="max-width: 900px; margin: 0 auto; background: var(--panel-bg-alt); border: 2px solid var(--border-primary); border-radius: 10px; padding: 30px;">
+                        <h1 style="text-align: center; color: var(--text-primary); margin: 0 0 20px 0; font-family: 'Courier New', monospace;">📷 Screenshot Captured</h1>
+
+                        <div style="margin-bottom: 20px; border: 2px solid var(--border-secondary); border-radius: 5px; overflow: hidden;">
+                            <img src="${screenshotDataUrl}" style="width: 100%; height: auto; display: block;" alt="Screenshot preview">
+                        </div>
+
+                        <div style="background: rgba(0, 100, 0, 0.2); padding: 20px; border: 2px solid var(--border-primary); border-radius: 10px; margin-bottom: 20px;">
+                            <div style="margin-bottom: 15px;">
+                                <label style="display: block; color: var(--text-primary); font-family: 'Courier New', monospace; font-weight: bold; margin-bottom: 5px;">
+                                    Title:
+                                </label>
+                                <input
+                                    type="text"
+                                    id="screenshot-title"
+                                    placeholder="Enter a title for this issue..."
+                                    style="width: 100%; padding: 10px; background: rgba(0, 0, 0, 0.5); border: 2px solid var(--border-secondary); border-radius: 5px; color: var(--text-primary); font-family: 'Courier New', monospace; font-size: 14px; box-sizing: border-box;"
+                                >
+                            </div>
+
+                            <div style="margin-bottom: 15px;">
+                                <label style="display: block; color: var(--text-primary); font-family: 'Courier New', monospace; font-weight: bold; margin-bottom: 5px;">
+                                    Description:
+                                </label>
+                                <textarea
+                                    id="screenshot-description"
+                                    placeholder="Describe what you see or what issue you're reporting..."
+                                    rows="6"
+                                    style="width: 100%; padding: 10px; background: rgba(0, 0, 0, 0.5); border: 2px solid var(--border-secondary); border-radius: 5px; color: var(--text-primary); font-family: 'Courier New', monospace; font-size: 14px; resize: vertical; box-sizing: border-box;"
+                                ></textarea>
+                            </div>
+                        </div>
+
+                        <div id="screenshot-status-message" style="display: none; padding: 15px; border-radius: 5px; margin-bottom: 20px; font-family: 'Courier New', monospace; text-align: center;"></div>
+
+                        <div style="display: flex; gap: 10px; justify-content: center;">
+                            <button id="save-screenshot-btn" style="background: var(--button-bg); color: var(--button-text); border: none; padding: 12px 30px; font-size: 14px; font-family: 'Courier New', monospace; font-weight: bold; border-radius: 5px; cursor: pointer; transition: transform 0.1s;">
+                                💾 Save Screenshot Data
+                            </button>
+                            <button id="close-screenshot-btn" style="background: #ff6666; color: #000; border: none; padding: 12px 30px; font-size: 14px; font-family: 'Courier New', monospace; font-weight: bold; border-radius: 5px; cursor: pointer; transition: transform 0.1s;">
+                                ✖ Close (ESC)
+                            </button>
+                        </div>
+
+                        <div style="margin-top: 20px; padding: 15px; background: rgba(0, 100, 200, 0.2); border: 2px solid var(--border-secondary); border-radius: 5px;">
+                            <p style="margin: 0; font-size: 12px; color: #888; text-align: center; font-family: 'Courier New', monospace;">
+                                ℹ️ This screenshot will be used to create a GitHub issue with the title, description, and image you provide.
+                            </p>
+                        </div>
+                    </div>
+                `;
+
+                document.body.appendChild(overlay);
+
+                const titleInput = document.getElementById('screenshot-title');
+                const descriptionInput = document.getElementById('screenshot-description');
+                const saveBtn = document.getElementById('save-screenshot-btn');
+                const closeBtn = document.getElementById('close-screenshot-btn');
+                const statusMessage = document.getElementById('screenshot-status-message');
+
+                // Focus on title input
+                titleInput.focus();
+
+                // Function to show status message
+                function showStatus(message, isSuccess) {
+                    statusMessage.textContent = message;
+                    statusMessage.style.display = 'block';
+                    statusMessage.style.background = isSuccess ? 'rgba(0, 255, 0, 0.2)' : 'rgba(255, 0, 0, 0.2)';
+                    statusMessage.style.border = isSuccess ? '2px solid #00ff00' : '2px solid #ff6666';
+                    statusMessage.style.color = isSuccess ? '#00ff00' : '#ff6666';
+                }
+
+                // Save button handler
+                saveBtn.addEventListener('click', () => {
+                    const title = titleInput.value.trim();
+                    const description = descriptionInput.value.trim();
+
+                    if (!title) {
+                        showStatus('⚠️ Please enter a title', false);
+                        titleInput.focus();
+                        return;
+                    }
+
+                    if (!description) {
+                        showStatus('⚠️ Please enter a description', false);
+                        descriptionInput.focus();
+                        return;
+                    }
+
+                    // Store screenshot data in localStorage for future GitHub issue creation
+                    const screenshotData = {
+                        title: title,
+                        description: description,
+                        imageData: screenshotDataUrl,
+                        timestamp: new Date().toISOString()
+                    };
+
+                    // Save to localStorage (can be retrieved later for GitHub issue creation)
+                    const existingScreenshots = JSON.parse(localStorage.getItem('wolfpack-screenshots') || '[]');
+                    existingScreenshots.push(screenshotData);
+                    localStorage.setItem('wolfpack-screenshots', JSON.stringify(existingScreenshots));
+
+                    showStatus('✅ Screenshot data saved successfully! Ready for GitHub issue creation.', true);
+
+                    // Disable save button and change text
+                    saveBtn.disabled = true;
+                    saveBtn.style.opacity = '0.5';
+                    saveBtn.style.cursor = 'not-allowed';
+                    saveBtn.textContent = '✓ Saved';
+
+                    // Auto-close after 2 seconds
+                    setTimeout(() => {
+                        overlay.remove();
+                    }, 2000);
+                });
+
+                // Close button handler
+                closeBtn.addEventListener('click', () => {
+                    overlay.remove();
+                });
+
+                // ESC key handler
+                const escHandler = (e) => {
+                    if (e.key === 'Escape') {
+                        overlay.remove();
+                        document.removeEventListener('keydown', escHandler);
+                    }
+                };
+                document.addEventListener('keydown', escHandler);
+
+                // Click background to close
+                overlay.addEventListener('click', (e) => {
+                    if (e.target === overlay) {
+                        overlay.remove();
+                    }
+                });
+
+                // Clean up event listener when overlay is removed
+                overlay.addEventListener('remove', () => {
+                    document.removeEventListener('keydown', escHandler);
+                });
+
+            } catch (error) {
+                console.error('Screenshot capture failed:', error);
+                alert('Failed to capture screenshot. Please try again.');
+            }
         });
 
     </script>
