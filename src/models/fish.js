@@ -185,7 +185,9 @@ export class Fish extends AquaticOrganism {
         this.frameAge++;
         this.updateBiology();
 
-        this.depth = this.y / GameConfig.DEPTH_SCALE;
+        // Get dynamic depth scale from scene
+        const depthScale = this.scene.sonarDisplay ? this.scene.sonarDisplay.getDepthScale() : GameConfig.DEPTH_SCALE;
+        this.depth = this.y / depthScale;
         this.depthZone = this.getDepthZone();
         this.speed = this.baseSpeed * this.depthZone.speedMultiplier;
 
@@ -220,7 +222,7 @@ export class Fish extends AquaticOrganism {
             // Apply movement in world coordinates
             this.worldX += movement.x;
             this.y += movement.y;
-            this.depth = this.y / GameConfig.DEPTH_SCALE;
+            this.depth = this.y / depthScale;
 
             // Get player's world position (or use nature simulation mode)
             let playerWorldX;
@@ -267,7 +269,7 @@ export class Fish extends AquaticOrganism {
 
             // Keep fish above lake bottom (with 5 feet buffer)
             // Allow fish to swim all the way to surface (y=0) now that ice rendering is removed
-            const maxY = (bottomDepth - 5) * GameConfig.DEPTH_SCALE;
+            const maxY = (bottomDepth - 5) * depthScale;
             this.y = Math.max(0, Math.min(maxY, this.y));
 
             // Convert world position to screen position based on player position

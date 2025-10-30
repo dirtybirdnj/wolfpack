@@ -79,13 +79,15 @@ export class Baitfish extends AquaticOrganism {
             this.handleNormalBehavior(cloudCenter, lakersNearby, spreadMultiplier, otherBaitfish);
         }
 
-        this.depth = this.y / GameConfig.DEPTH_SCALE;
+        // Get dynamic depth scale from scene
+        const depthScale = this.scene.sonarDisplay ? this.scene.sonarDisplay.getDepthScale() : GameConfig.DEPTH_SCALE;
+        this.depth = this.y / depthScale;
 
         // Keep in vertical bounds based on water depth
         const bottomDepth = this.getBottomDepthAtPosition();
         // Allow baitfish near surface but not at absolute top (prevents sticking at Y=0)
-        const minY = 0.25 * GameConfig.DEPTH_SCALE; // 0.25 feet from surface (about 1 pixel)
-        const maxY = (bottomDepth - 3) * GameConfig.DEPTH_SCALE; // 3 feet from bottom
+        const minY = 0.25 * depthScale; // 0.25 feet from surface (about 1 pixel)
+        const maxY = (bottomDepth - 3) * depthScale; // 3 feet from bottom
         this.y = Math.max(minY, Math.min(maxY, this.y));
 
         // Update screen position and check if too far from player

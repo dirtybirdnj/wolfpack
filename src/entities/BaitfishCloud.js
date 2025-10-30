@@ -10,7 +10,9 @@ export class BaitfishCloud {
         this.worldX = worldX; // World X coordinate (like fish)
         this.centerX = worldX; // Screen X coordinate (calculated in update)
         this.centerY = y;
-        this.depth = y / GameConfig.DEPTH_SCALE;
+        // Get dynamic depth scale from scene
+        const depthScale = this.scene.sonarDisplay ? this.scene.sonarDisplay.getDepthScale() : GameConfig.DEPTH_SCALE;
+        this.depth = y / depthScale;
 
         // Species information
         this.speciesType = speciesType;
@@ -168,7 +170,9 @@ export class BaitfishCloud {
         // Update center position (cloud drifts or flees) - use world coordinates
         this.worldX += this.velocity.x;
         this.centerY += this.velocity.y;
-        this.depth = this.centerY / GameConfig.DEPTH_SCALE;
+        // Get dynamic depth scale from scene
+        const depthScale = this.scene.sonarDisplay ? this.scene.sonarDisplay.getDepthScale() : GameConfig.DEPTH_SCALE;
+        this.depth = this.centerY / depthScale;
 
         // SURFACE TRAP DETECTION: Track if stuck at surface
         const surfaceLimit = 50;
@@ -201,8 +205,8 @@ export class BaitfishCloud {
 
         // Keep cloud in vertical bounds based on water depth
         // Allow baitfish clouds near surface but not at absolute top (prevents sticking at Y=0)
-        const minY = 0.5 * GameConfig.DEPTH_SCALE; // 0.5 feet from surface
-        const maxY = (bottomDepth - 5) * GameConfig.DEPTH_SCALE; // 5 feet from bottom
+        const minY = 0.5 * depthScale; // 0.5 feet from surface
+        const maxY = (bottomDepth - 5) * depthScale; // 5 feet from bottom
         this.centerY = Math.max(minY, Math.min(maxY, this.centerY));
 
         // Convert world position to screen position based on player position
@@ -253,7 +257,7 @@ export class BaitfishCloud {
         // HORIZONTAL LINE DETECTION - Despawn cloud if compressed into unrealistic formation
         // This simulates natural cloud dispersal behavior
         const surfaceDepthLimit = 15; // Feet from surface
-        const surfaceYLimit = surfaceDepthLimit * GameConfig.DEPTH_SCALE;
+        const surfaceYLimit = surfaceDepthLimit * depthScale;
 
         if (this.centerY <= surfaceYLimit && this.baitfish.length >= 8) {
             // Cloud is near surface - check if compressed into horizontal line
@@ -431,7 +435,9 @@ export class BaitfishCloud {
         if (totalFish > 0) {
             this.centerX = (this.centerX * thisFishCount + otherCloud.centerX * otherFishCount) / totalFish;
             this.centerY = (this.centerY * thisFishCount + otherCloud.centerY * otherFishCount) / totalFish;
-            this.depth = this.centerY / GameConfig.DEPTH_SCALE;
+            // Get dynamic depth scale from scene
+            const depthScale = this.scene.sonarDisplay ? this.scene.sonarDisplay.getDepthScale() : GameConfig.DEPTH_SCALE;
+            this.depth = this.centerY / depthScale;
         }
 
         // Transfer all baitfish from other cloud to this cloud
