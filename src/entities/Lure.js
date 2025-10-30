@@ -124,9 +124,6 @@ export class Lure {
 
         // Get actual bottom depth from bathymetric data based on fishing type
         let bottomDepth = GameConfig.MAX_DEPTH; // Default fallback
-        if (this.scene.boatManager) {
-            // Boat/kayak mode: get depth at player's current position
-            bottomDepth = this.scene.boatManager.getDepthAtPosition(this.scene.boatManager.playerX);
         } else if (this.scene.iceHoleManager) {
             // Ice fishing mode: use hole manager's depth calculation
             bottomDepth = this.scene.iceHoleManager.getDepthAtPosition(this.x);

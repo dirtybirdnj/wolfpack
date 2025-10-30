@@ -52,8 +52,6 @@ export class AquaticOrganism {
             const playerWorldX = currentHole ? currentHole.x : this.worldX;
             const offsetFromPlayer = this.worldX - playerWorldX;
             this.x = (GameConfig.CANVAS_WIDTH / 2) + offsetFromPlayer;
-        } else if (this.scene.boatManager) {
-            const playerWorldX = this.scene.boatManager.getPlayerWorldX();
             const offsetFromPlayer = this.worldX - playerWorldX;
             this.x = (GameConfig.CANVAS_WIDTH / 2) + offsetFromPlayer;
         } else {
@@ -68,8 +66,6 @@ export class AquaticOrganism {
     getBottomDepthAtPosition() {
         let bottomDepth = this.scene.maxDepth || GameConfig.MAX_DEPTH;
 
-        if (this.scene.boatManager) {
-            bottomDepth = this.scene.boatManager.getDepthAtPosition(this.worldX);
         } else if (this.scene.iceHoleManager) {
             // For ice fishing, use the hole manager's depth calculation
             bottomDepth = this.scene.iceHoleManager.getDepthAtPosition(this.x);
@@ -90,8 +86,6 @@ export class AquaticOrganism {
             const playerWorldX = currentHole ? currentHole.x : this.worldX;
             const distanceFromPlayer = Math.abs(this.worldX - playerWorldX);
             return distanceFromPlayer > maxDistance;
-        } else if (this.scene.boatManager) {
-            const playerWorldX = this.scene.boatManager.getPlayerWorldX();
             const distanceFromPlayer = Math.abs(this.worldX - playerWorldX);
             return distanceFromPlayer > maxDistance;
         } else {
