@@ -15,8 +15,8 @@ export class FishingLine {
         this.lineAlpha = 0.8; // Braid is more visible
         this.lineType = 'braid';
 
-        // Ice hole position (where line starts)
-        this.iceHoleY = 54; // Ice surface height
+        // Line starts from top of screen (no ice hole visible in fishing mode)
+        this.iceHoleY = 0; // Top of screen
     }
 
     setLineType(type, braidColor = 'neon-green') {
@@ -56,8 +56,8 @@ export class FishingLine {
 
         // Get line start position (always center of screen when fishing)
         const lineStartX = GameConfig.CANVAS_WIDTH / 2;
-        // Get surface height from manager (ice or water)
-        const surfaceY = manager ? (manager.iceHeight || manager.waterHeight || 0) : this.iceHoleY;
+        // Line always starts from top of screen (no ice hole visible)
+        const surfaceY = 0;
 
         // Determine where the line ends
         let endX, endY;
@@ -81,8 +81,8 @@ export class FishingLine {
             endY = lure.y;
         }
 
-        // Only draw line if lure is below surface
-        if (endY > surfaceY) {
+        // Only draw line if lure has dropped below the top of screen
+        if (endY > 0) {
             // Draw the fishing line with slight curve for realism
             const midX = (lineStartX + endX) / 2;
             const midY = (surfaceY + endY) / 2;
