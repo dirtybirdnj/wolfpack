@@ -1118,39 +1118,13 @@
         // Setup camera icon click handler (Screenshot Feature)
         document.getElementById('camera-icon-container').addEventListener('click', async () => {
             try {
-                // Show loading indicator
-                const loadingOverlay = document.createElement('div');
-                loadingOverlay.style.cssText = `
-                    position: fixed;
-                    top: 0;
-                    left: 0;
-                    width: 100%;
-                    height: 100%;
-                    background: rgba(0, 0, 0, 0.8);
-                    z-index: 9999;
-                    display: flex;
-                    justify-content: center;
-                    align-items: center;
-                    color: var(--text-primary);
-                    font-family: 'Courier New', monospace;
-                    font-size: 18px;
-                `;
-                loadingOverlay.innerHTML = '📸 Capturing screenshot...';
-                document.body.appendChild(loadingOverlay);
-
-                // Wait a moment for the loading overlay to render
-                await new Promise(resolve => setTimeout(resolve, 100));
-
-                // Capture screenshot of the entire page
+                // Capture screenshot FIRST (before showing any UI)
                 const canvas = await html2canvas(document.body, {
                     backgroundColor: '#000000',
                     scale: 1,
                     logging: false,
                     useCORS: true
                 });
-
-                // Remove loading overlay
-                loadingOverlay.remove();
 
                 // Convert canvas to data URL
                 const screenshotDataUrl = canvas.toDataURL('image/png');
