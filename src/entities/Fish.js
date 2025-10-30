@@ -243,15 +243,9 @@ export class Fish {
     renderAtPosition(graphics, x, y, scale = 3) {
         const bodySize = Math.max(8, this.model.weight / 2) * scale;
 
-        graphics.save();
-        graphics.translateCanvas(x, y);
-        graphics.scaleCanvas(1, 1); // Always face right for popup
-        graphics.rotateCanvas(0); // Horizontal orientation
-
-        // Delegate rendering to the model
-        this.model.renderAtPosition(graphics, bodySize);
-
-        graphics.restore();
+        // Delegate rendering to the model with explicit coordinates
+        // Model will render at the specified position without transformations
+        this.model.renderAtPosition(graphics, x, y, bodySize);
     }
 }
 

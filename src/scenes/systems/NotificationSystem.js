@@ -46,6 +46,9 @@ export class NotificationSystem {
 
         // Flag to signal switching to tackle box
         this.switchToTackleBox = false;
+
+        // Gamepad disconnect warning state
+        this.disconnectWarning = null;
     }
 
     /**
@@ -157,6 +160,109 @@ export class NotificationSystem {
             delay: 1000,
             onComplete: () => text.destroy()
         });
+    }
+
+    /**
+     * Show gamepad disconnected warning
+     * Important notification when controller dies during gameplay
+     */
+    showGamepadDisconnected() {
+        // Create persistent overlay that stays until dismissed
+        const overlay = this.scene.add.graphics();
+        overlay.fillStyle(0x000000, 0.85);
+        overlay.fillRect(0, 0, GameConfig.CANVAS_WIDTH, GameConfig.CANVAS_HEIGHT);
+        overlay.setDepth(3000);
+
+        // Warning title
+        const title = this.scene.add.text(GameConfig.CANVAS_WIDTH / 2, 200, '⚠️ CONTROLLER DISCONNECTED', {
+            fontSize: '32px',
+            fontFamily: 'Courier New',
+            color: '#ff6600',
+            fontStyle: 'bold',
+            stroke: '#000000',
+            strokeThickness: 4
+        });
+        title.setOrigin(0.5, 0.5);
+        title.setDepth(3001);
+
+        // Warning message
+        const message = this.scene.add.text(GameConfig.CANVAS_WIDTH / 2, 280,
+            'Your controller has been disconnected.\n\n' +
+            'Check battery or connection, then press\n' +
+            'any button on the controller to reconnect.\n\n' +
+            'Or use keyboard controls to continue.',
+            {
+                fontSize: '16px',
+                fontFamily: 'Courier New',
+                color: '#ffffff',
+                align: 'center',
+                stroke: '#000000',
+                strokeThickness: 2,
+                lineSpacing: 8
+            }
+        );
+        message.setOrigin(0.5, 0.5);
+        message.setDepth(3001);
+
+        // Continue hint
+        const hint = this.scene.add.text(GameConfig.CANVAS_WIDTH / 2, 400,
+            'Press SPACEBAR or ESC to dismiss',
+            {
+                fontSize: '14px',
+                fontFamily: 'Courier New',
+                color: '#88ff88',
+                stroke: '#000000',
+                strokeThickness: 2
+            }
+        );
+        hint.setOrigin(0.5, 0.5);
+        hint.setDepth(3001);
+
+        // Pulse animation for title
+        this.scene.tweens.add({
+            targets: title,
+            alpha: 0.6,
+            duration: 800,
+            yoyo: true,
+            repeat: -1
+        });
+
+        // Store reference for dismissal
+        this.disconnectWarning = {
+            overlay: overlay,
+            title: title,
+            message: message,
+            hint: hint
+        };
+
+        // Pause the game
+        this.scene.physics.pause();
+
+        return this.disconnectWarning;
+    }
+
+    /**
+     * Dismiss gamepad disconnected warning
+     */
+    dismissDisconnectWarning() {
+        if (!this.disconnectWarning) return;
+
+        this.disconnectWarning.overlay.destroy();
+        this.disconnectWarning.title.destroy();
+        this.disconnectWarning.message.destroy();
+        this.disconnectWarning.hint.destroy();
+
+        this.disconnectWarning = null;
+
+        // Resume the game
+        this.scene.physics.resume();
+    }
+
+    /**
+     * Check if disconnect warning is active
+     */
+    hasDisconnectWarning() {
+        return this.disconnectWarning !== null && this.disconnectWarning !== undefined;
     }
 
     /**
@@ -831,6 +937,21 @@ export class NotificationSystem {
         // Handle pause menu input when paused
         if (this.isPaused) {
             this.handlePauseMenuInput();
+        }
+
+        // Handle disconnect warning dismissal
+        if (this.hasDisconnectWarning()) {
+            const spaceKey = this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+            const escKey = this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ESC);
+
+            if (Phaser.Input.Keyboard.JustDown(spaceKey) || Phaser.Input.Keyboard.JustDown(escKey)) {
+                this.dismissDisconnectWarning();
+            }
+
+            // Auto-dismiss if controller reconnects
+            if (window.gamepadManager && window.gamepadManager.isConnected()) {
+                this.dismissDisconnectWarning();
+            }
         }
     }
 

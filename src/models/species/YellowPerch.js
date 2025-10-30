@@ -56,18 +56,18 @@ export class YellowPerch extends Fish {
     /**
      * Render yellow perch body (shared by render and renderAtPosition)
      */
-    renderBody(graphics, bodySize, colors) {
+    renderBody(graphics, bodySize, colors, centerX = 0, centerY = 0) {
         // Perch body - deep and laterally compressed
         const perchLength = bodySize * 2.0;
         const perchHeight = bodySize * 0.85;
 
         // Main body - golden yellow
         graphics.fillStyle(colors.base, 1.0);
-        graphics.fillEllipse(0, 0, perchLength, perchHeight);
+        graphics.fillEllipse(centerX, centerY, perchLength, perchHeight);
 
         // Belly - pale yellow/cream
         graphics.fillStyle(colors.belly, 0.9);
-        graphics.fillEllipse(0, perchHeight * 0.25, perchLength * 0.8, perchHeight * 0.45);
+        graphics.fillEllipse(centerX, centerY + perchHeight * 0.25, perchLength * 0.8, perchHeight * 0.45);
 
         // Vertical bars - 6-8 dark bars
         graphics.fillStyle(colors.bars, 0.75);
@@ -76,13 +76,13 @@ export class YellowPerch extends Fish {
         const barSpacing = perchLength / (barCount + 1);
 
         for (let i = 0; i < barCount; i++) {
-            const barX = -perchLength * 0.4 + (i * barSpacing);
+            const barX = centerX - perchLength * 0.4 + (i * barSpacing);
             const heightMultiplier = 1.0 - Math.abs(i - barCount / 2) * 0.12;
             const barHeight = perchHeight * 0.75 * heightMultiplier;
 
             graphics.fillRect(
                 barX - barWidth / 2,
-                -barHeight / 2,
+                centerY - barHeight / 2,
                 barWidth,
                 barHeight
             );
@@ -90,49 +90,63 @@ export class YellowPerch extends Fish {
 
         // Tail
         const tailSize = bodySize * 0.7;
-        const tailX = -perchLength * 0.45;
+        const tailX = centerX - perchLength * 0.45;
 
         graphics.fillStyle(colors.fins, 0.9);
         graphics.beginPath();
-        graphics.moveTo(tailX, 0);
-        graphics.lineTo(tailX - tailSize * 0.65, -tailSize * 0.55);
-        graphics.lineTo(tailX - tailSize * 0.65, tailSize * 0.55);
+        graphics.moveTo(tailX, centerY);
+        graphics.lineTo(tailX - tailSize * 0.65, centerY - tailSize * 0.55);
+        graphics.lineTo(tailX - tailSize * 0.65, centerY + tailSize * 0.55);
         graphics.closePath();
         graphics.fillPath();
 
         // Spiny dorsal fin (front)
         graphics.fillStyle(colors.fins, 0.85);
-        const spinyDorsalX = -perchLength * 0.15;
+        const spinyDorsalX = centerX - perchLength * 0.15;
         graphics.fillTriangle(
-            spinyDorsalX, -perchHeight * 0.5,
-            spinyDorsalX - bodySize * 0.35, -perchHeight * 1.2,
-            spinyDorsalX + bodySize * 0.15, -perchHeight * 1.1
+            spinyDorsalX, centerY - perchHeight * 0.5,
+            spinyDorsalX - bodySize * 0.35, centerY - perchHeight * 1.2,
+            spinyDorsalX + bodySize * 0.15, centerY - perchHeight * 1.1
         );
 
         // Soft dorsal fin (rear) - orange/red tinted
         graphics.fillStyle(colors.fins, 0.9);
-        const softDorsalX = perchLength * 0.05;
+        const softDorsalX = centerX + perchLength * 0.05;
         graphics.fillTriangle(
-            softDorsalX, -perchHeight * 0.5,
-            softDorsalX - bodySize * 0.15, -perchHeight * 1.0,
-            softDorsalX + bodySize * 0.25, -perchHeight * 0.9
+            softDorsalX, centerY - perchHeight * 0.5,
+            softDorsalX - bodySize * 0.15, centerY - perchHeight * 1.0,
+            softDorsalX + bodySize * 0.25, centerY - perchHeight * 0.9
         );
 
         // Pectoral fins
-        const finX = -bodySize * 0.15;
+        const finX = centerX - bodySize * 0.15;
         graphics.fillTriangle(
-            finX, 0,
-            finX - bodySize * 0.3, -perchHeight * 0.25,
-            finX - bodySize * 0.3, perchHeight * 0.25
+            finX, centerY,
+            finX - bodySize * 0.3, centerY - perchHeight * 0.25,
+            finX - bodySize * 0.3, centerY + perchHeight * 0.25
         );
     }
 
     /**
      * Render at a custom position (for catch popup)
+     * @param {boolean} facingLeft - If true, fish faces left (tournament photo style)
      */
-    renderAtPosition(graphics, bodySize) {
+    renderAtPosition(graphics, x, y, bodySize, facingLeft = false) {
         const colors = this.speciesData.appearance.colorScheme;
-        this.renderBody(graphics, bodySize, colors);
+
+        // Use canvas transformation to position the fish
+        graphics.save();
+        graphics.translateCanvas(x, y);
+
+        // Flip fish to face left if requested
+        if (facingLeft) {
+            graphics.scaleCanvas(-1, 1);
+        }
+
+        // Render body at origin (0,0) relative to translated position
+        this.renderBody(graphics, bodySize, colors, 0, 0);
+
+        graphics.restore();
     }
 }
 

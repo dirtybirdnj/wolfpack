@@ -1,4 +1,5 @@
 import GameConfig from '../config/GameConfig.js';
+import { PREDATOR_SPECIES } from '../config/SpeciesData.js';
 
 export class FishFight {
     constructor(scene, fish, lure) {
@@ -42,6 +43,9 @@ export class FishFight {
         // Thrashing animation
         this.thrashAmount = 0;
         this.thrashSpeed = 0.15 + (biologicalCondition * 0.1); // Healthier fish thrash faster
+
+        // Store ice hole center position for fish positioning
+        this.centerX = this.lure.x;
 
         console.log(`Fish condition - Health: ${this.fish.health.toFixed(0)}%, Hunger: ${this.fish.hunger.toFixed(0)}%, Strength: ${this.fishStrength.toFixed(1)}, Initial Energy: ${this.fishEnergy.toFixed(1)}`);
 
@@ -358,8 +362,8 @@ export class FishFight {
         // Add vertical thrashing component (fish also thrashes up/down)
         const verticalThrash = Math.cos(this.fightTime * this.thrashSpeed * 1.3) * 6 * thrashMultiplier * energyMultiplier;
 
-        // Position fish at depth with thrashing
-        this.fish.x = this.lure.x + actualThrash;
+        // Position fish at depth with thrashing (relative to ice hole center, not current lure position)
+        this.fish.x = this.centerX + actualThrash;
         this.fish.y = targetY + verticalThrash;
         this.fish.depth = this.fish.y / GameConfig.DEPTH_SCALE;
 
@@ -570,9 +574,235 @@ export class FishFight {
         this.showCatchPopup(info);
     }
 
+    /**
+     * Draw a measurement ruler below the fish (simulates real fishing ruler)
+     * Tournament style: starts at fish mouth (left edge)
+     * Returns array of all created elements for cleanup
+     */
+    drawMeasurementRuler(startX, centerY, fishLengthInches, pixelsPerInch) {
+        const elements = []; // Track all elements for cleanup
+
+        const rulerGraphics = this.scene.add.graphics();
+        rulerGraphics.setDepth(2002);
+        elements.push(rulerGraphics);
+
+        // Ruler dimensions - exact scale matching fish (larger for 4x fish)
+        const rulerLengthPx = fishLengthInches * pixelsPerInch;
+        const rulerHeight = 30; // Taller ruler for larger fish
+        const rulerStartX = startX;
+        const rulerEndX = startX + rulerLengthPx;
+
+        // Draw ruler background (white like a real fishing ruler)
+        rulerGraphics.fillStyle(0xffffff, 1.0);
+        rulerGraphics.fillRect(rulerStartX, centerY - rulerHeight / 2, rulerLengthPx, rulerHeight);
+
+        // Draw ruler border (black)
+        rulerGraphics.lineStyle(3, 0x000000, 1.0);
+        rulerGraphics.strokeRect(rulerStartX, centerY - rulerHeight / 2, rulerLengthPx, rulerHeight);
+
+        // Draw tick marks and numbers for EVERY inch
+        rulerGraphics.lineStyle(2, 0x000000, 1.0);
+        for (let i = 0; i <= fishLengthInches; i++) {
+            const tickX = rulerStartX + (i * pixelsPerInch);
+
+            // Full-height tick marks at every inch
+            rulerGraphics.lineBetween(
+                tickX, centerY - rulerHeight / 2,
+                tickX, centerY + rulerHeight / 2
+            );
+
+            // Add number label for every inch
+            if (i > 0) {
+                const label = this.scene.add.text(tickX, centerY,
+                    `${i}`,
+                    {
+                        fontSize: '14px',
+                        fontFamily: 'Courier New',
+                        color: '#000000',
+                        align: 'center',
+                        fontStyle: 'bold'
+                    }
+                );
+                label.setOrigin(0.5, 0.5);
+                label.setDepth(2003);
+                elements.push(label);
+            }
+        }
+
+        // Add "LENGTH" label on left side
+        const lengthLabel = this.scene.add.text(rulerStartX - 5, centerY,
+            'LENGTH',
+            {
+                fontSize: '10px',
+                fontFamily: 'Courier New',
+                color: '#ffff00',
+                align: 'right',
+                stroke: '#000000',
+                strokeThickness: 2
+            }
+        );
+        lengthLabel.setOrigin(1, 0.5);
+        lengthLabel.setDepth(2003);
+        elements.push(lengthLabel);
+
+        // Add fish length display on right side
+        const lengthValue = this.scene.add.text(rulerEndX + 5, centerY,
+            `${fishLengthInches}"`,
+            {
+                fontSize: '14px',
+                fontFamily: 'Courier New',
+                color: '#00ff00',
+                align: 'left',
+                stroke: '#000000',
+                strokeThickness: 3
+            }
+        );
+        lengthValue.setOrigin(0, 0.5);
+        lengthValue.setDepth(2003);
+        elements.push(lengthValue);
+
+        return elements;
+    }
+
+    /**
+     * Draw size classification ruler showing SMALL/MEDIUM/LARGE/TROPHY zones
+     * Greys out size classes the fish hasn't reached yet
+     * Shows ALL size classes (including unreached ones) for visual progress tracking
+     * Clipped to popup width to prevent overflow on the right side
+     * Returns array of all created elements for cleanup
+     */
+    drawClassificationRuler(startX, centerY, speciesName, fishLength, pixelsPerInch, popupWidth) {
+        const elements = [];
+
+        // Get species data from imported PREDATOR_SPECIES
+        const speciesData = PREDATOR_SPECIES[speciesName];
+
+        if (!speciesData || !speciesData.sizeCategories) {
+            return elements; // No classification data available
+        }
+
+        const rulerGraphics = this.scene.add.graphics();
+        rulerGraphics.setDepth(2002);
+        elements.push(rulerGraphics);
+
+        const rulerHeight = 35;
+        const categories = speciesData.sizeCategories;
+
+        // Size classification colors
+        const colors = {
+            small: 0x4a7c59,    // Green
+            medium: 0xf4a460,   // Sandy brown
+            large: 0xff6b35,    // Orange-red
+            trophy: 0xffd700    // Gold
+        };
+
+        const textColors = {
+            small: '#88ff88',
+            medium: '#ffdd88',
+            large: '#ffaa66',
+            trophy: '#ffff00'
+        };
+
+        // Calculate max available width for ruler (popup center +/- half width, with margin)
+        const popupCenterX = GameConfig.CANVAS_WIDTH / 2;
+        const maxRulerEndX = popupCenterX + (popupWidth / 2) - 10; // 10px margin from popup edge
+
+        // Draw each size zone - show ALL zones, clip on right side if needed
+        ['small', 'medium', 'large', 'trophy'].forEach(sizeName => {
+            const category = categories[sizeName];
+            if (!category || !category.lengthRange) return;
+
+            const minLength = category.lengthRange[0];
+            const maxLength = category.lengthRange[1];
+
+            const zoneStartX = startX + (minLength * pixelsPerInch);
+            let zoneWidth = (maxLength - minLength) * pixelsPerInch;
+            const zoneEndX = zoneStartX + zoneWidth;
+
+            // Skip if zone starts beyond popup boundary
+            if (zoneStartX >= maxRulerEndX) return;
+
+            // Clip zone width if it extends beyond popup boundary
+            if (zoneEndX > maxRulerEndX) {
+                zoneWidth = maxRulerEndX - zoneStartX;
+            }
+
+            // Check if fish has reached this size class
+            const fishReachedClass = fishLength >= minLength;
+            const opacity = fishReachedClass ? 0.7 : 0.2; // Grey out unreached classes
+            const borderOpacity = fishReachedClass ? 1.0 : 0.3;
+
+            // Draw zone background (clipped)
+            rulerGraphics.fillStyle(colors[sizeName], opacity);
+            rulerGraphics.fillRect(zoneStartX, centerY - rulerHeight / 2, zoneWidth, rulerHeight);
+
+            // Draw zone border (clipped)
+            rulerGraphics.lineStyle(3, colors[sizeName], borderOpacity);
+            rulerGraphics.strokeRect(zoneStartX, centerY - rulerHeight / 2, zoneWidth, rulerHeight);
+
+            // Add zone label (greyed text for unreached classes) - only if visible
+            const labelX = zoneStartX + zoneWidth / 2;
+            if (labelX < maxRulerEndX) {
+                const labelColor = fishReachedClass ? textColors[sizeName] : '#666666';
+                const labelText = this.scene.add.text(labelX, centerY,
+                    sizeName.toUpperCase(),
+                    {
+                        fontSize: '12px',
+                        fontFamily: 'Courier New',
+                        color: labelColor,
+                        align: 'center',
+                        stroke: '#000000',
+                        strokeThickness: 3,
+                        fontStyle: 'bold'
+                    }
+                );
+                labelText.setOrigin(0.5, 0.5);
+                labelText.setDepth(2003);
+                elements.push(labelText);
+            }
+
+            // Add length markers at boundaries - only if visible
+            if (sizeName !== 'small' && zoneStartX < maxRulerEndX) {
+                const markerColor = fishReachedClass ? '#ffffff' : '#666666';
+                const markerText = this.scene.add.text(zoneStartX, centerY + rulerHeight / 2 + 5,
+                    `${minLength}"`,
+                    {
+                        fontSize: '11px',
+                        fontFamily: 'Courier New',
+                        color: markerColor,
+                        align: 'center',
+                        fontStyle: 'bold'
+                    }
+                );
+                markerText.setOrigin(0.5, 0);
+                markerText.setDepth(2003);
+                elements.push(markerText);
+            }
+        });
+
+        // Add "SIZE CLASS" label on left
+        const classLabel = this.scene.add.text(startX - 5, centerY,
+            'SIZE',
+            {
+                fontSize: '10px',
+                fontFamily: 'Courier New',
+                color: '#ffff00',
+                align: 'right',
+                stroke: '#000000',
+                strokeThickness: 2
+            }
+        );
+        classLabel.setOrigin(1, 0.5);
+        classLabel.setDepth(2003);
+        elements.push(classLabel);
+
+        return elements;
+    }
+
     showCatchPopup(info) {
-        // Pause the game
+        // Pause the game AND prevent input systems from processing
         this.scene.physics.pause();
+        this.scene.catchPopupActive = true; // Flag to prevent other input handlers
 
         // Create dark overlay
         const overlay = this.scene.add.rectangle(
@@ -582,10 +812,11 @@ export class FishFight {
         );
         overlay.setOrigin(0, 0);
         overlay.setDepth(2000);
+        overlay.setInteractive(); // Block input to objects below
 
-        // Create popup background
-        const popupWidth = 500;
-        const popupHeight = 400;
+        // Create larger popup background (was 500x400, now 900x600)
+        const popupWidth = 900;
+        const popupHeight = 600;
         const popupX = GameConfig.CANVAS_WIDTH / 2;
         const popupY = GameConfig.CANVAS_HEIGHT / 2;
 
@@ -598,15 +829,15 @@ export class FishFight {
         popupBg.setDepth(2001);
 
         // Title
-        const title = this.scene.add.text(popupX, popupY - 160,
+        const title = this.scene.add.text(popupX, popupY - 260,
             'FISH CAUGHT!',
             {
-                fontSize: '32px',
+                fontSize: '48px',
                 fontFamily: 'Courier New',
                 color: '#00ff00',
                 align: 'center',
                 stroke: '#000000',
-                strokeThickness: 4
+                strokeThickness: 6
             }
         );
         title.setOrigin(0.5, 0.5);
@@ -616,15 +847,57 @@ export class FishFight {
         const fishGraphics = this.scene.add.graphics();
         fishGraphics.setDepth(2002);
 
-        // Render enlarged fish (with defensive check)
-        // Scale reduced from 4 to 2 to prevent fish from appearing too large
+        // Tournament-style fish photo: fish above ruler with nose at ruler start
+        // NOTE: this.fish is the model (LakeTrout, SmallmouthBass, etc.), not the entity wrapper
+
+        // NEW LAYOUT:
+        // 1. Center white ruler horizontally and vertically in popup
+        // 2. Move ruler down 1 inch (24px)
+        // 3. Ruler extends 4 inches past fish tail
+        // 4. Fish nose exactly at ruler start, above ruler
+        // 5. Trophy scale below white ruler, clipped to popup width
+
+        const desiredPixelsPerInch = 24; // 24 pixels per inch scale
+        const fishLengthInches = this.fish.length;
+        const extraInches = 4; // Ruler extends 4 inches past fish tail
+        const rulerLengthInches = fishLengthInches + extraInches;
+        const rulerLengthPx = rulerLengthInches * desiredPixelsPerInch;
+
+        // Center ruler horizontally and vertically, then move down 1 inch
+        const rulerCenterY = popupY + (1 * desiredPixelsPerInch); // Center + 1 inch down = 24px
+        const rulerStartX = popupX - (rulerLengthPx / 2); // Centered horizontally
+
+        // Fish body is drawn at roughly 2.5-3.2x bodySize depending on species
+        // Use average of 2.8x as estimate
+        const desiredFishLengthPx = fishLengthInches * desiredPixelsPerInch;
+        const bodySize = desiredFishLengthPx / 2.8;
+
+        // Fish positioned above ruler with nose exactly at ruler start
+        const fishCenterX = rulerStartX + (desiredFishLengthPx / 2);
+        const fishRenderY = rulerCenterY - 80; // Fish positioned above ruler
+
         if (this.fish && typeof this.fish.renderAtPosition === 'function') {
-            this.fish.renderAtPosition(fishGraphics, popupX, popupY - 40, 2);
+            // Render fish facing LEFT (tournament photo style)
+            // Fish centered at fishCenterX, so nose touches rulerStartX
+            this.fish.renderAtPosition(fishGraphics, fishCenterX, fishRenderY, bodySize, true);
         } else {
             console.warn('Fish renderAtPosition method not available, skipping fish rendering in popup');
         }
 
-        // Fish stats
+        // Draw white measurement ruler (centered, extends 4 inches past fish tail)
+        const rulerElements = this.drawMeasurementRuler(
+            rulerStartX, rulerCenterY, rulerLengthInches, desiredPixelsPerInch
+        );
+
+        // Draw size classification ruler below the white ruler
+        // Clip to popup width to prevent overflow
+        const classificationY = rulerCenterY + 40;
+        const classificationElements = this.drawClassificationRuler(
+            rulerStartX, classificationY, this.fish.species, this.fish.length,
+            desiredPixelsPerInch, popupWidth
+        );
+
+        // Fish stats - moved to TOP LEFT with smaller font
         // Format age display (fish.age is already in years from calculateBiologicalAge)
         let ageDisplay;
         if (this.fish.age < 2) {
@@ -636,30 +909,30 @@ export class FishFight {
             ageDisplay = `${this.fish.age} years`;
         }
 
-        const statsText = this.scene.add.text(popupX, popupY + 100,
-            `${info.name} (${info.gender})\n\n` +
+        const statsText = this.scene.add.text(popupX - 420, popupY - 250,
+            `${info.name} (${info.gender})\n` +
             `Weight: ${info.weight}\n` +
             `Length: ${info.length}\n` +
-            `Age: ${ageDisplay}\n\n` +
+            `Age: ${ageDisplay}\n` +
             `Points: +${this.fish.points}`,
             {
-                fontSize: '20px',
+                fontSize: '14px',
                 fontFamily: 'Courier New',
                 color: '#ffffff',
-                align: 'center',
+                align: 'left',
                 stroke: '#000000',
-                strokeThickness: 3,
-                lineSpacing: 8
+                strokeThickness: 2,
+                lineSpacing: 4
             }
         );
-        statsText.setOrigin(0.5, 0.5);
+        statsText.setOrigin(0, 0);  // Anchor at top-left
         statsText.setDepth(2002);
 
-        // Continue prompt
-        const continueText = this.scene.add.text(popupX, popupY + 180,
-            'Press any button to continue',
+        // Continue prompt - positioned well below stats
+        const continueText = this.scene.add.text(popupX, popupY + 240,
+            'Press X button to continue',
             {
-                fontSize: '16px',
+                fontSize: '20px',
                 fontFamily: 'Courier New',
                 color: '#ffff00',
                 align: 'center'
@@ -687,9 +960,16 @@ export class FishFight {
             statsText.destroy();
             continueText.destroy();
 
+            // Destroy ruler elements
+            rulerElements.forEach(element => element.destroy());
+            classificationElements.forEach(element => element.destroy());
+
             // Remove input listeners
-            this.scene.input.keyboard.off('keydown', dismissPopup);
-            this.scene.input.gamepad.off('down', dismissPopup);
+            this.scene.input.keyboard.off('keydown', keyboardHandler);
+            this.scene.input.gamepad.off('down', gamepadHandler);
+
+            // Clear catch popup flag BEFORE resuming
+            this.scene.catchPopupActive = false;
 
             // Resume game and finish cleanup
             this.scene.physics.resume();
@@ -699,12 +979,26 @@ export class FishFight {
             this.fish.destroy();
         };
 
-        // Listen for any keyboard input
-        this.scene.input.keyboard.once('keydown', dismissPopup);
+        // Keyboard handler - accept spacebar or enter
+        const keyboardHandler = (event) => {
+            if (event.keyCode === 32 || event.keyCode === 13) { // Space or Enter
+                dismissPopup();
+            }
+        };
 
-        // Listen for any gamepad button
+        // Gamepad handler - only accept X button (button 2)
+        const gamepadHandler = (pad, button, value) => {
+            if (button.index === 2) { // X button
+                dismissPopup();
+            }
+        };
+
+        // Listen for keyboard input
+        this.scene.input.keyboard.on('keydown', keyboardHandler);
+
+        // Listen for gamepad X button
         if (this.scene.input.gamepad && this.scene.input.gamepad.total > 0) {
-            this.scene.input.gamepad.once('down', dismissPopup);
+            this.scene.input.gamepad.on('down', gamepadHandler);
         }
     }
 

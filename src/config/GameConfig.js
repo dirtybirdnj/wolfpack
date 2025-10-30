@@ -35,7 +35,7 @@ export const GameConfig = {
     THERMOCLINE_DEPTH: 35, // feet - lake trout stay below this in summer
 
     // Canvas settings - expanded for maximum game area
-    CANVAS_WIDTH: 1200,
+    CANVAS_WIDTH: 1400,  // Widened from 1200 to expand into yellow areas
     CANVAS_HEIGHT: 650,
 
     // Sonar display settings

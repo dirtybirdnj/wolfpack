@@ -58,47 +58,60 @@ export class LakeTrout extends Fish {
     /**
      * Render lake trout body (shared by render and renderAtPosition)
      */
-    renderBody(graphics, bodySize) {
+    renderBody(graphics, bodySize, centerX = 0, centerY = 0) {
         // Main body - grayish-olive color
         graphics.fillStyle(GameConfig.COLOR_FISH_BODY, 1.0);
-        graphics.fillEllipse(0, 0, bodySize * 2.5, bodySize * 0.8);
+        graphics.fillEllipse(centerX, centerY, bodySize * 2.5, bodySize * 0.8);
 
         // Belly - cream/pinkish lighter color
         graphics.fillStyle(GameConfig.COLOR_FISH_BELLY, 0.8);
-        graphics.fillEllipse(0, bodySize * 0.2, bodySize * 2.2, bodySize * 0.5);
+        graphics.fillEllipse(centerX, centerY + bodySize * 0.2, bodySize * 2.2, bodySize * 0.5);
 
         // Tail fin
         const tailSize = bodySize * 0.7;
-        const tailX = -bodySize * 1.25;
+        const tailX = centerX - bodySize * 1.25;
 
         graphics.fillStyle(GameConfig.COLOR_FISH_FINS, 0.9);
         graphics.beginPath();
-        graphics.moveTo(tailX, 0);
-        graphics.lineTo(tailX - tailSize, -tailSize * 0.6);
-        graphics.lineTo(tailX - tailSize, tailSize * 0.6);
+        graphics.moveTo(tailX, centerY);
+        graphics.lineTo(tailX - tailSize, centerY - tailSize * 0.6);
+        graphics.lineTo(tailX - tailSize, centerY + tailSize * 0.6);
         graphics.closePath();
         graphics.fillPath();
 
         // Dorsal and pectoral fins
         graphics.fillStyle(GameConfig.COLOR_FISH_FINS, 0.7);
         graphics.fillTriangle(
-            0, -bodySize * 0.5,
-            -bodySize * 0.3, -bodySize * 1.2,
-            bodySize * 0.3, -bodySize * 1.2
+            centerX, centerY - bodySize * 0.5,
+            centerX - bodySize * 0.3, centerY - bodySize * 1.2,
+            centerX + bodySize * 0.3, centerY - bodySize * 1.2
         );
-        const finX = -bodySize * 0.3;
+        const finX = centerX - bodySize * 0.3;
         graphics.fillTriangle(
-            finX, 0,
-            finX - bodySize * 0.4, -bodySize * 0.3,
-            finX - bodySize * 0.4, bodySize * 0.3
+            finX, centerY,
+            finX - bodySize * 0.4, centerY - bodySize * 0.3,
+            finX - bodySize * 0.4, centerY + bodySize * 0.3
         );
     }
 
     /**
      * Render at a custom position (for catch popup)
+     * @param {boolean} facingLeft - If true, fish faces left (tournament photo style)
      */
-    renderAtPosition(graphics, bodySize) {
-        this.renderBody(graphics, bodySize);
+    renderAtPosition(graphics, x, y, bodySize, facingLeft = false) {
+        // Use canvas transformation to position the fish
+        graphics.save();
+        graphics.translateCanvas(x, y);
+
+        // Flip fish to face left if requested
+        if (facingLeft) {
+            graphics.scaleCanvas(-1, 1);
+        }
+
+        // Render body at origin (0,0) relative to translated position
+        this.renderBody(graphics, bodySize, 0, 0);
+
+        graphics.restore();
     }
 }
 
