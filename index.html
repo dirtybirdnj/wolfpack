@@ -268,6 +268,32 @@
             max-height: 0;
         }
 
+        /* Sidebar Toggle Button */
+        #sidebar-toggle {
+            font-size: 24px;
+            line-height: 1;
+            cursor: pointer;
+            user-select: none;
+            transition: transform 0.2s;
+        }
+
+        #sidebar-toggle:hover {
+            transform: scale(1.1);
+        }
+
+        /* Sidebar collapsed state */
+        body.sidebar-collapsed #main-layout {
+            grid-template-columns: 1fr 0px !important;
+        }
+
+        body.sidebar-collapsed #right-panel {
+            opacity: 0;
+            pointer-events: none;
+            overflow: hidden;
+            width: 0;
+            min-width: 0;
+        }
+
         /* Responsive */
         @media (max-width: 1600px) {
             #main-layout {
@@ -397,6 +423,10 @@
                     <div id="book-icon-container" style="position: relative;">
                         <div id="book-icon" style="font-size: 24px; line-height: 1; cursor: pointer;">📖</div>
                     </div>
+                    <!-- Sidebar Toggle (integrated into info bar) -->
+                    <div id="sidebar-toggle-container" style="position: relative;" title="Toggle sidebar">
+                        <div id="sidebar-toggle">☰</div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -461,6 +491,38 @@
         }
     </script>
 
+    <!-- Sidebar Toggle Controls -->
+    <script>
+        // Load sidebar preference from localStorage
+        const sidebarCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+        if (sidebarCollapsed) {
+            document.body.classList.add('sidebar-collapsed');
+        }
+
+        // Add click handler for sidebar toggle
+        document.addEventListener('DOMContentLoaded', () => {
+            const sidebarToggle = document.getElementById('sidebar-toggle');
+
+            sidebarToggle.addEventListener('click', () => {
+                const isCollapsed = document.body.classList.toggle('sidebar-collapsed');
+
+                // Save preference
+                localStorage.setItem('sidebarCollapsed', isCollapsed);
+
+                // Update icon
+                sidebarToggle.textContent = isCollapsed ? '☰' : '×';
+
+                console.log(isCollapsed ? '📱 Sidebar collapsed - Full screen mode' : '📊 Sidebar expanded');
+            });
+
+            // Set initial icon based on state
+            if (sidebarCollapsed) {
+                sidebarToggle.textContent = '☰';
+            } else {
+                sidebarToggle.textContent = '×';
+            }
+        });
+    </script>
 
     <!-- Initialize Gamepad Manager and Test Button -->
     <script type="module">
