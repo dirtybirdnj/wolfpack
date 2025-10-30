@@ -128,10 +128,32 @@ If the API server is not running:
 
 ## Troubleshooting
 
+### "EADDRINUSE: address already in use" or Port Conflicts
+
+**Problem:** Both servers trying to use the same port.
+
+**Common Cause:** Your `.env` file has `API_PORT=8080` which conflicts with the game server.
+
+**Solution:**
+1. Open `scripts/.env`
+2. Change `API_PORT=8080` to `API_PORT=3000`
+3. Or remove the `API_PORT` line entirely (defaults to 3000)
+4. If ports are still in use, run: `npm run kill-ports`
+
+**Port Assignment:**
+- API Server: Port **3000**
+- Game Server: Port **8080**
+
+**Quick Fix:**
+```bash
+npm run kill-ports  # Kill any processes on ports 3000 or 8080
+npm run dev         # Start fresh
+```
+
 ### "API Error: Failed to fetch"
 - Make sure you started with `npm run dev` (which starts both servers)
 - If you only ran `npm run game`, the API server won't be running
-- Check the console for server logs
+- Check the console for server logs - you should see both `[API]` and `[GAME]` prefixes
 - Verify the server is on port 3000: http://localhost:3000/api/health
 
 ### "Missing required environment variables"

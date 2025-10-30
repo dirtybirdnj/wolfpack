@@ -50,9 +50,17 @@ npm test              # Run tests
 npm run lint          # Check code style
 npm run build         # Build for production
 npm run electron      # Run as Electron app
+npm run kill-ports    # Kill processes on ports 3000 & 8080
 ```
 
 ## Troubleshooting
+
+**"EADDRINUSE: address already in use" or Port Conflict**
+- Check your `scripts/.env` file
+- Make sure `API_PORT` is set to **3000**, not 8080
+- The game uses port 8080, the API uses port 3000
+- If you see `API_PORT=8080` in your .env, change it to `API_PORT=3000`
+- Or run `npm run kill-ports` to kill any processes using ports 3000 or 8080
 
 **"API Error: Failed to fetch"**
 - You probably ran `npm run game` instead of `npm run dev`

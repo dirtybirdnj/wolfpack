@@ -5,10 +5,11 @@
   "main": "electron-main.js",
   "type": "module",
   "scripts": {
-    "start": "concurrently \"npm run api\" \"npm run game\"",
-    "dev": "concurrently \"npm run api\" \"npm run game\"",
+    "start": "concurrently --names \"API,GAME\" --prefix-colors \"cyan,green\" \"npm run api\" \"npm run game\"",
+    "dev": "concurrently --names \"API,GAME\" --prefix-colors \"cyan,green\" \"npm run api\" \"npm run game\"",
     "game": "http-server . -p 8080 -c-1",
     "api": "node scripts/api-server.js",
+    "kill-ports": "node scripts/kill-ports.js",
     "build": "node build.js",
     "build:electron": "node build.js && npm run package:electron",
     "package:electron": "electron-builder --config electron-builder.json",
