@@ -1,0 +1,38 @@
+[
+  {
+    "title": "Implement fish schooling behavior with flocking algorithm",
+    "description": "Add realistic fish movement patterns using boids-style flocking algorithm. Fish should exhibit cohesion, separation, and alignment behaviors when moving in schools.\n\n**Acceptance Criteria:**\n- Fish maintain proper spacing within schools\n- Schools react to player movement and lure\n- Performance optimized for multiple schools\n- Configurable behavior parameters",
+    "category": ["ai", "gameplay"],
+    "priority": "high"
+  },
+  {
+    "title": "Add depth-based lighting effects to sonar display",
+    "description": "Implement progressive darkening and color shift based on depth to enhance realism. Deeper waters should appear darker with blue-green color tones.\n\n**Acceptance Criteria:**\n- Smooth color transitions with depth changes\n- Configurable depth-to-color mapping\n- Performance impact < 5fps",
+    "category": ["graphics", "ui"],
+    "priority": "medium"
+  },
+  {
+    "title": "Fix sonar artifact rendering at extreme depths",
+    "description": "When depth exceeds 100 feet, the sonar display shows visual artifacts and flickering. This appears to be a rendering pipeline issue with the Phaser graphics system.\n\n**Steps to Reproduce:**\n1. Start game and navigate to deep water area\n2. Lower lure below 100 feet\n3. Observe sonar display\n\n**Expected:** Clean sonar rendering at all depths\n**Actual:** Flickering and artifacts appear",
+    "category": "bugfix",
+    "priority": "high"
+  },
+  {
+    "title": "Research particle system optimization strategies",
+    "description": "Investigate and document approaches to improve particle effect performance. Current implementation causes frame drops on lower-end hardware.\n\n**Research Goals:**\n- Benchmark current particle system performance\n- Evaluate Phaser built-in optimizations\n- Research object pooling strategies\n- Compare with other fishing game implementations\n\n**Deliverable:** Technical document with recommendations",
+    "category": ["graphics", "logic"],
+    "priority": "medium"
+  },
+  {
+    "title": "Add seasonal weather effects system",
+    "description": "Implement dynamic weather system with seasonal variations including snow, rain, wind effects on ice and water surface.\n\n**Features:**\n- Snow particle effects for winter\n- Rain effects for spring/fall\n- Wind affecting ice surface\n- Time-of-day integration",
+    "category": ["graphics", "gameplay"],
+    "priority": "low"
+  },
+  {
+    "title": "Improve lure physics and responsiveness",
+    "description": "Current lure movement feels unresponsive and unrealistic. Implement better physics model with water resistance, momentum, and drag.\n\n**Acceptance Criteria:**\n- Realistic acceleration/deceleration\n- Water resistance based on depth\n- Smooth line tension simulation\n- Improved player feedback",
+    "category": ["logic", "gameplay"],
+    "priority": "high"
+  }
+]
