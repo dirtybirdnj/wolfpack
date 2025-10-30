@@ -268,6 +268,19 @@
             max-height: 0;
         }
 
+        /* Top Bar Toggle Button */
+        #topbar-toggle {
+            font-size: 24px;
+            line-height: 1;
+            cursor: pointer;
+            user-select: none;
+            transition: transform 0.2s;
+        }
+
+        #topbar-toggle:hover {
+            transform: scale(1.1);
+        }
+
         /* Sidebar Toggle Button */
         #sidebar-toggle {
             font-size: 24px;
@@ -279,6 +292,15 @@
 
         #sidebar-toggle:hover {
             transform: scale(1.1);
+        }
+
+        /* Top bar collapsed state */
+        body.topbar-collapsed #top-bar-container {
+            display: none;
+        }
+
+        body.topbar-collapsed #main-layout {
+            grid-template-rows: 0px 1fr !important;
         }
 
         /* Sidebar collapsed state */
@@ -423,6 +445,10 @@
                     <div id="book-icon-container" style="position: relative;">
                         <div id="book-icon" style="font-size: 24px; line-height: 1; cursor: pointer;">📖</div>
                     </div>
+                    <!-- Top Bar Toggle (integrated into info bar) -->
+                    <div id="topbar-toggle-container" style="position: relative;" title="Toggle top bar">
+                        <div id="topbar-toggle">▼</div>
+                    </div>
                     <!-- Sidebar Toggle (integrated into info bar) -->
                     <div id="sidebar-toggle-container" style="position: relative;" title="Toggle sidebar">
                         <div id="sidebar-toggle">☰</div>
@@ -520,6 +546,57 @@
                 sidebarToggle.textContent = '☰';
             } else {
                 sidebarToggle.textContent = '×';
+            }
+        });
+    </script>
+
+    <!-- Top Bar Toggle Controls -->
+    <script>
+        // Load top bar preference from localStorage
+        const topbarCollapsed = localStorage.getItem('topbarCollapsed') === 'true';
+        if (topbarCollapsed) {
+            document.body.classList.add('topbar-collapsed');
+        }
+
+        // Add click handler for top bar toggle
+        document.addEventListener('DOMContentLoaded', () => {
+            const topbarToggle = document.getElementById('topbar-toggle');
+
+            topbarToggle.addEventListener('click', () => {
+                const isCollapsed = document.body.classList.toggle('topbar-collapsed');
+
+                // Save preference
+                localStorage.setItem('topbarCollapsed', isCollapsed);
+
+                // Update icon
+                topbarToggle.textContent = isCollapsed ? '▲' : '▼';
+
+                console.log(isCollapsed ? '🎬 Top bar hidden - Cinema mode' : '📊 Top bar visible');
+            });
+
+            // Set initial icon based on state
+            if (topbarCollapsed) {
+                topbarToggle.textContent = '▲';
+            } else {
+                topbarToggle.textContent = '▼';
+            }
+        });
+    </script>
+
+    <!-- Keyboard Shortcuts -->
+    <script>
+        document.addEventListener('keydown', (event) => {
+            // 'm' key to toggle sidebar menu
+            if (event.key === 'm' || event.key === 'M') {
+                // Don't trigger if user is typing in an input field
+                if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') {
+                    return;
+                }
+
+                const sidebarToggle = document.getElementById('sidebar-toggle');
+                if (sidebarToggle) {
+                    sidebarToggle.click();
+                }
             }
         });
     </script>
