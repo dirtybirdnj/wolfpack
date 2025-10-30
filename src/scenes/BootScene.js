@@ -63,24 +63,15 @@ export class BootScene extends Phaser.Scene {
             onComplete: () => {
                 // Wait 2.5 seconds at full opacity
                 this.time.delayedCall(2500, () => {
-                    // Fade out logo and text
+                    // Fade out logo and text, then start menu
                     this.tweens.add({
                         targets: [this.vtjLogo, this.websiteText, this.taglineText],
                         alpha: 0,
                         duration: 500,
                         ease: 'Power2',
                         onComplete: () => {
-                            // Fade out black box to reveal menu
-                            this.tweens.add({
-                                targets: this.blackBox,
-                                alpha: 0,
-                                duration: 500,
-                                ease: 'Power2',
-                                onComplete: () => {
-                                    // Start menu scene
-                                    this.scene.start('MenuScene');
-                                }
-                            });
+                            // Start menu scene directly (MenuScene has black overlay that will fade out)
+                            this.scene.start('MenuScene');
                         }
                     });
                 });
