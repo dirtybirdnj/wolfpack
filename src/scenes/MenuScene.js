@@ -146,9 +146,12 @@ export class MenuScene extends Phaser.Scene {
 
         this.buttons = [arcade, unlimited, simulation];
 
+        // Highlight the selected button (Unlimited mode by default) - ALWAYS do this, not just for gamepad
+        this.updateSelection();
+
         // Controls hint
         const controlsY = 570;
-        this.controlsText = this.add.text(width / 2, controlsY, 'Click a mode to begin | ESC to return to menu', {
+        this.controlsText = this.add.text(width / 2, controlsY, 'Arrow Keys or Click to select | ENTER/SPACE to start', {
             fontSize: '11px',
             fontFamily: 'Courier New',
             color: '#88ff88',
@@ -176,9 +179,6 @@ export class MenuScene extends Phaser.Scene {
                 lastAnalogLeft: false,
                 lastAnalogRight: false
             };
-
-            // Highlight the selected button (Unlimited mode by default)
-            this.updateSelection();
         }
 
         // Setup keyboard controls
