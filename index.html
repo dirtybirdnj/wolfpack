@@ -655,10 +655,9 @@
         // Function to show test controller overlay
         function showTestController() {
             const gamepad = gamepadManager.getGamepad();
-            if (!gamepad) {
-                alert('No controller connected!\n\nPlease connect a gamepad and press any button on it first.');
-                return;
-            }
+
+            // Start in gamepad mode if controller is connected, otherwise keyboard mode
+            let currentMode = gamepad ? 'gamepad' : 'keyboard';
 
             // Create test overlay
             const overlay = document.createElement('div');
@@ -683,34 +682,78 @@
 
             overlay.innerHTML = `
                 <div style="max-width: 800px; width: 100%;">
-                    <h2 style="text-align: center; color: #00aaff; margin-bottom: 20px;">🎮 CONTROLLER TEST MODE</h2>
-                    <div style="background: rgba(0, 50, 100, 0.3); padding: 20px; border: 2px solid #00aaff; border-radius: 10px; margin-bottom: 20px;">
-                        <div style="font-size: 14px; margin-bottom: 10px;">
-                            <strong>Controller:</strong> <span id="test-controller-name">${gamepad.id}</span>
-                        </div>
-                        <div style="font-size: 12px; color: #888;">
-                            Press any button or move any stick to see its state
-                        </div>
-                    </div>
+                    <h2 style="text-align: center; color: #00aaff; margin-bottom: 20px;">INPUT TEST MODE</h2>
 
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
-                        <div style="background: rgba(0, 100, 0, 0.2); padding: 15px; border: 1px solid #00ff00; border-radius: 5px;">
-                            <h3 style="margin: 0 0 10px 0; color: #ffff00;">BUTTONS</h3>
-                            <div id="test-buttons" style="font-size: 11px; line-height: 1.8; font-family: monospace;"></div>
-                        </div>
-
-                        <div style="background: rgba(0, 100, 0, 0.2); padding: 15px; border: 1px solid #00ff00; border-radius: 5px;">
-                            <h3 style="margin: 0 0 10px 0; color: #ffff00;">AXES (STICKS)</h3>
-                            <div id="test-axes" style="font-size: 11px; line-height: 1.8; font-family: monospace;"></div>
-                        </div>
-                    </div>
-
-                    <div style="text-align: center; display: flex; flex-direction: column; gap: 10px; align-items: center;">
-                        <button id="close-test-btn" style="background: #ff6666; color: #000; border: none; padding: 12px 30px; font-size: 14px; font-family: 'Courier New', monospace; font-weight: bold; border-radius: 5px; cursor: pointer;">
-                            CLOSE TEST (Press START or ESC)
+                    <!-- Toggle Switch -->
+                    <div style="display: flex; justify-content: center; align-items: center; gap: 10px; margin-bottom: 20px;">
+                        <button id="mode-toggle-gamepad" style="background: #00aaff; color: #000; border: none; padding: 10px 20px; font-size: 20px; border-radius: 5px; cursor: pointer; transition: all 0.2s;">
+                            🎮 Gamepad
                         </button>
-                        <button id="check-gamepads-overlay-btn" style="background: #ffaa00; color: #000; border: none; padding: 8px 20px; font-size: 12px; font-family: 'Courier New', monospace; font-weight: bold; border-radius: 5px; cursor: pointer;">
-                            Check Gamepads
+                        <button id="mode-toggle-keyboard" style="background: #444; color: #888; border: none; padding: 10px 20px; font-size: 20px; border-radius: 5px; cursor: pointer; transition: all 0.2s;">
+                            ⌨️ Keyboard
+                        </button>
+                    </div>
+
+                    <!-- Gamepad Mode Content -->
+                    <div id="gamepad-mode-content" style="display: block;">
+                        <div style="background: rgba(0, 50, 100, 0.3); padding: 20px; border: 2px solid #00aaff; border-radius: 10px; margin-bottom: 20px;">
+                            <div style="font-size: 14px; margin-bottom: 10px;">
+                                <strong>Controller:</strong> <span id="test-controller-name">${gamepad ? gamepad.id : 'No controller connected'}</span>
+                            </div>
+                            <div style="font-size: 12px; color: #888;">
+                                Press any button or move any stick to see its state
+                            </div>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+                            <div style="background: rgba(0, 100, 0, 0.2); padding: 15px; border: 1px solid #00ff00; border-radius: 5px;">
+                                <h3 style="margin: 0 0 10px 0; color: #ffff00;">BUTTONS</h3>
+                                <div id="test-buttons" style="font-size: 11px; line-height: 1.8; font-family: monospace;"></div>
+                            </div>
+
+                            <div style="background: rgba(0, 100, 0, 0.2); padding: 15px; border: 1px solid #00ff00; border-radius: 5px;">
+                                <h3 style="margin: 0 0 10px 0; color: #ffff00;">AXES (STICKS)</h3>
+                                <div id="test-axes" style="font-size: 11px; line-height: 1.8; font-family: monospace;"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Keyboard Mode Content -->
+                    <div id="keyboard-mode-content" style="display: none;">
+                        <div style="background: rgba(0, 50, 100, 0.3); padding: 20px; border: 2px solid #00aaff; border-radius: 10px; margin-bottom: 20px;">
+                            <div style="font-size: 14px; margin-bottom: 10px;">
+                                <strong>Keyboard Controls Tester</strong>
+                            </div>
+                            <div style="font-size: 12px; color: #888;">
+                                Press keys to test hand placement and see control mapping
+                            </div>
+                        </div>
+
+                        <div style="background: rgba(0, 100, 0, 0.2); padding: 20px; border: 1px solid #00ff00; border-radius: 5px; margin-bottom: 20px;">
+                            <h3 style="margin: 0 0 15px 0; color: #ffff00; text-align: center;">GAME CONTROLS</h3>
+                            <div id="keyboard-controls-display" style="font-size: 12px; line-height: 2;">
+                                <div><span id="key-up" style="display: inline-block; width: 120px; color: #888;">↑ / W</span> Move Up</div>
+                                <div><span id="key-down" style="display: inline-block; width: 120px; color: #888;">↓ / S</span> Move Down</div>
+                                <div><span id="key-left" style="display: inline-block; width: 120px; color: #888;">← / A</span> Move Left</div>
+                                <div><span id="key-right" style="display: inline-block; width: 120px; color: #888;">→ / D</span> Move Right</div>
+                                <div style="margin-top: 10px;"><span id="key-space" style="display: inline-block; width: 120px; color: #888;">SPACE</span> Jig Lure / Confirm</div>
+                                <div><span id="key-r" style="display: inline-block; width: 120px; color: #888;">R</span> Reset / Restart</div>
+                                <div><span id="key-p" style="display: inline-block; width: 120px; color: #888;">P</span> Pause</div>
+                                <div><span id="key-esc" style="display: inline-block; width: 120px; color: #888;">ESC</span> Return to Menu</div>
+                                <div style="margin-top: 10px;"><span id="key-m" style="display: inline-block; width: 120px; color: #888;">M</span> Toggle Top Bar</div>
+                                <div><span id="key-s-key" style="display: inline-block; width: 120px; color: #888;">S (menu)</span> Toggle Sidebar</div>
+                                <div style="margin-top: 10px;"><span id="key-enter" style="display: inline-block; width: 120px; color: #888;">ENTER</span> Start Game</div>
+                            </div>
+                        </div>
+
+                        <div style="text-align: center; font-size: 11px; color: #888;">
+                            Press any key listed above to highlight it
+                        </div>
+                    </div>
+
+                    <div style="text-align: center; margin-top: 20px;">
+                        <button id="close-test-btn" style="background: #ff6666; color: #000; border: none; padding: 12px 30px; font-size: 14px; font-family: 'Courier New', monospace; font-weight: bold; border-radius: 5px; cursor: pointer;">
+                            CLOSE TEST (Press ESC)
                         </button>
                     </div>
                 </div>
@@ -721,9 +764,40 @@
             const buttonsDiv = document.getElementById('test-buttons');
             const axesDiv = document.getElementById('test-axes');
             const closeBtn = document.getElementById('close-test-btn');
-            const checkGamepadsOverlayBtn = document.getElementById('check-gamepads-overlay-btn');
+            const modeToggleGamepad = document.getElementById('mode-toggle-gamepad');
+            const modeToggleKeyboard = document.getElementById('mode-toggle-keyboard');
+            const gamepadModeContent = document.getElementById('gamepad-mode-content');
+            const keyboardModeContent = document.getElementById('keyboard-mode-content');
 
-            // Button names for display
+            // Toggle mode function
+            function switchMode(mode) {
+                currentMode = mode;
+
+                if (mode === 'gamepad') {
+                    gamepadModeContent.style.display = 'block';
+                    keyboardModeContent.style.display = 'none';
+                    modeToggleGamepad.style.background = '#00aaff';
+                    modeToggleGamepad.style.color = '#000';
+                    modeToggleKeyboard.style.background = '#444';
+                    modeToggleKeyboard.style.color = '#888';
+                } else {
+                    gamepadModeContent.style.display = 'none';
+                    keyboardModeContent.style.display = 'block';
+                    modeToggleGamepad.style.background = '#444';
+                    modeToggleGamepad.style.color = '#888';
+                    modeToggleKeyboard.style.background = '#00aaff';
+                    modeToggleKeyboard.style.color = '#000';
+                }
+            }
+
+            // Set initial mode
+            switchMode(currentMode);
+
+            // Toggle button handlers
+            modeToggleGamepad.addEventListener('click', () => switchMode('gamepad'));
+            modeToggleKeyboard.addEventListener('click', () => switchMode('keyboard'));
+
+            // Button names for gamepad display
             const buttonNames = [
                 'X (A)', 'Circle (B)', 'Square (X)', 'Triangle (Y)',
                 'L1 (LB)', 'R1 (RB)', 'L2 (LT)', 'R2 (RT)',
@@ -731,59 +805,115 @@
                 'D-Up', 'D-Down', 'D-Left', 'D-Right'
             ];
 
-            // Update test display
-            let testInterval = setInterval(() => {
-                const currentGamepad = gamepadManager.getGamepad();
-                if (!currentGamepad) {
-                    clearInterval(testInterval);
-                    overlay.remove();
-                    return;
+            // Keyboard key mapping
+            const keyElements = {
+                'ArrowUp': 'key-up',
+                'KeyW': 'key-up',
+                'ArrowDown': 'key-down',
+                'KeyS': 'key-down',
+                'ArrowLeft': 'key-left',
+                'KeyA': 'key-left',
+                'ArrowRight': 'key-right',
+                'KeyD': 'key-right',
+                'Space': 'key-space',
+                'KeyR': 'key-r',
+                'KeyP': 'key-p',
+                'Escape': 'key-esc',
+                'KeyM': 'key-m',
+                'Enter': 'key-enter'
+            };
+
+            // Track active keys
+            const activeKeys = new Set();
+
+            // Keyboard event handlers
+            const keydownHandler = (e) => {
+                if (currentMode === 'keyboard') {
+                    const elementId = keyElements[e.code];
+                    if (elementId) {
+                        activeKeys.add(e.code);
+                        const el = document.getElementById(elementId);
+                        if (el) {
+                            el.style.color = '#00ff00';
+                            el.style.fontWeight = 'bold';
+                        }
+                    }
                 }
+            };
 
-                // Update buttons
-                let buttonsHTML = '';
-                currentGamepad.buttons.forEach((button, i) => {
-                    const name = buttonNames[i] || `Button ${i}`;
-                    const pressed = button.pressed ? '🟢 PRESSED' : '⚫ Released';
-                    const value = button.value.toFixed(2);
-                    const color = button.pressed ? '#00ff00' : '#666';
-                    buttonsHTML += `<div style="color: ${color};">${name.padEnd(15)} ${pressed} (${value})</div>`;
-                });
-                buttonsDiv.innerHTML = buttonsHTML;
+            const keyupHandler = (e) => {
+                if (currentMode === 'keyboard') {
+                    const elementId = keyElements[e.code];
+                    if (elementId) {
+                        activeKeys.delete(e.code);
+                        const el = document.getElementById(elementId);
+                        if (el) {
+                            el.style.color = '#888';
+                            el.style.fontWeight = 'normal';
+                        }
+                    }
+                }
+            };
 
-                // Update axes
-                let axesHTML = '';
-                const axisNames = ['Left X', 'Left Y', 'Right X', 'Right Y'];
-                currentGamepad.axes.forEach((value, i) => {
-                    const name = axisNames[i] || `Axis ${i}`;
-                    const bar = '█'.repeat(Math.abs(value * 10));
-                    const direction = value > 0 ? '→' : value < 0 ? '←' : '·';
-                    axesHTML += `<div>${name.padEnd(10)} ${direction} ${bar} ${value.toFixed(3)}</div>`;
-                });
-                axesDiv.innerHTML = axesHTML;
+            document.addEventListener('keydown', keydownHandler);
+            document.addEventListener('keyup', keyupHandler);
 
-                // Check for Start button or ESC key to close
-                if (currentGamepad.buttons[9]?.pressed) { // Start button
-                    clearInterval(testInterval);
-                    overlay.remove();
+            // Update gamepad test display
+            let testInterval = setInterval(() => {
+                if (currentMode === 'gamepad') {
+                    const currentGamepad = gamepadManager.getGamepad();
+                    if (!currentGamepad) {
+                        buttonsDiv.innerHTML = '<div style="color: #ff6666;">No gamepad connected</div>';
+                        axesDiv.innerHTML = '<div style="color: #ff6666;">No gamepad connected</div>';
+                        return;
+                    }
+
+                    // Update buttons
+                    let buttonsHTML = '';
+                    currentGamepad.buttons.forEach((button, i) => {
+                        const name = buttonNames[i] || `Button ${i}`;
+                        const pressed = button.pressed ? '🟢 PRESSED' : '⚫ Released';
+                        const value = button.value.toFixed(2);
+                        const color = button.pressed ? '#00ff00' : '#666';
+                        buttonsHTML += `<div style="color: ${color};">${name.padEnd(15)} ${pressed} (${value})</div>`;
+                    });
+                    buttonsDiv.innerHTML = buttonsHTML;
+
+                    // Update axes
+                    let axesHTML = '';
+                    const axisNames = ['Left X', 'Left Y', 'Right X', 'Right Y'];
+                    currentGamepad.axes.forEach((value, i) => {
+                        const name = axisNames[i] || `Axis ${i}`;
+                        const bar = '█'.repeat(Math.abs(value * 10));
+                        const direction = value > 0 ? '→' : value < 0 ? '←' : '·';
+                        axesHTML += `<div>${name.padEnd(10)} ${direction} ${bar} ${value.toFixed(3)}</div>`;
+                    });
+                    axesDiv.innerHTML = axesHTML;
+
+                    // Check for Start button to close
+                    if (currentGamepad.buttons[9]?.pressed) {
+                        clearInterval(testInterval);
+                        document.removeEventListener('keydown', keydownHandler);
+                        document.removeEventListener('keyup', keyupHandler);
+                        overlay.remove();
+                    }
                 }
             }, 50); // 20 Hz update rate
 
             // Close button handler
             closeBtn.addEventListener('click', () => {
                 clearInterval(testInterval);
+                document.removeEventListener('keydown', keydownHandler);
+                document.removeEventListener('keyup', keyupHandler);
                 overlay.remove();
-            });
-
-            // Check Gamepads button handler in overlay
-            checkGamepadsOverlayBtn.addEventListener('click', () => {
-                checkGamepads();
             });
 
             // ESC key handler
             const escHandler = (e) => {
                 if (e.key === 'Escape') {
                     clearInterval(testInterval);
+                    document.removeEventListener('keydown', keydownHandler);
+                    document.removeEventListener('keyup', keyupHandler);
                     overlay.remove();
                     document.removeEventListener('keydown', escHandler);
                 }
