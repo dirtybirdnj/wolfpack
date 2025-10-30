@@ -1,12 +1,15 @@
 {
   "name": "wolfpack",
   "version": "0.26.0",
-  "description": "Wolfpack - Lake Champlain fishing simulator game built with Phaser",
-  "main": "src/index.js",
+  "description": "Wolfpack - Lake Champlain ice fishing sonar simulator game built with Phaser",
+  "main": "electron-main.js",
   "scripts": {
     "start": "http-server . -p 8080 -c-1",
     "dev": "http-server . -p 8080 -c-1",
     "build": "node build.js",
+    "build:electron": "node build.js && npm run package:electron",
+    "package:electron": "electron-builder --config electron-builder.json",
+    "electron": "electron .",
     "preview": "npm run build && http-server dist -p 8081 -c-1"
   },
   "keywords": [
@@ -19,6 +22,8 @@
   "author": "",
   "license": "MIT",
   "devDependencies": {
+    "electron": "^28.0.0",
+    "electron-builder": "^24.9.1",
     "http-server": "^14.1.1"
   },
   "engines": {
