@@ -134,6 +134,30 @@ function setupDevTools(game) {
                     // Update percentage text
                     reelSpeedPercent.textContent = speedPercent;
                 }
+
+                // Update drop speed meter
+                const dropSpeedFill = document.getElementById('drop-speed-fill');
+                const dropSpeedPercent = document.getElementById('drop-speed-percent');
+
+                if (dropSpeedFill && dropSpeedPercent) {
+                    // Calculate drop rate based on lure velocity (positive = dropping)
+                    const velocity = gameScene.lure.velocity || 0;
+                    const dropRate = Math.max(0, velocity); // Only show positive (dropping) velocity
+
+                    // Calculate max fall speed based on lure weight (same logic as in Lure.js)
+                    const weightMultiplier = gameScene.lure.weight * 1.5;
+                    const maxFallSpeed = GameConfig.LURE_MAX_FALL_SPEED * weightMultiplier;
+
+                    // Normalize to 0-1 range
+                    const dropValue = Math.min(1, dropRate / maxFallSpeed);
+                    const dropPercent = Math.round(dropValue * 100);
+
+                    // Update bar width
+                    dropSpeedFill.style.width = `${dropPercent}%`;
+
+                    // Update percentage text
+                    dropSpeedPercent.textContent = dropPercent;
+                }
             }
 
             // Time - show countdown for arcade, count up for unlimited

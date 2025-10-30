@@ -1,0 +1,44 @@
+{
+  "appId": "com.wolfpack.game",
+  "productName": "Wolfpack",
+  "directories": {
+    "output": "electron-dist"
+  },
+  "files": [
+    "dist/**/*",
+    "electron-main.js",
+    "package.json"
+  ],
+  "extraMetadata": {
+    "main": "electron-main.js"
+  },
+  "win": {
+    "target": [
+      {
+        "target": "dir",
+        "arch": ["x64"]
+      }
+    ],
+    "icon": "assets/icon.png"
+  },
+  "mac": {
+    "target": [
+      {
+        "target": "dir",
+        "arch": ["x64", "arm64"]
+      }
+    ],
+    "icon": "assets/icon.png",
+    "category": "public.app-category.games"
+  },
+  "linux": {
+    "target": [
+      {
+        "target": "dir",
+        "arch": ["x64"]
+      }
+    ],
+    "icon": "assets/icon.png",
+    "category": "Game"
+  }
+}

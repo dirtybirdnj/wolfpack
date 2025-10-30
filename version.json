@@ -1,6 +1,6 @@
 {
-  "version": "0.4.0",
-  "commit": "e16cbeb",
-  "date": "2025-10-24",
-  "description": "Dynamic baitfish behavior and improved fishing mechanics"
+  "version": "0.26.0",
+  "commit": "75e0872",
+  "date": "2025-10-29",
+  "description": "Merge pull request #28 from dirtybirdnj/claude/add-electron-packaging-011CUcPXzgfj7ycyqXVSdKyT"
 }

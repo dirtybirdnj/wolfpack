@@ -46,6 +46,11 @@ export class NotificationSystem {
 
         // Flag to signal switching to tackle box
         this.switchToTackleBox = false;
+
+        // Gamepad disconnect warning state
+        this.disconnectWarning = null;
+        this.controllerReconnected = false; // Track when controller reconnects
+        this.xButtonWasPressed = false; // Track X button state for disconnect warning
     }
 
     /**
@@ -157,6 +162,113 @@ export class NotificationSystem {
             delay: 1000,
             onComplete: () => text.destroy()
         });
+    }
+
+    /**
+     * Show gamepad disconnected warning
+     * Important notification when controller dies during gameplay
+     */
+    showGamepadDisconnected() {
+        // Create persistent overlay that stays until dismissed
+        const overlay = this.scene.add.graphics();
+        overlay.fillStyle(0x000000, 0.85);
+        overlay.fillRect(0, 0, GameConfig.CANVAS_WIDTH, GameConfig.CANVAS_HEIGHT);
+        overlay.setDepth(3000);
+
+        // Warning title
+        const title = this.scene.add.text(GameConfig.CANVAS_WIDTH / 2, 130, '⚠️ CONTROLLER DISCONNECTED', {
+            fontSize: '32px',
+            fontFamily: 'Courier New',
+            color: '#ff6600',
+            fontStyle: 'bold',
+            stroke: '#000000',
+            strokeThickness: 4
+        });
+        title.setOrigin(0.5, 0.5);
+        title.setDepth(3001);
+
+        // Warning message
+        const message = this.scene.add.text(GameConfig.CANVAS_WIDTH / 2, 210,
+            'Your controller has been disconnected.\n\n' +
+            'Check battery or connection, then press\n' +
+            'any button on the controller to reconnect.\n\n' +
+            'Or use keyboard controls to continue.',
+            {
+                fontSize: '16px',
+                fontFamily: 'Courier New',
+                color: '#ffffff',
+                align: 'center',
+                stroke: '#000000',
+                strokeThickness: 2,
+                lineSpacing: 8
+            }
+        );
+        message.setOrigin(0.5, 0.5);
+        message.setDepth(3001);
+
+        // Continue hint
+        const hint = this.scene.add.text(GameConfig.CANVAS_WIDTH / 2, 330,
+            'Press SPACEBAR or ESC to dismiss',
+            {
+                fontSize: '14px',
+                fontFamily: 'Courier New',
+                color: '#88ff88',
+                stroke: '#000000',
+                strokeThickness: 2
+            }
+        );
+        hint.setOrigin(0.5, 0.5);
+        hint.setDepth(3001);
+
+        // Pulse animation for title
+        this.scene.tweens.add({
+            targets: title,
+            alpha: 0.6,
+            duration: 800,
+            yoyo: true,
+            repeat: -1
+        });
+
+        // Store reference for dismissal
+        this.disconnectWarning = {
+            overlay: overlay,
+            title: title,
+            message: message,
+            hint: hint
+        };
+
+        // Pause the game using the same system as START button
+        // This freezes the game state so player doesn't lose fish
+        this.isPaused = true;
+        this.controllerReconnected = false;
+        this.xButtonWasPressed = false;
+
+        return this.disconnectWarning;
+    }
+
+    /**
+     * Dismiss gamepad disconnected warning
+     */
+    dismissDisconnectWarning() {
+        if (!this.disconnectWarning) return;
+
+        this.disconnectWarning.overlay.destroy();
+        this.disconnectWarning.title.destroy();
+        this.disconnectWarning.message.destroy();
+        this.disconnectWarning.hint.destroy();
+
+        this.disconnectWarning = null;
+        this.controllerReconnected = false;
+
+        // Resume the game using the same system as START button
+        this.isPaused = false;
+    }
+
+    /**
+     * Check if disconnect warning is active
+     */
+    hasDisconnectWarning() {
+        return this.disconnectWarning !== null && this.disconnectWarning !== undefined;
     }
 
     /**
@@ -828,9 +940,63 @@ export class NotificationSystem {
      * @param {number} delta - Time since last frame
      */
     update(time, delta) {
-        // Handle pause menu input when paused
-        if (this.isPaused) {
+        // Handle pause menu input when paused (but NOT when disconnect warning is showing)
+        if (this.isPaused && !this.hasDisconnectWarning()) {
             this.handlePauseMenuInput();
+        }
+
+        // Handle disconnect warning dismissal
+        if (this.hasDisconnectWarning()) {
+            // Check if controller reconnected
+            if (window.gamepadManager && window.gamepadManager.isConnected() && !this.controllerReconnected) {
+                // Controller just reconnected - update message to show "Press X to continue"
+                this.controllerReconnected = true;
+
+                // Update the hint text
+                this.disconnectWarning.hint.setText('🎮 Controller Reconnected!\nPress X to continue');
+                this.disconnectWarning.hint.setColor('#00ff00');
+
+                // Stop the title pulsing animation (controller is back!)
+                this.scene.tweens.killTweensOf(this.disconnectWarning.title);
+                this.disconnectWarning.title.setAlpha(1);
+                this.disconnectWarning.title.setColor('#00ff00');
+            }
+
+            // If controller is reconnected, wait for X button to continue
+            if (this.controllerReconnected) {
+                let xButtonPressed = false;
+                let dismissWarning = false;
+
+                // Check X button on gamepad (with JustDown logic)
+                if (window.gamepadManager && window.gamepadManager.isConnected()) {
+                    const xButton = window.gamepadManager.getButton('X');
+                    xButtonPressed = xButton && xButton.pressed;
+
+                    // JustDown = pressed now but wasn't pressed before
+                    if (xButtonPressed && !this.xButtonWasPressed) {
+                        dismissWarning = true;
+                    }
+                }
+
+                // Update button state for next frame
+                this.xButtonWasPressed = xButtonPressed;
+
+                // Also allow keyboard X or SPACE
+                const xKey = this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.X);
+                const spaceKey = this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+
+                if (Phaser.Input.Keyboard.JustDown(xKey) || Phaser.Input.Keyboard.JustDown(spaceKey) || dismissWarning) {
+                    this.dismissDisconnectWarning();
+                }
+            } else {
+                // Controller still disconnected - allow keyboard dismissal
+                const spaceKey = this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+                const escKey = this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ESC);
+
+                if (Phaser.Input.Keyboard.JustDown(spaceKey) || Phaser.Input.Keyboard.JustDown(escKey)) {
+                    this.dismissDisconnectWarning();
+                }
+            }
         }
     }
 

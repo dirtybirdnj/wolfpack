@@ -22,36 +22,30 @@ export class MenuScene extends Phaser.Scene {
             bgImage.setDisplaySize(width, height);
         }
 
-        // Add Wolfpack logo if available - moved up and scaled better
-        if (this.textures.exists('logo-wolfpack')) {
-            const logo = this.add.image(width / 2, 160, 'logo-wolfpack');
-            logo.setScale(0.5);  // Increased from 0.4 to show more
-        } else {
-            // Fallback text logo
-            this.add.text(width / 2, 100, 'WOLFPACK', {
-                fontSize: '64px',
-                fontFamily: 'Courier New',
-                color: '#ff6600',
-                fontStyle: 'bold'
-            }).setOrigin(0.5);
-        }
+        // Title
+        this.add.text(width / 2, 100, 'WOLFPACK', {
+            fontSize: '64px',
+            fontFamily: 'Courier New',
+            color: '#ff6600',
+            fontStyle: 'bold'
+        }).setOrigin(0.5);
 
-        // Subtitle - moved down to accommodate larger logo
-        this.add.text(width / 2, 290, 'VERTICAL TUBE JIG', {
+        // Subtitle
+        this.add.text(width / 2, 160, 'VERTICAL TUBE JIG', {
             fontSize: '20px',
             fontFamily: 'Courier New',
             color: '#ff3300',
             fontStyle: 'bold'
         }).setOrigin(0.5);
 
-        this.add.text(width / 2, 320, 'Lake Champlain Ice Fishing', {
+        this.add.text(width / 2, 200, 'Lake Champlain Ice Fishing', {
             fontSize: '16px',
             fontFamily: 'Courier New',
             color: '#00ff00'
         }).setOrigin(0.5);
 
         // Game mode selection
-        this.add.text(width / 2, 300, 'SELECT FISHING TYPE & MODE', {
+        this.add.text(width / 2, 280, 'SELECT FISHING TYPE & MODE', {
             fontSize: '18px',
             fontFamily: 'Courier New',
             color: '#00ffff',
@@ -266,19 +260,21 @@ export class MenuScene extends Phaser.Scene {
     }
 
     update() {
-        // Handle keyboard navigation - single horizontal row
+        // Handle keyboard navigation - single horizontal row with wrap-around
         if (Phaser.Input.Keyboard.JustDown(this.cursors.left)) {
-            if (this.selectedMode > 0) {
-                this.selectedMode--;
-                this.updateSelection();
+            this.selectedMode--;
+            if (this.selectedMode < 0) {
+                this.selectedMode = this.buttons.length - 1; // Wrap to last button
             }
+            this.updateSelection();
         }
 
         if (Phaser.Input.Keyboard.JustDown(this.cursors.right)) {
-            if (this.selectedMode < this.buttons.length - 1) {
-                this.selectedMode++;
-                this.updateSelection();
+            this.selectedMode++;
+            if (this.selectedMode >= this.buttons.length) {
+                this.selectedMode = 0; // Wrap to first button
             }
+            this.updateSelection();
         }
 
         if (Phaser.Input.Keyboard.JustDown(this.enterKey) ||
@@ -291,28 +287,30 @@ export class MenuScene extends Phaser.Scene {
 
         // Handle gamepad navigation
         if (this.gamepadDetected && window.gamepadManager && window.gamepadManager.isConnected()) {
-            // D-Pad navigation - single horizontal row
+            // D-Pad navigation - single horizontal row with wrap-around
             const dpadLeft = window.gamepadManager.getButton('DpadLeft');
             const dpadRight = window.gamepadManager.getButton('DpadRight');
 
             if (dpadLeft.pressed && !this.gamepadState.lastDpadLeft) {
-                if (this.selectedMode > 0) {
-                    this.selectedMode--;
-                    this.updateSelection();
+                this.selectedMode--;
+                if (this.selectedMode < 0) {
+                    this.selectedMode = this.buttons.length - 1; // Wrap to last button
                 }
+                this.updateSelection();
             }
 
             if (dpadRight.pressed && !this.gamepadState.lastDpadRight) {
-                if (this.selectedMode < this.buttons.length - 1) {
-                    this.selectedMode++;
-                    this.updateSelection();
+                this.selectedMode++;
+                if (this.selectedMode >= this.buttons.length) {
+                    this.selectedMode = 0; // Wrap to first button
                 }
+                this.updateSelection();
             }
 
             this.gamepadState.lastDpadLeft = dpadLeft.pressed;
             this.gamepadState.lastDpadRight = dpadRight.pressed;
 
-            // Analog stick navigation - single horizontal row
+            // Analog stick navigation - single horizontal row with wrap-around
             const leftStickX = window.gamepadManager.getAxis('LeftStickX');
             const analogThreshold = 0.5;
 
@@ -320,17 +318,19 @@ export class MenuScene extends Phaser.Scene {
             const analogRight = leftStickX > analogThreshold;
 
             if (analogLeft && !this.gamepadState.lastAnalogLeft) {
-                if (this.selectedMode > 0) {
-                    this.selectedMode--;
-                    this.updateSelection();
+                this.selectedMode--;
+                if (this.selectedMode < 0) {
+                    this.selectedMode = this.buttons.length - 1; // Wrap to last button
                 }
+                this.updateSelection();
             }
 
             if (analogRight && !this.gamepadState.lastAnalogRight) {
-                if (this.selectedMode < this.buttons.length - 1) {
-                    this.selectedMode++;
-                    this.updateSelection();
+                this.selectedMode++;
+                if (this.selectedMode >= this.buttons.length) {
+                    this.selectedMode = 0; // Wrap to first button
                 }
+                this.updateSelection();
             }
 
             this.gamepadState.lastAnalogLeft = analogLeft;

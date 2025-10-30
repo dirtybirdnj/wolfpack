@@ -58,10 +58,10 @@
 
         #main-layout {
             display: grid;
-            grid-template-columns: 1fr 220px;
+            grid-template-columns: 1fr 320px;
             grid-template-rows: auto 1fr;
             gap: 15px;
-            max-width: 1800px;
+            max-width: 1900px;
             margin: 0 auto;
             align-items: start;
         }
@@ -83,26 +83,10 @@
         #top-bar-container {
             grid-column: 1;
             grid-row: 1;
-            display: flex;
-            align-items: start;
-            gap: 10px;
         }
 
-        #gamepad-icon-container,
-        #book-icon-container {
-            position: relative;
-            flex-shrink: 0;
-            cursor: pointer;
-            user-select: none;
-            transition: opacity 0.3s;
-        }
-
-        #gamepad-icon,
-        #book-icon {
-            font-size: 32px;
-            line-height: 1;
-            opacity: 1;
-            transition: all 0.2s;
+        #game-info-panel {
+            width: 100%;
         }
 
         #gamepad-icon.keyboard-mode {
@@ -114,25 +98,8 @@
             transform: scale(1.1);
         }
 
-        #gamepad-connection-indicator {
-            position: absolute;
-            bottom: -2px;
-            right: -2px;
-            width: 10px;
-            height: 10px;
-            background: #00ff00;
-            border-radius: 50%;
-            border: 2px solid var(--bg-gradient-1);
-            display: none;
-            box-shadow: 0 0 8px rgba(0, 255, 0, 0.8);
-        }
-
         #gamepad-connection-indicator.connected {
-            display: block;
-        }
-
-        #game-info-panel {
-            flex: 1;
+            display: block !important;
         }
 
         #game-container {
@@ -304,7 +271,7 @@
         /* Responsive */
         @media (max-width: 1600px) {
             #main-layout {
-                grid-template-columns: 1fr 200px;
+                grid-template-columns: 1fr 280px;
             }
         }
 
@@ -360,17 +327,11 @@
 </head>
 <body>
     <div id="main-layout">
-        <!-- Top Bar Container (Gamepad Icon + Game Info Panel) -->
+        <!-- Top Bar Container (Game Info Panel with integrated icons) -->
         <div id="top-bar-container">
-            <!-- Gamepad Icon -->
-            <div id="gamepad-icon-container">
-                <div id="gamepad-icon">🎮</div>
-                <div id="gamepad-connection-indicator"></div>
-            </div>
-
             <!-- Game Info Panel -->
             <div id="game-info-panel" class="panel">
-                <div style="display: grid; grid-template-columns: repeat(9, 1fr); gap: 8px; font-size: 10px;">
+                <div style="display: grid; grid-template-columns: repeat(10, 1fr) auto auto; gap: 8px; font-size: 10px; align-items: center;">
                     <div>
                         <div style="color: var(--text-muted); font-size: 8px;">SCORE</div>
                         <div style="font-weight: bold; color: var(--text-primary); font-size: 11px;"><span id="ui-score">0</span></div>
@@ -386,6 +347,17 @@
                     <div>
                         <div style="color: var(--text-muted); font-size: 8px;">SPEED</div>
                         <div style="font-weight: bold; color: var(--text-primary); font-size: 11px;"><span id="ui-speed">2.0</span></div>
+                    </div>
+                    <div>
+                        <div style="color: var(--text-muted); font-size: 8px;">DROP</div>
+                        <div style="display: flex; align-items: center; gap: 3px;">
+                            <div style="flex: 1; height: 10px; background: rgba(0, 0, 0, 0.5); border: 1px solid var(--text-muted); border-radius: 2px; position: relative; overflow: hidden; min-width: 40px;">
+                                <div id="drop-speed-fill" style="position: absolute; right: 0; top: 0; bottom: 0; width: 0%; background: linear-gradient(90deg, #ff6600 0%, #ffff00 50%, #00ff00 100%); transition: width 0.05s linear;"></div>
+                            </div>
+                            <div style="color: var(--text-primary); font-size: 9px; font-weight: bold; min-width: 22px;">
+                                <span id="drop-speed-percent">0</span>%
+                            </div>
+                        </div>
                     </div>
                     <div>
                         <div style="color: var(--text-muted); font-size: 8px;">REEL</div>
@@ -416,12 +388,16 @@
                         <div style="color: var(--text-muted); font-size: 8px;">FUEL</div>
                         <div style="font-weight: bold; color: var(--text-primary); font-size: 11px;"><span id="ui-boat-fuel">100</span>%</div>
                     </div>
+                    <!-- Gamepad Icon (integrated into info bar) -->
+                    <div id="gamepad-icon-container" style="position: relative;">
+                        <div id="gamepad-icon" style="font-size: 24px; line-height: 1; cursor: pointer;">🎮</div>
+                        <div id="gamepad-connection-indicator" style="position: absolute; bottom: 0; right: 0; width: 8px; height: 8px; background: #00ff00; border-radius: 50%; border: 2px solid var(--bg-gradient-1); display: none; box-shadow: 0 0 8px rgba(0, 255, 0, 0.8);"></div>
+                    </div>
+                    <!-- Book Icon (integrated into info bar) -->
+                    <div id="book-icon-container" style="position: relative;">
+                        <div id="book-icon" style="font-size: 24px; line-height: 1; cursor: pointer;">📖</div>
+                    </div>
                 </div>
-            </div>
-
-            <!-- Book Icon (Species Guide) -->
-            <div id="book-icon-container">
-                <div id="book-icon">📖</div>
             </div>
         </div>
 
@@ -664,16 +640,12 @@
 
         // Check Gamepads function - manual diagnostic
         function checkGamepads() {
-            console.log('🔍 Manual gamepad check requested...');
-            console.log('🔍 Gamepad API supported?', !!navigator.getGamepads);
-
             if (!navigator.getGamepads) {
                 alert('❌ Gamepad API not supported in this browser!');
                 return;
             }
 
             const gamepads = navigator.getGamepads();
-            console.log('🔍 Raw navigator.getGamepads():', gamepads);
 
             let foundCount = 0;
             let message = 'Gamepad Check Results:\n\n';
@@ -686,9 +658,6 @@
                     message += `   Connected: ${pad.connected}\n`;
                     message += `   Buttons: ${pad.buttons.length}\n`;
                     message += `   Axes: ${pad.axes.length}\n\n`;
-                    console.log('🔍 Found gamepad:', pad);
-                } else {
-                    console.log(`🔍 Gamepad slot ${i}: null`);
                 }
             }
 
@@ -818,11 +787,6 @@
             });
         });
 
-        // Log initial state
-        console.log('🎮 Gamepad Manager initialized. Waiting for controller connection...');
-        console.log('🎮 Press any button on your controller to connect it.');
-        console.log('🎮 Click the gamepad icon to test your controller.');
-        console.log('📖 Click the book icon to view the species guide.');
     </script>
 
     <!-- Commit Log Modal -->
