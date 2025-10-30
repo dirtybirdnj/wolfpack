@@ -210,6 +210,22 @@ export class GameScene extends Phaser.Scene {
             this.events.on('fishCaught', this.handleFishCaught, this);
             this.events.on('fishBump', this.handleFishBump, this);
 
+            // Gamepad disconnect listener - show warning when controller dies
+            if (window.gamepadManager) {
+                window.gamepadManager.on('disconnected', (gamepad) => {
+                    console.log('🎮 Controller disconnected during gameplay');
+                    this.notificationSystem.showGamepadDisconnected();
+                });
+
+                window.gamepadManager.on('connected', (gamepad) => {
+                    console.log('🎮 Controller reconnected');
+                    // Auto-dismiss warning if it's showing
+                    if (this.notificationSystem.hasDisconnectWarning()) {
+                        this.notificationSystem.dismissDisconnectWarning();
+                    }
+                });
+            }
+
             // Fade in
             this.cameras.main.fadeIn(500);
 
