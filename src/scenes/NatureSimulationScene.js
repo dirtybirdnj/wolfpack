@@ -22,6 +22,7 @@ export class NatureSimulationScene extends Phaser.Scene {
         this.fishes = [];
         this.baitfishClouds = [];
         this.zooplankton = [];
+        this.crayfish = [];
 
         // Simulation state
         this.waterTemp = 40;
@@ -57,8 +58,9 @@ export class NatureSimulationScene extends Phaser.Scene {
         this.debugSystem = new DebugSystem(this);
         this.debugSystem.setEnabled(true);
 
-        // Create depth selection UI
+        // Create depth selection UI (hidden initially)
         this.createDepthSelectionUI();
+        this.hideDepthSelectionUI();
 
         // Create info text
         this.createInfoText();
@@ -97,15 +99,15 @@ export class NatureSimulationScene extends Phaser.Scene {
     createDepthSelectionUI() {
         const { width, height } = this.cameras.main;
 
-        // Semi-transparent background panel
+        // Semi-transparent background panel (expanded height for temperature slider)
         this.depthPanel = this.add.graphics();
         this.depthPanel.fillStyle(0x1a2a3a, 0.95);
-        this.depthPanel.fillRoundedRect(width / 2 - 280, 20, 560, 180, 10);
+        this.depthPanel.fillRoundedRect(width / 2 - 280, 20, 560, 230, 10);
         this.depthPanel.lineStyle(2, 0x00ff00, 1);
-        this.depthPanel.strokeRoundedRect(width / 2 - 280, 20, 560, 180, 10);
+        this.depthPanel.strokeRoundedRect(width / 2 - 280, 20, 560, 230, 10);
 
         // Title
-        this.depthTitle = this.add.text(width / 2, 45, 'NATURE SIMULATION - SELECT WATER DEPTH', {
+        this.depthTitle = this.add.text(width / 2, 45, 'NATURE SIMULATION - SELECT WATER DEPTH & TEMPERATURE', {
             fontSize: '18px',
             fontFamily: 'Courier New',
             color: '#00ff00',
@@ -127,11 +129,14 @@ export class NatureSimulationScene extends Phaser.Scene {
         });
 
         // Random depth button
-        const randomButton = this.createDepthButton(width / 2, 145, 'RANDOM', true);
+        const randomButton = this.createDepthButton(width / 2, 140, 'RANDOM', true);
         this.depthButtons.push(randomButton);
 
+        // Temperature slider
+        this.createTemperatureSlider(width, 170);
+
         // Instructions
-        this.depthInstructions = this.add.text(width / 2, 175, 'Arrow Keys/D-Pad: Navigate | Enter/A: Select | ESC: Menu', {
+        this.depthInstructions = this.add.text(width / 2, 220, 'Arrow Keys/D-Pad: Navigate | Enter/A: Select | Drag slider for temp | ESC: Close', {
             fontSize: '11px',
             fontFamily: 'Courier New',
             color: '#88ff88',
@@ -140,6 +145,72 @@ export class NatureSimulationScene extends Phaser.Scene {
 
         // Highlight first button by default
         this.updateDepthButtonSelection();
+    }
+
+    createTemperatureSlider(width, y) {
+        // Lake Champlain temperature range: 32°F (winter) to 75°F (summer)
+        const minTemp = 32;
+        const maxTemp = 75;
+        const sliderWidth = 400;
+        const sliderX = width / 2 - sliderWidth / 2;
+
+        // Label
+        this.tempLabel = this.add.text(width / 2, y, `Water Temp: ${Math.floor(this.waterTemp)}°F`, {
+            fontSize: '14px',
+            fontFamily: 'Courier New',
+            color: '#00ffff',
+            fontStyle: 'bold'
+        }).setOrigin(0.5);
+
+        // Slider track
+        const trackY = y + 20;
+        const trackGraphics = this.add.graphics();
+        trackGraphics.fillStyle(0x2a4a3a, 1);
+        trackGraphics.fillRoundedRect(sliderX, trackY - 3, sliderWidth, 6, 3);
+        trackGraphics.lineStyle(1, 0x00ff00, 1);
+        trackGraphics.strokeRoundedRect(sliderX, trackY - 3, sliderWidth, 6, 3);
+
+        // Slider handle
+        const handleX = sliderX + ((this.waterTemp - minTemp) / (maxTemp - minTemp)) * sliderWidth;
+        const handle = this.add.circle(handleX, trackY, 8, 0x00ffff);
+        handle.setStrokeStyle(2, 0x00ff00);
+        handle.setInteractive({ draggable: true });
+
+        // Store in container for easy show/hide
+        this.tempSliderContainer = this.add.container(0, 0, [trackGraphics, handle]);
+
+        // Drag handler
+        this.input.on('drag', (pointer, gameObject, dragX) => {
+            if (gameObject !== handle) return;
+
+            // Constrain to slider bounds
+            const newX = Phaser.Math.Clamp(dragX, sliderX, sliderX + sliderWidth);
+            handle.x = newX;
+
+            // Calculate temperature
+            const ratio = (newX - sliderX) / sliderWidth;
+            this.waterTemp = minTemp + (ratio * (maxTemp - minTemp));
+
+            // Update label
+            this.tempLabel.setText(`Water Temp: ${Math.floor(this.waterTemp)}°F`);
+        });
+
+        // Temperature markers
+        const markers = [32, 40, 50, 60, 70, 75];
+        markers.forEach(temp => {
+            const markerX = sliderX + ((temp - minTemp) / (maxTemp - minTemp)) * sliderWidth;
+            const markerGraphics = this.add.graphics();
+            markerGraphics.lineStyle(1, 0x888888, 1);
+            markerGraphics.lineBetween(markerX, trackY - 10, markerX, trackY - 15);
+
+            const markerText = this.add.text(markerX, trackY + 12, `${temp}°`, {
+                fontSize: '8px',
+                fontFamily: 'Courier New',
+                color: '#888888'
+            }).setOrigin(0.5);
+
+            this.tempSliderContainer.add([markerGraphics, markerText]);
+        });
     }
 
     createDepthButton(x, y, depth, isRandom = false) {
@@ -222,11 +293,7 @@ export class NatureSimulationScene extends Phaser.Scene {
         this.updateDepthScale();
 
         // Hide depth selection UI
-        this.depthSelectionActive = false;
-        this.depthPanel.destroy();
-        this.depthTitle.destroy();
-        this.depthInstructions.destroy();
-        this.depthButtons.forEach(btn => btn.destroy());
+        this.hideDepthSelectionUI();
 
         // Update sonar display with new depth
         if (this.sonarDisplay) {
@@ -241,6 +308,40 @@ export class NatureSimulationScene extends Phaser.Scene {
         }
 
         console.log(`Nature simulation started at ${depth}ft depth`);
+    }
+
+    hideDepthSelectionUI() {
+        if (!this.depthSelectionActive) return;
+
+        this.depthSelectionActive = false;
+        if (this.depthPanel) this.depthPanel.setVisible(false);
+        if (this.depthTitle) this.depthTitle.setVisible(false);
+        if (this.depthInstructions) this.depthInstructions.setVisible(false);
+        if (this.tempSliderContainer) this.tempSliderContainer.setVisible(false);
+        if (this.tempLabel) this.tempLabel.setVisible(false);
+        if (this.depthButtons) {
+            this.depthButtons.forEach(btn => btn.setVisible(false));
+        }
+    }
+
+    showDepthSelectionUI() {
+        this.depthSelectionActive = true;
+        if (this.depthPanel) this.depthPanel.setVisible(true);
+        if (this.depthTitle) this.depthTitle.setVisible(true);
+        if (this.depthInstructions) this.depthInstructions.setVisible(true);
+        if (this.tempSliderContainer) this.tempSliderContainer.setVisible(true);
+        if (this.tempLabel) this.tempLabel.setVisible(true);
+        if (this.depthButtons) {
+            this.depthButtons.forEach(btn => btn.setVisible(true));
+        }
+    }
+
+    toggleDepthSelectionUI() {
+        if (this.depthSelectionActive) {
+            this.hideDepthSelectionUI();
+        } else {
+            this.showDepthSelectionUI();
+        }
     }
 
     createInfoText() {
@@ -341,13 +442,22 @@ export class NatureSimulationScene extends Phaser.Scene {
             try {
                 const fish = this.spawningSystem.trySpawnFish();
                 if (fish) {
-                    console.log(`✓ Spawned ${fish.species} (${fish.weight.toFixed(1)}lbs) at ${fish.depth.toFixed(1)}ft`);
+                    // Defensive check: only log full details if it's actually a fish with weight/species
+                    if (fish.weight !== undefined && fish.species) {
+                        console.log(`✓ Spawned ${fish.species} (${fish.weight.toFixed(1)}lbs) at ${fish.depth.toFixed(1)}ft`);
+                    } else {
+                        console.log(`✓ Spawned organism at ${fish.depth?.toFixed(1) || 'unknown'}ft`);
+                    }
                 } else {
                     console.log('⚠️ Could not spawn fish (water may be too shallow for selected species, trying again...)');
                     // Try again with potentially different species
                     const retryFish = this.spawningSystem.trySpawnFish();
                     if (retryFish) {
-                        console.log(`✓ Spawned ${retryFish.species} (${retryFish.weight.toFixed(1)}lbs) at ${retryFish.depth.toFixed(1)}ft`);
+                        if (retryFish.weight !== undefined && retryFish.species) {
+                            console.log(`✓ Spawned ${retryFish.species} (${retryFish.weight.toFixed(1)}lbs) at ${retryFish.depth.toFixed(1)}ft`);
+                        } else {
+                            console.log(`✓ Spawned organism at ${retryFish.depth?.toFixed(1) || 'unknown'}ft`);
+                        }
                     }
                 }
             } catch (error) {
@@ -593,6 +703,32 @@ export class NatureSimulationScene extends Phaser.Scene {
             plankton.update();
         });
 
+        // Update crayfish
+        this.crayfish = this.crayfish.filter(cf => {
+            if (cf.visible && !cf.consumed) {
+                // Find nearby zooplankton for hunting
+                const nearbyZooplankton = this.zooplankton.filter(zp => {
+                    const dx = cf.x - zp.x;
+                    const dy = cf.y - zp.y;
+                    return Math.sqrt(dx * dx + dy * dy) < 150;
+                });
+
+                // Check if smallmouth bass nearby (predators)
+                const predatorsNearby = this.fishes.some(f => {
+                    if (f.species !== 'smallmouth_bass') return false;
+                    const dx = cf.x - f.x;
+                    const dy = cf.y - f.y;
+                    return Math.sqrt(dx * dx + dy * dy) < 200;
+                });
+
+                cf.update(nearbyZooplankton, predatorsNearby);
+                return true;
+            } else {
+                cf.destroy();
+                return false;
+            }
+        });
+
         // Update debug system
         if (this.debugSystem) {
             this.debugSystem.update();
@@ -602,6 +738,7 @@ export class NatureSimulationScene extends Phaser.Scene {
         this.fishes = this.fishes.filter(f => f.visible);
         this.baitfishClouds = this.baitfishClouds.filter(c => c.visible);
         this.zooplankton = this.zooplankton.filter(p => p.visible);
+        this.crayfish = this.crayfish.filter(cf => cf.visible);
     }
 }
 

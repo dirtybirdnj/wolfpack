@@ -1,5 +1,45 @@
+9bbf6e9 - 2025-10-29 - Merge pull request #30 from dirtybirdnj/claude/add-game-info-indicator-011CUcQzRUkwzmLVWxbXeZ9u
+5e4634d - 2025-10-30 - Fix controller disconnect pause to properly freeze game state
+2db88f4 - 2025-10-30 - Move controller disconnect warning message up one inch
+b0f06ee - 2025-10-30 - Merge main branch to prepare DROP indicator for merge
+1a60b87 - 2025-10-29 - Merge pull request #29 from dirtybirdnj/claude/fix-scaling-bugs-011CUcEqhv4DwqPffmdgdk6q
+64abc70 - 2025-10-30 - Merge origin/main into claude/fix-scaling-bugs-011CUcEqhv4DwqPffmdgdk6q
+1652e40 - 2025-10-30 - Add controller disconnect detection and warning notification
+52c721f - 2025-10-30 - Refine fish caught popup layout: center rulers, extend ruler past tail
+92422ee - 2025-10-29 - Added build stuff claude added, rebase fuckery
+b47df01 - 2025-10-29 - Screenshot of ruler bug on fishcaught popup
+da2680c - 2025-10-30 - Update build script to generate version files from main branch
+bedc966 - 2025-10-30 - Bump version to 0.26.0
+a04394a - 2025-10-30 - UI layout improvements: expand canvas, move icons, align catch popup
+554a127 - 2025-10-29 - Screenshot with app UI diagram
+dd7d7e4 - 2025-10-30 - Refine catch popup layout: stats top-left, rulers aligned, fish centered
+eaad8c4 - 2025-10-29 - screenshot of fish caught ruler bug
+6e23e34 - 2025-10-30 - Massive catch popup upgrade: 4x larger fish, white ruler, greyed classes
+5c0ac1e - 2025-10-29 - Added screenshot of ruler bug. looks incredible
+dfc9acd - 2025-10-30 - Add DROP indicator to game info panel
+921ce98 - 2025-10-30 - Fix crash: replace require() with ES6 import for SpeciesData
 75e0872 - 2025-10-29 - Merge pull request #28 from dirtybirdnj/claude/add-electron-packaging-011CUcPXzgfj7ycyqXVSdKyT
+310cec3 - 2025-10-30 - Tournament-style fish photo: facing left, scaled to ruler, size classification
+992f320 - 2025-10-29 - Improve boot menu: remove sonar text, box art, add wrap-around navigation
 216390b - 2025-10-29 - Add Electron packaging for Steam distribution
+16723a2 - 2025-10-29 - Added screenshot of boot menu
+8f56875 - 2025-10-29 - Fix overlapping text in catch popup
+834719a - 2025-10-29 - Added screenshot of fishlanded popup having white and yellow text drawn on top of eachother
+903a41a - 2025-10-29 - Increase fish size and add measurement ruler to catch popup
+ea46a49 - 2025-10-29 - Fix fish not appearing in catch popup by calculating bodySize correctly
+540492e - 2025-10-29 - Add comprehensive debugging to all species renderAtPosition methods
+d876f83 - 2025-10-29 - Add debugging for fish rendering and fix menu blocking during catch popup
+aca3525 - 2025-10-29 - Consolidate and update AI documentation
+944180e - 2025-10-29 - Fix fish rendering in catch popup using translateCanvas
+cbcbe44 - 2025-10-29 - Clean up console messages during initialization
+6559f40 - 2025-10-29 - Add debug logging for fish rendering in catch popup
+e7416f2 - 2025-10-29 - Fix fish rendering in catch popup by setting graphics position
+865579c - 2025-10-29 - Fix fish rendering in catch popup and lure movement during fight
+4af060d - 2025-10-29 - Fix catch popup input interference and fish rendering
+96cb86c - 2025-10-29 - Added fishfight end state rendering screenshots
+7556c25 - 2025-10-29 - Fix sample image paths after samples directory reorganization
+28c302c - 2025-10-29 - Require X button on gamepad to dismiss catch popup
+74d47a5 - 2025-10-29 - Fix fish scaling and lure position bugs in fishfight interface
 25dd9ce - 2025-10-29 - Merge pull request #27 from dirtybirdnj/claude/add-gameplay-recordings-011CUc6Hk1VgGJ6o6jNTNZYm
 1cfc9b5 - 2025-10-29 - Merge main branch to bring samples reorganization up to date
 e2ba2a7 - 2025-10-29 - Merge pull request #26 from dirtybirdnj/claude/fix-npm-build-command-011CUc454pFLJ3mznZQYEbn2
@@ -8,43 +48,3 @@ f519f2c - 2025-10-29 - Move species rendering to model classes
 bb45728 - 2025-10-29 - Consolidate Lake Trout rendering - eliminate duplication
 873b40e - 2025-10-29 - Fix depthZone undefined error in fish status display
 04dabf3 - 2025-10-29 - Add defensive check for renderAtPosition in catch popup
-e76b4eb - 2025-10-29 - Fix import paths in species models after reorganization
-23a9260 - 2025-10-29 - Organize species models into dedicated subfolder
-817272c - 2025-10-29 - Add semantic versioning to build ZIP filenames
-8772162 - 2025-10-29 - Refactor fish system: separate game logic from rendering
-c84855d - 2025-10-29 - Add automatic itch.io ZIP creation to build system
-3bedab2 - 2025-10-29 - Merge pull request #25 from dirtybirdnj/claude/add-haptic-fish-bumps-011CUc1MLG2VWb4rdhT4qKBM
-5f1af5e - 2025-10-29 - Merge branch 'main' into claude/add-haptic-fish-bumps-011CUc1MLG2VWb4rdhT4qKBM
-bed6db5 - 2025-10-29 - Increase max predator fish on screen from 4 to 20
-268b927 - 2025-10-29 - Double baitfish clouds, increase laker hunger, add health restoration
-274ce5d - 2025-10-29 - Add ecosystem response to pike summoning
-03c96b7 - 2025-10-29 - Add R trigger hookset, smallmouth bump boost, and pike jig summon
-5dae59e - 2025-10-29 - Reorganize samples directory into categorized subdirectories
-9605f00 - 2025-10-29 - Fix gamepadManager axis access for hookset detection
-be5670a - 2025-10-29 - Scale haptic feedback intensity by line sensitivity
-5d63d02 - 2025-10-29 - Implement hookset timing system for skill-based fishing
-fc45674 - 2025-10-29 - Add visual feedback - lure vibration on fish bumps
-c78a796 - 2025-10-29 - Fix fishingLineModel reference and synchronization
-51b6279 - 2025-10-29 - Merge pull request #24 from dirtybirdnj/claude/modularize-fish-system-011CUbqXSkZMi59LEJrtZawx
-67b6db2 - 2025-10-29 - Scale haptic feedback intensity by line sensitivity
-3065cbb - 2025-10-29 - Prevent lure auto-drop after catching fish
-f721165 - 2025-10-29 - Add haptic feedback for fish bumping the lure
-4d74b69 - 2025-10-29 - Eliminate code duplication in fish species rendering
-0dea881 - 2025-10-29 - Merge main branch into modular fish system
-21d6745 - 2025-10-29 - Merge pull request #21 from dirtybirdnj/claude/new-game-concept-011CUV24FTAHJE9cys3sfWkz
-01b3b99 - 2025-10-29 - Add SELECT button shortcut to open tackle box from pause menu
-4b5c8ed - 2025-10-29 - Fix tackle box menu bugs and add Tackle Box button to pause menu
-cb0744f - 2025-10-29 - Implement menu toggling between tackle box and pause menu
-07cf190 - 2025-10-29 - Add Circle/A button and fix Start button behavior in tackle box
-0b280ce - 2025-10-29 - Fix tackle box not closing properly with Select button
-15c686f - 2025-10-29 - Fix tackle box graphics not clearing when closed
-54d84c9 - 2025-10-29 - Merge remote-tracking branch 'origin/main' into claude/modularize-fish-system-011CUbqXSkZMi59LEJrtZawx
-a85c3b1 - 2025-10-29 - Added screenshot of select button bug
-f7cf20e - 2025-10-29 - Merge pull request #23 from dirtybirdnj/claude/game-distribution-research-011CUQwW3GocKCDtaNKQ6fpG
-c0bd90b - 2025-10-29 - Remove node_modules from git tracking
-a9694b5 - 2025-10-29 - Update documentation to reflect modular fish system
-3fb3b30 - 2025-10-29 - Fix tackle box not closing with Select button
-2fd3dad - 2025-10-29 - Added screenshot of select menu bug. Added more map assets
-fb59be0 - 2025-10-29 - Add tackle box to GameScene (active fishing mode)
-6633e13 - 2025-10-29 - Add build system and itch.io publishing guide
-bc12d67 - 2025-10-29 - Remove auto-opening tackle box from NavigationScene

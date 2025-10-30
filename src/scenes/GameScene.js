@@ -4,6 +4,7 @@ import SonarDisplay from '../utils/SonarDisplay.js';
 import Lure from '../entities/Lure.js';
 import Fish from '../entities/Fish.js';
 import BaitfishCloud from '../entities/BaitfishCloud.js';
+import Crayfish from '../entities/Crayfish.js';
 import FishFight from '../entities/FishFight.js';
 import IceHoleManager from '../managers/IceHoleManager.js';
 import BoatManager from '../managers/BoatManager.js';
@@ -46,6 +47,7 @@ export class GameScene extends Phaser.Scene {
         this.fishes = [];
         this.baitfishClouds = [];
         this.zooplankton = [];
+        this.crayfish = [];
 
         // Game state
         this.score = 0;
@@ -590,7 +592,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     /**
-     * Update all entities (fish, baitfish, zooplankton)
+     * Update all entities (fish, baitfish, zooplankton, crayfish)
      */
     updateEntities() {
         // Update zooplankton
@@ -601,6 +603,32 @@ export class GameScene extends Phaser.Scene {
                 return true;
             } else {
                 zp.destroy();
+                return false;
+            }
+        });
+
+        // Update crayfish
+        this.crayfish = this.crayfish.filter(cf => {
+            if (cf.visible && !cf.consumed) {
+                // Find nearby zooplankton for hunting
+                const nearbyZooplankton = this.zooplankton.filter(zp => {
+                    const dx = cf.x - zp.x;
+                    const dy = cf.y - zp.y;
+                    return Math.sqrt(dx * dx + dy * dy) < 150;
+                });
+
+                // Check if smallmouth bass nearby (predators)
+                const predatorsNearby = this.fishes.some(f => {
+                    if (f.species !== 'smallmouth_bass') return false;
+                    const dx = cf.x - f.x;
+                    const dy = cf.y - f.y;
+                    return Math.sqrt(dx * dx + dy * dy) < 200;
+                });
+
+                cf.update(nearbyZooplankton, predatorsNearby);
+                return true;
+            } else {
+                cf.destroy();
                 return false;
             }
         });

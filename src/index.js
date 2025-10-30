@@ -77,7 +77,37 @@ function setupDevTools(game) {
     // Update UI stats every 100ms
     setInterval(() => {
         const gameScene = game.scene.getScene('GameScene');
-        if (gameScene && gameScene.scene.isActive()) {
+        const natureScene = game.scene.getScene('NatureSimulationScene');
+
+        // Handle Nature Simulation Scene
+        if (natureScene && natureScene.scene.isActive()) {
+            // Show nature depth selector button
+            const natureDepthSelector = document.getElementById('nature-depth-selector');
+            if (natureDepthSelector) natureDepthSelector.style.display = 'inline';
+
+            // Update depth display with max depth
+            const uiDepth = document.getElementById('ui-depth');
+            if (uiDepth) uiDepth.textContent = natureScene.maxDepth || 80;
+
+            // Update temperature
+            const uiTemp = document.getElementById('ui-temp');
+            if (uiTemp) uiTemp.textContent = Math.floor(natureScene.waterTemp || 40);
+
+            // Update time
+            const minutes = Math.floor(natureScene.gameTime / 60);
+            const secs = natureScene.gameTime % 60;
+            const timeStr = `${minutes}:${secs.toString().padStart(2, '0')}`;
+            const uiTime = document.getElementById('ui-time');
+            if (uiTime) uiTime.textContent = timeStr;
+
+            // Update fish status panel
+            updateFishStatus(natureScene);
+        }
+        // Handle Game Scene
+        else if (gameScene && gameScene.scene.isActive()) {
+            // Hide nature depth selector button in game mode
+            const natureDepthSelector = document.getElementById('nature-depth-selector');
+            if (natureDepthSelector) natureDepthSelector.style.display = 'none';
             // Game info panel - Score & fish
             const uiScore = document.getElementById('ui-score');
             const uiCaught = document.getElementById('ui-caught');
@@ -238,6 +268,17 @@ function setupDevTools(game) {
                     btn.textContent = debugMode ? 'Debug: ON' : 'Toggle Debug Info';
                     btn.style.background = debugMode ? '#ffaa00' : '#00ff00';
                 }
+            }
+        });
+    }
+
+    // Nature Mode Depth Selector Button
+    const natureDepthSelector = document.getElementById('nature-depth-selector');
+    if (natureDepthSelector) {
+        natureDepthSelector.addEventListener('click', () => {
+            const natureScene = game.scene.getScene('NatureSimulationScene');
+            if (natureScene && natureScene.scene.isActive()) {
+                natureScene.toggleDepthSelectionUI();
             }
         });
     }
@@ -425,6 +466,12 @@ function updateFishStatus(gameScene) {
 
     // Helper function to render fish card
     const renderFish = ({ fish, index }) => {
+        // Defensive check: Only Fish objects have AI, hunger, health, etc.
+        // Skip non-fish entities (zooplankton, crayfish)
+        if (!fish.ai || typeof fish.hunger !== 'number' || !fish.depthZone) {
+            return ''; // Not a fish, skip rendering
+        }
+
         const info = fish.getInfo();
         const zoneColor = fish.depthZone.name === 'Surface' ? '#ffff00' :
                          fish.depthZone.name === 'Mid-Column' ? '#00ff00' : '#888888';

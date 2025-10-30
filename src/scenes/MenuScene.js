@@ -7,6 +7,12 @@ export class MenuScene extends Phaser.Scene {
         this.buttons = [];
     }
 
+    preload() {
+        // Load logo assets
+        this.load.image('wolfpack-logo', 'samples/assets/wolfpack-text-transparent.png');
+        this.load.image('vtj-logo', 'samples/assets/vtj-circle-thickborder.png');
+    }
+
     create() {
         const { width, height } = this.cameras.main;
 
@@ -22,105 +28,65 @@ export class MenuScene extends Phaser.Scene {
             bgImage.setDisplaySize(width, height);
         }
 
-        // Title
-        this.add.text(width / 2, 100, 'WOLFPACK', {
-            fontSize: '64px',
-            fontFamily: 'Courier New',
-            color: '#ff6600',
-            fontStyle: 'bold'
-        }).setOrigin(0.5);
+        // Title - Wolfpack Logo (moved down 1 inch = 96 pixels)
+        const wolfpackLogo = this.add.image(width / 2, 196, 'wolfpack-logo');
+        wolfpackLogo.setOrigin(0.5);
+        wolfpackLogo.setScale(0.5); // Adjust scale as needed
 
-        // Subtitle
-        this.add.text(width / 2, 160, 'VERTICAL TUBE JIG', {
-            fontSize: '20px',
-            fontFamily: 'Courier New',
-            color: '#ff3300',
-            fontStyle: 'bold'
-        }).setOrigin(0.5);
+        // VTJ Logo (bottom right, moved left 1 inch, half size, clickable)
+        const vtjLogo = this.add.image(width - 176, height - 80, 'vtj-logo');
+        vtjLogo.setOrigin(0.5);
+        vtjLogo.setScale(0.075); // Half the original size
+        vtjLogo.setInteractive({ useHandCursor: true });
+        vtjLogo.on('pointerdown', () => {
+            window.open('https://www.verticaltubejig.com', '_blank');
+        });
 
-        this.add.text(width / 2, 200, 'Lake Champlain Ice Fishing', {
-            fontSize: '16px',
-            fontFamily: 'Courier New',
-            color: '#00ff00'
-        }).setOrigin(0.5);
-
-        // Game mode selection
-        this.add.text(width / 2, 280, 'SELECT FISHING TYPE & MODE', {
+        // Game mode selection (moved down 0.5 inch = 48 pixels)
+        this.add.text(width / 2, 328, 'SELECT GAME MODE', {
             fontSize: '18px',
             fontFamily: 'Courier New',
             color: '#00ffff',
             fontStyle: 'bold'
         }).setOrigin(0.5);
 
-        // Single horizontal row layout for all 7 game modes
-        const buttonWidth = 130;
-        const buttonHeight = 70;
-        const buttonSpacing = 25;
+        // Three button layout centered on screen
+        const buttonWidth = 150;
+        const buttonHeight = 80;
+        const buttonSpacing = 40;
         const centerX = width / 2;
-        const buttonY = 400;
+        const buttonY = 496; // Moved down 1 inch (96 pixels)
 
-        // Calculate starting X position to center all buttons
-        const totalWidth = (buttonWidth * 7) + (buttonSpacing * 6);
+        // Calculate starting X position to center all three buttons
+        const totalWidth = (buttonWidth * 3) + (buttonSpacing * 2);
         const startX = centerX - (totalWidth / 2) + (buttonWidth / 2);
 
-        // Create all 7 buttons in a single row
+        // Create Ice Arcade, Ice Unlimited, and Nature Simulation buttons
         const iceArcade = this.createModeButton(
-            startX + (buttonWidth + buttonSpacing) * 0, buttonY,
-            'ICE',
+            startX, buttonY,
+            'ICE FISHING',
             'Arcade',
             { fishingType: GameConfig.FISHING_TYPE_ICE, gameMode: GameConfig.GAME_MODE_ARCADE },
             0
         );
 
         const iceUnlimited = this.createModeButton(
-            startX + (buttonWidth + buttonSpacing) * 1, buttonY,
-            'ICE',
+            startX + (buttonWidth + buttonSpacing), buttonY,
+            'ICE FISHING',
             'Unlimited',
             { fishingType: GameConfig.FISHING_TYPE_ICE, gameMode: GameConfig.GAME_MODE_UNLIMITED },
             1
         );
 
-        const kayakArcade = this.createModeButton(
-            startX + (buttonWidth + buttonSpacing) * 2, buttonY,
-            'KAYAK',
-            'Arcade',
-            { fishingType: GameConfig.FISHING_TYPE_KAYAK, gameMode: GameConfig.GAME_MODE_ARCADE },
-            2
-        );
-
-        const kayakUnlimited = this.createModeButton(
-            startX + (buttonWidth + buttonSpacing) * 3, buttonY,
-            'KAYAK',
-            'Unlimited',
-            { fishingType: GameConfig.FISHING_TYPE_KAYAK, gameMode: GameConfig.GAME_MODE_UNLIMITED },
-            3
-        );
-
-        const boatArcade = this.createModeButton(
-            startX + (buttonWidth + buttonSpacing) * 4, buttonY,
-            'BOAT',
-            'Arcade',
-            { fishingType: GameConfig.FISHING_TYPE_MOTORBOAT, gameMode: GameConfig.GAME_MODE_ARCADE },
-            4
-        );
-
-        const boatUnlimited = this.createModeButton(
-            startX + (buttonWidth + buttonSpacing) * 5, buttonY,
-            'BOAT',
-            'Unlimited',
-            { fishingType: GameConfig.FISHING_TYPE_MOTORBOAT, gameMode: GameConfig.GAME_MODE_UNLIMITED },
-            5
-        );
-
         const natureSimulation = this.createModeButton(
-            startX + (buttonWidth + buttonSpacing) * 6, buttonY,
+            startX + (buttonWidth + buttonSpacing) * 2, buttonY,
             'NATURE',
             'Simulation',
             { fishingType: GameConfig.FISHING_TYPE_NATURE_SIMULATION, gameMode: null },
-            6
+            2
         );
 
-        this.buttons = [iceArcade, iceUnlimited, kayakArcade, kayakUnlimited, boatArcade, boatUnlimited, natureSimulation];
+        this.buttons = [iceArcade, iceUnlimited, natureSimulation];
 
         // Controls hint
         const controlsY = 570;
@@ -372,7 +338,7 @@ export class MenuScene extends Phaser.Scene {
             // Clear previous navigation position data to use default deep water location
             this.registry.set('fishingWorldX', null);
             this.registry.set('fishingWorldY', 5000);
-            this.registry.set('currentDepth', GameConfig.MAX_DEPTH);
+            this.registry.set('currentDepth', 90); // Start ice fishing at 90ft depth
             startingScene = 'GameScene';
         }
 
