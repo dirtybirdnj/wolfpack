@@ -3,7 +3,7 @@ import GameConfig from '../config/GameConfig.js';
 export class MenuScene extends Phaser.Scene {
     constructor() {
         super({ key: 'MenuScene' });
-        this.selectedMode = 2; // Start with Nature Simulation mode (index 2) pre-selected
+        this.selectedMode = 1; // Start with Unlimited mode (index 1) pre-selected for controller support
         this.buttons = [];
 
         // Configurable fade-in duration for smooth transition from boot screen (in milliseconds)
