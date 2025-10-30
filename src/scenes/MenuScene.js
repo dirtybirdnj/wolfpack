@@ -380,10 +380,6 @@ export class MenuScene extends Phaser.Scene {
         if (modeConfig.fishingType === GameConfig.FISHING_TYPE_NATURE_SIMULATION) {
             // Nature simulation goes to its own scene
             startingScene = 'NatureSimulationScene';
-        } else if (modeConfig.fishingType === GameConfig.FISHING_TYPE_KAYAK ||
-                   modeConfig.fishingType === GameConfig.FISHING_TYPE_MOTORBOAT) {
-            // Kayak and motorboat modes start with navigation (top-down lake view)
-            startingScene = 'NavigationScene';
         } else {
             // Ice fishing goes directly to GameScene (no navigation needed on ice)
             // Clear previous navigation position data to use default deep water location
