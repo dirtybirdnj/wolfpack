@@ -667,9 +667,10 @@ export class FishFight {
     /**
      * Draw size classification ruler showing SMALL/MEDIUM/LARGE/TROPHY zones
      * Greys out size classes the fish hasn't reached yet
+     * Ruler matches exact length of white ruler (limited to fishLengthInches)
      * Returns array of all created elements for cleanup
      */
-    drawClassificationRuler(startX, centerY, speciesName, fishLength, pixelsPerInch) {
+    drawClassificationRuler(startX, centerY, speciesName, fishLength, pixelsPerInch, maxRulerLength) {
         const elements = [];
 
         // Get species data from imported PREDATOR_SPECIES
@@ -686,6 +687,9 @@ export class FishFight {
         const rulerHeight = 35; // Taller for larger fish
         const categories = speciesData.sizeCategories;
 
+        // Ruler length matches white ruler exactly (fish length in inches)
+        const totalRulerLengthPx = maxRulerLength * pixelsPerInch;
+
         // Size classification colors
         const colors = {
             small: 0x4a7c59,    // Green
@@ -701,7 +705,7 @@ export class FishFight {
             trophy: '#ffff00'
         };
 
-        // Draw each size zone
+        // Draw each size zone - only show zones up to fish length
         ['small', 'medium', 'large', 'trophy'].forEach(sizeName => {
             const category = categories[sizeName];
             if (!category || !category.lengthRange) return;
@@ -709,8 +713,18 @@ export class FishFight {
             const minLength = category.lengthRange[0];
             const maxLength = category.lengthRange[1];
 
+            // Skip zones that start beyond the fish length
+            if (minLength > maxRulerLength) return;
+
             const zoneStartX = startX + (minLength * pixelsPerInch);
-            const zoneWidth = (maxLength - minLength) * pixelsPerInch;
+            // Clip zone width to not exceed ruler length
+            const idealZoneWidth = (maxLength - minLength) * pixelsPerInch;
+            const rulerEndX = startX + totalRulerLengthPx;
+            const zoneEndX = Math.min(zoneStartX + idealZoneWidth, rulerEndX);
+            const zoneWidth = zoneEndX - zoneStartX;
+
+            // Skip if zone has no visible width
+            if (zoneWidth <= 0) return;
 
             // Check if fish has reached this size class
             const fishReachedClass = fishLength >= minLength;
@@ -832,7 +846,7 @@ export class FishFight {
 
         // Tournament-style fish photo: scale fish to match ruler exactly
         // NOTE: this.fish is the model (LakeTrout, SmallmouthBass, etc.), not the entity wrapper
-        const fishRenderY = popupY - 140; // Positioned higher in larger popup
+        const fishRenderY = popupY - 60; // Moved down from -140 (gained space from moving stats up)
 
         // Calculate proper scale: fish body should match ruler length
         // 4x larger than before (was 6, now 24 pixels per inch)
@@ -859,12 +873,12 @@ export class FishFight {
             fishMouthX, fishRenderY + 80, fishLengthInches, desiredPixelsPerInch
         );
 
-        // Draw size classification ruler below the measurement ruler
+        // Draw size classification ruler below the measurement ruler - SAME LENGTH as white ruler
         const classificationElements = this.drawClassificationRuler(
-            fishMouthX, fishRenderY + 120, this.fish.species, this.fish.length, desiredPixelsPerInch
+            fishMouthX, fishRenderY + 120, this.fish.species, this.fish.length, desiredPixelsPerInch, fishLengthInches
         );
 
-        // Fish stats
+        // Fish stats - moved to TOP LEFT with smaller font
         // Format age display (fish.age is already in years from calculateBiologicalAge)
         let ageDisplay;
         if (this.fish.age < 2) {
@@ -876,22 +890,23 @@ export class FishFight {
             ageDisplay = `${this.fish.age} years`;
         }
 
-        const statsText = this.scene.add.text(popupX, popupY + 100,
+        const statsText = this.scene.add.text(popupX - 420, popupY - 250,
             `${info.name} (${info.gender})\n` +
-            `Weight: ${info.weight}  |  Length: ${info.length}\n` +
+            `Weight: ${info.weight}\n` +
+            `Length: ${info.length}\n` +
             `Age: ${ageDisplay}\n` +
             `Points: +${this.fish.points}`,
             {
-                fontSize: '22px',
+                fontSize: '14px',
                 fontFamily: 'Courier New',
                 color: '#ffffff',
-                align: 'center',
+                align: 'left',
                 stroke: '#000000',
-                strokeThickness: 4,
-                lineSpacing: 10
+                strokeThickness: 2,
+                lineSpacing: 4
             }
         );
-        statsText.setOrigin(0.5, 0);  // Anchor at top-center instead of center
+        statsText.setOrigin(0, 0);  // Anchor at top-left
         statsText.setDepth(2002);
 
         // Continue prompt - positioned well below stats
