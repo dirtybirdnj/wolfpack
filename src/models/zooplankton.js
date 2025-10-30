@@ -1,28 +1,25 @@
 import GameConfig from '../config/GameConfig.js';
 import { Utils } from '../utils/Constants.js';
+import AquaticOrganism from './AquaticOrganism.js';
 
 /**
- * Zooplankton Model - Base class for zooplankton organisms
- * Contains all biological properties, stats, and game logic
+ * Zooplankton Model - Extends AquaticOrganism
+ * Bottom of the food chain organisms
  *
- * Zooplankton are tiny organisms at the bottom of the food chain that:
+ * Zooplankton are tiny organisms that:
  * - Drift slowly near the lake bottom
- * - Are consumed by baitfish
+ * - Are consumed by baitfish and crayfish
  * - Have short lifespans (50-100 seconds)
  * - Stay within 2-10 feet of the lake bottom
  */
-export class Zooplankton {
+export class Zooplankton extends AquaticOrganism {
     constructor(scene, worldX, y) {
-        this.scene = scene;
-
-        // Position properties
-        this.worldX = worldX; // World X coordinate (like fish)
-        this.x = worldX; // Screen X coordinate (calculated in update)
-        this.y = y;
-        this.depth = y / GameConfig.DEPTH_SCALE;
+        // Call parent constructor (no species data for simple organisms)
+        super(scene, worldX, y);
 
         // Biological properties (very tiny organisms)
         this.size = Utils.randomBetween(0.1, 0.3); // Very small (inches)
+        this.length = this.size; // Length same as size for zooplankton
         this.speed = Utils.randomBetween(0.1, 0.3); // Very slow drift
 
         // Movement behavior - mostly drift with slight random movement
@@ -31,8 +28,6 @@ export class Zooplankton {
 
         // State
         this.consumed = false;
-        this.visible = true;
-        this.age = 0;
 
         // Visual properties for sonar display
         this.hue = Utils.randomBetween(150, 200); // Greenish-blue color variation
@@ -67,21 +62,8 @@ export class Zooplankton {
         this.worldX += Math.cos(this.driftDirection) * this.driftSpeed;
         this.y += Math.sin(this.driftDirection) * this.driftSpeed * 0.3; // Less vertical movement
 
-        // Get actual lake bottom depth at zooplankton's current world position
-        let bottomDepth = this.scene.maxDepth || GameConfig.MAX_DEPTH;
-        if (this.scene.boatManager) {
-            bottomDepth = this.scene.boatManager.getDepthAtPosition(this.worldX);
-        } else if (this.scene.iceHoleManager) {
-            // For ice fishing, get bottom from current hole's profile
-            const currentHole = this.scene.iceHoleManager.getCurrentHole();
-            if (currentHole && currentHole.bottomProfile) {
-                const closest = currentHole.bottomProfile.reduce((prev, curr) =>
-                    Math.abs(curr.x - this.x) < Math.abs(prev.x - this.x) ? curr : prev
-                );
-                bottomDepth = closest.y / GameConfig.DEPTH_SCALE;
-            }
-        }
-        // If neither manager exists (nature simulation), use scene.maxDepth which was already set above
+        // Get actual lake bottom depth (using parent class helper)
+        const bottomDepth = this.getBottomDepthAtPosition();
 
         // Stay near the bottom (within 2-10 feet of actual bottom)
         const bottomY = bottomDepth * GameConfig.DEPTH_SCALE;
@@ -97,45 +79,12 @@ export class Zooplankton {
 
         this.depth = this.y / GameConfig.DEPTH_SCALE;
 
-        // Convert world position to screen position based on player position
+        // Convert world position to screen position (using parent class helper)
         this.updateScreenPosition();
-    }
 
-    /**
-     * Update screen position based on player position
-     * (different for ice fishing vs boat fishing vs nature mode)
-     */
-    updateScreenPosition() {
-        // In nature simulation mode, use worldX directly as screen X
-        if (this.scene.iceHoleManager) {
-            const currentHole = this.scene.iceHoleManager.getCurrentHole();
-            const playerWorldX = currentHole ? currentHole.x : this.worldX;
-            const offsetFromPlayer = this.worldX - playerWorldX;
-            this.x = (GameConfig.CANVAS_WIDTH / 2) + offsetFromPlayer;
-
-            // Remove if too far from player in world coordinates
-            const distanceFromPlayer = Math.abs(this.worldX - playerWorldX);
-            if (distanceFromPlayer > 600) {
-                this.visible = false;
-            }
-        } else if (this.scene.boatManager) {
-            const playerWorldX = this.scene.boatManager.getPlayerWorldX();
-            const offsetFromPlayer = this.worldX - playerWorldX;
-            this.x = (GameConfig.CANVAS_WIDTH / 2) + offsetFromPlayer;
-
-            // Remove if too far from player in world coordinates
-            const distanceFromPlayer = Math.abs(this.worldX - playerWorldX);
-            if (distanceFromPlayer > 600) {
-                this.visible = false;
-            }
-        } else {
-            // Nature simulation mode - use worldX directly as screen X (no player to offset from)
-            this.x = this.worldX;
-
-            // Remove if off screen in nature mode
-            if (this.worldX < -400 || this.worldX > GameConfig.CANVAS_WIDTH + 400) {
-                this.visible = false;
-            }
+        // Check if too far from player and cull if needed
+        if (this.isTooFarFromPlayer(600)) {
+            this.visible = false;
         }
     }
 

@@ -1,20 +1,20 @@
 import GameConfig from '../config/GameConfig.js';
 
 /**
- * AquaticOrganism - Lightweight base class for fish and baitfish
- * Contains only the essential shared properties to keep baitfish performant
+ * AquaticOrganism - Lightweight base class for all aquatic life
+ * Contains only the essential shared properties to keep all organisms performant
  *
  * This class provides:
  * - Position management (world and screen coordinates)
- * - Species data
+ * - Species data (optional - simple organisms like zooplankton may not have species)
  * - Basic biological properties (size, age)
  * - Movement tracking (angle, speed)
  */
 export class AquaticOrganism {
-    constructor(scene, worldX, y, species, speciesData) {
+    constructor(scene, worldX, y, species = null, speciesData = null) {
         this.scene = scene;
 
-        // Species identification
+        // Species identification (optional for simple organisms)
         this.species = species;
         this.speciesData = speciesData;
 
