@@ -266,8 +266,9 @@ export class Fish extends AquaticOrganism {
             }
 
             // Keep fish above lake bottom (with 5 feet buffer)
+            // Allow fish to swim all the way to surface (y=0) now that ice rendering is removed
             const maxY = (bottomDepth - 5) * GameConfig.DEPTH_SCALE;
-            this.y = Math.max(10, Math.min(maxY, this.y));
+            this.y = Math.max(0, Math.min(maxY, this.y));
 
             // Convert world position to screen position based on player position
             if (isNatureSimulation) {
