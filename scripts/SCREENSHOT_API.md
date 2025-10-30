@@ -40,40 +40,35 @@ This installs:
 - `@octokit/rest` - GitHub API client
 - `dotenv` - Environment variable management
 
-### 3. Start the API Server
+### 3. Start the Servers
 
-You have several options:
-
-**Option A: Run API server only**
+Simply run:
 ```bash
-npm run api
-```
-
-**Option B: Run both API and game dev server**
-```bash
-npm run dev:full
-```
-
-**Option C: Run in separate terminals**
-```bash
-# Terminal 1: API Server
-npm run api
-
-# Terminal 2: Game Server
 npm run dev
 ```
 
-The API server will start on port 3000 (or your configured port).
+or
+
+```bash
+npm start
+```
+
+This will automatically start **both** the API server (port 3000) and the game server (port 8080) concurrently.
+
+**Individual Server Commands** (if needed):
+```bash
+npm run api   # API server only
+npm run game  # Game server only
+```
 
 ## Usage
 
-1. Start the API server: `npm run api`
-2. Start the game: `npm run dev` (in another terminal)
-3. Open the game in your browser: http://localhost:8080
-4. Click the camera icon (📷) in the top bar
-5. Fill in title and description
-6. Click "Create GitHub Issue"
-7. The issue will be created automatically!
+1. Start both servers: `npm run dev` (starts API + game automatically)
+2. Open the game in your browser: http://localhost:8080
+3. Click the camera icon (📷) in the top bar
+4. Fill in title and description
+5. Click "Create GitHub Issue"
+6. The issue will be created automatically!
 
 ## API Endpoints
 
@@ -134,7 +129,8 @@ If the API server is not running:
 ## Troubleshooting
 
 ### "API Error: Failed to fetch"
-- Make sure the API server is running: `npm run api`
+- Make sure you started with `npm run dev` (which starts both servers)
+- If you only ran `npm run game`, the API server won't be running
 - Check the console for server logs
 - Verify the server is on port 3000: http://localhost:3000/api/health
 
