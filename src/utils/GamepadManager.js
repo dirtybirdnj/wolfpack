@@ -11,6 +11,7 @@ class GamepadManager {
             connected: [],
             disconnected: []
         };
+        this.rafId = null; // Store RAF ID for cleanup
 
         // Check if Gamepad API is supported
         if (!navigator.getGamepads) {
@@ -66,7 +67,7 @@ class GamepadManager {
      */
     pollGamepads() {
         this.updateGamepads();
-        requestAnimationFrame(() => this.pollGamepads());
+        this.rafId = requestAnimationFrame(() => this.pollGamepads());
     }
 
     updateGamepads() {
@@ -123,6 +124,18 @@ class GamepadManager {
     on(event, callback) {
         if (this.listeners[event]) {
             this.listeners[event].push(callback);
+        }
+    }
+
+    /**
+     * Remove a listener for gamepad events
+     */
+    off(event, callback) {
+        if (this.listeners[event]) {
+            const index = this.listeners[event].indexOf(callback);
+            if (index > -1) {
+                this.listeners[event].splice(index, 1);
+            }
         }
     }
 
@@ -228,6 +241,23 @@ class GamepadManager {
         const gamepad = this.getGamepad();
         if (!gamepad || !gamepad.axes[axisIndex]) return 0;
         return gamepad.axes[axisIndex];
+    }
+
+    /**
+     * Cleanup method - stops polling and clears listeners
+     */
+    destroy() {
+        // Cancel the requestAnimationFrame loop
+        if (this.rafId !== null) {
+            cancelAnimationFrame(this.rafId);
+            this.rafId = null;
+            console.log('🧹 Cancelled GamepadManager RAF polling');
+        }
+
+        // Clear all event listeners
+        this.listeners.connected = [];
+        this.listeners.disconnected = [];
+        console.log('🧹 Cleared GamepadManager event listeners');
     }
 }
 

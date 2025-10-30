@@ -140,7 +140,8 @@ function setupResizeHandler(game) {
 
 function setupDevTools(game) {
     // Update UI stats every 100ms
-    setInterval(() => {
+    // Store interval ID so it can be cleared on game destroy
+    const statsUpdateInterval = setInterval(() => {
         const gameScene = game.scene.getScene('GameScene');
         const natureScene = game.scene.getScene('NatureSimulationScene');
 
@@ -509,6 +510,14 @@ function setupDevTools(game) {
             }
         }
     }, 500);
+
+    // Cleanup interval when game is destroyed
+    game.events.once('destroy', () => {
+        if (statsUpdateInterval) {
+            clearInterval(statsUpdateInterval);
+            console.log('🧹 Cleaned up stats update interval');
+        }
+    });
 
     // Note: Test Controller Button is handled in index.html
     // to avoid duplicate event listeners that could interfere with game state
