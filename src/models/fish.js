@@ -1,7 +1,7 @@
 import GameConfig from '../config/GameConfig.js';
 import { Constants, Utils } from '../utils/Constants.js';
 import FishAI from '../entities/FishAI.js';
-import { getPredatorSpecies } from '../config/SpeciesData.js';
+import { getPredatorSpecies, getBaitfishSpecies } from '../config/SpeciesData.js';
 import AquaticOrganism from './AquaticOrganism.js';
 
 // Fish name pools
