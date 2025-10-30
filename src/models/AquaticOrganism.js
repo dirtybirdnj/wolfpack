@@ -52,8 +52,6 @@ export class AquaticOrganism {
             const playerWorldX = currentHole ? currentHole.x : this.worldX;
             const offsetFromPlayer = this.worldX - playerWorldX;
             this.x = (GameConfig.CANVAS_WIDTH / 2) + offsetFromPlayer;
-            const offsetFromPlayer = this.worldX - playerWorldX;
-            this.x = (GameConfig.CANVAS_WIDTH / 2) + offsetFromPlayer;
         } else {
             // Nature simulation mode - use worldX directly as screen X (no player to offset from)
             this.x = this.worldX;
