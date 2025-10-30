@@ -200,8 +200,8 @@ export class BaitfishCloud {
         }
 
         // Keep cloud in vertical bounds based on water depth
-        // Allow baitfish clouds to swim all the way to surface (no minimum constraint)
-        const minY = 0; // No minimum - can reach surface
+        // Allow baitfish clouds near surface but not at absolute top (prevents sticking at Y=0)
+        const minY = 0.5 * GameConfig.DEPTH_SCALE; // 0.5 feet from surface
         const maxY = (bottomDepth - 5) * GameConfig.DEPTH_SCALE; // 5 feet from bottom
         this.centerY = Math.max(minY, Math.min(maxY, this.centerY));
 
