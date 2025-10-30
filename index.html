@@ -370,7 +370,7 @@
 
             <!-- Game Info Panel -->
             <div id="game-info-panel" class="panel">
-                <div style="display: grid; grid-template-columns: repeat(9, 1fr); gap: 8px; font-size: 10px;">
+                <div style="display: grid; grid-template-columns: repeat(10, 1fr); gap: 8px; font-size: 10px;">
                     <div>
                         <div style="color: var(--text-muted); font-size: 8px;">SCORE</div>
                         <div style="font-weight: bold; color: var(--text-primary); font-size: 11px;"><span id="ui-score">0</span></div>
@@ -386,6 +386,17 @@
                     <div>
                         <div style="color: var(--text-muted); font-size: 8px;">SPEED</div>
                         <div style="font-weight: bold; color: var(--text-primary); font-size: 11px;"><span id="ui-speed">2.0</span></div>
+                    </div>
+                    <div>
+                        <div style="color: var(--text-muted); font-size: 8px;">DROP</div>
+                        <div style="display: flex; align-items: center; gap: 3px;">
+                            <div style="flex: 1; height: 10px; background: rgba(0, 0, 0, 0.5); border: 1px solid var(--text-muted); border-radius: 2px; position: relative; overflow: hidden; min-width: 40px;">
+                                <div id="drop-speed-fill" style="position: absolute; right: 0; top: 0; bottom: 0; width: 0%; background: linear-gradient(90deg, #ff6600 0%, #ffff00 50%, #00ff00 100%); transition: width 0.05s linear;"></div>
+                            </div>
+                            <div style="color: var(--text-primary); font-size: 9px; font-weight: bold; min-width: 22px;">
+                                <span id="drop-speed-percent">0</span>%
+                            </div>
+                        </div>
                     </div>
                     <div>
                         <div style="color: var(--text-muted); font-size: 8px;">REEL</div>
