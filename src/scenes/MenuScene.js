@@ -3,7 +3,7 @@ import GameConfig from '../config/GameConfig.js';
 export class MenuScene extends Phaser.Scene {
     constructor() {
         super({ key: 'MenuScene' });
-        this.selectedMode = 1; // Start with Unlimited mode (index 1) pre-selected
+        this.selectedMode = 2; // Start with Nature Simulation mode (index 2) pre-selected
         this.buttons = [];
     }
 

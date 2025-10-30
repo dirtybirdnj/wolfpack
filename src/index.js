@@ -8,6 +8,7 @@ import GameScene from './scenes/GameScene.js';
 import GameOverScene from './scenes/GameOverScene.js';
 import UIScene from './scenes/UIScene.js';
 import NatureSimulationScene from './scenes/NatureSimulationScene.js';
+import gamepadManager from './utils/GamepadManager.js';
 
 // Phaser game configuration
 const config = {
@@ -51,9 +52,13 @@ const config = {
 
 // Initialize the game
 window.addEventListener('load', () => {
+    // Initialize gamepad manager globally
+    window.gamepadManager = gamepadManager;
+    console.log('🎮 Gamepad Manager initialized');
+
     // Create the game instance
     const game = new Phaser.Game(config);
-    
+
     // Game initialized
     console.log('Lake Champlain Fishing Game - Ready');
 
@@ -62,7 +67,7 @@ window.addEventListener('load', () => {
         e.preventDefault();
         return false;
     });
-    
+
     // Add game to window for debugging (optional)
     if (typeof window !== 'undefined') {
         window.game = game;
