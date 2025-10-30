@@ -32,8 +32,8 @@ const config = {
         transparent: false
     },
     scale: {
-        mode: Phaser.Scale.FIT,
-        autoCenter: Phaser.Scale.CENTER_BOTH,
+        mode: Phaser.Scale.RESIZE,
+        autoCenter: Phaser.Scale.NO_CENTER,
         width: GameConfig.CANVAS_WIDTH,
         height: GameConfig.CANVAS_HEIGHT,
         parent: 'game-container'
@@ -93,28 +93,16 @@ function setupResizeHandler(game) {
         const containerWidth = gameContainer.clientWidth - 4; // Account for border
         const containerHeight = gameContainer.clientHeight - 4;
 
-        // Calculate the optimal game size while maintaining aspect ratio
-        const gameAspectRatio = GameConfig.CANVAS_WIDTH / GameConfig.CANVAS_HEIGHT;
-        const containerAspectRatio = containerWidth / containerHeight;
-
-        let newWidth, newHeight;
-
-        if (containerAspectRatio > gameAspectRatio) {
-            // Container is wider than game aspect ratio - fit to height
-            newHeight = containerHeight;
-            newWidth = newHeight * gameAspectRatio;
-        } else {
-            // Container is taller than game aspect ratio - fit to width
-            newWidth = containerWidth;
-            newHeight = newWidth / gameAspectRatio;
-        }
+        // Fill the container completely - no aspect ratio preservation
+        const newWidth = containerWidth;
+        const newHeight = containerHeight;
 
         // Update the game scale
         if (game.scale) {
             game.scale.resize(newWidth, newHeight);
         }
 
-        console.log(`🎮 Game resized to: ${Math.round(newWidth)}x${Math.round(newHeight)} (container: ${containerWidth}x${containerHeight})`);
+        console.log(`🎮 Game resized to fill container: ${Math.round(newWidth)}x${Math.round(newHeight)}`);
     }
 
     // Initial resize
