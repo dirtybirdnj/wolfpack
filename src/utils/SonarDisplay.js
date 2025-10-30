@@ -75,14 +75,15 @@ export class SonarDisplay {
     
     generateBottomProfile() {
         // Generate a realistic lakebed profile using actual water depth
+        // Keep bottom very close to max depth (within 1-3 feet) to maximize gameplay area
         const maxDepth = this.scene.maxDepth || GameConfig.MAX_DEPTH;
         const profile = [];
-        let depth = maxDepth - 10;
+        let depth = maxDepth - 2;
 
         for (let x = 0; x < GameConfig.CANVAS_WIDTH + 200; x += 20) {
             // Add some variation to simulate rocks, drop-offs, etc.
-            depth += (Math.random() - 0.5) * 3;
-            depth = Math.max(maxDepth - 20, Math.min(maxDepth - 5, depth));
+            depth += (Math.random() - 0.5) * 1;
+            depth = Math.max(maxDepth - 3, Math.min(maxDepth - 1, depth));
 
             // Occasional structure (rocks, logs)
             if (Math.random() < 0.1) {

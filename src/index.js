@@ -17,6 +17,7 @@ const config = {
     height: GameConfig.CANVAS_HEIGHT,
     parent: 'game-container',
     backgroundColor: GameConfig.COLOR_BACKGROUND,
+    banner: false, // Disable Phaser boot banner
     physics: {
         default: 'arcade',
         arcade: {
