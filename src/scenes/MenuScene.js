@@ -7,6 +7,12 @@ export class MenuScene extends Phaser.Scene {
         this.buttons = [];
     }
 
+    preload() {
+        // Load logo assets
+        this.load.image('wolfpack-logo', 'samples/assets/wolfpack-text-transparent.png');
+        this.load.image('vtj-logo', 'samples/assets/vtj-circle-thickborder.png');
+    }
+
     create() {
         const { width, height } = this.cameras.main;
 
@@ -22,23 +28,17 @@ export class MenuScene extends Phaser.Scene {
             bgImage.setDisplaySize(width, height);
         }
 
-        // Title
-        this.add.text(width / 2, 100, 'WOLFPACK', {
-            fontSize: '64px',
-            fontFamily: 'Courier New',
-            color: '#ff6600',
-            fontStyle: 'bold'
-        }).setOrigin(0.5);
+        // Title - Wolfpack Logo
+        const wolfpackLogo = this.add.image(width / 2, 100, 'wolfpack-logo');
+        wolfpackLogo.setOrigin(0.5);
+        wolfpackLogo.setScale(0.5); // Adjust scale as needed
 
-        // Subtitle
-        this.add.text(width / 2, 160, 'VERTICAL TUBE JIG', {
-            fontSize: '20px',
-            fontFamily: 'Courier New',
-            color: '#ff3300',
-            fontStyle: 'bold'
-        }).setOrigin(0.5);
+        // Subtitle - VTJ Logo
+        const vtjLogo = this.add.image(width / 2, 180, 'vtj-logo');
+        vtjLogo.setOrigin(0.5);
+        vtjLogo.setScale(0.15); // Adjust scale as needed (VTJ is a circle logo)
 
-        this.add.text(width / 2, 200, 'Lake Champlain Ice Fishing', {
+        this.add.text(width / 2, 220, 'Lake Champlain Ice Fishing', {
             fontSize: '16px',
             fontFamily: 'Courier New',
             color: '#00ff00'
