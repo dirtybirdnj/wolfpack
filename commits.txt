@@ -1,50 +1,50 @@
-9bbf6e9 - 2025-10-29 - Merge pull request #30 from dirtybirdnj/claude/add-game-info-indicator-011CUcQzRUkwzmLVWxbXeZ9u
-5e4634d - 2025-10-30 - Fix controller disconnect pause to properly freeze game state
-2db88f4 - 2025-10-30 - Move controller disconnect warning message up one inch
-b0f06ee - 2025-10-30 - Merge main branch to prepare DROP indicator for merge
-1a60b87 - 2025-10-29 - Merge pull request #29 from dirtybirdnj/claude/fix-scaling-bugs-011CUcEqhv4DwqPffmdgdk6q
-64abc70 - 2025-10-30 - Merge origin/main into claude/fix-scaling-bugs-011CUcEqhv4DwqPffmdgdk6q
-1652e40 - 2025-10-30 - Add controller disconnect detection and warning notification
-52c721f - 2025-10-30 - Refine fish caught popup layout: center rulers, extend ruler past tail
-92422ee - 2025-10-29 - Added build stuff claude added, rebase fuckery
-b47df01 - 2025-10-29 - Screenshot of ruler bug on fishcaught popup
-da2680c - 2025-10-30 - Update build script to generate version files from main branch
-bedc966 - 2025-10-30 - Bump version to 0.26.0
-a04394a - 2025-10-30 - UI layout improvements: expand canvas, move icons, align catch popup
-554a127 - 2025-10-29 - Screenshot with app UI diagram
-dd7d7e4 - 2025-10-30 - Refine catch popup layout: stats top-left, rulers aligned, fish centered
-eaad8c4 - 2025-10-29 - screenshot of fish caught ruler bug
-6e23e34 - 2025-10-30 - Massive catch popup upgrade: 4x larger fish, white ruler, greyed classes
-5c0ac1e - 2025-10-29 - Added screenshot of ruler bug. looks incredible
-dfc9acd - 2025-10-30 - Add DROP indicator to game info panel
-921ce98 - 2025-10-30 - Fix crash: replace require() with ES6 import for SpeciesData
-75e0872 - 2025-10-29 - Merge pull request #28 from dirtybirdnj/claude/add-electron-packaging-011CUcPXzgfj7ycyqXVSdKyT
-310cec3 - 2025-10-30 - Tournament-style fish photo: facing left, scaled to ruler, size classification
-992f320 - 2025-10-29 - Improve boot menu: remove sonar text, box art, add wrap-around navigation
-216390b - 2025-10-29 - Add Electron packaging for Steam distribution
-16723a2 - 2025-10-29 - Added screenshot of boot menu
-8f56875 - 2025-10-29 - Fix overlapping text in catch popup
-834719a - 2025-10-29 - Added screenshot of fishlanded popup having white and yellow text drawn on top of eachother
-903a41a - 2025-10-29 - Increase fish size and add measurement ruler to catch popup
-ea46a49 - 2025-10-29 - Fix fish not appearing in catch popup by calculating bodySize correctly
-540492e - 2025-10-29 - Add comprehensive debugging to all species renderAtPosition methods
-d876f83 - 2025-10-29 - Add debugging for fish rendering and fix menu blocking during catch popup
-aca3525 - 2025-10-29 - Consolidate and update AI documentation
-944180e - 2025-10-29 - Fix fish rendering in catch popup using translateCanvas
-cbcbe44 - 2025-10-29 - Clean up console messages during initialization
-6559f40 - 2025-10-29 - Add debug logging for fish rendering in catch popup
-e7416f2 - 2025-10-29 - Fix fish rendering in catch popup by setting graphics position
-865579c - 2025-10-29 - Fix fish rendering in catch popup and lure movement during fight
-4af060d - 2025-10-29 - Fix catch popup input interference and fish rendering
-96cb86c - 2025-10-29 - Added fishfight end state rendering screenshots
-7556c25 - 2025-10-29 - Fix sample image paths after samples directory reorganization
-28c302c - 2025-10-29 - Require X button on gamepad to dismiss catch popup
-74d47a5 - 2025-10-29 - Fix fish scaling and lure position bugs in fishfight interface
-25dd9ce - 2025-10-29 - Merge pull request #27 from dirtybirdnj/claude/add-gameplay-recordings-011CUc6Hk1VgGJ6o6jNTNZYm
-1cfc9b5 - 2025-10-29 - Merge main branch to bring samples reorganization up to date
-e2ba2a7 - 2025-10-29 - Merge pull request #26 from dirtybirdnj/claude/fix-npm-build-command-011CUc454pFLJ3mznZQYEbn2
-0df5f44 - 2025-10-29 - Fix fish display scaling in catch popup
-f519f2c - 2025-10-29 - Move species rendering to model classes
-bb45728 - 2025-10-29 - Consolidate Lake Trout rendering - eliminate duplication
-873b40e - 2025-10-29 - Fix depthZone undefined error in fish status display
-04dabf3 - 2025-10-29 - Add defensive check for renderAtPosition in catch popup
+7d191f5 - 2025-10-30 - Merge pull request #35 from dirtybirdnj/claude/debug-reel-model-integration-011CUcqGEKn5sNzS4WXnE6tY
+51a3319 - 2025-10-30 - Remove cinema mode popup from start menu
+941b72e - 2025-10-30 - Test commit: whitespace change in README
+ae5134f - 2025-10-30 - Merge main responsive canvas sizing with depth scaling fixes
+9534c70 - 2025-10-30 - Merge pull request #34 from dirtybirdnj/claude/fix-stuck-chat-error-011CUdiyzH3PaFoHVoe6zdxL
+c7b2a50 - 2025-10-30 - Fix memory leaks causing max connections exceeded error
+1554f50 - 2025-10-30 - Fix spawn/constraint depth scale mismatch causing fish stuck at surface
+82be4f2 - 2025-10-30 - Fix game world depth scaling to properly fill screen with water column
+2c559cf - 2025-10-30 - Merge pull request #33 from dirtybirdnj/claude/adjust-game-area-layout-011CUdY1MaCVWwNDXUZcXdHy
+ed34fd0 - 2025-10-30 - Make game backgrounds scale dynamically with container size
+84e67ea - 2025-10-30 - Added screenshots of start page background scaling improvement
+449bf51 - 2025-10-30 - Fix fish status panel to fill 100% of available vertical space
+307183a - 2025-10-30 - Added screenshot of game world constraint bugs
+f1d7b2f - 2025-10-30 - Add visual debug boundaries to show fish movement constraints
+1c438b4 - 2025-10-30 - Fix baitfish stuck at top of screen (invisible wall bug)
+7f85f95 - 2025-10-30 - Added screenshot of fish and crayfish trapped at surface
+7dc65e5 - 2025-10-30 - Remove S key sidebar toggle from keyboard tester
+1b89188 - 2025-10-30 - Add keyboard/gamepad toggle to input tester
+2c474f9 - 2025-10-30 - Update top toolbar icons: consistent hamburger and smaller up arrow
+68ee271 - 2025-10-30 - Move SELECT GAME MODE text up 1/4 inch
+7d51d9f - 2025-10-30 - Remove redundant black box fade from boot sequence
+0f12c3a - 2025-10-30 - Increase boot logo time and adjust menu text position
+8a54c2e - 2025-10-30 - Enhance boot screen with branding text and faster timing
+1dfe004 - 2025-10-30 - Add smooth black fade transition to start menu
+546ffe7 - 2025-10-30 - Implement responsive layout and dynamic game window resizing
+e41d5ce - 2025-10-30 - Adjust menu layout: move text and logo positioning
+2aa788e - 2025-10-30 - Fix olive green flash before boot screen
+9319646 - 2025-10-30 - Add VTJ logo splash screen on boot
+5f524b8 - 2025-10-30 - Remove boot banner and optimize lake bottom positioning
+32387a0 - 2025-10-30 - Fix invisible wall bug trapping baitfish at surface
+11c3f6a - 2025-10-30 - Fix start menu: pre-select Nature Simulation and enable controller navigation
+7474bf5 - 2025-10-30 - Merge pull request #32 from dirtybirdnj/claude/add-reel-model-011CUceqgLMUoHtLM72apLic
+b292784 - 2025-10-30 - Merge branch 'claude/add-reel-model-011CUceqgLMUoHtLM72apLic' of http://127.0.0.1:16815/git/dirtybirdnj/wolfpack into claude/add-reel-model-011CUceqgLMUoHtLM72apLic
+a97cd36 - 2025-10-30 - Fix fish trapped at surface by removing minimum Y constraints
+b6ec683 - 2025-10-30 - Added bug of fish trapped at the top of the game area
+a95b3dd - 2025-10-30 - Pre-select Unlimited mode and add L1/R1 bumper navigation
+1c6b896 - 2025-10-30 - Merge branch 'claude/add-reel-model-011CUceqgLMUoHtLM72apLic' of http://127.0.0.1:16815/git/dirtybirdnj/wolfpack into claude/add-reel-model-011CUceqgLMUoHtLM72apLic
+36a9d41 - 2025-10-30 - Remove ice surface display and kayak/boat fishing modes
+c6dcc5c - 2025-10-30 - added ice surface bug
+a3dad07 - 2025-10-30 - Fix fish visibility in arcade mode by adjusting ice graphics depth
+4875cda - 2025-10-30 - Fix arcade ice mode by restoring missing assets from BootScene
+d48bbd1 - 2025-10-30 - Update menu buttons and remove boot screen completely
+d4e1818 - 2025-10-30 - Fix bottomProfile null reference errors and remove boot screen wait
+aa19efd - 2025-10-30 - Merge remote-tracking branch 'origin/main' into claude/add-reel-model-011CUceqgLMUoHtLM72apLic
+6ddc517 - 2025-10-30 - Add reel type and line test selection to tackle box
+e412d9a - 2025-10-29 - Merge pull request #31 from dirtybirdnj/claude/apply-fish-pattern-011CUcQPnbY32bJ8Mk6J5iuL
+e2b1326 - 2025-10-30 - Adjust menu layout and restore nature simulation mode
+56130a9 - 2025-10-30 - Clean up menu screen: remove subtitle and adjust spacing
+9c12a5e - 2025-10-30 - Integrate reel and drag system with scientifically accurate mechanics
+b4691eb - 2025-10-30 - Temporarily remove boat and kayak modes, focus on ice fishing

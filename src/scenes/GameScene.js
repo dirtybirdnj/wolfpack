@@ -7,7 +7,6 @@ import BaitfishCloud from '../entities/BaitfishCloud.js';
 import Crayfish from '../entities/Crayfish.js';
 import FishFight from '../entities/FishFight.js';
 import IceHoleManager from '../managers/IceHoleManager.js';
-import BoatManager from '../managers/BoatManager.js';
 import FishingLine from '../entities/FishingLine.js';
 import { FishingLineModel } from '../models/FishingLineModel.js';
 import { ReelModel } from '../models/ReelModel.js';
@@ -266,52 +265,26 @@ export class GameScene extends Phaser.Scene {
     }
 
     /**
-     * Initialize location managers (ice hole or boat)
+     * Initialize location managers (ice hole only)
      */
     initializeManagers() {
-        const isSummerMode = this.fishingType === GameConfig.FISHING_TYPE_KAYAK ||
-                             this.fishingType === GameConfig.FISHING_TYPE_MOTORBOAT;
+        this.iceHoleManager = new IceHoleManager(this);
 
-        if (isSummerMode) {
-            this.boatManager = new BoatManager(this, this.fishingType);
-            this.iceHoleManager = null;
-        } else {
-            this.iceHoleManager = new IceHoleManager(this);
-            this.boatManager = null;
-        }
-
-        // Show/hide UI panels based on fishing mode
+        // Show ice drill panel
         const iceDrillPanel = document.getElementById('ice-drill-panel');
         const kayakPanel = document.getElementById('kayak-tiredness-panel');
         const boatPanel = document.getElementById('motorboat-gas-panel');
 
-        if (this.fishingType === GameConfig.FISHING_TYPE_ICE) {
-            if (iceDrillPanel) iceDrillPanel.style.display = 'block';
-            if (kayakPanel) kayakPanel.style.display = 'none';
-            if (boatPanel) boatPanel.style.display = 'none';
-        } else if (this.fishingType === GameConfig.FISHING_TYPE_KAYAK) {
-            if (iceDrillPanel) iceDrillPanel.style.display = 'none';
-            if (kayakPanel) kayakPanel.style.display = 'block';
-            if (boatPanel) boatPanel.style.display = 'none';
-        } else if (this.fishingType === GameConfig.FISHING_TYPE_MOTORBOAT) {
-            if (iceDrillPanel) iceDrillPanel.style.display = 'none';
-            if (kayakPanel) kayakPanel.style.display = 'none';
-            if (boatPanel) boatPanel.style.display = 'block';
-        }
+        if (iceDrillPanel) iceDrillPanel.style.display = 'block';
+        if (kayakPanel) kayakPanel.style.display = 'none';
+        if (boatPanel) boatPanel.style.display = 'none';
     }
 
     /**
-     * Set water temperature based on fishing type
+     * Set water temperature
      */
     initializeWaterTemp() {
-        const isSummerMode = this.fishingType === GameConfig.FISHING_TYPE_KAYAK ||
-                             this.fishingType === GameConfig.FISHING_TYPE_MOTORBOAT;
-
-        if (isSummerMode) {
-            this.waterTemp = Utils.randomBetween(GameConfig.SUMMER_WATER_TEMP_MIN, GameConfig.SUMMER_WATER_TEMP_MAX);
-        } else {
-            this.waterTemp = Utils.randomBetween(GameConfig.WATER_TEMP_MIN, GameConfig.WATER_TEMP_MAX);
-        }
+        this.waterTemp = Utils.randomBetween(GameConfig.WATER_TEMP_MIN, GameConfig.WATER_TEMP_MAX);
     }
 
     /**
@@ -493,8 +466,7 @@ export class GameScene extends Phaser.Scene {
 
         // Update fishing line
         const hookedFish = this.currentFight && this.currentFight.active ? this.currentFight.fish : null;
-        const manager = this.iceHoleManager || this.boatManager;
-        this.fishingLine.update(this.lure, hookedFish, manager);
+        this.fishingLine.update(this.lure, hookedFish, this.iceHoleManager);
 
         // Continuously update lure info in UI
         this.updateSpeedDisplay();
@@ -513,13 +485,11 @@ export class GameScene extends Phaser.Scene {
     }
 
     /**
-     * Update managers (ice hole or boat)
+     * Update managers (ice hole)
      */
     updateManagers() {
         if (this.iceHoleManager) {
             this.iceHoleManager.update();
-        } else if (this.boatManager) {
-            this.boatManager.update();
         }
     }
 
@@ -539,16 +509,9 @@ export class GameScene extends Phaser.Scene {
         console.log('🎵 Fish whistle: Spawning trophy fish and large bait clouds...');
 
         // Get player position
-        let playerWorldX;
-        if (this.iceHoleManager) {
-            const currentHole = this.iceHoleManager.getCurrentHole();
-            if (!currentHole) return;
-            playerWorldX = currentHole.x;
-        } else if (this.boatManager) {
-            playerWorldX = this.boatManager.getPlayerWorldX();
-        } else {
-            return;
-        }
+        const currentHole = this.iceHoleManager.getCurrentHole();
+        if (!currentHole) return;
+        const playerWorldX = currentHole.x;
 
         // Spawn 1 trophy fish of each species
         const species = ['yellow_perch', 'lake_trout', 'northern_pike', 'smallmouth_bass'];
@@ -1608,9 +1571,6 @@ export class GameScene extends Phaser.Scene {
         // Clean up managers
         if (this.iceHoleManager) {
             this.iceHoleManager.destroy();
-        }
-        if (this.boatManager) {
-            this.boatManager.destroy();
         }
 
         // Clean up systems

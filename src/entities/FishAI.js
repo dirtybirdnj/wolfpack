@@ -77,20 +77,10 @@ export class FishAI {
     }
     
     calculateDepthPreference() {
-        const isSummerMode = this.fishingType === GameConfig.FISHING_TYPE_KAYAK ||
-                             this.fishingType === GameConfig.FISHING_TYPE_MOTORBOAT;
-
-        if (isSummerMode) {
-            // Summer: Lake trout prefer to stay below thermocline
-            const minDepth = GameConfig.THERMOCLINE_DEPTH + 5; // 5 feet below thermocline
-            const maxDepth = GameConfig.LAKE_TROUT_PREFERRED_DEPTH_MAX;
-            return Utils.randomBetween(minDepth, maxDepth);
-        } else {
-            // Winter: Lake trout prefer deeper, cooler water
-            const minDepth = GameConfig.LAKE_TROUT_PREFERRED_DEPTH_MIN;
-            const maxDepth = GameConfig.LAKE_TROUT_PREFERRED_DEPTH_MAX;
-            return Utils.randomBetween(minDepth, maxDepth);
-        }
+        // Ice fishing: Lake trout prefer deeper, cooler water
+        const minDepth = GameConfig.LAKE_TROUT_PREFERRED_DEPTH_MIN;
+        const maxDepth = GameConfig.LAKE_TROUT_PREFERRED_DEPTH_MAX;
+        return Utils.randomBetween(minDepth, maxDepth);
     }
 
     detectFrenzy(lure, allFish) {
@@ -636,9 +626,6 @@ export class FishAI {
     }
     
     getMovementVector() {
-        const isSummerMode = this.fishingType === GameConfig.FISHING_TYPE_KAYAK ||
-                             this.fishingType === GameConfig.FISHING_TYPE_MOTORBOAT;
-
         // IDLE fish cruise horizontally without a specific target
         if (this.state === Constants.FISH_STATE.IDLE || !this.targetX || !this.targetY) {
             // Northern Pike: ambush behavior - stay near ambush position
@@ -672,36 +659,7 @@ export class FishAI {
                 }
             }
 
-            // Lake Trout: thermocline behavior in summer modes
-            if (isSummerMode) {
-                const thermoclineDepth = GameConfig.THERMOCLINE_DEPTH;
-                const currentDepth = this.fish.depth;
-
-                // If fish is above thermocline, slowly return below it
-                if (currentDepth < thermoclineDepth) {
-                    this.returningToThermocline = true;
-                    return {
-                        x: this.fish.speed * this.idleDirection * 0.5, // Slower horizontal movement
-                        y: this.fish.speed * 0.3 // Drift downward
-                    };
-                } else if (currentDepth < thermoclineDepth + 5) {
-                    // Just below thermocline, continue drifting down slowly
-                    this.returningToThermocline = true;
-                    return {
-                        x: this.fish.speed * this.idleDirection * 0.7,
-                        y: this.fish.speed * 0.2
-                    };
-                } else {
-                    // Below thermocline, normal cruising
-                    this.returningToThermocline = false;
-                    return {
-                        x: this.fish.speed * this.idleDirection,
-                        y: 0 // Stay at current depth while idle
-                    };
-                }
-            }
-
-            // Winter mode: normal idle behavior (lake trout)
+            // Ice fishing mode: normal idle behavior (lake trout)
             return {
                 x: this.fish.speed * this.idleDirection,
                 y: 0 // Stay at current depth while idle

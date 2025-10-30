@@ -11,7 +11,7 @@ import { Constants } from '../../utils/Constants.js';
  * - Gamepad input handling with native Gamepad API
  * - Mouse/touch input
  * - Input state tracking
- * - Mode-specific controls (ice fishing vs boat)
+ * - Ice fishing controls
  *
  * COMMON TASKS:
  * - Add new keyboard controls → handleKeyboardInput() method
@@ -125,71 +125,30 @@ export class InputSystem {
      * Handle keyboard input
      */
     handleKeyboardInput() {
-        // Check if in boat mode
-        const isBoatMode = this.scene.boatManager !== null;
-
-        if (isBoatMode) {
-            // Boat mode: left/right moves the boat (but only if lure is at surface)
-            if (this.cursors.left.isDown || this.cursors.right.isDown) {
-                // Check if lure is at surface before allowing movement
-                if (this.scene.lure.state === Constants.LURE_STATE.SURFACE) {
-                    if (this.cursors.left.isDown) {
-                        this.scene.boatManager.movePlayer(-1);
-                    } else if (this.cursors.right.isDown) {
-                        this.scene.boatManager.movePlayer(1);
-                    }
-                } else {
-                    // Show warning if trying to move with lure down
-                    if (!this.movementWarningShown) {
-                        this.showMovementWarning();
-                        this.movementWarningShown = true;
-                        // Reset warning flag after a delay
-                        this.scene.time.delayedCall(2000, () => {
-                            this.movementWarningShown = false;
-                        });
-                    }
-                    this.scene.boatManager.stopMoving();
-                }
-            } else {
-                this.scene.boatManager.stopMoving();
-            }
-
-            // Up/down still controls lure
-            if (this.spaceKey.isDown || this.cursors.down.isDown) {
-                this.scene.lure.drop();
-            }
-
-            if (this.cursors.up.isDown) {
-                this.scene.lure.retrieve();
-            } else {
-                this.scene.lure.stopRetrieve();
-            }
-        } else {
-            // Ice fishing mode: original controls
-            // Drop lure with space or down arrow
-            if (this.spaceKey.isDown || this.cursors.down.isDown) {
-                this.scene.lure.drop();
-            }
-
-            // Retrieve lure with up arrow
-            if (this.cursors.up.isDown) {
-                this.scene.lure.retrieve();
-            } else {
-                this.scene.lure.stopRetrieve();
-            }
-
-            // Adjust retrieve speed with left/right arrows
-            if (Phaser.Input.Keyboard.JustDown(this.cursors.left)) {
-                this.scene.lure.adjustSpeed(-1);
-                this.updateSpeedDisplay();
-            }
-            if (Phaser.Input.Keyboard.JustDown(this.cursors.right)) {
-                this.scene.lure.adjustSpeed(1);
-                this.updateSpeedDisplay();
-            }
+        // Ice fishing mode controls
+        // Drop lure with space or down arrow
+        if (this.spaceKey.isDown || this.cursors.down.isDown) {
+            this.scene.lure.drop();
         }
 
-        // Reset lure with R key (all modes)
+        // Retrieve lure with up arrow
+        if (this.cursors.up.isDown) {
+            this.scene.lure.retrieve();
+        } else {
+            this.scene.lure.stopRetrieve();
+        }
+
+        // Adjust retrieve speed with left/right arrows
+        if (Phaser.Input.Keyboard.JustDown(this.cursors.left)) {
+            this.scene.lure.adjustSpeed(-1);
+            this.updateSpeedDisplay();
+        }
+        if (Phaser.Input.Keyboard.JustDown(this.cursors.right)) {
+            this.scene.lure.adjustSpeed(1);
+            this.updateSpeedDisplay();
+        }
+
+        // Reset lure with R key
         if (Phaser.Input.Keyboard.JustDown(this.rKey)) {
             this.scene.lure.reset();
         }
@@ -260,38 +219,7 @@ export class InputSystem {
             }
         }
 
-        // === BOAT/KAYAK MOVEMENT (Summer modes only) ===
-        if (this.scene.boatManager) {
-            // D-pad left/right and left stick X: Move boat/kayak (but only if lure is at surface)
-            const movingLeft = dpadLeftBtn.pressed || leftStickX < -DEAD_ZONE;
-            const movingRight = dpadRightBtn.pressed || leftStickX > DEAD_ZONE;
-
-            if (movingLeft || movingRight) {
-                // Check if lure is at surface before allowing movement
-                if (this.scene.lure.state === Constants.LURE_STATE.SURFACE) {
-                    if (movingLeft) {
-                        this.scene.boatManager.movePlayer(-1);
-                    } else if (movingRight) {
-                        this.scene.boatManager.movePlayer(1);
-                    }
-                } else {
-                    // Show warning if trying to move with lure down
-                    if (!this.movementWarningShown) {
-                        this.showMovementWarning();
-                        this.movementWarningShown = true;
-                        // Reset warning flag after a delay
-                        this.scene.time.delayedCall(2000, () => {
-                            this.movementWarningShown = false;
-                        });
-                    }
-                    this.scene.boatManager.stopMoving();
-                }
-            } else {
-                this.scene.boatManager.stopMoving();
-            }
-        }
-
-        // === FISHING MODE (normal controls) ===
+        // === FISHING MODE (ice fishing controls) ===
 
         // === RIGHT TRIGGER (R2): VARIABLE SPEED REELING ===
         // R2 trigger controls reel speed based on pressure (like a real baitcaster)
@@ -407,33 +335,6 @@ export class InputSystem {
         }
 
         return false;
-    }
-
-    /**
-     * Show movement warning when trying to move with lure down
-     */
-    showMovementWarning() {
-        // This will be moved to NotificationSystem later
-        const text = this.scene.add.text(GameConfig.CANVAS_WIDTH / 2, 100,
-            'Reel Up First\nReel up to move locations',
-            {
-                fontSize: '14px',
-                fontFamily: 'Courier New',
-                color: '#ffff00',
-                align: 'center',
-                stroke: '#000000',
-                strokeThickness: 2
-            }
-        );
-        text.setOrigin(0.5, 0.5);
-        text.setDepth(1000);
-
-        this.scene.tweens.add({
-            targets: text,
-            alpha: 0,
-            duration: 2000,
-            onComplete: () => text.destroy()
-        });
     }
 
     /**
