@@ -55,19 +55,23 @@ export class MenuScene extends Phaser.Scene {
     }
 
     create() {
-        const { width, height } = this.cameras.main;
+        // Use scale dimensions instead of camera dimensions for proper responsiveness
+        const width = this.scale.width;
+        const height = this.scale.height;
 
         // Add background gradient
-        const bg = this.add.graphics();
-        bg.fillGradientStyle(0x1a2f3a, 0x1a2f3a, 0x3a4f5a, 0x3a4f5a, 1);
-        bg.fillRect(0, 0, width, height);
+        this.bgGraphics = this.add.graphics();
+        this.drawBackground();
 
         // Add background image if available
         if (this.textures.exists('bg-ice')) {
-            const bgImage = this.add.image(width / 2, height / 2, 'bg-ice');
-            bgImage.setAlpha(0.3);
-            bgImage.setDisplaySize(width, height);
+            this.bgImage = this.add.image(width / 2, height / 2, 'bg-ice');
+            this.bgImage.setAlpha(0.3);
+            this.bgImage.setDisplaySize(width, height);
         }
+
+        // Listen for resize events to redraw background
+        this.scale.on('resize', this.handleResize, this);
 
         // Title - Wolfpack Logo (moved down 1 inch = 96 pixels)
         const wolfpackLogo = this.add.image(width / 2, 196, 'wolfpack-logo');
@@ -393,6 +397,29 @@ export class MenuScene extends Phaser.Scene {
             this.gamepadState.lastX = xButton.pressed;
             this.gamepadState.lastA = aButton.pressed;
         }
+    }
+
+    drawBackground() {
+        // Redraw background to fill the current scale dimensions
+        const width = this.scale.width;
+        const height = this.scale.height;
+
+        this.bgGraphics.clear();
+        this.bgGraphics.fillGradientStyle(0x1a2f3a, 0x1a2f3a, 0x3a4f5a, 0x3a4f5a, 1);
+        this.bgGraphics.fillRect(0, 0, width, height);
+    }
+
+    handleResize(gameSize) {
+        // Redraw background when window resizes
+        this.drawBackground();
+
+        // Update background image if it exists
+        if (this.bgImage) {
+            this.bgImage.setPosition(gameSize.width / 2, gameSize.height / 2);
+            this.bgImage.setDisplaySize(gameSize.width, gameSize.height);
+        }
+
+        console.log(`📐 MenuScene resized to: ${gameSize.width}x${gameSize.height}`);
     }
 
     startGame(modeConfig) {
