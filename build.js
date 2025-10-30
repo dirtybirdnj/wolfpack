@@ -81,6 +81,45 @@ function copyFile(src, dest) {
   fs.copyFileSync(src, dest);
 }
 
+// Generate version.json and commits.txt from main branch
+function generateVersionFiles() {
+  logStep('Generating version files from main branch...');
+
+  try {
+    // Fetch latest from origin to ensure we have up-to-date main
+    execSync('git fetch origin main', { encoding: 'utf-8', stdio: 'pipe' });
+
+    // Get latest commit hash from origin/main branch (short format)
+    const commitHash = execSync('git rev-parse --short origin/main', { encoding: 'utf-8' }).trim();
+
+    // Get commit date
+    const commitDate = execSync('git log origin/main -1 --format=%cd --date=short', { encoding: 'utf-8' }).trim();
+
+    // Get commit message
+    const commitMsg = execSync('git log origin/main -1 --format=%s', { encoding: 'utf-8' }).trim();
+
+    // Create version.json
+    const versionData = {
+      version: PACKAGE_JSON.version,
+      commit: commitHash,
+      date: commitDate,
+      description: commitMsg
+    };
+
+    fs.writeFileSync('version.json', JSON.stringify(versionData, null, 2) + '\n');
+    logSuccess(`Generated version.json (v${PACKAGE_JSON.version} @ ${commitHash})`);
+
+    // Generate commits.txt with last 50 commits from origin/main
+    const commits = execSync('git log origin/main -50 --format="%h - %cd - %s" --date=short', { encoding: 'utf-8' }).trim();
+    fs.writeFileSync('commits.txt', commits + '\n');
+    logSuccess('Generated commits.txt from origin/main branch');
+
+  } catch (error) {
+    logWarning(`Failed to generate version files: ${error.message}`);
+    logWarning('Build will continue with existing version files if available');
+  }
+}
+
 // Clean dist directory
 function cleanDist() {
   logStep('Cleaning dist directory...');
@@ -327,6 +366,7 @@ async function build() {
   log('╚════════════════════════════════════════════╝\n', colors.bright);
 
   try {
+    generateVersionFiles();
     cleanDist();
     copySources();
     createBuildInfo();
