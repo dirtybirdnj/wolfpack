@@ -338,7 +338,7 @@ export class MenuScene extends Phaser.Scene {
             // Clear previous navigation position data to use default deep water location
             this.registry.set('fishingWorldX', null);
             this.registry.set('fishingWorldY', 5000);
-            this.registry.set('currentDepth', 90); // Start ice fishing at 90ft depth
+            this.registry.set('currentDepth', 100); // Start ice fishing at 100ft depth
             startingScene = 'GameScene';
         }
 
