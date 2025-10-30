@@ -74,8 +74,8 @@ export class MenuScene extends Phaser.Scene {
         wolfpackLogo.setOrigin(0.5);
         wolfpackLogo.setScale(0.5); // Adjust scale as needed
 
-        // VTJ Logo (bottom right, moved left 1 inch, half size, clickable)
-        const vtjLogo = this.add.image(width - 176, height - 80, 'vtj-logo');
+        // VTJ Logo (bottom right, half size, clickable)
+        const vtjLogo = this.add.image(width - 80, height - 80, 'vtj-logo');
         vtjLogo.setOrigin(0.5);
         vtjLogo.setScale(0.075); // Half the original size
         vtjLogo.setInteractive({ useHandCursor: true });
@@ -83,8 +83,8 @@ export class MenuScene extends Phaser.Scene {
             window.open('https://www.verticaltubejig.com', '_blank');
         });
 
-        // Game mode selection (moved up 0.5 inch = 48 pixels, was 328)
-        const gameModeText = this.add.text(width / 2, 280, 'SELECT GAME MODE', {
+        // Game mode selection (moved down 1 inch = 96 pixels from 280)
+        const gameModeText = this.add.text(width / 2, 376, 'SELECT GAME MODE', {
             fontSize: '18px',
             fontFamily: 'Courier New',
             color: '#00ffff',
