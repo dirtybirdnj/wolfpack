@@ -3,7 +3,7 @@ import GameConfig from '../config/GameConfig.js';
 export class MenuScene extends Phaser.Scene {
     constructor() {
         super({ key: 'MenuScene' });
-        this.selectedMode = 2; // Start with Nature Simulation mode (index 2) pre-selected
+        this.selectedMode = 1; // Start with Unlimited mode (index 1) pre-selected for controller support
         this.buttons = [];
 
         // Configurable fade-in duration for smooth transition from boot screen (in milliseconds)
@@ -146,39 +146,38 @@ export class MenuScene extends Phaser.Scene {
 
         this.buttons = [arcade, unlimited, simulation];
 
+        // Highlight the selected button (Unlimited mode by default) - ALWAYS do this, not just for gamepad
+        this.updateSelection();
+
         // Controls hint
         const controlsY = 570;
-        this.controlsText = this.add.text(width / 2, controlsY, 'Click a mode to begin | ESC to return to menu', {
+        this.controlsText = this.add.text(width / 2, controlsY, 'Arrow Keys or Click to select | ENTER/SPACE to start', {
             fontSize: '11px',
             fontFamily: 'Courier New',
             color: '#88ff88',
             align: 'center'
         }).setOrigin(0.5);
 
-        // Check for gamepad
-        this.gamepadDetected = false;
+        // Setup gamepad state tracking (always, not just when detected)
+        // This ensures menu responds to controller whenever it's connected
+        this.gamepadState = {
+            lastDpadLeft: false,
+            lastDpadRight: false,
+            lastL1: false,
+            lastR1: false,
+            lastX: false,
+            lastA: false,
+            lastAnalogLeft: false,
+            lastAnalogRight: false
+        };
+
+        // Check if gamepad is connected at startup and show hint
         if (window.gamepadManager && window.gamepadManager.isConnected()) {
-            this.gamepadDetected = true;
             this.gamepadText = this.add.text(width / 2, 590, 'L1/R1 or D-Pad to select | X or A to confirm', {
                 fontSize: '11px',
                 fontFamily: 'Courier New',
                 color: '#00ffff'
             }).setOrigin(0.5);
-
-            // Setup gamepad state tracking
-            this.gamepadState = {
-                lastDpadLeft: false,
-                lastDpadRight: false,
-                lastL1: false,
-                lastR1: false,
-                lastX: false,
-                lastA: false,
-                lastAnalogLeft: false,
-                lastAnalogRight: false
-            };
-
-            // Highlight the selected button (Unlimited mode by default)
-            this.updateSelection();
         }
 
         // Setup keyboard controls
@@ -328,8 +327,9 @@ export class MenuScene extends Phaser.Scene {
             }
         }
 
-        // Handle gamepad navigation
-        if (this.gamepadDetected && window.gamepadManager && window.gamepadManager.isConnected()) {
+        // Handle gamepad navigation (always check, not just when detected at startup)
+        // This ensures menu responds whenever a controller is connected
+        if (window.gamepadManager && window.gamepadManager.isConnected()) {
             // D-Pad navigation - single horizontal row with wrap-around
             const dpadLeft = window.gamepadManager.getButton('DpadLeft');
             const dpadRight = window.gamepadManager.getButton('DpadRight');

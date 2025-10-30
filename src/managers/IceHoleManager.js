@@ -261,13 +261,22 @@ export class IceHoleManager {
     }
 
     drawHole(hole, index) {
+        // Don't draw the current hole during fishing mode (let lure drop from top)
+        const isCurrent = index === this.currentHoleIndex && !this.movementMode;
+        if (isCurrent) {
+            return; // Skip drawing current hole in fishing mode
+        }
+
         // ALWAYS calculate screen position relative to player position
         // This makes holes move around the stationary player
         const screenX = this.calculateScreenX(hole.x);
 
         if (screenX < -50 || screenX > GameConfig.CANVAS_WIDTH + 50) {return;} // Off screen
 
-        const isCurrent = index === this.currentHoleIndex && !this.movementMode;
+        // Only draw holes in movement mode (other holes visible when walking)
+        if (!this.movementMode) {
+            return; // Don't draw any holes in fishing mode
+        }
 
         // Hole position at top of screen (since ice surface is removed)
         const holeY = 20;
@@ -280,18 +289,11 @@ export class IceHoleManager {
         this.iceGraphics.lineStyle(2, 0xffffff, 0.8);
         this.iceGraphics.strokeCircle(screenX, holeY, 16);
 
-        // Current hole indicator
-        if (isCurrent) {
-            this.iceGraphics.lineStyle(3, 0x00ff00, 1.0);
-            this.iceGraphics.strokeCircle(screenX, holeY, 20);
-        }
-
         // Hole number
-        const textColor = isCurrent ? '#00ff00' : '#ffffff';
         const text = this.scene.add.text(screenX, holeY, `${index + 1}`, {
             fontSize: '10px',
             fontFamily: 'Courier New',
-            color: textColor,
+            color: '#ffffff',
             fontStyle: 'bold'
         });
         text.setOrigin(0.5, 0.5);

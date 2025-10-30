@@ -36,6 +36,21 @@ export class SonarDisplay {
         this.depthTexts = [];
         this.createDepthMarkers();
 
+        // Draggable debug boundaries state
+        this.debugBoundaryOffsets = {
+            baitfishMin: 0,
+            baitfishCloudMin: 0,
+            fishMin: 0,
+            baitfishMax: 0,
+            fishMax: 0
+        };
+        this.dragState = {
+            active: false,
+            boundaryKey: null,
+            startY: 0,
+            startOffset: 0
+        };
+
         // Listen for resize events to update dimensions
         this.scene.scale.on('resize', this.handleResize, this);
     }
@@ -416,16 +431,90 @@ export class SonarDisplay {
         });
     }
 
+    /**
+     * Handle pointer down on a debug boundary line
+     */
+    handleBoundaryPointerDown(boundaryKey, pointer) {
+        this.dragState.active = true;
+        this.dragState.boundaryKey = boundaryKey;
+        this.dragState.startY = pointer.y;
+        this.dragState.startOffset = this.debugBoundaryOffsets[boundaryKey];
+    }
+
+    /**
+     * Handle pointer move for dragging debug boundaries
+     */
+    handleBoundaryPointerMove(pointer) {
+        if (!this.dragState.active || !this.dragState.boundaryKey) return;
+
+        const deltaY = pointer.y - this.dragState.startY;
+        this.debugBoundaryOffsets[this.dragState.boundaryKey] = this.dragState.startOffset + deltaY;
+
+        // Log the new position in feet
+        const depthScale = this.getDepthScale();
+        const offsetInFeet = this.debugBoundaryOffsets[this.dragState.boundaryKey] / depthScale;
+        console.log(`${this.dragState.boundaryKey}: ${offsetInFeet.toFixed(2)}ft offset`);
+    }
+
+    /**
+     * Handle pointer up to stop dragging
+     */
+    handleBoundaryPointerUp() {
+        if (this.dragState.active && this.dragState.boundaryKey) {
+            const depthScale = this.getDepthScale();
+            const offsetInFeet = this.debugBoundaryOffsets[this.dragState.boundaryKey] / depthScale;
+            console.log(`✓ ${this.dragState.boundaryKey} set to ${offsetInFeet.toFixed(2)}ft offset`);
+        }
+        this.dragState.active = false;
+        this.dragState.boundaryKey = null;
+    }
+
+    /**
+     * Create an interactive zone for a debug boundary line
+     */
+    createInteractiveZone(boundaryKey, y, color) {
+        const zone = this.scene.add.rectangle(this.canvasWidth / 2, y, this.canvasWidth, 16, color, 0);
+        zone.setInteractive({ useHandCursor: true, draggable: true });
+        zone.setDepth(999);
+
+        // Pointer events
+        zone.on('pointerdown', (pointer) => {
+            this.handleBoundaryPointerDown(boundaryKey, pointer);
+        });
+
+        // Store reference for cleanup
+        if (!this.interactiveZones) this.interactiveZones = [];
+        this.interactiveZones.push(zone);
+
+        return zone;
+    }
+
     drawDebugBoundaries() {
+        // Clean up old interactive zones
+        if (this.interactiveZones) {
+            this.interactiveZones.forEach(zone => zone.destroy());
+            this.interactiveZones = [];
+        }
+
+        // Set up global pointer handlers for dragging
+        if (!this.pointerMoveHandler) {
+            this.pointerMoveHandler = (pointer) => this.handleBoundaryPointerMove(pointer);
+            this.pointerUpHandler = () => this.handleBoundaryPointerUp();
+
+            this.scene.input.on('pointermove', this.pointerMoveHandler);
+            this.scene.input.on('pointerup', this.pointerUpHandler);
+        }
+
         // Draw visual debug boundaries to show fish movement constraints
         const maxDepth = this.getActualMaxDepth();
         const depthScale = this.getDepthScale();
 
         // BAITFISH CONSTRAINTS
         // Minimum Y for baitfish (0.25 feet from surface)
-        const baitfishMinY = 0.25 * depthScale;
+        const baitfishMinY = 0.25 * depthScale + this.debugBoundaryOffsets.baitfishMin;
         this.graphics.lineStyle(3, 0xff0000, 0.8); // RED line - baitfish minimum
         this.graphics.lineBetween(0, baitfishMinY, this.canvasWidth, baitfishMinY);
+        this.createInteractiveZone('baitfishMin', baitfishMinY, 0xff0000);
 
         // Add label for baitfish minimum
         const baitfishMinLabel = this.scene.add.text(10, baitfishMinY + 5, 'BAITFISH MIN (0.25ft)', {
@@ -439,9 +528,10 @@ export class SonarDisplay {
 
         // BAITFISH CLOUD CONSTRAINTS
         // Minimum Y for baitfish clouds (0.5 feet from surface)
-        const baitfishCloudMinY = 0.5 * depthScale;
+        const baitfishCloudMinY = 0.5 * depthScale + this.debugBoundaryOffsets.baitfishCloudMin;
         this.graphics.lineStyle(3, 0xff8800, 0.8); // ORANGE line - baitfish cloud minimum
-        this.graphics.lineBetween(0, baitfishCloudMinY, GameConfig.CANVAS_WIDTH, baitfishCloudMinY);
+        this.graphics.lineBetween(0, baitfishCloudMinY, this.canvasWidth, baitfishCloudMinY);
+        this.createInteractiveZone('baitfishCloudMin', baitfishCloudMinY, 0xff8800);
 
         // Add label for baitfish cloud minimum
         const cloudMinLabel = this.scene.add.text(10, baitfishCloudMinY + 5, 'BAITFISH CLOUD MIN (0.5ft)', {
@@ -455,9 +545,10 @@ export class SonarDisplay {
 
         // FISH CONSTRAINTS (Regular fish like lakers)
         // Minimum Y for fish (0 feet - can reach surface)
-        const fishMinY = 0;
+        const fishMinY = 0 + this.debugBoundaryOffsets.fishMin;
         this.graphics.lineStyle(2, 0x00ff00, 0.6); // GREEN line - fish minimum (at surface)
-        this.graphics.lineBetween(0, fishMinY, GameConfig.CANVAS_WIDTH, fishMinY);
+        this.graphics.lineBetween(0, fishMinY, this.canvasWidth, fishMinY);
+        this.createInteractiveZone('fishMin', fishMinY, 0x00ff00);
 
         // Add label for fish minimum
         const fishMinLabel = this.scene.add.text(10, fishMinY + 2, 'FISH MIN (0ft - SURFACE)', {
@@ -471,9 +562,10 @@ export class SonarDisplay {
 
         // MAXIMUM CONSTRAINTS
         // Maximum Y for baitfish (3 feet from bottom)
-        const baitfishMaxY = (maxDepth - 3) * depthScale;
+        const baitfishMaxY = (maxDepth - 3) * depthScale + this.debugBoundaryOffsets.baitfishMax;
         this.graphics.lineStyle(2, 0x00ffff, 0.6); // CYAN line - baitfish maximum
-        this.graphics.lineBetween(0, baitfishMaxY, GameConfig.CANVAS_WIDTH, baitfishMaxY);
+        this.graphics.lineBetween(0, baitfishMaxY, this.canvasWidth, baitfishMaxY);
+        this.createInteractiveZone('baitfishMax', baitfishMaxY, 0x00ffff);
 
         // Add label for baitfish maximum
         const baitfishMaxLabel = this.scene.add.text(10, baitfishMaxY - 15, `BAITFISH MAX (${maxDepth-3}ft)`, {
@@ -486,9 +578,10 @@ export class SonarDisplay {
         this.scene.time.delayedCall(50, () => baitfishMaxLabel.destroy());
 
         // Maximum Y for fish (5 feet from bottom)
-        const fishMaxY = (maxDepth - 5) * depthScale;
+        const fishMaxY = (maxDepth - 5) * depthScale + this.debugBoundaryOffsets.fishMax;
         this.graphics.lineStyle(2, 0x0088ff, 0.6); // BLUE line - fish maximum
-        this.graphics.lineBetween(0, fishMaxY, GameConfig.CANVAS_WIDTH, fishMaxY);
+        this.graphics.lineBetween(0, fishMaxY, this.canvasWidth, fishMaxY);
+        this.createInteractiveZone('fishMax', fishMaxY, 0x0088ff);
 
         // Add label for fish maximum
         const fishMaxLabel = this.scene.add.text(10, fishMaxY - 15, `FISH MAX (${maxDepth-5}ft)`, {
@@ -501,8 +594,8 @@ export class SonarDisplay {
         this.scene.time.delayedCall(50, () => fishMaxLabel.destroy());
 
         // Draw legend box for debug boundaries
-        const legendX = GameConfig.CANVAS_WIDTH - 250;
-        const legendY = GameConfig.CANVAS_HEIGHT - 120;
+        const legendX = this.canvasWidth - 250;
+        const legendY = this.canvasHeight - 120;
 
         this.graphics.fillStyle(0x000000, 0.8);
         this.graphics.fillRect(legendX - 5, legendY - 5, 240, 110);
@@ -556,6 +649,22 @@ export class SonarDisplay {
     destroy() {
         // Remove resize listener
         this.scene.scale.off('resize', this.handleResize, this);
+
+        // Remove drag event listeners
+        if (this.pointerMoveHandler) {
+            this.scene.input.off('pointermove', this.pointerMoveHandler);
+            this.pointerMoveHandler = null;
+        }
+        if (this.pointerUpHandler) {
+            this.scene.input.off('pointerup', this.pointerUpHandler);
+            this.pointerUpHandler = null;
+        }
+
+        // Clean up interactive zones
+        if (this.interactiveZones) {
+            this.interactiveZones.forEach(zone => zone.destroy());
+            this.interactiveZones = [];
+        }
 
         this.graphics.destroy();
         // Clean up depth marker texts
