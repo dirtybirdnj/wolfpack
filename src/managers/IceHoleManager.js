@@ -31,7 +31,7 @@ export class IceHoleManager {
 
         // Graphics
         this.iceGraphics = scene.add.graphics();
-        this.iceGraphics.setDepth(1000); // On top of most things
+        this.iceGraphics.setDepth(5); // Above background but below fish
 
         // Ice surface height (in pixels from top)
         this.iceHeight = 54;
@@ -296,7 +296,7 @@ export class IceHoleManager {
             fontStyle: 'bold'
         });
         text.setOrigin(0.5, 0.5);
-        text.setDepth(1001);
+        text.setDepth(100); // Above everything for visibility
 
         // Clean up text after next frame (since graphics clear each frame)
         this.scene.time.delayedCall(50, () => text.destroy());
@@ -332,7 +332,7 @@ export class IceHoleManager {
             padding: { x: 4, y: 2 }
         });
         text.setOrigin(0.5, 0);
-        text.setDepth(1001);
+        text.setDepth(100); // Above everything for visibility
 
         this.scene.time.delayedCall(50, () => text.destroy());
     }
