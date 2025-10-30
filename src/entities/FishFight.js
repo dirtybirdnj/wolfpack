@@ -667,7 +667,7 @@ export class FishFight {
     /**
      * Draw size classification ruler showing SMALL/MEDIUM/LARGE/TROPHY zones
      * Greys out size classes the fish hasn't reached yet
-     * Ruler matches exact length of white ruler (limited to fishLengthInches)
+     * Shows ALL size classes (including unreached ones) for visual progress tracking
      * Returns array of all created elements for cleanup
      */
     drawClassificationRuler(startX, centerY, speciesName, fishLength, pixelsPerInch, maxRulerLength) {
@@ -687,9 +687,6 @@ export class FishFight {
         const rulerHeight = 35; // Taller for larger fish
         const categories = speciesData.sizeCategories;
 
-        // Ruler length matches white ruler exactly (fish length in inches)
-        const totalRulerLengthPx = maxRulerLength * pixelsPerInch;
-
         // Size classification colors
         const colors = {
             small: 0x4a7c59,    // Green
@@ -705,7 +702,7 @@ export class FishFight {
             trophy: '#ffff00'
         };
 
-        // Draw each size zone - only show zones up to fish length
+        // Draw each size zone - show ALL zones (including unreached greyed ones)
         ['small', 'medium', 'large', 'trophy'].forEach(sizeName => {
             const category = categories[sizeName];
             if (!category || !category.lengthRange) return;
@@ -713,18 +710,8 @@ export class FishFight {
             const minLength = category.lengthRange[0];
             const maxLength = category.lengthRange[1];
 
-            // Skip zones that start beyond the fish length
-            if (minLength > maxRulerLength) return;
-
             const zoneStartX = startX + (minLength * pixelsPerInch);
-            // Clip zone width to not exceed ruler length
-            const idealZoneWidth = (maxLength - minLength) * pixelsPerInch;
-            const rulerEndX = startX + totalRulerLengthPx;
-            const zoneEndX = Math.min(zoneStartX + idealZoneWidth, rulerEndX);
-            const zoneWidth = zoneEndX - zoneStartX;
-
-            // Skip if zone has no visible width
-            if (zoneWidth <= 0) return;
+            const zoneWidth = (maxLength - minLength) * pixelsPerInch;
 
             // Check if fish has reached this size class
             const fishReachedClass = fishLength >= minLength;
@@ -846,7 +833,10 @@ export class FishFight {
 
         // Tournament-style fish photo: scale fish to match ruler exactly
         // NOTE: this.fish is the model (LakeTrout, SmallmouthBass, etc.), not the entity wrapper
-        const fishRenderY = popupY - 60; // Moved down from -140 (gained space from moving stats up)
+
+        // Align to layout guides: red line for left alignment, blue line for vertical position
+        const rulerStartX = popupX - 360; // Red line: ruler starts here (fish nose touches this)
+        const rulerY = popupY + 100; // Blue line: vertical position for rulers
 
         // Calculate proper scale: fish body should match ruler length
         // 4x larger than before (was 6, now 24 pixels per inch)
@@ -858,24 +848,27 @@ export class FishFight {
         // Use average of 2.8x as estimate
         const bodySize = desiredFishLengthPx / 2.8;
 
-        // Calculate fish mouth position (left edge where ruler should start)
-        const fishMouthX = popupX - (desiredFishLengthPx / 2);
+        // Fish center X is at ruler start + half the fish length
+        const fishCenterX = rulerStartX + (desiredFishLengthPx / 2);
+        const fishRenderY = rulerY - 80; // Fish positioned above rulers
 
         if (this.fish && typeof this.fish.renderAtPosition === 'function') {
             // Render fish facing LEFT (tournament photo style)
-            this.fish.renderAtPosition(fishGraphics, popupX, fishRenderY, bodySize, true);
+            // Fish centered at fishCenterX, so nose touches rulerStartX
+            this.fish.renderAtPosition(fishGraphics, fishCenterX, fishRenderY, bodySize, true);
         } else {
             console.warn('Fish renderAtPosition method not available, skipping fish rendering in popup');
         }
 
-        // Draw measurement ruler below the fish, starting at fish mouth
+        // Draw measurement ruler at blue line position, starting at red line (fish mouth)
         const rulerElements = this.drawMeasurementRuler(
-            fishMouthX, fishRenderY + 80, fishLengthInches, desiredPixelsPerInch
+            rulerStartX, rulerY, fishLengthInches, desiredPixelsPerInch
         );
 
         // Draw size classification ruler below the measurement ruler - SAME LENGTH as white ruler
+        // Show ALL size classes (including greyed out ones the fish hasn't reached)
         const classificationElements = this.drawClassificationRuler(
-            fishMouthX, fishRenderY + 120, this.fish.species, this.fish.length, desiredPixelsPerInch, fishLengthInches
+            rulerStartX, rulerY + 40, this.fish.species, this.fish.length, desiredPixelsPerInch, fishLengthInches
         );
 
         // Fish stats - moved to TOP LEFT with smaller font
