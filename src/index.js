@@ -33,9 +33,11 @@ const config = {
         transparent: false
     },
     scale: {
-        mode: Phaser.Scale.NONE,
+        mode: Phaser.Scale.FIT,
+        autoCenter: Phaser.Scale.CENTER_BOTH,
         width: GameConfig.CANVAS_WIDTH,
-        height: GameConfig.CANVAS_HEIGHT
+        height: GameConfig.CANVAS_HEIGHT,
+        parent: 'game-container'
     },
     input: {
         keyboard: true,
@@ -75,13 +77,78 @@ window.addEventListener('load', () => {
         window.game = game;
     }
 
+    // Setup responsive resize handling
+    setupResizeHandler(game);
+
     // Dev Tools Integration
     setupDevTools(game);
 });
 
+function setupResizeHandler(game) {
+    // Calculate and update game size based on available container space
+    function resizeGame() {
+        const gameContainer = document.getElementById('game-container');
+        if (!gameContainer) return;
+
+        // Get the container dimensions
+        const containerWidth = gameContainer.clientWidth - 4; // Account for border
+        const containerHeight = gameContainer.clientHeight - 4;
+
+        // Calculate the optimal game size while maintaining aspect ratio
+        const gameAspectRatio = GameConfig.CANVAS_WIDTH / GameConfig.CANVAS_HEIGHT;
+        const containerAspectRatio = containerWidth / containerHeight;
+
+        let newWidth, newHeight;
+
+        if (containerAspectRatio > gameAspectRatio) {
+            // Container is wider than game aspect ratio - fit to height
+            newHeight = containerHeight;
+            newWidth = newHeight * gameAspectRatio;
+        } else {
+            // Container is taller than game aspect ratio - fit to width
+            newWidth = containerWidth;
+            newHeight = newWidth / gameAspectRatio;
+        }
+
+        // Update the game scale
+        if (game.scale) {
+            game.scale.resize(newWidth, newHeight);
+        }
+
+        console.log(`🎮 Game resized to: ${Math.round(newWidth)}x${Math.round(newHeight)} (container: ${containerWidth}x${containerHeight})`);
+    }
+
+    // Initial resize
+    setTimeout(resizeGame, 100);
+
+    // Debounced resize handler to avoid excessive calls
+    let resizeTimeout;
+    window.addEventListener('resize', () => {
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(resizeGame, 150);
+    });
+
+    // Also resize when sidebar or topbar are toggled
+    const sidebarToggle = document.getElementById('sidebar-toggle');
+    const topbarToggle = document.getElementById('topbar-toggle');
+
+    if (sidebarToggle) {
+        sidebarToggle.addEventListener('click', () => {
+            setTimeout(resizeGame, 350); // Wait for CSS transition
+        });
+    }
+
+    if (topbarToggle) {
+        topbarToggle.addEventListener('click', () => {
+            setTimeout(resizeGame, 350); // Wait for CSS transition
+        });
+    }
+}
+
 function setupDevTools(game) {
     // Update UI stats every 100ms
-    setInterval(() => {
+    // Store interval ID so it can be cleared on game destroy
+    const statsUpdateInterval = setInterval(() => {
         const gameScene = game.scene.getScene('GameScene');
         const natureScene = game.scene.getScene('NatureSimulationScene');
 
@@ -450,6 +517,14 @@ function setupDevTools(game) {
             }
         }
     }, 500);
+
+    // Cleanup interval when game is destroyed
+    game.events.once('destroy', () => {
+        if (statsUpdateInterval) {
+            clearInterval(statsUpdateInterval);
+            console.log('🧹 Cleaned up stats update interval');
+        }
+    });
 
     // Note: Test Controller Button is handled in index.html
     // to avoid duplicate event listeners that could interfere with game state
