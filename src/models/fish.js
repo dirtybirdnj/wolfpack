@@ -120,8 +120,8 @@ export class Fish extends AquaticOrganism {
     }
 
     calculateSonarStrength() {
-        if (this.weight > 25) return 'strong';
-        if (this.weight > 10) return 'medium';
+        if (this.weight > 25) {return 'strong';}
+        if (this.weight > 10) {return 'medium';}
         return 'weak';
     }
 
@@ -231,8 +231,6 @@ export class Fish extends AquaticOrganism {
             if (this.scene.iceHoleManager) {
                 const currentHole = this.scene.iceHoleManager.getCurrentHole();
                 playerWorldX = currentHole ? currentHole.x : this.worldX;
-            } else if (this.scene.boatManager) {
-                playerWorldX = this.scene.boatManager.getPlayerWorldX();
             } else {
                 // Nature simulation mode - no player to track
                 isNatureSimulation = true;
@@ -258,11 +256,7 @@ export class Fish extends AquaticOrganism {
 
             // Get lake bottom depth at fish's current position
             let bottomDepth = this.scene.maxDepth || GameConfig.MAX_DEPTH;
-            if (this.scene.boatManager) {
-                const offsetFromPlayer = this.x - (GameConfig.CANVAS_WIDTH / 2);
-                const gameX = this.scene.boatManager.playerX + offsetFromPlayer;
-                bottomDepth = this.scene.boatManager.getDepthAtPosition(gameX);
-            } else if (this.scene.iceHoleManager) {
+            if (this.scene.iceHoleManager) {
                 // Use ice hole manager's depth calculation
                 bottomDepth = this.scene.iceHoleManager.getDepthAtPosition(this.x);
             }

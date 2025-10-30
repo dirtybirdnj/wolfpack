@@ -91,9 +91,6 @@ export class SpawningSystem {
             const currentHole = this.scene.iceHoleManager.getCurrentHole();
             if (!currentHole) return null;
             playerWorldX = currentHole.x;
-        } else if (this.scene.boatManager) {
-            // Use getPlayerWorldX() to get actual world coordinates, not game coordinates
-            playerWorldX = this.scene.boatManager.getPlayerWorldX();
         } else {
             // Nature simulation mode - spawn randomly across the screen
             isNatureSimulation = true;
@@ -300,9 +297,6 @@ export class SpawningSystem {
         if (this.scene.iceHoleManager) {
             const currentHole = this.scene.iceHoleManager.getCurrentHole();
             playerWorldX = currentHole ? currentHole.x : 0;
-        } else if (this.scene.boatManager) {
-            // Use getPlayerWorldX() to get actual world coordinates, not game coordinates
-            playerWorldX = this.scene.boatManager.getPlayerWorldX();
         } else {
             isNatureSimulation = true;
             playerWorldX = GameConfig.CANVAS_WIDTH / 2;
@@ -369,9 +363,6 @@ export class SpawningSystem {
         if (this.scene.iceHoleManager) {
             const currentHole = this.scene.iceHoleManager.getCurrentHole();
             playerWorldX = currentHole ? currentHole.x : 0;
-        } else if (this.scene.boatManager) {
-            // Use getPlayerWorldX() to get actual world coordinates, not game coordinates
-            playerWorldX = this.scene.boatManager.getPlayerWorldX();
         } else {
             isNatureSimulation = true;
             playerWorldX = GameConfig.CANVAS_WIDTH / 2;
@@ -463,8 +454,6 @@ export class SpawningSystem {
         if (this.scene.iceHoleManager) {
             const currentHole = this.scene.iceHoleManager.getCurrentHole();
             playerWorldX = currentHole ? currentHole.x : 0;
-        } else if (this.scene.boatManager) {
-            playerWorldX = this.scene.boatManager.getPlayerWorldX();
         } else {
             isNatureSimulation = true;
             playerWorldX = GameConfig.CANVAS_WIDTH / 2;
@@ -514,9 +503,6 @@ export class SpawningSystem {
             const currentHole = this.scene.iceHoleManager.getCurrentHole();
             if (!currentHole) return null;
             playerWorldX = currentHole.x;
-        } else if (this.scene.boatManager) {
-            // Use getPlayerWorldX() to get actual world coordinates, not game coordinates
-            playerWorldX = this.scene.boatManager.getPlayerWorldX();
         } else {
             // Nature simulation mode - spawn randomly across the screen
             isNatureSimulation = true;

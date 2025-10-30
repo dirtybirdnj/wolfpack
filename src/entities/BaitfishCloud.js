@@ -80,7 +80,7 @@ export class BaitfishCloud {
     }
 
     update(lakers = [], zooplankton = []) {
-        if (!this.visible) return null;
+        if (!this.visible) {return null;}
 
         this.age++;
 
@@ -192,9 +192,7 @@ export class BaitfishCloud {
 
         // Get lake bottom depth at cloud's current world position
         let bottomDepth = this.scene.maxDepth || GameConfig.MAX_DEPTH;
-        if (this.scene.boatManager) {
-            bottomDepth = this.scene.boatManager.getDepthAtPosition(this.worldX);
-        } else if (this.scene.iceHoleManager) {
+        if (this.scene.iceHoleManager) {
             // For ice fishing, use hole manager's depth calculation
             bottomDepth = this.scene.iceHoleManager.getDepthAtPosition(this.centerX);
         } else {
@@ -214,10 +212,6 @@ export class BaitfishCloud {
         if (this.scene.iceHoleManager) {
             const currentHole = this.scene.iceHoleManager.getCurrentHole();
             const playerWorldX = currentHole ? currentHole.x : this.worldX;
-            const offsetFromPlayer = this.worldX - playerWorldX;
-            this.centerX = (GameConfig.CANVAS_WIDTH / 2) + offsetFromPlayer;
-        } else if (this.scene.boatManager) {
-            const playerWorldX = this.scene.boatManager.getPlayerWorldX();
             const offsetFromPlayer = this.worldX - playerWorldX;
             this.centerX = (GameConfig.CANVAS_WIDTH / 2) + offsetFromPlayer;
         } else {
@@ -267,10 +261,10 @@ export class BaitfishCloud {
             let maxX = -Infinity;
 
             this.baitfish.forEach(fish => {
-                if (fish.y < minY) minY = fish.y;
-                if (fish.y > maxY) maxY = fish.y;
-                if (fish.worldX < minX) minX = fish.worldX;
-                if (fish.worldX > maxX) maxX = fish.worldX;
+                if (fish.y < minY) {minY = fish.y;}
+                if (fish.y > maxY) {maxY = fish.y;}
+                if (fish.worldX < minX) {minX = fish.worldX;}
+                if (fish.worldX > maxX) {maxX = fish.worldX;}
             });
 
             const verticalSpread = maxY - minY;
@@ -310,7 +304,7 @@ export class BaitfishCloud {
         const detectionRange = 200; // Baitfish can detect zooplankton from up to 200 pixels away
 
         return zooplankton.filter(zp => {
-            if (!zp.visible || zp.consumed) return false;
+            if (!zp.visible || zp.consumed) {return false;}
 
             const distance = Utils.calculateDistance(
                 zp.x, zp.y,
@@ -346,7 +340,7 @@ export class BaitfishCloud {
         let minDistance = Infinity;
 
         for (const baitfish of this.baitfish) {
-            if (baitfish.consumed) continue;
+            if (baitfish.consumed) {continue;}
 
             const distance = Utils.calculateDistance(x, y, baitfish.x, baitfish.y);
             if (distance < minDistance) {
@@ -364,8 +358,6 @@ export class BaitfishCloud {
         if (this.scene.iceHoleManager) {
             const currentHole = this.scene.iceHoleManager.getCurrentHole();
             playerWorldX = currentHole ? currentHole.x : 0;
-        } else if (this.scene.boatManager) {
-            playerWorldX = this.scene.boatManager.getPlayerWorldX();
         } else {
             return false;
         }
@@ -425,7 +417,7 @@ export class BaitfishCloud {
 
     mergeWith(otherCloud) {
         // Merge another cloud into this one
-        if (!otherCloud || !otherCloud.visible) return;
+        if (!otherCloud || !otherCloud.visible) {return;}
 
         // Calculate new center position BEFORE merging (weighted average based on baitfish count)
         const thisFishCount = this.baitfish.length;

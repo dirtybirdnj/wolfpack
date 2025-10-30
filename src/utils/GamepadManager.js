@@ -200,7 +200,7 @@ class GamepadManager {
      */
     getButton(buttonName) {
         const gamepad = this.getGamepad();
-        if (!gamepad) return { pressed: false, value: 0 };
+        if (!gamepad) {return { pressed: false, value: 0 };}
 
         // Button mapping for standard gamepads
         const buttonMap = {
@@ -239,7 +239,7 @@ class GamepadManager {
      */
     getAxis(axisIndex) {
         const gamepad = this.getGamepad();
-        if (!gamepad || !gamepad.axes[axisIndex]) return 0;
+        if (!gamepad || !gamepad.axes[axisIndex]) {return 0;}
         return gamepad.axes[axisIndex];
     }
 

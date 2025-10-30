@@ -133,7 +133,7 @@ export class Fish {
         this.graphics.clear();
 
         if (!this.model.visible) {
-            if (this.sprite) this.sprite.setVisible(false);
+            if (this.sprite) {this.sprite.setVisible(false);}
             return;
         }
 

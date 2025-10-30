@@ -199,7 +199,7 @@ export class Crayfish extends AquaticOrganism {
                     let bestScore = currentDist;
 
                     nearbyZooplankton.forEach(zp => {
-                        if (!zp.visible || zp.consumed || zp === this.currentTarget) return;
+                        if (!zp.visible || zp.consumed || zp === this.currentTarget) {return;}
 
                         const distance = Math.sqrt(
                             Math.pow(this.x - zp.x, 2) + Math.pow(this.y - zp.y, 2)
@@ -231,7 +231,7 @@ export class Crayfish extends AquaticOrganism {
             let bestDistance = Infinity;
 
             nearbyZooplankton.forEach(zp => {
-                if (!zp.visible || zp.consumed) return;
+                if (!zp.visible || zp.consumed) {return;}
 
                 const distance = Math.sqrt(
                     Math.pow(this.x - zp.x, 2) + Math.pow(this.y - zp.y, 2)

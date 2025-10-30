@@ -166,7 +166,7 @@ export class NatureSimulationScene extends Phaser.Scene {
 
         // Drag handler
         this.input.on('drag', (pointer, gameObject, dragX) => {
-            if (gameObject !== handle) return;
+            if (gameObject !== handle) {return;}
 
             // Constrain to slider bounds
             const newX = Phaser.Math.Clamp(dragX, sliderX, sliderX + sliderWidth);
@@ -258,7 +258,7 @@ export class NatureSimulationScene extends Phaser.Scene {
     }
 
     updateDepthButtonSelection() {
-        if (!this.depthButtons || this.depthButtons.length === 0) return;
+        if (!this.depthButtons || this.depthButtons.length === 0) {return;}
 
         // Clear all button highlights
         this.depthButtons.forEach((btn, index) => {
@@ -296,14 +296,14 @@ export class NatureSimulationScene extends Phaser.Scene {
     }
 
     hideDepthSelectionUI() {
-        if (!this.depthSelectionActive) return;
+        if (!this.depthSelectionActive) {return;}
 
         this.depthSelectionActive = false;
-        if (this.depthPanel) this.depthPanel.setVisible(false);
-        if (this.depthTitle) this.depthTitle.setVisible(false);
-        if (this.depthInstructions) this.depthInstructions.setVisible(false);
-        if (this.tempSliderContainer) this.tempSliderContainer.setVisible(false);
-        if (this.tempLabel) this.tempLabel.setVisible(false);
+        if (this.depthPanel) {this.depthPanel.setVisible(false);}
+        if (this.depthTitle) {this.depthTitle.setVisible(false);}
+        if (this.depthInstructions) {this.depthInstructions.setVisible(false);}
+        if (this.tempSliderContainer) {this.tempSliderContainer.setVisible(false);}
+        if (this.tempLabel) {this.tempLabel.setVisible(false);}
         if (this.depthButtons) {
             this.depthButtons.forEach(btn => btn.setVisible(false));
         }
@@ -311,11 +311,11 @@ export class NatureSimulationScene extends Phaser.Scene {
 
     showDepthSelectionUI() {
         this.depthSelectionActive = true;
-        if (this.depthPanel) this.depthPanel.setVisible(true);
-        if (this.depthTitle) this.depthTitle.setVisible(true);
-        if (this.depthInstructions) this.depthInstructions.setVisible(true);
-        if (this.tempSliderContainer) this.tempSliderContainer.setVisible(true);
-        if (this.tempLabel) this.tempLabel.setVisible(true);
+        if (this.depthPanel) {this.depthPanel.setVisible(true);}
+        if (this.depthTitle) {this.depthTitle.setVisible(true);}
+        if (this.depthInstructions) {this.depthInstructions.setVisible(true);}
+        if (this.tempSliderContainer) {this.tempSliderContainer.setVisible(true);}
+        if (this.tempLabel) {this.tempLabel.setVisible(true);}
         if (this.depthButtons) {
             this.depthButtons.forEach(btn => btn.setVisible(true));
         }
@@ -346,7 +346,7 @@ export class NatureSimulationScene extends Phaser.Scene {
     }
 
     updateInfoText() {
-        if (!this.infoText || this.depthSelectionActive) return;
+        if (!this.infoText || this.depthSelectionActive) {return;}
 
         const minutes = Math.floor(this.gameTime / 60);
         const secs = this.gameTime % 60;
@@ -700,7 +700,7 @@ export class NatureSimulationScene extends Phaser.Scene {
 
                 // Check if smallmouth bass nearby (predators)
                 const predatorsNearby = this.fishes.some(f => {
-                    if (f.species !== 'smallmouth_bass') return false;
+                    if (f.species !== 'smallmouth_bass') {return false;}
                     const dx = cf.x - f.x;
                     const dy = cf.y - f.y;
                     return Math.sqrt(dx * dx + dy * dy) < 200;
@@ -724,6 +724,44 @@ export class NatureSimulationScene extends Phaser.Scene {
         this.baitfishClouds = this.baitfishClouds.filter(c => c.visible);
         this.zooplankton = this.zooplankton.filter(p => p.visible);
         this.crayfish = this.crayfish.filter(cf => cf.visible);
+    }
+
+    /**
+     * Clean up scene resources to prevent memory leaks
+     */
+    shutdown() {
+        // Remove keyboard event listeners
+        if (this.input && this.input.keyboard) {
+            this.input.keyboard.off('keydown-ESC');
+            this.input.keyboard.off('keydown-D');
+            this.input.keyboard.off('keydown-B');
+        }
+
+        // Remove input event listeners
+        if (this.input) {
+            this.input.off('drag');
+        }
+
+        // Clean up entities
+        this.fishes.forEach(fish => fish.destroy());
+        this.baitfishClouds.forEach(cloud => cloud.destroy());
+        this.zooplankton.forEach(zp => zp.destroy());
+        this.crayfish.forEach(cf => cf.destroy());
+
+        // Clean up systems
+        if (this.spawningSystem) {
+            this.spawningSystem.destroy();
+        }
+        if (this.debugSystem) {
+            this.debugSystem.destroy();
+        }
+
+        // Clean up graphics
+        if (this.sonarDisplay) {
+            this.sonarDisplay.destroy();
+        }
+
+        console.log('🧹 NatureSimulationScene cleanup complete');
     }
 }
 
