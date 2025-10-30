@@ -84,8 +84,6 @@ export class AquaticOrganism {
             const playerWorldX = currentHole ? currentHole.x : this.worldX;
             const distanceFromPlayer = Math.abs(this.worldX - playerWorldX);
             return distanceFromPlayer > maxDistance;
-            const distanceFromPlayer = Math.abs(this.worldX - playerWorldX);
-            return distanceFromPlayer > maxDistance;
         } else {
             // Nature simulation mode - check if off screen
             return this.worldX < -400 || this.worldX > GameConfig.CANVAS_WIDTH + 400;
