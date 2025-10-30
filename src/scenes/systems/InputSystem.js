@@ -342,6 +342,25 @@ export class InputSystem {
         // Right stick Y-axis for fine vertical lure control (1-2 inch movements)
         const rightStickY = window.gamepadManager.getAxis(3); // Right stick Y axis
         this.scene.lure.applyJig(rightStickY, DEAD_ZONE);
+
+        // === L1/R1 BUMPERS: DRAG ADJUSTMENT ===
+        // L1: Decrease drag by 10%
+        // R1: Increase drag by 10%
+        if (this.scene.reelModel) {
+            // L1 pressed - decrease drag
+            if (l1Btn.pressed && !this.gamepadState.lastL1) {
+                this.scene.reelModel.adjustDrag(-10);
+                console.log(`Drag decreased to ${this.scene.reelModel.dragSetting}% (${this.scene.reelModel.getCurrentDragForce().toFixed(1)} lbs)`);
+            }
+            this.gamepadState.lastL1 = l1Btn.pressed;
+
+            // R1 pressed - increase drag
+            if (r1Btn.pressed && !this.gamepadState.lastR1) {
+                this.scene.reelModel.adjustDrag(+10);
+                console.log(`Drag increased to ${this.scene.reelModel.dragSetting}% (${this.scene.reelModel.getCurrentDragForce().toFixed(1)} lbs)`);
+            }
+            this.gamepadState.lastR1 = r1Btn.pressed;
+        }
     }
 
     /**

@@ -9,6 +9,7 @@ import IceHoleManager from '../managers/IceHoleManager.js';
 import BoatManager from '../managers/BoatManager.js';
 import FishingLine from '../entities/FishingLine.js';
 import { FishingLineModel } from '../models/FishingLineModel.js';
+import { ReelModel } from '../models/ReelModel.js';
 
 // Import all systems
 import SpawningSystem from './systems/SpawningSystem.js';
@@ -186,6 +187,9 @@ export class GameScene extends Phaser.Scene {
 
             // Initialize fishing line model
             this.fishingLineModel = new FishingLineModel();
+
+            // Initialize reel model
+            this.reelModel = new ReelModel();
 
             // Apply line type from tackle box selection
             const lineType = this.registry.get('lineType');
@@ -715,8 +719,8 @@ export class GameScene extends Phaser.Scene {
         // Show hook notification
         this.notificationSystem.showFishHookedNotification();
 
-        // Start the fight
-        this.currentFight = new FishFight(this, fish, this.lure);
+        // Start the fight with reel and line models
+        this.currentFight = new FishFight(this, fish, this.lure, this.fishingLineModel, this.reelModel);
     }
 
     /**

@@ -158,6 +158,21 @@ function setupDevTools(game) {
                     // Update percentage text
                     dropSpeedPercent.textContent = dropPercent;
                 }
+
+                // Update drag setting meter
+                const dragSettingFill = document.getElementById('drag-setting-fill');
+                const dragSettingPercent = document.getElementById('drag-setting-percent');
+
+                if (dragSettingFill && dragSettingPercent && gameScene.reelModel) {
+                    // Get current drag setting (0-100%)
+                    const dragPercent = Math.round(gameScene.reelModel.dragSetting || 50);
+
+                    // Update bar width
+                    dragSettingFill.style.width = `${dragPercent}%`;
+
+                    // Update percentage text
+                    dragSettingPercent.textContent = dragPercent;
+                }
             }
 
             // Time - show countdown for arcade, count up for unlimited

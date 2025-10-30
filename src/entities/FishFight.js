@@ -2,10 +2,12 @@ import GameConfig from '../config/GameConfig.js';
 import { PREDATOR_SPECIES } from '../config/SpeciesData.js';
 
 export class FishFight {
-    constructor(scene, fish, lure) {
+    constructor(scene, fish, lure, fishingLineModel, reelModel) {
         this.scene = scene;
         this.fish = fish;
         this.lure = lure;
+        this.fishingLine = fishingLineModel;
+        this.reel = reelModel;
 
         // Fight state
         this.active = true;
@@ -47,7 +49,16 @@ export class FishFight {
         // Store ice hole center position for fish positioning
         this.centerX = this.lure.x;
 
+        // Initialize line out based on fish depth
+        if (this.reel) {
+            const initialLineOut = this.fishDistance / GameConfig.DEPTH_SCALE; // Convert pixels to feet
+            this.reel.lineOut = initialLineOut;
+        }
+
         console.log(`Fish condition - Health: ${this.fish.health.toFixed(0)}%, Hunger: ${this.fish.hunger.toFixed(0)}%, Strength: ${this.fishStrength.toFixed(1)}, Initial Energy: ${this.fishEnergy.toFixed(1)}`);
+        if (this.reel && this.fishingLine) {
+            console.log(`Reel: ${this.reel.getDisplayName()}, Drag: ${this.reel.dragSetting}% (${this.reel.getCurrentDragForce().toFixed(1)} lbs), Line: ${this.reel.lineTestStrength} lb test ${this.fishingLine.getDisplayName()}`);
+        }
 
 
         // Visual
@@ -81,10 +92,32 @@ export class FishFight {
         this.lineTension -= GameConfig.TENSION_DECAY_RATE;
         this.lineTension = Math.max(0, this.lineTension);
 
-        // Check for line break
-        if (this.lineTension >= GameConfig.TENSION_BREAK_THRESHOLD) {
-            this.breakLine();
-            return;
+        // Check for line break - scientifically accurate formula
+        // Line breaks when tension exceeds test strength, modified by shock absorption
+        if (this.reel && this.fishingLine) {
+            const testStrength = this.reel.lineTestStrength; // pounds
+            const shockAbsorptionMult = this.fishingLine.getShockAbsorptionMultiplier();
+
+            // Convert tension percentage to approximate force
+            // Tension of 100 = roughly equivalent to a 20 lb fish thrashing
+            const approximateForce = (this.lineTension / 100) * 20;
+
+            // Apply shock absorption to effective break threshold
+            const effectiveBreakStrength = testStrength * shockAbsorptionMult * 1.2;
+            // Monofilament: 15 lb test * 0.9 shock * 1.2 = 16.2 lb effective
+            // Braid: 15 lb test * 0.5 shock * 1.2 = 9 lb effective (breaks easier)
+
+            if (approximateForce >= effectiveBreakStrength) {
+                console.log(`Line break! Force: ${approximateForce.toFixed(1)} lbs exceeded ${effectiveBreakStrength.toFixed(1)} lbs effective strength`);
+                this.breakLine();
+                return;
+            }
+        } else {
+            // Fallback to old logic if models not available
+            if (this.lineTension >= GameConfig.TENSION_BREAK_THRESHOLD) {
+                this.breakLine();
+                return;
+            }
         }
 
         // Check if fish reached surface
@@ -240,18 +273,36 @@ export class FishFight {
         this.lastReelTime = currentTime;
         this.reelCount++;
 
-        // Add tension from reeling
-        this.lineTension += GameConfig.TENSION_PER_REEL;
+        // Calculate tension from reeling - affected by line stretch
+        // More stretch = less immediate tension increase
+        const stretchFactor = this.fishingLine ? this.fishingLine.getStretchFactor() : 0.7;
+        const tensionIncrease = GameConfig.TENSION_PER_REEL * (2.0 - stretchFactor);
+        // Monofilament (stretch=0.9): 1.1x multiplier = 16.5 tension
+        // Braid (stretch=0.5): 1.5x multiplier = 22.5 tension
+
+        this.lineTension += tensionIncrease;
         this.lineTension = Math.min(GameConfig.MAX_LINE_TENSION, this.lineTension);
 
         // Only reel in if tension is manageable
         if (this.lineTension < GameConfig.TENSION_BREAK_THRESHOLD - 10) {
-            this.fishDistance -= GameConfig.REEL_DISTANCE_PER_TAP;
+            // Calculate reel distance based on gear ratio
+            const gearRatio = this.reel ? this.reel.getGearRatio() : 6.0;
+            const reelDistance = GameConfig.REEL_DISTANCE_PER_TAP * (gearRatio / 6.0);
+
+            this.fishDistance -= reelDistance;
             this.fishDistance = Math.max(0, this.fishDistance);
+
+            // Track line being retrieved
+            if (this.reel) {
+                this.reel.retrieveLine(reelDistance / GameConfig.DEPTH_SCALE); // Convert pixels to feet
+            }
         }
 
-        // Drain fish energy
-        this.fishEnergy -= GameConfig.FISH_TIRE_RATE;
+        // Drain fish energy based on drag setting
+        const dragMultiplier = this.reel ? (this.reel.dragSetting / 100) : 0.5;
+        const energyDrain = GameConfig.FISH_TIRE_RATE * (0.5 + dragMultiplier);
+        // Higher drag = fish tires faster
+        this.fishEnergy -= energyDrain;
         this.fishEnergy = Math.max(0, this.fishEnergy);
     }
 
@@ -299,9 +350,41 @@ export class FishFight {
                 break;
         }
 
-        // Apply pull to line tension
-        this.lineTension += pullStrength * 0.1;
+        // Apply pull to line tension - affected by line stretch and shock absorption
+        const shockAbsorption = this.fishingLine ? this.fishingLine.getShockAbsorptionMultiplier() : 0.7;
+        const stretchFactor = this.fishingLine ? this.fishingLine.getStretchFactor() : 0.7;
+
+        // Higher shock absorption = less tension increase
+        // More stretch = dampens tension spikes
+        const dampeningFactor = shockAbsorption * (2.0 - stretchFactor);
+        // Monofilament (shock=0.9, stretch=0.9): 0.9 * 1.1 = 0.99 (absorbs 99% of shock, transmits 1%)
+        // Braid (shock=0.5, stretch=0.5): 0.5 * 1.5 = 0.75 (transmits 25% more force)
+
+        const tensionIncrease = (pullStrength * 0.1) * (2.0 - dampeningFactor);
+        this.lineTension += tensionIncrease;
         this.lineTension = Math.min(GameConfig.MAX_LINE_TENSION, this.lineTension);
+
+        // Check if fish pull exceeds drag setting - line slips instead of breaking
+        if (this.reel) {
+            const currentDragForce = this.reel.getCurrentDragForce();
+            const fishPullForce = pullStrength; // Pull strength is already in appropriate scale
+
+            // If fish pull exceeds drag, line slips (fish takes line)
+            if (fishPullForce > currentDragForce && this.reel.dragSetting < 100) {
+                const lineSlip = (fishPullForce - currentDragForce) * 0.05; // feet of line going out
+                const spoolEmpty = this.reel.addLineOut(lineSlip);
+
+                // If spool empties, line breaks automatically
+                if (spoolEmpty) {
+                    console.log('SPOOL EMPTY! Line capacity exhausted.');
+                    this.breakLine();
+                    return;
+                }
+
+                // Reduce tension when line slips (drag acting as shock absorber)
+                this.lineTension *= 0.95;
+            }
+        }
 
         // Apply downward swimming force
         this.swimDownForce = swimDownStrength;
@@ -442,8 +525,22 @@ export class FishFight {
                 break;
         }
 
+        // Calculate line remaining color
+        let lineRemainingPercent = 100;
+        let lineRemainingColor = '#00ff00';
+        if (this.reel) {
+            lineRemainingPercent = this.reel.getLineRemainingPercent();
+            if (lineRemainingPercent < 25) {
+                lineRemainingColor = '#ff6666'; // Red - critical
+            } else if (lineRemainingPercent < 50) {
+                lineRemainingColor = '#ffaa00'; // Orange - warning
+            } else {
+                lineRemainingColor = '#00ff00'; // Green - safe
+            }
+        }
+
         const statsText = this.scene.add.text(barX, barY + barHeight + 8,
-            `Fish: ${this.fish.weight.toFixed(1)} lbs | Energy: ${Math.floor(this.fishEnergy)}% | Dist: ${Math.floor(this.fishDistance / GameConfig.DEPTH_SCALE)} ft`,
+            `Fish: ${this.fish.weight.toFixed(1)} lbs | Energy: ${Math.floor(this.fishEnergy)}% | Dist: ${Math.floor(this.fishDistance / GameConfig.DEPTH_SCALE)} ft | Line: ${this.reel ? Math.floor(this.reel.lineCapacity - this.reel.lineOut) : '?'}/${this.reel ? this.reel.lineCapacity : '?'} ft`,
             {
                 fontSize: '10px',
                 fontFamily: 'Courier New',
@@ -451,6 +548,17 @@ export class FishFight {
             }
         );
         statsText.setDepth(501);
+
+        // Add drag and line info
+        const dragText = this.scene.add.text(barX + 300, barY + barHeight + 8,
+            `Drag: ${this.reel ? this.reel.dragSetting : '?'}% (${this.reel ? this.reel.getCurrentDragForce().toFixed(1) : '?'} lbs)`,
+            {
+                fontSize: '10px',
+                fontFamily: 'Courier New',
+                color: lineRemainingColor
+            }
+        );
+        dragText.setDepth(501);
 
         // State and condition
         const conditionText = this.scene.add.text(barX, barY + barHeight + 21,
@@ -478,6 +586,7 @@ export class FishFight {
         this.scene.time.delayedCall(10, () => {
             tensionText.destroy();
             statsText.destroy();
+            dragText.destroy();
             conditionText.destroy();
             instructText.destroy();
         });
