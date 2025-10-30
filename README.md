@@ -1,8 +1,9 @@
 ![Wolf Pack ](https://github.com/dirtybirdnj/wolfpack/blob/main/samples/screenshots/pr7-snes-wolfpack-artwork.jpg?raw=true)
 
-A Lake Champlain ice fishing simulator recreates the experience of vertical jigging, built with Phaser 3. 
+A Lake Champlain ice fishing simulator recreates the experience of vertical jigging, built with Phaser 3.
 
 Hunt for Lake Trout Wolfpacks across the deep, cold waters of Lake Champlain.
+
 Observe the ambush behavior of Northern Pike, wait for them to stalk prey and drop your lure to trigger a strike!
 Smallmouth Bass and Yellow Perch are in the mix too, see if you can figure out what makes them strike!
 
