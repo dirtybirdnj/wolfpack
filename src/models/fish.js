@@ -287,6 +287,11 @@ export class Fish extends AquaticOrganism {
     }
 
     feedOnBaitfish(preySpecies = 'alewife') {
+        // Defensive check: Only predatory fish have hunger and health properties
+        if (this.hunger === undefined || this.health === undefined) {
+            return; // Not a predatory fish, skip feeding logic
+        }
+
         // Fish has consumed a baitfish, reduce hunger based on prey nutrition value
         const speciesData = getBaitfishSpecies(preySpecies);
         const nutritionValue = speciesData.nutritionValue || 20; // Default to 20 if not specified

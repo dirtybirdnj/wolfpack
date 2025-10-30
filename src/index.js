@@ -401,6 +401,12 @@ function updateFishStatus(gameScene) {
 
     // Helper function to render fish card
     const renderFish = ({ fish, index }) => {
+        // Defensive check: Only Fish objects have AI, hunger, health, etc.
+        // Skip non-fish entities (zooplankton, crayfish)
+        if (!fish.ai || typeof fish.hunger !== 'number' || !fish.depthZone) {
+            return ''; // Not a fish, skip rendering
+        }
+
         const info = fish.getInfo();
         const zoneColor = fish.depthZone.name === 'Surface' ? '#ffff00' :
                          fish.depthZone.name === 'Mid-Column' ? '#00ff00' : '#888888';

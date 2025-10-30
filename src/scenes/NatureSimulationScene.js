@@ -341,13 +341,22 @@ export class NatureSimulationScene extends Phaser.Scene {
             try {
                 const fish = this.spawningSystem.trySpawnFish();
                 if (fish) {
-                    console.log(`✓ Spawned ${fish.species} (${fish.weight.toFixed(1)}lbs) at ${fish.depth.toFixed(1)}ft`);
+                    // Defensive check: only log full details if it's actually a fish with weight/species
+                    if (fish.weight !== undefined && fish.species) {
+                        console.log(`✓ Spawned ${fish.species} (${fish.weight.toFixed(1)}lbs) at ${fish.depth.toFixed(1)}ft`);
+                    } else {
+                        console.log(`✓ Spawned organism at ${fish.depth?.toFixed(1) || 'unknown'}ft`);
+                    }
                 } else {
                     console.log('⚠️ Could not spawn fish (water may be too shallow for selected species, trying again...)');
                     // Try again with potentially different species
                     const retryFish = this.spawningSystem.trySpawnFish();
                     if (retryFish) {
-                        console.log(`✓ Spawned ${retryFish.species} (${retryFish.weight.toFixed(1)}lbs) at ${retryFish.depth.toFixed(1)}ft`);
+                        if (retryFish.weight !== undefined && retryFish.species) {
+                            console.log(`✓ Spawned ${retryFish.species} (${retryFish.weight.toFixed(1)}lbs) at ${retryFish.depth.toFixed(1)}ft`);
+                        } else {
+                            console.log(`✓ Spawned organism at ${retryFish.depth?.toFixed(1) || 'unknown'}ft`);
+                        }
                     }
                 }
             } catch (error) {

@@ -53,6 +53,11 @@ export class Fish {
      * Falls back to procedural rendering if no artwork found
      */
     tryLoadArtwork() {
+        // Defensive check: Ensure model has weight property (only Fish models have this)
+        if (this.model.weight === undefined) {
+            return; // Not a fish model, skip artwork loading
+        }
+
         // Get size category for the artwork filename
         const sizeCategory = this.model.weight > 30 ? 'trophy' :
                            this.model.weight > 15 ? 'large' :
