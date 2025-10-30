@@ -192,7 +192,7 @@ export class BaitfishCloud {
 
         // Get lake bottom depth at cloud's current world position
         let bottomDepth = this.scene.maxDepth || GameConfig.MAX_DEPTH;
-        } else if (this.scene.iceHoleManager) {
+        if (this.scene.iceHoleManager) {
             // For ice fishing, use hole manager's depth calculation
             bottomDepth = this.scene.iceHoleManager.getDepthAtPosition(this.centerX);
         } else {

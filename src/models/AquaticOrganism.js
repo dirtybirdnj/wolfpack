@@ -66,7 +66,7 @@ export class AquaticOrganism {
     getBottomDepthAtPosition() {
         let bottomDepth = this.scene.maxDepth || GameConfig.MAX_DEPTH;
 
-        } else if (this.scene.iceHoleManager) {
+        if (this.scene.iceHoleManager) {
             // For ice fishing, use the hole manager's depth calculation
             bottomDepth = this.scene.iceHoleManager.getDepthAtPosition(this.x);
         } else {

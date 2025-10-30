@@ -256,7 +256,7 @@ export class Fish extends AquaticOrganism {
 
             // Get lake bottom depth at fish's current position
             let bottomDepth = this.scene.maxDepth || GameConfig.MAX_DEPTH;
-            } else if (this.scene.iceHoleManager) {
+            if (this.scene.iceHoleManager) {
                 // Use ice hole manager's depth calculation
                 bottomDepth = this.scene.iceHoleManager.getDepthAtPosition(this.x);
             }
