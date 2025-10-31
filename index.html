@@ -1177,9 +1177,12 @@
 
                         <div id="screenshot-status-message" style="display: none; padding: 15px; border-radius: 5px; margin-bottom: 20px; font-family: 'Courier New', monospace; text-align: center;"></div>
 
-                        <div style="display: flex; gap: 10px; justify-content: center;">
-                            <button id="save-screenshot-btn" style="background: var(--button-bg); color: var(--button-text); border: none; padding: 12px 30px; font-size: 14px; font-family: 'Courier New', monospace; font-weight: bold; border-radius: 5px; cursor: pointer; transition: transform 0.1s;">
-                                🐛 Create GitHub Issue
+                        <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+                            <button id="download-screenshot-btn" style="background: var(--button-bg); color: var(--button-text); border: none; padding: 12px 30px; font-size: 14px; font-family: 'Courier New', monospace; font-weight: bold; border-radius: 5px; cursor: pointer; transition: transform 0.1s;">
+                                💾 Download PNG
+                            </button>
+                            <button id="copy-markdown-btn" style="background: #4CAF50; color: #fff; border: none; padding: 12px 30px; font-size: 14px; font-family: 'Courier New', monospace; font-weight: bold; border-radius: 5px; cursor: pointer; transition: transform 0.1s;">
+                                📋 Copy Issue Markdown
                             </button>
                             <button id="close-screenshot-btn" style="background: #ff6666; color: #000; border: none; padding: 12px 30px; font-size: 14px; font-family: 'Courier New', monospace; font-weight: bold; border-radius: 5px; cursor: pointer; transition: transform 0.1s;">
                                 ✖ Close (ESC)
@@ -1188,7 +1191,7 @@
 
                         <div style="margin-top: 20px; padding: 15px; background: rgba(0, 100, 200, 0.2); border: 2px solid var(--border-secondary); border-radius: 5px;">
                             <p style="margin: 0; font-size: 12px; color: #888; text-align: center; font-family: 'Courier New', monospace;">
-                                ℹ️ This screenshot will be used to create a GitHub issue with the title, description, and image you provide.
+                                ℹ️ Download the screenshot as a PNG file or copy formatted markdown to create a GitHub issue manually.
                             </p>
                         </div>
                     </div>
@@ -1198,7 +1201,8 @@
 
                 const titleInput = document.getElementById('screenshot-title');
                 const descriptionInput = document.getElementById('screenshot-description');
-                const saveBtn = document.getElementById('save-screenshot-btn');
+                const downloadBtn = document.getElementById('download-screenshot-btn');
+                const copyMarkdownBtn = document.getElementById('copy-markdown-btn');
                 const closeBtn = document.getElementById('close-screenshot-btn');
                 const statusMessage = document.getElementById('screenshot-status-message');
 
@@ -1214,89 +1218,81 @@
                     statusMessage.style.color = isSuccess ? '#00ff00' : '#ff6666';
                 }
 
-                // Save button handler
-                saveBtn.addEventListener('click', async () => {
+                // Save to localStorage
+                function saveToLocalStorage() {
                     const title = titleInput.value.trim();
                     const description = descriptionInput.value.trim();
 
-                    if (!title) {
-                        showStatus('⚠️ Please enter a title', false);
-                        titleInput.focus();
-                        return;
-                    }
-
-                    if (!description) {
-                        showStatus('⚠️ Please enter a description', false);
-                        descriptionInput.focus();
-                        return;
-                    }
-
-                    // Disable button while processing
-                    saveBtn.disabled = true;
-                    saveBtn.textContent = '⏳ Creating issue...';
-
-                    try {
-                        // Save to localStorage as backup
+                    if (title || description) {
                         const screenshotData = {
-                            title: title,
-                            description: description,
+                            title: title || 'Untitled Screenshot',
+                            description: description || 'No description provided',
                             imageData: screenshotDataUrl,
                             timestamp: new Date().toISOString()
                         };
                         const existingScreenshots = JSON.parse(localStorage.getItem('wolfpack-screenshots') || '[]');
                         existingScreenshots.push(screenshotData);
                         localStorage.setItem('wolfpack-screenshots', JSON.stringify(existingScreenshots));
+                    }
+                }
 
-                        // Call API to create GitHub issue
-                        const apiUrl = 'http://localhost:3000/api/issues/create';
-                        const response = await fetch(apiUrl, {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                            },
-                            body: JSON.stringify({
-                                title: title,
-                                description: description,
-                                imageData: screenshotDataUrl,
-                                labels: ['bug', 'screenshot']
-                            })
-                        });
+                // Download button handler
+                downloadBtn.addEventListener('click', () => {
+                    const title = titleInput.value.trim() || 'wolfpack-screenshot';
+                    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+                    const filename = `${title.replace(/[^a-z0-9]/gi, '-').toLowerCase()}-${timestamp}.png`;
 
-                        const result = await response.json();
+                    // Create download link
+                    const link = document.createElement('a');
+                    link.download = filename;
+                    link.href = screenshotDataUrl;
+                    link.click();
 
-                        if (result.success) {
-                            showStatus(`✅ GitHub issue created: #${result.issue.number}`, true);
+                    // Save to localStorage
+                    saveToLocalStorage();
 
-                            // Add link to issue
-                            const issueLink = document.createElement('a');
-                            issueLink.href = result.issue.url;
-                            issueLink.target = '_blank';
-                            issueLink.textContent = 'View Issue';
-                            issueLink.style.cssText = 'display: block; margin-top: 10px; color: var(--text-primary); text-decoration: underline;';
-                            statusMessage.appendChild(issueLink);
+                    showStatus(`✅ Screenshot downloaded as ${filename}`, true);
+                });
 
-                            // Update button
-                            saveBtn.style.opacity = '0.5';
-                            saveBtn.style.cursor = 'not-allowed';
-                            saveBtn.textContent = '✓ Issue Created';
+                // Copy markdown button handler
+                copyMarkdownBtn.addEventListener('click', async () => {
+                    const title = titleInput.value.trim();
+                    const description = descriptionInput.value.trim();
 
-                            // Auto-close after 3 seconds
-                            setTimeout(() => {
-                                overlay.remove();
-                            }, 3000);
-                        } else {
-                            throw new Error(result.error || 'Failed to create issue');
-                        }
+                    if (!title) {
+                        showStatus('⚠️ Please enter a title first', false);
+                        titleInput.focus();
+                        return;
+                    }
 
+                    // Generate markdown for GitHub issue
+                    const markdown = `## ${title}
+
+${description || 'No description provided'}
+
+### Screenshot
+![Screenshot](screenshot.png)
+
+---
+**Captured:** ${new Date().toLocaleString()}
+**Device:** ${navigator.userAgent}
+
+> Note: To create this issue on GitHub:
+> 1. Download the screenshot using the "Download PNG" button
+> 2. Create a new issue on GitHub
+> 3. Paste this markdown as the issue description
+> 4. Attach the downloaded screenshot file
+> 5. Add labels: \`bug\`, \`screenshot\``;
+
+                    try {
+                        await navigator.clipboard.writeText(markdown);
+                        showStatus('✅ Issue markdown copied to clipboard!', true);
+
+                        // Save to localStorage
+                        saveToLocalStorage();
                     } catch (error) {
-                        console.error('Failed to create issue:', error);
-
-                        // Show error with fallback option
-                        showStatus(`⚠️ API Error: ${error.message}. Screenshot saved to localStorage for manual submission.`, false);
-
-                        // Re-enable button
-                        saveBtn.disabled = false;
-                        saveBtn.textContent = '💾 Retry';
+                        console.error('Failed to copy to clipboard:', error);
+                        showStatus('⚠️ Failed to copy to clipboard. Please try again.', false);
                     }
                 });
 

@@ -7,13 +7,6 @@
    npm install
    ```
 
-2. **Configure GitHub credentials** (for screenshot feature):
-   ```bash
-   cd scripts
-   cp .env.example .env
-   # Edit .env and add your GitHub token
-   ```
-
 ## Running the Game
 
 **Simple - Just run one command:**
@@ -21,27 +14,21 @@
 npm run dev
 ```
 
-This automatically starts:
-- 🎮 **Game server** on http://localhost:8080
-- 🔧 **API server** on http://localhost:3000 (for screenshot feature)
-
-## Individual Commands
-
-If you need to run servers separately:
-
-```bash
-npm run game  # Game only (no screenshot feature)
-npm run api   # API only
-```
+This starts the game server on http://localhost:8080
 
 ## Using the Screenshot Feature
 
-1. Make sure you ran `npm run dev` (not just `npm run game`)
-2. Open http://localhost:8080
-3. Click the camera icon (📷) in the top navigation
-4. Fill in title and description
-5. Click "Create GitHub Issue"
-6. Your issue will be created automatically!
+1. Open http://localhost:8080
+2. Click the camera icon (📷) in the top navigation
+3. Fill in title and description (optional)
+4. Choose one of the following:
+   - **Download PNG**: Saves the screenshot as a PNG file to your computer
+   - **Copy Issue Markdown**: Copies formatted markdown to your clipboard
+5. To create a GitHub issue:
+   - Download the screenshot
+   - Copy the markdown using "Copy Issue Markdown"
+   - Go to GitHub and create a new issue
+   - Paste the markdown and attach the screenshot file
 
 ## Other Commands
 
@@ -50,30 +37,22 @@ npm test              # Run tests
 npm run lint          # Check code style
 npm run build         # Build for production
 npm run electron      # Run as Electron app
-npm run kill-ports    # Kill processes on ports 3000 & 8080
+npm run kill-ports    # Kill processes on port 8080
 ```
 
 ## Troubleshooting
 
 **"EADDRINUSE: address already in use" or Port Conflict**
-- Check your `scripts/.env` file
-- Make sure `API_PORT` is set to **3000**, not 8080
-- The game uses port 8080, the API uses port 3000
-- If you see `API_PORT=8080` in your .env, change it to `API_PORT=3000`
-- Or run `npm run kill-ports` to kill any processes using ports 3000 or 8080
+- Another process is using port 8080
+- Run `npm run kill-ports` to kill any processes using port 8080
+- Or manually find and kill the process: `lsof -ti:8080 | xargs kill`
 
-**"API Error: Failed to fetch"**
-- You probably ran `npm run game` instead of `npm run dev`
-- The screenshot feature needs the API server running
-- Solution: Stop the game server and run `npm run dev` instead
-
-**"Missing required environment variables"**
-- The API server needs GitHub credentials
-- Copy `scripts/.env.example` to `scripts/.env`
-- Add your GitHub token (get one at https://github.com/settings/tokens)
+**Screenshot feature not working**
+- Make sure you're using a modern browser (Chrome, Firefox, Edge, Safari)
+- Check browser console for errors (F12 → Console tab)
+- If "Copy Issue Markdown" doesn't work, your browser may not support clipboard API
 
 ## Learn More
 
-- 📸 Screenshot API: `scripts/SCREENSHOT_API.md`
 - 🎫 Ticket Generator: `scripts/README.md`
 - 📚 Full Documentation: `docs/` folder

@@ -1,15 +1,15 @@
 #!/usr/bin/env node
 
 /**
- * Kill processes using ports 3000 and 8080
+ * Kill processes using port 8080
  * Cross-platform Node.js script
  */
 
 import { execSync } from 'child_process';
 
-const PORTS = [3000, 8080];
+const PORTS = [8080];
 
-console.log('🔍 Checking for processes on ports 3000 and 8080...\n');
+console.log('🔍 Checking for processes on port 8080...\n');
 
 for (const port of PORTS) {
   try {
