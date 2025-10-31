@@ -19,7 +19,7 @@ export class Crayfish extends AquaticOrganism {
         super(scene, worldX, y);
 
         // Biological properties (small invertebrates, larger than zooplankton)
-        this.size = Utils.randomBetween(0.5, 1.5); // Inches (slightly larger than zooplankton)
+        this.size = Utils.randomBetween(2.0, 4.0); // Inches (realistic crayfish size, more visible)
         this.length = this.size;
         this.speed = Utils.randomBetween(0.3, 0.6); // Slow crawling speed
 
@@ -326,7 +326,7 @@ export class Crayfish extends AquaticOrganism {
         const alpha = 0.7;
         const screenX = this.x;
         const screenY = this.y;
-        const bodySize = this.size + 1;
+        const bodySize = this.size * 1.5; // Increased visual size for better visibility
 
         // Different visual based on state
         let color = 0xaa6633; // Brownish-orange
