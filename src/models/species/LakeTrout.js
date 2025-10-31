@@ -7,8 +7,8 @@ import GameConfig from '../../config/GameConfig.js';
  * Salvelinus namaycush
  */
 export class LakeTrout extends Fish {
-    constructor(scene, x, y, size = 'MEDIUM', fishingType = null) {
-        super(scene, x, y, size, fishingType, 'lake_trout');
+    constructor(scene, x, y, size = 'MEDIUM') {
+        super(scene, x, y, size, 'lake_trout');
 
         // Lake trout are MUCH hungrier - voracious predators
         this.hunger = Utils.randomBetween(80, 100);

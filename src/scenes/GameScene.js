@@ -161,7 +161,7 @@ export class GameScene extends Phaser.Scene {
             this.hideUnusedPanels();
 
             // Set up the sonar display
-            this.sonarDisplay = new SonarDisplay(this, this.fishingType);
+            this.sonarDisplay = new SonarDisplay(this);
 
             // Create the player's lure - start at surface (0 feet)
             this.lure = new Lure(this, GameConfig.CANVAS_WIDTH / 2, 0);
@@ -515,7 +515,7 @@ export class GameScene extends Phaser.Scene {
             const y = depth * GameConfig.DEPTH_SCALE;
 
             // All TROPHY size
-            const fish = new Fish(this, worldX, y, 'TROPHY', this.fishingType, speciesName);
+            const fish = new Fish(this, worldX, y, 'TROPHY', speciesName);
 
             // Set movement direction
             fish.ai.idleDirection = Math.random() < 0.5 ? -1 : 1;
@@ -540,7 +540,7 @@ export class GameScene extends Phaser.Scene {
             // Random baitfish species
             const baitSpecies = ['alewife', 'rainbow_smelt', 'yellow_perch'][Math.floor(Math.random() * 3)];
 
-            const cloud = new BaitfishCloud(this, worldX, y, cloudSize, this.fishingType, baitSpecies);
+            const cloud = new BaitfishCloud(this, worldX, y, cloudSize, baitSpecies);
 
             this.baitfishClouds.push(cloud);
             console.log(`  Spawned large ${baitSpecies} cloud (${cloudSize} fish) at ${depth}ft`);

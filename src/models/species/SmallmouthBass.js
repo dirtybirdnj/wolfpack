@@ -6,8 +6,8 @@ import { Utils } from '../../utils/Constants.js';
  * Micropterus dolomieu
  */
 export class SmallmouthBass extends Fish {
-    constructor(scene, x, y, size = 'MEDIUM', fishingType = null) {
-        super(scene, x, y, size, fishingType, 'smallmouth_bass');
+    constructor(scene, x, y, size = 'MEDIUM') {
+        super(scene, x, y, size, 'smallmouth_bass');
     }
 
     calculateLength() {

@@ -26,10 +26,9 @@ import {
 describe('FishAI - Constructor and Initialization', () => {
   test('Creates with default properties', () => {
     const fish = createMockFish();
-    const ai = new FishAI(fish, GameConfig.FISHING_TYPE_ICE);
+    const ai = new FishAI(fish);
 
     expect(ai.fish).toBe(fish);
-    expect(ai.fishingType).toBe(GameConfig.FISHING_TYPE_ICE);
     expect(ai.state).toBe(Constants.FISH_STATE.IDLE);
     expect(ai.targetX).toBeNull();
     expect(ai.targetY).toBeNull();
@@ -40,7 +39,7 @@ describe('FishAI - Constructor and Initialization', () => {
 
     // Test multiple times due to randomness
     for (let i = 0; i < 10; i++) {
-      const ai = new FishAI(fish, GameConfig.FISHING_TYPE_ICE);
+      const ai = new FishAI(fish);
       expect(ai.alertness).toBeGreaterThanOrEqual(0.5);
       expect(ai.alertness).toBeLessThanOrEqual(1.0);
     }
@@ -50,7 +49,7 @@ describe('FishAI - Constructor and Initialization', () => {
     const fish = createMockFish();
 
     for (let i = 0; i < 10; i++) {
-      const ai = new FishAI(fish, GameConfig.FISHING_TYPE_ICE);
+      const ai = new FishAI(fish);
       expect(ai.baseAggressiveness).toBeGreaterThanOrEqual(0.5);
       expect(ai.baseAggressiveness).toBeLessThanOrEqual(1.0);
     }
@@ -61,7 +60,7 @@ describe('FishAI - Constructor and Initialization', () => {
     const directions = new Set();
 
     for (let i = 0; i < 20; i++) {
-      const ai = new FishAI(fish, GameConfig.FISHING_TYPE_ICE);
+      const ai = new FishAI(fish);
       directions.add(ai.idleDirection);
     }
 
@@ -73,7 +72,7 @@ describe('FishAI - Constructor and Initialization', () => {
 
   test('Sets default strike attempts to 1', () => {
     const fish = createMockFish();
-    const ai = new FishAI(fish, GameConfig.FISHING_TYPE_ICE);
+    const ai = new FishAI(fish);
 
     expect(ai.strikeAttempts).toBe(0);
     expect(ai.maxStrikeAttempts).toBe(1);
@@ -81,7 +80,7 @@ describe('FishAI - Constructor and Initialization', () => {
 
   test('Calculates depth preference within expected range', () => {
     const fish = createMockFish();
-    const ai = new FishAI(fish, GameConfig.FISHING_TYPE_ICE);
+    const ai = new FishAI(fish);
 
     expect(ai.depthPreference).toBeGreaterThanOrEqual(GameConfig.LAKE_TROUT_PREFERRED_DEPTH_MIN);
     expect(ai.depthPreference).toBeLessThanOrEqual(GameConfig.LAKE_TROUT_PREFERRED_DEPTH_MAX);
@@ -89,7 +88,7 @@ describe('FishAI - Constructor and Initialization', () => {
 
   test('Calculates speed preference within expected range', () => {
     const fish = createMockFish();
-    const ai = new FishAI(fish, GameConfig.FISHING_TYPE_ICE);
+    const ai = new FishAI(fish);
 
     expect(ai.speedPreference).toBeGreaterThanOrEqual(1.5);
     expect(ai.speedPreference).toBeLessThanOrEqual(3.5);
@@ -97,7 +96,7 @@ describe('FishAI - Constructor and Initialization', () => {
 
   test('Initializes baitfish hunting properties', () => {
     const fish = createMockFish();
-    const ai = new FishAI(fish, GameConfig.FISHING_TYPE_ICE);
+    const ai = new FishAI(fish);
 
     expect(ai.targetBaitfishCloud).toBeNull();
     expect(ai.targetBaitfish).toBeNull();
@@ -106,14 +105,14 @@ describe('FishAI - Constructor and Initialization', () => {
 
   test('Initializes thermocline behavior flag', () => {
     const fish = createMockFish();
-    const ai = new FishAI(fish, GameConfig.FISHING_TYPE_ICE);
+    const ai = new FishAI(fish);
 
     expect(ai.returningToThermocline).toBe(false);
   });
 
   test('Initializes with no bumped lure flag', () => {
     const fish = createMockFish();
-    const ai = new FishAI(fish, GameConfig.FISHING_TYPE_ICE);
+    const ai = new FishAI(fish);
 
     expect(ai.hasBumpedLure).toBe(false);
   });
@@ -122,7 +121,7 @@ describe('FishAI - Constructor and Initialization', () => {
 describe('FishAI - Species-Specific Initialization (Northern Pike)', () => {
   test('Northern Pike are initialized as ambush predators', () => {
     const pike = createMockFish({ species: 'northern_pike' });
-    const ai = new FishAI(pike, GameConfig.FISHING_TYPE_ICE);
+    const ai = new FishAI(pike);
 
     expect(ai.isAmbushPredator).toBe(true);
   });
@@ -133,35 +132,35 @@ describe('FishAI - Species-Specific Initialization (Northern Pike)', () => {
       worldX: 1234,
       y: 567
     });
-    const ai = new FishAI(pike, GameConfig.FISHING_TYPE_ICE);
+    const ai = new FishAI(pike);
 
     expect(ai.ambushPosition).toEqual({ x: 1234, y: 567 });
   });
 
   test('Northern Pike have ambush radius property', () => {
     const pike = createMockFish({ species: 'northern_pike' });
-    const ai = new FishAI(pike, GameConfig.FISHING_TYPE_ICE);
+    const ai = new FishAI(pike);
 
     expect(ai.ambushRadius).toBe(50);
   });
 
   test('Northern Pike have extended strike range', () => {
     const pike = createMockFish({ species: 'northern_pike' });
-    const ai = new FishAI(pike, GameConfig.FISHING_TYPE_ICE);
+    const ai = new FishAI(pike);
 
     expect(ai.strikeRange).toBe(60);
   });
 
   test('Northern Pike have burst speed multiplier', () => {
     const pike = createMockFish({ species: 'northern_pike' });
-    const ai = new FishAI(pike, GameConfig.FISHING_TYPE_ICE);
+    const ai = new FishAI(pike);
 
     expect(ai.burstSpeed).toBe(2.5);
   });
 
   test('Non-pike species are not ambush predators', () => {
     const trout = createMockFish({ species: 'lake_trout' });
-    const ai = new FishAI(trout, GameConfig.FISHING_TYPE_ICE);
+    const ai = new FishAI(trout);
 
     expect(ai.isAmbushPredator).toBe(false);
   });
@@ -170,21 +169,21 @@ describe('FishAI - Species-Specific Initialization (Northern Pike)', () => {
 describe('FishAI - Species-Specific Initialization (Smallmouth Bass)', () => {
   test('Smallmouth Bass are initialized to circle before strike', () => {
     const bass = createMockFish({ species: 'smallmouth_bass' });
-    const ai = new FishAI(bass, GameConfig.FISHING_TYPE_ICE);
+    const ai = new FishAI(bass);
 
     expect(ai.circlesBeforeStrike).toBe(true);
   });
 
   test('Smallmouth Bass start not circling', () => {
     const bass = createMockFish({ species: 'smallmouth_bass' });
-    const ai = new FishAI(bass, GameConfig.FISHING_TYPE_ICE);
+    const ai = new FishAI(bass);
 
     expect(ai.isCircling).toBe(false);
   });
 
   test('Smallmouth Bass have circle angle initialized', () => {
     const bass = createMockFish({ species: 'smallmouth_bass' });
-    const ai = new FishAI(bass, GameConfig.FISHING_TYPE_ICE);
+    const ai = new FishAI(bass);
 
     expect(ai.circleAngle).toBeGreaterThanOrEqual(0);
     expect(ai.circleAngle).toBeLessThanOrEqual(Math.PI * 2);
@@ -192,14 +191,14 @@ describe('FishAI - Species-Specific Initialization (Smallmouth Bass)', () => {
 
   test('Smallmouth Bass have circle radius', () => {
     const bass = createMockFish({ species: 'smallmouth_bass' });
-    const ai = new FishAI(bass, GameConfig.FISHING_TYPE_ICE);
+    const ai = new FishAI(bass);
 
     expect(ai.circleRadius).toBe(35);
   });
 
   test('Smallmouth Bass have circle speed', () => {
     const bass = createMockFish({ species: 'smallmouth_bass' });
-    const ai = new FishAI(bass, GameConfig.FISHING_TYPE_ICE);
+    const ai = new FishAI(bass);
 
     expect(ai.circleSpeed).toBe(0.08);
   });
@@ -209,7 +208,7 @@ describe('FishAI - Species-Specific Initialization (Smallmouth Bass)', () => {
     const directions = new Set();
 
     for (let i = 0; i < 20; i++) {
-      const ai = new FishAI(bass, GameConfig.FISHING_TYPE_ICE);
+      const ai = new FishAI(bass);
       directions.add(ai.circleDirection);
     }
 
@@ -220,7 +219,7 @@ describe('FishAI - Species-Specific Initialization (Smallmouth Bass)', () => {
 
   test('Smallmouth Bass have circle time counters', () => {
     const bass = createMockFish({ species: 'smallmouth_bass' });
-    const ai = new FishAI(bass, GameConfig.FISHING_TYPE_ICE);
+    const ai = new FishAI(bass);
 
     expect(ai.circleTime).toBe(0);
     expect(ai.maxCircleTime).toBe(120);
@@ -228,7 +227,7 @@ describe('FishAI - Species-Specific Initialization (Smallmouth Bass)', () => {
 
   test('Non-bass species do not circle', () => {
     const trout = createMockFish({ species: 'lake_trout' });
-    const ai = new FishAI(trout, GameConfig.FISHING_TYPE_ICE);
+    const ai = new FishAI(trout);
 
     expect(ai.circlesBeforeStrike).toBe(false);
   });
@@ -242,7 +241,7 @@ describe('FishAI - Aggressiveness Getter', () => {
         aggressivenessBonus: 0
       }
     });
-    const ai = new FishAI(fish, GameConfig.FISHING_TYPE_ICE);
+    const ai = new FishAI(fish);
 
     const aggressiveness = ai.aggressiveness;
     expect(aggressiveness).toBeGreaterThanOrEqual(0.1);
@@ -256,7 +255,7 @@ describe('FishAI - Aggressiveness Getter', () => {
         aggressivenessBonus: 0.3
       }
     });
-    const ai = new FishAI(fish, GameConfig.FISHING_TYPE_ICE);
+    const ai = new FishAI(fish);
     ai.baseAggressiveness = 0.5;
 
     expect(ai.aggressiveness).toBe(0.8); // 0.5 + 0.3
@@ -269,7 +268,7 @@ describe('FishAI - Aggressiveness Getter', () => {
         aggressivenessBonus: 0.8
       }
     });
-    const ai = new FishAI(fish, GameConfig.FISHING_TYPE_ICE);
+    const ai = new FishAI(fish);
     ai.baseAggressiveness = 0.9;
 
     expect(ai.aggressiveness).toBe(1.0); // Clamped from 1.7
@@ -282,7 +281,7 @@ describe('FishAI - Aggressiveness Getter', () => {
         aggressivenessBonus: -0.5
       }
     });
-    const ai = new FishAI(fish, GameConfig.FISHING_TYPE_ICE);
+    const ai = new FishAI(fish);
     ai.baseAggressiveness = 0.2;
 
     expect(ai.aggressiveness).toBe(0.1); // Clamped from -0.3
@@ -295,7 +294,7 @@ describe('FishAI - Aggressiveness Getter', () => {
         aggressivenessBonus: 0
       }
     });
-    const ai = new FishAI(fish, GameConfig.FISHING_TYPE_ICE);
+    const ai = new FishAI(fish);
     ai.baseAggressiveness = 0.7;
 
     expect(ai.aggressiveness).toBe(0.7);
@@ -305,24 +304,24 @@ describe('FishAI - Aggressiveness Getter', () => {
 describe('FishAI - getStrikeDistance', () => {
   test('Northern Pike have longer strike distance', () => {
     const pike = createMockFish({ species: 'northern_pike' });
-    const ai = new FishAI(pike, GameConfig.FISHING_TYPE_ICE);
+    const ai = new FishAI(pike);
 
     expect(ai.getStrikeDistance()).toBe(60); // Pike-specific strike range
   });
 
   test('Non-pike species use default strike distance', () => {
     const trout = createMockFish({ species: 'lake_trout' });
-    const ai = new FishAI(trout, GameConfig.FISHING_TYPE_ICE);
+    const ai = new FishAI(trout);
 
     expect(ai.getStrikeDistance()).toBe(GameConfig.STRIKE_DISTANCE);
   });
 
   test('Pike strike distance is greater than default', () => {
     const pike = createMockFish({ species: 'northern_pike' });
-    const pikeAi = new FishAI(pike, GameConfig.FISHING_TYPE_ICE);
+    const pikeAi = new FishAI(pike);
 
     const trout = createMockFish({ species: 'lake_trout' });
-    const troutAi = new FishAI(trout, GameConfig.FISHING_TYPE_ICE);
+    const troutAi = new FishAI(trout);
 
     expect(pikeAi.getStrikeDistance()).toBeGreaterThan(troutAi.getStrikeDistance());
   });
@@ -331,7 +330,7 @@ describe('FishAI - getStrikeDistance', () => {
 describe('FishAI - calculateDepthPreference', () => {
   test('Returns depth within preferred range', () => {
     const fish = createMockFish();
-    const ai = new FishAI(fish, GameConfig.FISHING_TYPE_ICE);
+    const ai = new FishAI(fish);
 
     const depth = ai.calculateDepthPreference();
     expect(depth).toBeGreaterThanOrEqual(GameConfig.LAKE_TROUT_PREFERRED_DEPTH_MIN);
@@ -340,7 +339,7 @@ describe('FishAI - calculateDepthPreference', () => {
 
   test('Different calls return different values (uses randomness)', () => {
     const fish = createMockFish();
-    const ai = new FishAI(fish, GameConfig.FISHING_TYPE_ICE);
+    const ai = new FishAI(fish);
 
     const depths = new Set();
     for (let i = 0; i < 10; i++) {
@@ -355,7 +354,7 @@ describe('FishAI - calculateDepthPreference', () => {
 describe('FishAI - detectFrenzy (Multi-Fish Interaction)', () => {
   test('Does not enter frenzy when alone', () => {
     const fish = createMockFish({ inFrenzy: false });
-    const ai = new FishAI(fish, GameConfig.FISHING_TYPE_ICE);
+    const ai = new FishAI(fish);
     const lure = createMockLure();
 
     ai.detectFrenzy(lure, [fish]); // Only this fish
@@ -365,7 +364,7 @@ describe('FishAI - detectFrenzy (Multi-Fish Interaction)', () => {
 
   test('Can enter frenzy when other fish are interested', () => {
     const fish = createMockFish({ inFrenzy: false });
-    const ai = new FishAI(fish, GameConfig.FISHING_TYPE_ICE);
+    const ai = new FishAI(fish);
 
     // Create other excited fish nearby
     const excitedFish = createMockFishArray(2, Constants.FISH_STATE.INTERESTED, 490, 95);
@@ -390,7 +389,7 @@ describe('FishAI - detectFrenzy (Multi-Fish Interaction)', () => {
 
   test('Frenzy duration scales with number of excited fish', () => {
     const fish = createMockFish({ inFrenzy: false });
-    const ai = new FishAI(fish, GameConfig.FISHING_TYPE_ICE);
+    const ai = new FishAI(fish);
 
     // Test with 1 excited fish
     const excitedFish1 = createMockFishArray(1, Constants.FISH_STATE.CHASING, 490, 95);
@@ -429,7 +428,7 @@ describe('FishAI - detectFrenzy (Multi-Fish Interaction)', () => {
 
   test('Frenzy intensity scales with number of excited fish', () => {
     const fish = createMockFish({ inFrenzy: false });
-    const ai = new FishAI(fish, GameConfig.FISHING_TYPE_ICE);
+    const ai = new FishAI(fish);
 
     const excitedFish = createMockFishArray(3, Constants.FISH_STATE.STRIKING, 490, 95);
     const lure = createMockLure({ x: 500, y: 100 });
@@ -450,7 +449,7 @@ describe('FishAI - detectFrenzy (Multi-Fish Interaction)', () => {
 
   test('Frenzying fish get multiple strike attempts', () => {
     const fish = createMockFish({ inFrenzy: false });
-    const ai = new FishAI(fish, GameConfig.FISHING_TYPE_ICE);
+    const ai = new FishAI(fish);
 
     const excitedFish = createMockFishArray(2, Constants.FISH_STATE.CHASING, 490, 95);
     const lure = createMockLure({ x: 500, y: 100 });
@@ -471,7 +470,7 @@ describe('FishAI - detectFrenzy (Multi-Fish Interaction)', () => {
 
   test('Fish in frenzy state changes to interested', () => {
     const fish = createMockFish({ inFrenzy: false });
-    const ai = new FishAI(fish, GameConfig.FISHING_TYPE_ICE);
+    const ai = new FishAI(fish);
 
     const excitedFish = createMockFishArray(2, Constants.FISH_STATE.CHASING, 490, 95);
     const lure = createMockLure({ x: 500, y: 100 });
@@ -492,7 +491,7 @@ describe('FishAI - detectFrenzy (Multi-Fish Interaction)', () => {
   test('Frenzy triggers interest flash on fish', () => {
     const fish = createMockFish({ inFrenzy: false });
     fish.triggerInterestFlash = jest.fn();
-    const ai = new FishAI(fish, GameConfig.FISHING_TYPE_ICE);
+    const ai = new FishAI(fish);
 
     const excitedFish = createMockFishArray(2, Constants.FISH_STATE.CHASING, 490, 95);
     const lure = createMockLure({ x: 500, y: 100 });
@@ -514,7 +513,7 @@ describe('FishAI - detectFrenzy (Multi-Fish Interaction)', () => {
 
   test('Does not count self when detecting excited fish', () => {
     const fish = createMockFish({ inFrenzy: false });
-    const ai = new FishAI(fish, GameConfig.FISHING_TYPE_ICE);
+    const ai = new FishAI(fish);
     ai.state = Constants.FISH_STATE.CHASING; // This fish is excited
 
     const lure = createMockLure();
@@ -528,7 +527,7 @@ describe('FishAI - detectFrenzy (Multi-Fish Interaction)', () => {
 
   test('Detects excited fish in HUNTING_BAITFISH state', () => {
     const fish = createMockFish({ inFrenzy: false });
-    const ai = new FishAI(fish, GameConfig.FISHING_TYPE_ICE);
+    const ai = new FishAI(fish);
 
     const huntingFish = createMockFishArray(2, Constants.FISH_STATE.HUNTING_BAITFISH, 490, 95);
     const lure = createMockLure({ x: 500, y: 100 });
@@ -552,7 +551,7 @@ describe('FishAI - detectFrenzy (Multi-Fish Interaction)', () => {
 
   test('Detects excited fish in FEEDING state', () => {
     const fish = createMockFish({ inFrenzy: false });
-    const ai = new FishAI(fish, GameConfig.FISHING_TYPE_ICE);
+    const ai = new FishAI(fish);
 
     const feedingFish = createMockFishArray(2, Constants.FISH_STATE.FEEDING, 490, 95);
     const lure = createMockLure({ x: 500, y: 100 });
@@ -576,7 +575,7 @@ describe('FishAI - detectFrenzy (Multi-Fish Interaction)', () => {
 
   test('Only detects fish within detection range', () => {
     const fish = createMockFish({ x: 500, y: 100, inFrenzy: false });
-    const ai = new FishAI(fish, GameConfig.FISHING_TYPE_ICE);
+    const ai = new FishAI(fish);
 
     // Create excited fish FAR away (beyond detection range * 3)
     const farFish = createMockFish({
@@ -612,7 +611,7 @@ describe('FishAI - detectFrenzy (Vertical Strike)', () => {
       },
       inFrenzy: false
     });
-    const ai = new FishAI(fish, GameConfig.FISHING_TYPE_ICE);
+    const ai = new FishAI(fish);
 
     // Lure above fish
     const lure = createMockLure({ x: 510, y: 100 });
@@ -644,7 +643,7 @@ describe('FishAI - detectFrenzy (Vertical Strike)', () => {
       },
       inFrenzy: false
     });
-    const ai = new FishAI(fish, GameConfig.FISHING_TYPE_ICE);
+    const ai = new FishAI(fish);
 
     // Lure above fish (needs to be at least 20px above and within horizontal range)
     const lure = createMockLure({ x: 510, y: 370 }); // Changed from 100 to 370 to be closer
@@ -676,7 +675,7 @@ describe('FishAI - detectFrenzy (Vertical Strike)', () => {
       },
       inFrenzy: false
     });
-    const ai = new FishAI(fish, GameConfig.FISHING_TYPE_ICE);
+    const ai = new FishAI(fish);
 
     const lure = createMockLure({ x: 510, y: 100 });
 
@@ -704,7 +703,7 @@ describe('FishAI - detectFrenzy (Vertical Strike)', () => {
       },
       inFrenzy: false
     });
-    const ai = new FishAI(fish, GameConfig.FISHING_TYPE_ICE);
+    const ai = new FishAI(fish);
 
     const lure = createMockLure({ x: 510, y: 95 });
 
@@ -734,7 +733,7 @@ describe('FishAI - detectFrenzy (Vertical Strike)', () => {
       },
       inFrenzy: false
     });
-    const ai = new FishAI(fish, GameConfig.FISHING_TYPE_ICE);
+    const ai = new FishAI(fish);
 
     const lure = createMockLure({ x: 510, y: 30 });
 
@@ -755,7 +754,7 @@ describe('FishAI - detectFrenzy (Vertical Strike)', () => {
 describe('FishAI - update() Method (Decision Cooldown)', () => {
   test('Does not make decisions during cooldown', () => {
     const fish = createMockFish();
-    const ai = new FishAI(fish, GameConfig.FISHING_TYPE_ICE);
+    const ai = new FishAI(fish);
     const lure = createMockLure();
 
     ai.lastDecisionTime = 1000;
@@ -770,7 +769,7 @@ describe('FishAI - update() Method (Decision Cooldown)', () => {
 
   test('Makes decisions after cooldown expires', () => {
     const fish = createMockFish();
-    const ai = new FishAI(fish, GameConfig.FISHING_TYPE_ICE);
+    const ai = new FishAI(fish);
     const lure = createMockLure();
 
     ai.lastDecisionTime = 1000;
@@ -784,7 +783,7 @@ describe('FishAI - update() Method (Decision Cooldown)', () => {
 
   test('Updates lastDecisionTime when decision is made', () => {
     const fish = createMockFish();
-    const ai = new FishAI(fish, GameConfig.FISHING_TYPE_ICE);
+    const ai = new FishAI(fish);
     const lure = createMockLure();
 
     ai.lastDecisionTime = 0;
@@ -799,7 +798,7 @@ describe('FishAI - update() Method (Decision Cooldown)', () => {
 describe('FishAI - update() Method (Nature Mode - No Lure)', () => {
   test('Fish idle when no lure and no baitfish', () => {
     const fish = createMockFish();
-    const ai = new FishAI(fish, GameConfig.FISHING_TYPE_ICE);
+    const ai = new FishAI(fish);
 
     ai.update(null, 1000, [fish], []);
 
@@ -808,7 +807,7 @@ describe('FishAI - update() Method (Nature Mode - No Lure)', () => {
 
   test('Nature mode does not crash without lure', () => {
     const fish = createMockFish();
-    const ai = new FishAI(fish, GameConfig.FISHING_TYPE_ICE);
+    const ai = new FishAI(fish);
 
     expect(() => {
       ai.update(null, 1000, [fish], []);
@@ -819,7 +818,7 @@ describe('FishAI - update() Method (Nature Mode - No Lure)', () => {
 describe('FishAI - Edge Cases and Type Safety', () => {
   test('Handles undefined allFish array', () => {
     const fish = createMockFish();
-    const ai = new FishAI(fish, GameConfig.FISHING_TYPE_ICE);
+    const ai = new FishAI(fish);
     const lure = createMockLure();
 
     expect(() => {
@@ -829,7 +828,7 @@ describe('FishAI - Edge Cases and Type Safety', () => {
 
   test('Handles empty allFish array', () => {
     const fish = createMockFish();
-    const ai = new FishAI(fish, GameConfig.FISHING_TYPE_ICE);
+    const ai = new FishAI(fish);
     const lure = createMockLure();
 
     expect(() => {
@@ -839,7 +838,7 @@ describe('FishAI - Edge Cases and Type Safety', () => {
 
   test('Handles undefined baitfishClouds array', () => {
     const fish = createMockFish();
-    const ai = new FishAI(fish, GameConfig.FISHING_TYPE_ICE);
+    const ai = new FishAI(fish);
     const lure = createMockLure();
 
     expect(() => {
@@ -849,7 +848,7 @@ describe('FishAI - Edge Cases and Type Safety', () => {
 
   test('Handles empty baitfishClouds array', () => {
     const fish = createMockFish();
-    const ai = new FishAI(fish, GameConfig.FISHING_TYPE_ICE);
+    const ai = new FishAI(fish);
     const lure = createMockLure();
 
     expect(() => {
@@ -863,7 +862,7 @@ describe('FishAI - Edge Cases and Type Safety', () => {
 
     // FishAI doesn't validate depthZone in constructor
     // This test verifies it doesn't crash, but accessing aggressiveness will fail
-    const ai = new FishAI(fish, GameConfig.FISHING_TYPE_ICE);
+    const ai = new FishAI(fish);
     expect(ai).toBeDefined();
 
     // Accessing aggressiveness getter should throw because it accesses fish.depthZone.aggressivenessBonus
@@ -874,7 +873,7 @@ describe('FishAI - Edge Cases and Type Safety', () => {
 
   test('Handles fish with invalid species', () => {
     const fish = createMockFish({ species: 'invalid_species' });
-    const ai = new FishAI(fish, GameConfig.FISHING_TYPE_ICE);
+    const ai = new FishAI(fish);
 
     // Should not crash, should just not have species-specific behaviors
     expect(ai.isAmbushPredator).toBe(false);

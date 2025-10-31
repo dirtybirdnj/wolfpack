@@ -10,11 +10,11 @@ import YellowPerch from '../models/species/YellowPerch.js';
  * All game logic is delegated to the model
  */
 export class Fish {
-    constructor(scene, x, y, size = 'MEDIUM', fishingType = null, species = 'lake_trout') {
+    constructor(scene, x, y, size = 'MEDIUM', species = 'lake_trout') {
         this.scene = scene;
 
         // Create the appropriate model based on species
-        this.model = this.createModel(scene, x, y, size, fishingType, species);
+        this.model = this.createModel(scene, x, y, size, species);
 
         // Phaser-specific visual elements
         this.graphics = scene.add.graphics();
@@ -32,18 +32,18 @@ export class Fish {
     /**
      * Factory method to create the appropriate species model
      */
-    createModel(scene, x, y, size, fishingType, species) {
+    createModel(scene, x, y, size, species) {
         switch(species) {
             case 'lake_trout':
-                return new LakeTrout(scene, x, y, size, fishingType);
+                return new LakeTrout(scene, x, y, size);
             case 'northern_pike':
-                return new NorthernPike(scene, x, y, size, fishingType);
+                return new NorthernPike(scene, x, y, size);
             case 'smallmouth_bass':
-                return new SmallmouthBass(scene, x, y, size, fishingType);
+                return new SmallmouthBass(scene, x, y, size);
             case 'yellow_perch_large':
-                return new YellowPerch(scene, x, y, size, fishingType);
+                return new YellowPerch(scene, x, y, size);
             default:
-                return new LakeTrout(scene, x, y, size, fishingType);
+                return new LakeTrout(scene, x, y, size);
         }
     }
 
