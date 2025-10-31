@@ -15,8 +15,8 @@ export class FishingLine {
         this.lineAlpha = 0.8; // Braid is more visible
         this.lineType = 'braid';
 
-        // Line starts from top of screen (no ice hole visible in fishing mode)
-        this.iceHoleY = 0; // Top of screen
+        // Line starts from top of screen (surface)
+        this.surfaceY = 0; // Top of screen
     }
 
     setLineType(type, braidColor = 'neon-green') {
