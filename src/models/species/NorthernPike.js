@@ -6,8 +6,8 @@ import { Utils } from '../../utils/Constants.js';
  * Esox lucius
  */
 export class NorthernPike extends Fish {
-    constructor(scene, x, y, size = 'MEDIUM', fishingType = null) {
-        super(scene, x, y, size, fishingType, 'northern_pike');
+    constructor(scene, x, y, size = 'MEDIUM') {
+        super(scene, x, y, size, 'northern_pike');
     }
 
     calculateLength() {

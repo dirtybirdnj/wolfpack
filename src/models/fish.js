@@ -22,14 +22,12 @@ const FEMALE_NAMES = [
  * Adds AI, catching mechanics, and predator-specific behaviors
  */
 export class Fish extends AquaticOrganism {
-    constructor(scene, x, y, size = 'MEDIUM', fishingType = null, species = 'lake_trout') {
+    constructor(scene, x, y, size = 'MEDIUM', species = 'lake_trout') {
         // Get species data for super constructor
         const speciesData = getPredatorSpecies(species);
 
         // Call parent constructor with base properties
         super(scene, x, y, species, speciesData);
-
-        this.fishingType = fishingType || scene.fishingType;
 
         // Fish-specific size and weight properties
         this.size = Constants.FISH_SIZE[size];
@@ -55,7 +53,7 @@ export class Fish extends AquaticOrganism {
         this.speed = this.baseSpeed * this.depthZone.speedMultiplier;
 
         // AI controller (heavy - not used by baitfish)
-        this.ai = new FishAI(this, this.fishingType);
+        this.ai = new FishAI(this);
 
         // Sonar properties (visual rendering handled by entity layer)
         this.sonarStrength = this.calculateSonarStrength();

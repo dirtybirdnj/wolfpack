@@ -182,7 +182,7 @@ export class SpawningSystem {
         const y = depth * depthScale;
 
         // Create the fish with species parameter (worldX will be used internally, x will be calculated for screen)
-        const fish = new Fish(this.scene, worldX, y, size, this.scene.fishingType || 'observation', species);
+        const fish = new Fish(this.scene, worldX, y, size, species);
 
         // Set initial movement direction - fish swim toward and past the player
         if (fromLeft) {
@@ -501,7 +501,7 @@ export class SpawningSystem {
 
         // Create fish with max hunger and low health (size MEDIUM for balance)
         // Emergency fish is always lake trout for consistency
-        const fish = new Fish(this.scene, worldX, y, 'MEDIUM', this.scene.fishingType, 'lake_trout');
+        const fish = new Fish(this.scene, worldX, y, 'MEDIUM', 'lake_trout');
         fish.hunger = 100; // Max hunger - very motivated!
         fish.health = 30; // Low health makes it easier to catch
         fish.isEmergencyFish = true; // Mark as emergency fish

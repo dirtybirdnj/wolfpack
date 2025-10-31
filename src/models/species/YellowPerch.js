@@ -6,8 +6,8 @@ import { Utils } from '../../utils/Constants.js';
  * Perca flavescens
  */
 export class YellowPerch extends Fish {
-    constructor(scene, x, y, size = 'MEDIUM', fishingType = null) {
-        super(scene, x, y, size, fishingType, 'yellow_perch_large');
+    constructor(scene, x, y, size = 'MEDIUM') {
+        super(scene, x, y, size, 'yellow_perch_large');
     }
 
     calculateLength() {

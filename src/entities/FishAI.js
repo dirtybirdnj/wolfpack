@@ -3,9 +3,8 @@ import { Constants, Utils } from '../utils/Constants.js';
 import { calculateDietPreference } from '../config/SpeciesData.js';
 
 export class FishAI {
-    constructor(fish, fishingType) {
+    constructor(fish) {
         this.fish = fish;
-        this.fishingType = fishingType; // Store fishing type for thermocline behavior
         this.state = Constants.FISH_STATE.IDLE;
         this.targetX = null;
         this.targetY = null;

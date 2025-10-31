@@ -2,9 +2,8 @@ import GameConfig from '../config/GameConfig.js';
 import { BAITFISH_SPECIES } from '../config/SpeciesData.js';
 
 export class SonarDisplay {
-    constructor(scene, fishingType) {
+    constructor(scene) {
         this.scene = scene;
-        this.fishingType = fishingType; // Track fishing type for rendering
         this.graphics = scene.add.graphics();
         this.graphics.setDepth(0); // Render as background
         this.gridOffset = 0;
