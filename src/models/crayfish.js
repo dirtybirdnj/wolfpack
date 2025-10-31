@@ -106,8 +106,11 @@ export class Crayfish extends AquaticOrganism {
         // Keep on bottom of lake
         this.stayOnBottom();
 
-        // Update depth and screen position
-        this.depth = this.y / GameConfig.DEPTH_SCALE;
+        // Update depth and screen position (use dynamic depth scale)
+        const depthScale = this.scene.sonarDisplay ?
+            this.scene.sonarDisplay.getDepthScale() :
+            GameConfig.DEPTH_SCALE;
+        this.depth = this.y / depthScale;
         this.updateScreenPosition();
 
         // Check if too far from player
@@ -274,9 +277,19 @@ export class Crayfish extends AquaticOrganism {
      */
     stayOnBottom() {
         const bottomDepth = this.getBottomDepthAtPosition();
-        const bottomY = bottomDepth * GameConfig.DEPTH_SCALE;
-        const minY = bottomY - (1 * GameConfig.DEPTH_SCALE); // 1 foot from bottom
-        const maxY = bottomY - (0.2 * GameConfig.DEPTH_SCALE); // Very close to bottom
+
+        // Use dynamic depth scale from sonar display (not static GameConfig.DEPTH_SCALE)
+        const depthScale = this.scene.sonarDisplay ?
+            this.scene.sonarDisplay.getDepthScale() :
+            GameConfig.DEPTH_SCALE;
+
+        // Calculate bottom Y position with small offset to appear grounded (same as lure)
+        const BOTTOM_OFFSET_PX = 12;
+        const bottomY = (bottomDepth * depthScale) + BOTTOM_OFFSET_PX;
+
+        // Allow small movement range on bottom (0.2-1 foot from actual bottom)
+        const minY = bottomY - (1 * depthScale); // 1 foot above bottom
+        const maxY = bottomY; // Right on bottom (with offset)
 
         // Snap to bottom zone
         if (this.y < minY) {

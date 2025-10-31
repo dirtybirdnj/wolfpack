@@ -65,10 +65,15 @@ export class Zooplankton extends AquaticOrganism {
         // Get actual lake bottom depth (using parent class helper)
         const bottomDepth = this.getBottomDepthAtPosition();
 
+        // Use dynamic depth scale from sonar display (not static GameConfig.DEPTH_SCALE)
+        const depthScale = this.scene.sonarDisplay ?
+            this.scene.sonarDisplay.getDepthScale() :
+            GameConfig.DEPTH_SCALE;
+
         // Stay near the bottom (within 2-10 feet of actual bottom)
-        const bottomY = bottomDepth * GameConfig.DEPTH_SCALE;
-        const minY = bottomY - (10 * GameConfig.DEPTH_SCALE); // 10 feet from bottom
-        const maxY = bottomY - (2 * GameConfig.DEPTH_SCALE); // 2 feet from bottom (don't go below!)
+        const bottomY = bottomDepth * depthScale;
+        const minY = bottomY - (10 * depthScale); // 10 feet from bottom
+        const maxY = bottomY - (2 * depthScale); // 2 feet from bottom (don't go below!)
 
         // Gently push back towards bottom zone
         if (this.y < minY) {
@@ -77,7 +82,7 @@ export class Zooplankton extends AquaticOrganism {
             this.y -= 0.2;
         }
 
-        this.depth = this.y / GameConfig.DEPTH_SCALE;
+        this.depth = this.y / depthScale;
 
         // Convert world position to screen position (using parent class helper)
         this.updateScreenPosition();
