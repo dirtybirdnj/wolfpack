@@ -89,8 +89,8 @@ export class GameScene extends Phaser.Scene {
         // Tackle box state
         this.tackleBoxOpen = false;
         this.tackleBoxTab = 0; // 0=lure, 1=line, 2=reel
-        this.tackleBoxSelected = { lure: 0, line: 0, reel: 0, lineTest: 3 }; // Default to 10 lb test (index 3)
-        this.reelTabFocus = 0; // 0=reel type section, 1=line test section
+        this.tackleBoxSelected = { lure: 0, line: 0, reel: 0, lineTest: 1 }; // Default to 10 lb test (index 1)
+        this.lineTabFocus = 0; // 0=line type section, 1=line test section
         this.switchingToPauseMenu = false; // Flag to keep game paused when switching menus
         this.catchPopupActive = false; // Flag to block input when catch popup is displayed
         this.tackleBoxButtonStates = {
@@ -1181,49 +1181,33 @@ export class GameScene extends Phaser.Scene {
                 console.log(`🎣 Lure weight changed to ${selected.label}`);
             }
         } else if (this.tackleBoxTab === 1) {
-            // LINE tab
-            const maxIndex = this.tackleBoxGear.lineTypes.length - 1;
-            if (upPressed) {
-                this.tackleBoxSelected.line--;
-                if (this.tackleBoxSelected.line < 0) {this.tackleBoxSelected.line = maxIndex;}
-            }
-            if (downPressed) {
-                this.tackleBoxSelected.line++;
-                if (this.tackleBoxSelected.line > maxIndex) {this.tackleBoxSelected.line = 0;}
-            }
-            if (confirmPressed) {
-                const selected = this.tackleBoxGear.lineTypes[this.tackleBoxSelected.line];
-                this.fishingLine.setLineType(selected.value, 'neon-green');
-                this.fishingLineModel.setLineType(selected.value);
-                console.log(`🧵 Line type changed to ${selected.label}`);
-            }
-        } else if (this.tackleBoxTab === 2) {
-            // REEL tab - has two sections: reel type and line test
+            // LINE tab - has two sections: line type and line test strength
             // Use left/right to switch between sections (overrides tab switching in this tab)
             if (leftPressed) {
-                this.reelTabFocus = 0; // Focus on reel type
+                this.lineTabFocus = 0; // Focus on line type
             }
             if (rightPressed) {
-                this.reelTabFocus = 1; // Focus on line test
+                this.lineTabFocus = 1; // Focus on line test strength
             }
 
-            if (this.reelTabFocus === 0) {
-                // Navigating reel type
-                const maxIndex = this.tackleBoxGear.reelTypes.length - 1;
+            if (this.lineTabFocus === 0) {
+                // Navigating line type
+                const maxIndex = this.tackleBoxGear.lineTypes.length - 1;
                 if (upPressed) {
-                    this.tackleBoxSelected.reel--;
-                    if (this.tackleBoxSelected.reel < 0) {this.tackleBoxSelected.reel = maxIndex;}
+                    this.tackleBoxSelected.line--;
+                    if (this.tackleBoxSelected.line < 0) {this.tackleBoxSelected.line = maxIndex;}
                 }
                 if (downPressed) {
-                    this.tackleBoxSelected.reel++;
-                    if (this.tackleBoxSelected.reel > maxIndex) {this.tackleBoxSelected.reel = 0;}
+                    this.tackleBoxSelected.line++;
+                    if (this.tackleBoxSelected.line > maxIndex) {this.tackleBoxSelected.line = 0;}
                 }
                 if (confirmPressed) {
-                    const selected = this.tackleBoxGear.reelTypes[this.tackleBoxSelected.reel];
-                    this.reelModel.setReelType(selected.value);
-                    console.log(`🎣 Reel type changed to ${selected.label}`);
+                    const selected = this.tackleBoxGear.lineTypes[this.tackleBoxSelected.line];
+                    this.fishingLine.setLineType(selected.value, 'neon-green');
+                    this.fishingLineModel.setLineType(selected.value);
+                    console.log(`🧵 Line type changed to ${selected.label}`);
                 }
-            } else if (this.reelTabFocus === 1) {
+            } else if (this.lineTabFocus === 1) {
                 // Navigating line test strength
                 const maxIndex = this.tackleBoxGear.lineTestStrengths.length - 1;
                 if (upPressed) {
@@ -1239,6 +1223,22 @@ export class GameScene extends Phaser.Scene {
                     this.reelModel.setLineTestStrength(selected.value);
                     console.log(`🧵 Line test changed to ${selected.label}`);
                 }
+            }
+        } else if (this.tackleBoxTab === 2) {
+            // REEL tab - just reel type selection
+            const maxIndex = this.tackleBoxGear.reelTypes.length - 1;
+            if (upPressed) {
+                this.tackleBoxSelected.reel--;
+                if (this.tackleBoxSelected.reel < 0) {this.tackleBoxSelected.reel = maxIndex;}
+            }
+            if (downPressed) {
+                this.tackleBoxSelected.reel++;
+                if (this.tackleBoxSelected.reel > maxIndex) {this.tackleBoxSelected.reel = 0;}
+            }
+            if (confirmPressed) {
+                const selected = this.tackleBoxGear.reelTypes[this.tackleBoxSelected.reel];
+                this.reelModel.setReelType(selected.value);
+                console.log(`🎣 Reel type changed to ${selected.label}`);
             }
         }
     }
@@ -1358,8 +1358,8 @@ export class GameScene extends Phaser.Scene {
                 }
             });
         } else if (this.tackleBoxTab === 1) {
-            // LINE tab
-            const titleText = this.add.text(panelX + panelWidth / 2, contentY - 20, 'SELECT LINE TYPE', {
+            // LINE tab - shows line type and line test strength
+            const titleText = this.add.text(panelX + panelWidth / 2, contentY - 20, 'SELECT LINE TYPE & TEST', {
                 fontSize: '14px',
                 fontFamily: 'Courier New',
                 color: '#cccccc'
@@ -1368,67 +1368,24 @@ export class GameScene extends Phaser.Scene {
             titleText.setDepth(2001);
             this.time.delayedCall(16, () => titleText.destroy());
 
+            // Line Type Section
+            const lineTypeSectionY = contentY;
+            const lineTypeSectionActive = this.lineTabFocus === 0;
+            const lineTypeHeaderText = this.add.text(contentX, lineTypeSectionY, lineTypeSectionActive ? '→ LINE TYPE:' : 'LINE TYPE:', {
+                fontSize: '12px',
+                fontFamily: 'Courier New',
+                color: lineTypeSectionActive ? '#00ffff' : '#ffaa00',
+                fontStyle: 'bold'
+            });
+            lineTypeHeaderText.setDepth(2001);
+            this.time.delayedCall(16, () => lineTypeHeaderText.destroy());
+
             this.tackleBoxGear.lineTypes.forEach((line, index) => {
-                const itemY = contentY + index * 35;
+                const itemY = lineTypeSectionY + 25 + index * 30;
                 const isSelected = index === this.tackleBoxSelected.line;
                 const isCurrent = this.fishingLine.lineType === line.value;
 
-                const labelText = this.add.text(contentX, itemY, line.label, {
-                    fontSize: isSelected ? '16px' : '14px',
-                    fontFamily: 'Courier New',
-                    color: isSelected ? '#00ffff' : '#00ff00',
-                    fontStyle: isSelected ? 'bold' : 'normal'
-                });
-                labelText.setDepth(2001);
-                this.time.delayedCall(16, () => labelText.destroy());
-
-                const descText = this.add.text(contentX + 180, itemY, line.desc, {
-                    fontSize: '12px',
-                    fontFamily: 'Courier New',
-                    color: isSelected ? '#cccccc' : '#888888'
-                });
-                descText.setDepth(2001);
-                this.time.delayedCall(16, () => descText.destroy());
-
-                if (isCurrent) {
-                    const currentText = this.add.text(contentX + 450, itemY, '← CURRENT', {
-                        fontSize: '12px',
-                        fontFamily: 'Courier New',
-                        color: '#ffff00'
-                    });
-                    currentText.setDepth(2001);
-                    this.time.delayedCall(16, () => currentText.destroy());
-                }
-            });
-        } else if (this.tackleBoxTab === 2) {
-            // REEL tab - shows reel type and line test strength
-            const titleText = this.add.text(panelX + panelWidth / 2, contentY - 20, 'SELECT REEL & LINE TEST', {
-                fontSize: '14px',
-                fontFamily: 'Courier New',
-                color: '#cccccc'
-            });
-            titleText.setOrigin(0.5, 0.5);
-            titleText.setDepth(2001);
-            this.time.delayedCall(16, () => titleText.destroy());
-
-            // Reel Type Section
-            const reelSectionY = contentY;
-            const reelSectionActive = this.reelTabFocus === 0;
-            const reelHeaderText = this.add.text(contentX, reelSectionY, reelSectionActive ? '→ REEL TYPE:' : 'REEL TYPE:', {
-                fontSize: '12px',
-                fontFamily: 'Courier New',
-                color: reelSectionActive ? '#00ffff' : '#ffaa00',
-                fontStyle: 'bold'
-            });
-            reelHeaderText.setDepth(2001);
-            this.time.delayedCall(16, () => reelHeaderText.destroy());
-
-            this.tackleBoxGear.reelTypes.forEach((reel, index) => {
-                const itemY = reelSectionY + 25 + index * 30;
-                const isSelected = index === this.tackleBoxSelected.reel;
-                const isCurrent = this.reelModel.reelType === reel.value;
-
-                const labelText = this.add.text(contentX + 10, itemY, reel.label, {
+                const labelText = this.add.text(contentX + 10, itemY, line.label, {
                     fontSize: isSelected ? '15px' : '13px',
                     fontFamily: 'Courier New',
                     color: isSelected ? '#00ffff' : '#00ff00',
@@ -1437,7 +1394,7 @@ export class GameScene extends Phaser.Scene {
                 labelText.setDepth(2001);
                 this.time.delayedCall(16, () => labelText.destroy());
 
-                const descText = this.add.text(contentX + 160, itemY, reel.desc, {
+                const descText = this.add.text(contentX + 160, itemY, line.desc, {
                     fontSize: '11px',
                     fontFamily: 'Courier New',
                     color: isSelected ? '#cccccc' : '#888888'
@@ -1457,8 +1414,8 @@ export class GameScene extends Phaser.Scene {
             });
 
             // Line Test Strength Section
-            const lineTestSectionY = contentY + 100;
-            const lineTestSectionActive = this.reelTabFocus === 1;
+            const lineTestSectionY = contentY + 120;
+            const lineTestSectionActive = this.lineTabFocus === 1;
             const lineTestHeaderText = this.add.text(contentX, lineTestSectionY, lineTestSectionActive ? '→ LINE TEST STRENGTH:' : 'LINE TEST STRENGTH:', {
                 fontSize: '12px',
                 fontFamily: 'Courier New',
@@ -1500,11 +1457,54 @@ export class GameScene extends Phaser.Scene {
                     this.time.delayedCall(16, () => currentText.destroy());
                 }
             });
+        } else if (this.tackleBoxTab === 2) {
+            // REEL tab - just reel type selection
+            const titleText = this.add.text(panelX + panelWidth / 2, contentY - 20, 'SELECT REEL TYPE', {
+                fontSize: '14px',
+                fontFamily: 'Courier New',
+                color: '#cccccc'
+            });
+            titleText.setOrigin(0.5, 0.5);
+            titleText.setDepth(2001);
+            this.time.delayedCall(16, () => titleText.destroy());
+
+            this.tackleBoxGear.reelTypes.forEach((reel, index) => {
+                const itemY = contentY + index * 40;
+                const isSelected = index === this.tackleBoxSelected.reel;
+                const isCurrent = this.reelModel.reelType === reel.value;
+
+                const labelText = this.add.text(contentX, itemY, reel.label, {
+                    fontSize: isSelected ? '16px' : '14px',
+                    fontFamily: 'Courier New',
+                    color: isSelected ? '#00ffff' : '#00ff00',
+                    fontStyle: isSelected ? 'bold' : 'normal'
+                });
+                labelText.setDepth(2001);
+                this.time.delayedCall(16, () => labelText.destroy());
+
+                const descText = this.add.text(contentX + 150, itemY, reel.desc, {
+                    fontSize: '12px',
+                    fontFamily: 'Courier New',
+                    color: isSelected ? '#cccccc' : '#888888'
+                });
+                descText.setDepth(2001);
+                this.time.delayedCall(16, () => descText.destroy());
+
+                if (isCurrent) {
+                    const currentText = this.add.text(contentX + 450, itemY, '← CURRENT', {
+                        fontSize: '12px',
+                        fontFamily: 'Courier New',
+                        color: '#ffff00'
+                    });
+                    currentText.setDepth(2001);
+                    this.time.delayedCall(16, () => currentText.destroy());
+                }
+            });
         }
 
-        // Instructions - different for reel tab
+        // Instructions - different for line tab
         let hintMessage = 'Arrow Keys: Navigate | X: Select | TAB/Select: Close';
-        if (this.tackleBoxTab === 2) {
+        if (this.tackleBoxTab === 1) {
             hintMessage = 'L/R: Switch Section | Up/Down: Navigate | X: Select | TAB: Close';
         }
         const hintText = this.add.text(panelX + panelWidth / 2, panelY + panelHeight - 20, hintMessage, {

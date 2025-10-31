@@ -139,7 +139,7 @@ export class SonarDisplay {
         this.drawBackgroundGradient();
 
         // Draw depth zones (visual indicators)
-        this.drawDepthZones();
+        // this.drawDepthZones(); // Hidden for cleaner display
 
         // Draw depth grid
         this.drawDepthGrid();

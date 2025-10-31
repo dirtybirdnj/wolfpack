@@ -36,7 +36,7 @@ export class ReelModel {
                 gearRatio: 6.2,           // High speed retrieve
                 dragPrecision: 0.95,      // Very precise drag control
                 backlashRisk: 0.15,       // 15% chance of backlash if misused
-                maxDragLimit: 25,         // Can handle bigger fish
+                maxDragLimit: 40,         // Can handle bigger fish (increased from 25)
                 lineCapacity: 300,        // feet (100 yards)
                 description: 'High performance - precise drag, fast retrieve, backlash risk'
             },
@@ -44,7 +44,7 @@ export class ReelModel {
                 gearRatio: 5.2,           // Slower, steadier retrieve
                 dragPrecision: 0.85,      // Less precise but more forgiving
                 backlashRisk: 0.0,        // No backlash
-                maxDragLimit: 18,         // Lower max drag
+                maxDragLimit: 30,         // Lower max drag (increased from 18)
                 lineCapacity: 250,        // feet (83 yards)
                 description: 'Beginner-friendly - forgiving drag, no backlash'
             }

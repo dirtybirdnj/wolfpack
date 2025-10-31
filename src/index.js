@@ -193,11 +193,9 @@ function setupDevTools(game) {
                 // Game info panel
                 const uiDepth = document.getElementById('ui-depth');
                 const uiState = document.getElementById('ui-lure-state');
-                const uiSpeed = document.getElementById('ui-speed');
 
                 if (uiDepth) uiDepth.textContent = lureInfo.depth;
                 if (uiState) uiState.textContent = lureInfo.state;
-                if (uiSpeed) uiSpeed.textContent = lureInfo.retrieveSpeed || '2.0';
 
                 // Update zone color
                 const depth = parseFloat(lureInfo.depth);
@@ -273,6 +271,26 @@ function setupDevTools(game) {
                     // Update percentage text
                     dragSettingPercent.textContent = dragPercent;
                 }
+            }
+
+            // Listen for tension updates from FishFight
+            if (gameScene && !gameScene._tensionListenerAdded) {
+                gameScene._tensionListenerAdded = true;
+                gameScene.events.on('updateLineTension', (tensionValue) => {
+                    const tensionFill = document.getElementById('tension-fill');
+                    const tensionPercent = document.getElementById('tension-percent');
+
+                    if (tensionFill && tensionPercent) {
+                        // Calculate percentage (tension is 0-100 scale, where 100 = MAX_LINE_TENSION)
+                        const tensionPercentValue = Math.round(tensionValue);
+
+                        // Update bar width
+                        tensionFill.style.width = `${tensionPercentValue}%`;
+
+                        // Update percentage text
+                        tensionPercent.textContent = tensionPercentValue;
+                    }
+                });
             }
 
             // Time - show countdown for arcade, count up for unlimited

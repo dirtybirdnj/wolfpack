@@ -42,6 +42,8 @@ export class InputSystem {
         this.rKey = this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.R);
         this.escKey = this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ESC);
         this.pKey = this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.P);
+        this.qKey = this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.Q); // Decrease drag
+        this.eKey = this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.E); // Increase drag
 
         // Mouse/touch controls (optional enhancement)
         this.scene.input.on('pointerdown', (pointer) => {
@@ -152,6 +154,21 @@ export class InputSystem {
         if (Phaser.Input.Keyboard.JustDown(this.rKey)) {
             this.scene.lure.reset();
         }
+
+        // Drag adjustment with Q/E keys
+        if (this.scene.reelModel) {
+            // Q key - decrease drag
+            if (Phaser.Input.Keyboard.JustDown(this.qKey)) {
+                this.scene.reelModel.adjustDrag(-10);
+                console.log(`Drag decreased to ${this.scene.reelModel.dragSetting}% (${this.scene.reelModel.getCurrentDragForce().toFixed(1)} lbs)`);
+            }
+
+            // E key - increase drag
+            if (Phaser.Input.Keyboard.JustDown(this.eKey)) {
+                this.scene.reelModel.adjustDrag(+10);
+                console.log(`Drag increased to ${this.scene.reelModel.dragSetting}% (${this.scene.reelModel.getCurrentDragForce().toFixed(1)} lbs)`);
+            }
+        }
     }
 
     /**
@@ -257,22 +274,56 @@ export class InputSystem {
     }
 
     /**
-     * Handle fish fight input (spacebar or R2 rapid tapping)
+     * Handle fish fight input (spacebar or R2 rapid tapping, plus drag adjustment)
      * @returns {boolean} True if reel input was pressed this frame
      */
     handleFishFightInput() {
         const spacePressed = Phaser.Input.Keyboard.JustDown(this.spaceKey);
 
+        // Handle drag adjustment with Q/E keys during fight
+        if (this.scene.reelModel) {
+            // Q key - decrease drag
+            if (Phaser.Input.Keyboard.JustDown(this.qKey)) {
+                this.scene.reelModel.adjustDrag(-10);
+                console.log(`Drag decreased to ${this.scene.reelModel.dragSetting}% (${this.scene.reelModel.getCurrentDragForce().toFixed(1)} lbs)`);
+            }
+
+            // E key - increase drag
+            if (Phaser.Input.Keyboard.JustDown(this.eKey)) {
+                this.scene.reelModel.adjustDrag(+10);
+                console.log(`Drag increased to ${this.scene.reelModel.dragSetting}% (${this.scene.reelModel.getCurrentDragForce().toFixed(1)} lbs)`);
+            }
+        }
+
         // Check R2 trigger for gamepad (rapid tapping) using native API
         let r2Pressed = false;
         if (window.gamepadManager && window.gamepadManager.isConnected()) {
             const r2Button = window.gamepadManager.getButton('R2');
+            const l1Button = window.gamepadManager.getButton('L1');
+            const r1Button = window.gamepadManager.getButton('R1');
             const currentTime = this.scene.time.now;
 
             // Trigger pressed (value > 0.5 threshold) and enough time has passed
             if (r2Button.value > 0.5 && currentTime - this.gamepadState.lastR2Press >= this.gamepadState.r2MinInterval) {
                 r2Pressed = true;
                 this.gamepadState.lastR2Press = currentTime;
+            }
+
+            // Handle drag adjustment with L1/R1 bumpers during fight
+            if (this.scene.reelModel) {
+                // L1 pressed - decrease drag
+                if (l1Button.pressed && !this.gamepadState.lastL1) {
+                    this.scene.reelModel.adjustDrag(-10);
+                    console.log(`🎮 Drag decreased to ${this.scene.reelModel.dragSetting}% (${this.scene.reelModel.getCurrentDragForce().toFixed(1)} lbs)`);
+                }
+                this.gamepadState.lastL1 = l1Button.pressed;
+
+                // R1 pressed - increase drag
+                if (r1Button.pressed && !this.gamepadState.lastR1) {
+                    this.scene.reelModel.adjustDrag(+10);
+                    console.log(`🎮 Drag increased to ${this.scene.reelModel.dragSetting}% (${this.scene.reelModel.getCurrentDragForce().toFixed(1)} lbs)`);
+                }
+                this.gamepadState.lastR1 = r1Button.pressed;
             }
         }
 
