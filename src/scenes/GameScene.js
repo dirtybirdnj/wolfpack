@@ -15,7 +15,6 @@ import SpawningSystem from './systems/SpawningSystem.js';
 import InputSystem from './systems/InputSystem.js';
 import CollisionSystem from './systems/CollisionSystem.js';
 import DebugSystem from './systems/DebugSystem.js';
-import ScoreSystem from './systems/ScoreSystem.js';
 import NotificationSystem from './systems/NotificationSystem.js';
 
 /**
@@ -27,7 +26,6 @@ import NotificationSystem from './systems/NotificationSystem.js';
  * - InputSystem: Keyboard and gamepad handling
  * - CollisionSystem: Collision detection and interactions
  * - DebugSystem: Debug visualization
- * - ScoreSystem: Score tracking and achievements
  * - NotificationSystem: In-game messages and overlays
  *
  * @module scenes/GameScene
@@ -35,7 +33,6 @@ import NotificationSystem from './systems/NotificationSystem.js';
  * COMMON TASKS:
  * - Modify fish spawning → src/scenes/systems/SpawningSystem.js
  * - Change controls → src/scenes/systems/InputSystem.js
- * - Add achievements → src/scenes/systems/ScoreSystem.js
  * - Adjust debug display → src/scenes/systems/DebugSystem.js
  */
 export class GameScene extends Phaser.Scene {
@@ -49,7 +46,6 @@ export class GameScene extends Phaser.Scene {
         this.crayfish = [];
 
         // Game state
-        this.score = 0;
         this.fishCaught = 0;
         this.fishLost = 0;
         this.gameTime = 0;
@@ -88,7 +84,6 @@ export class GameScene extends Phaser.Scene {
         this.inputSystem = null;
         this.collisionSystem = null;
         this.debugSystem = null;
-        this.scoreSystem = null;
         this.notificationSystem = null;
 
         // Tackle box state
@@ -293,7 +288,6 @@ export class GameScene extends Phaser.Scene {
         this.inputSystem = new InputSystem(this);
         this.collisionSystem = new CollisionSystem(this);
         this.debugSystem = new DebugSystem(this);
-        this.scoreSystem = new ScoreSystem(this);
         this.notificationSystem = new NotificationSystem(this);
 
         console.log('All game systems initialized');
@@ -473,7 +467,6 @@ export class GameScene extends Phaser.Scene {
         this.spawningSystem.update(time, delta);
         this.collisionSystem.update(time, delta);
         this.debugSystem.update(time, delta);
-        this.scoreSystem.update(time, delta);
 
         // Check for emergency fish spawn (arcade mode)
         this.spawningSystem.checkEmergencySpawn();
@@ -1565,9 +1558,6 @@ export class GameScene extends Phaser.Scene {
         }
         if (this.debugSystem) {
             this.debugSystem.destroy();
-        }
-        if (this.scoreSystem) {
-            this.scoreSystem.destroy();
         }
         if (this.notificationSystem) {
             this.notificationSystem.destroy();

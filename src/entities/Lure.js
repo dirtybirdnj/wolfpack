@@ -128,10 +128,12 @@ export class Lure {
         const bottomDepth = this.scene.maxDepth || GameConfig.MAX_DEPTH;
 
         // Stop lure at actual lake bottom (reuse depthScale from above)
-        const bottomY = bottomDepth * depthScale;
+        // Add small offset so lure appears to rest on the ground visually
+        const BOTTOM_OFFSET_PX = 12; // Allow lure to sink 12px into lake bottom visual area
+        const bottomY = bottomDepth * depthScale + BOTTOM_OFFSET_PX;
         if (this.y >= bottomY) {
             this.y = bottomY;
-            this.depth = bottomDepth;
+            this.depth = bottomDepth; // Keep logical depth at actual bottom
             this.velocity = 0;
             this.state = Constants.LURE_STATE.IDLE;
         }

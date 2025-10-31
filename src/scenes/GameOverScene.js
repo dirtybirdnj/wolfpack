@@ -32,7 +32,6 @@ export class GameOverScene extends Phaser.Scene {
 
         // Get game data from registry
         const gameMode = this.registry.get('gameMode');
-        const finalScore = this.registry.get('finalScore') || 0;
         const fishCaught = this.registry.get('finalFishCaught') || 0;
         const fishLost = this.registry.get('finalFishLost') || 0;
         const gameTime = this.registry.get('finalGameTime') || 0;
@@ -73,7 +72,6 @@ export class GameOverScene extends Phaser.Scene {
         }).setOrigin(0.5);
 
         const stats = [
-            `Score: ${finalScore} points`,
             `Fish Caught: ${fishCaught}`,
             `Fish Lost: ${fishLost}`,
             `Time: ${timeStr}`
