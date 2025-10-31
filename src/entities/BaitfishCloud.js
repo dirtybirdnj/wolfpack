@@ -191,15 +191,7 @@ export class BaitfishCloud {
         }
 
         // Get lake bottom depth at cloud's current world position
-        let bottomDepth = this.scene.maxDepth || GameConfig.MAX_DEPTH;
-        if (this.scene.iceHoleManager) {
-            // For ice fishing, use hole manager's depth calculation
-            bottomDepth = this.scene.iceHoleManager.getDepthAtPosition(this.centerX);
-        } else {
-            // Nature simulation mode - bottom profile is drawn at maxDepth - 5 feet (deepest point)
-            // Subtract 5 to match the visual bottom profile from SonarDisplay.generateBottomProfile()
-            bottomDepth = (this.scene.maxDepth || GameConfig.MAX_DEPTH) - 5;
-        }
+        const bottomDepth = this.scene.maxDepth || GameConfig.MAX_DEPTH;
 
         // Keep cloud in vertical bounds based on water depth
         // Allow baitfish clouds near surface but not at absolute top (prevents sticking at Y=0)
@@ -208,16 +200,9 @@ export class BaitfishCloud {
         this.centerY = Math.max(minY, Math.min(maxY, this.centerY));
 
         // Convert world position to screen position based on player position
-        // In nature simulation mode, use worldX directly as screen X
-        if (this.scene.iceHoleManager) {
-            const currentHole = this.scene.iceHoleManager.getCurrentHole();
-            const playerWorldX = currentHole ? currentHole.x : this.worldX;
-            const offsetFromPlayer = this.worldX - playerWorldX;
-            this.centerX = (GameConfig.CANVAS_WIDTH / 2) + offsetFromPlayer;
-        } else {
-            // Nature simulation mode - use worldX directly as screen X (no player to offset from)
-            this.centerX = this.worldX;
-        }
+        const playerWorldX = GameConfig.CANVAS_WIDTH / 2;
+        const offsetFromPlayer = this.worldX - playerWorldX;
+        this.centerX = (GameConfig.CANVAS_WIDTH / 2) + offsetFromPlayer;
 
         // Update all baitfish in the cloud
         this.baitfish = this.baitfish.filter(baitfish => {
@@ -354,14 +339,7 @@ export class BaitfishCloud {
 
     isOffScreen() {
         // Check if cloud is too far from player in world coordinates
-        let playerWorldX;
-        if (this.scene.iceHoleManager) {
-            const currentHole = this.scene.iceHoleManager.getCurrentHole();
-            playerWorldX = currentHole ? currentHole.x : 0;
-        } else {
-            return false;
-        }
-
+        const playerWorldX = GameConfig.CANVAS_WIDTH / 2;
         const distanceFromPlayer = Math.abs(this.worldX - playerWorldX);
         return distanceFromPlayer > 600;
     }

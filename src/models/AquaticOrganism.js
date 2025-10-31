@@ -44,34 +44,21 @@ export class AquaticOrganism {
 
     /**
      * Update screen position based on player position
-     * (different for ice fishing vs boat fishing vs nature mode)
+     * Player is always at center of screen
      */
     updateScreenPosition() {
-        if (this.scene.iceHoleManager) {
-            const currentHole = this.scene.iceHoleManager.getCurrentHole();
-            const playerWorldX = currentHole ? currentHole.x : this.worldX;
-            const offsetFromPlayer = this.worldX - playerWorldX;
-            this.x = (GameConfig.CANVAS_WIDTH / 2) + offsetFromPlayer;
-        } else {
-            // Nature simulation mode - use worldX directly as screen X (no player to offset from)
-            this.x = this.worldX;
-        }
+        // Player position is center of screen
+        const playerWorldX = GameConfig.CANVAS_WIDTH / 2;
+        const offsetFromPlayer = this.worldX - playerWorldX;
+        this.x = (GameConfig.CANVAS_WIDTH / 2) + offsetFromPlayer;
     }
 
     /**
      * Get lake bottom depth at organism's current world position
      */
     getBottomDepthAtPosition() {
-        let bottomDepth = this.scene.maxDepth || GameConfig.MAX_DEPTH;
-
-        if (this.scene.iceHoleManager) {
-            // For ice fishing, use the hole manager's depth calculation
-            bottomDepth = this.scene.iceHoleManager.getDepthAtPosition(this.x);
-        } else {
-            // Nature simulation mode - bottom profile is drawn at maxDepth - 5 feet
-            bottomDepth = (this.scene.maxDepth || GameConfig.MAX_DEPTH) - 5;
-        }
-
+        // Use maxDepth from scene
+        const bottomDepth = this.scene.maxDepth || GameConfig.MAX_DEPTH;
         return bottomDepth;
     }
 
@@ -79,15 +66,10 @@ export class AquaticOrganism {
      * Check if organism is too far from player (for culling)
      */
     isTooFarFromPlayer(maxDistance = 600) {
-        if (this.scene.iceHoleManager) {
-            const currentHole = this.scene.iceHoleManager.getCurrentHole();
-            const playerWorldX = currentHole ? currentHole.x : this.worldX;
-            const distanceFromPlayer = Math.abs(this.worldX - playerWorldX);
-            return distanceFromPlayer > maxDistance;
-        } else {
-            // Nature simulation mode - check if off screen
-            return this.worldX < -400 || this.worldX > GameConfig.CANVAS_WIDTH + 400;
-        }
+        // Player is at center of screen
+        const playerWorldX = GameConfig.CANVAS_WIDTH / 2;
+        const distanceFromPlayer = Math.abs(this.worldX - playerWorldX);
+        return distanceFromPlayer > maxDistance;
     }
 
     /**

@@ -87,15 +87,8 @@ export class SpawningSystem {
         let playerWorldX;
         let isNatureSimulation = false;
 
-        if (this.scene.iceHoleManager) {
-            const currentHole = this.scene.iceHoleManager.getCurrentHole();
-            if (!currentHole) return null;
-            playerWorldX = currentHole.x;
-        } else {
-            // Nature simulation mode - spawn randomly across the screen
-            isNatureSimulation = true;
-            playerWorldX = GameConfig.CANVAS_WIDTH / 2;
-        }
+        // Always use center of screen as player position
+        playerWorldX = GameConfig.CANVAS_WIDTH / 2;
 
         // Select species based on Lake Champlain distribution
         // Lake Trout: 50%, Northern Pike: 25%, Smallmouth Bass: 25%
@@ -294,13 +287,8 @@ export class SpawningSystem {
         let playerWorldX;
         let isNatureSimulation = false;
 
-        if (this.scene.iceHoleManager) {
-            const currentHole = this.scene.iceHoleManager.getCurrentHole();
-            playerWorldX = currentHole ? currentHole.x : 0;
-        } else {
-            isNatureSimulation = true;
-            playerWorldX = GameConfig.CANVAS_WIDTH / 2;
-        }
+        // Always use center of screen as player position
+        playerWorldX = GameConfig.CANVAS_WIDTH / 2;
 
         // Spawn in world coordinates at a distance from player (200-400 units away)
         // In nature simulation mode, spawn randomly across screen
@@ -360,13 +348,8 @@ export class SpawningSystem {
         let playerWorldX;
         let isNatureSimulation = false;
 
-        if (this.scene.iceHoleManager) {
-            const currentHole = this.scene.iceHoleManager.getCurrentHole();
-            playerWorldX = currentHole ? currentHole.x : 0;
-        } else {
-            isNatureSimulation = true;
-            playerWorldX = GameConfig.CANVAS_WIDTH / 2;
-        }
+        // Always use center of screen as player position
+        playerWorldX = GameConfig.CANVAS_WIDTH / 2;
 
         // Spawn 2-4 zooplankton at a time (increased from 1-3)
         const spawnCount = Math.floor(Utils.randomBetween(2, 4));
@@ -451,13 +434,8 @@ export class SpawningSystem {
         let playerWorldX;
         let isNatureSimulation = false;
 
-        if (this.scene.iceHoleManager) {
-            const currentHole = this.scene.iceHoleManager.getCurrentHole();
-            playerWorldX = currentHole ? currentHole.x : 0;
-        } else {
-            isNatureSimulation = true;
-            playerWorldX = GameConfig.CANVAS_WIDTH / 2;
-        }
+        // Always use center of screen as player position
+        playerWorldX = GameConfig.CANVAS_WIDTH / 2;
 
         // Random horizontal position
         let worldX;
@@ -499,15 +477,8 @@ export class SpawningSystem {
         let playerWorldX;
         let isNatureSimulation = false;
 
-        if (this.scene.iceHoleManager) {
-            const currentHole = this.scene.iceHoleManager.getCurrentHole();
-            if (!currentHole) return null;
-            playerWorldX = currentHole.x;
-        } else {
-            // Nature simulation mode - spawn randomly across the screen
-            isNatureSimulation = true;
-            playerWorldX = GameConfig.CANVAS_WIDTH / 2;
-        }
+        // Always use center of screen as player position
+        playerWorldX = GameConfig.CANVAS_WIDTH / 2;
 
         // Spawn from random side using world coordinates
         const fromLeft = Math.random() < 0.5;

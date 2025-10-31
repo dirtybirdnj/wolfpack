@@ -51,7 +51,7 @@ export class FishingLine {
         }
     }
 
-    update(lure, hookedFish = null, manager = null) {
+    update(lure, hookedFish = null) {
         this.graphics.clear();
 
         // Get line start position (always center of screen when fishing)

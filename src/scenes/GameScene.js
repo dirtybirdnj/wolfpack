@@ -6,7 +6,6 @@ import Fish from '../entities/Fish.js';
 import BaitfishCloud from '../entities/BaitfishCloud.js';
 import Crayfish from '../entities/Crayfish.js';
 import FishFight from '../entities/FishFight.js';
-import IceHoleManager from '../managers/IceHoleManager.js';
 import FishingLine from '../entities/FishingLine.js';
 import { FishingLineModel } from '../models/FishingLineModel.js';
 import { ReelModel } from '../models/ReelModel.js';
@@ -163,8 +162,8 @@ export class GameScene extends Phaser.Scene {
                 this.gameTime = 0;
             }
 
-            // Set up appropriate manager based on fishing type
-            this.initializeManagers();
+            // Hide unnecessary UI panels
+            this.hideUnusedPanels();
 
             // Set up the sonar display
             this.sonarDisplay = new SonarDisplay(this, this.fishingType);
@@ -265,18 +264,15 @@ export class GameScene extends Phaser.Scene {
     }
 
     /**
-     * Initialize location managers (ice hole only)
+     * Hide unused UI panels
      */
-    initializeManagers() {
-        // Only ice fishing is supported now
-        this.iceHoleManager = new IceHoleManager(this);
-
-        // Show ice drill UI only
+    hideUnusedPanels() {
+        // Hide all movement-related UI panels
         const iceDrillPanel = document.getElementById('ice-drill-panel');
         const kayakPanel = document.getElementById('kayak-tiredness-panel');
         const boatPanel = document.getElementById('motorboat-gas-panel');
 
-        if (iceDrillPanel) {iceDrillPanel.style.display = 'block';}
+        if (iceDrillPanel) {iceDrillPanel.style.display = 'none';}
         if (kayakPanel) {kayakPanel.style.display = 'none';}
         if (boatPanel) {boatPanel.style.display = 'none';}
     }
@@ -446,9 +442,6 @@ export class GameScene extends Phaser.Scene {
             // Don't return - let entities continue to update during fight
         }
 
-        // Update managers
-        this.updateManagers();
-
         // Update sonar display
         this.sonarDisplay.update();
 
@@ -468,7 +461,7 @@ export class GameScene extends Phaser.Scene {
 
         // Update fishing line
         const hookedFish = this.currentFight && this.currentFight.active ? this.currentFight.fish : null;
-        this.fishingLine.update(this.lure, hookedFish, this.iceHoleManager);
+        this.fishingLine.update(this.lure, hookedFish);
 
         // Continuously update lure info in UI
         this.updateSpeedDisplay();
@@ -486,14 +479,6 @@ export class GameScene extends Phaser.Scene {
         this.spawningSystem.checkEmergencySpawn();
     }
 
-    /**
-     * Update ice hole manager
-     */
-    updateManagers() {
-        if (this.iceHoleManager) {
-            this.iceHoleManager.update();
-        }
-    }
 
     /**
      * Wrapper for debug panel - delegates to SpawningSystem
@@ -510,12 +495,8 @@ export class GameScene extends Phaser.Scene {
     spawnFishWhistleFish() {
         console.log('🎵 Fish whistle: Spawning trophy fish and large bait clouds...');
 
-        // Get player position from ice hole
-        if (!this.iceHoleManager) {return;}
-
-        const currentHole = this.iceHoleManager.getCurrentHole();
-        if (!currentHole) {return;}
-        const playerWorldX = currentHole.x;
+        // Use center of screen as player position
+        const playerWorldX = GameConfig.CANVAS_WIDTH / 2;
 
         // Spawn 1 trophy fish of each species
         const species = ['yellow_perch', 'lake_trout', 'northern_pike', 'smallmouth_bass'];
@@ -1571,11 +1552,6 @@ export class GameScene extends Phaser.Scene {
         this.lure.destroy();
         this.fishingLine.destroy();
         this.sonarDisplay.destroy();
-
-        // Clean up managers
-        if (this.iceHoleManager) {
-            this.iceHoleManager.destroy();
-        }
 
         // Clean up systems
         if (this.spawningSystem) {
