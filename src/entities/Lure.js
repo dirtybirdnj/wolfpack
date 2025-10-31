@@ -124,12 +124,8 @@ export class Lure {
             this.state = Constants.LURE_STATE.SURFACE;
         }
 
-        // Get actual bottom depth from bathymetric data based on fishing type
-        let bottomDepth = GameConfig.MAX_DEPTH; // Default fallback
-        if (this.scene.iceHoleManager) {
-            // Ice fishing mode: use hole manager's depth calculation
-            bottomDepth = this.scene.iceHoleManager.getDepthAtPosition(this.x);
-        }
+        // Get actual bottom depth (use maxDepth from scene)
+        const bottomDepth = this.scene.maxDepth || GameConfig.MAX_DEPTH;
 
         // Stop lure at actual lake bottom (reuse depthScale from above)
         // Add small offset so lure appears to rest on the ground visually

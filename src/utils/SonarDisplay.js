@@ -57,17 +57,10 @@ export class SonarDisplay {
 
     getActualMaxDepth() {
         /**
-         * Get the actual maximum depth based on current ice hole
+         * Get the actual maximum depth based on current location
          * @returns {number} Maximum depth in feet
          */
-        if (this.scene.iceHoleManager) {
-            // Ice fishing mode: get depth from current hole
-            const currentHole = this.scene.iceHoleManager.getCurrentHole();
-            if (currentHole) {
-                return currentHole.depth;
-            }
-        }
-        return GameConfig.MAX_DEPTH; // Fallback
+        return this.scene.maxDepth || GameConfig.MAX_DEPTH;
     }
 
     getDepthScale() {

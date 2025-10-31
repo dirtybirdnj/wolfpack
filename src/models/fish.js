@@ -224,18 +224,9 @@ export class Fish extends AquaticOrganism {
             this.y += movement.y;
             this.depth = this.y / depthScale;
 
-            // Get player's world position (or use nature simulation mode)
-            let playerWorldX;
+            // Get player's world position (center of screen)
+            let playerWorldX = GameConfig.CANVAS_WIDTH / 2;
             let isNatureSimulation = false;
-
-            if (this.scene.iceHoleManager) {
-                const currentHole = this.scene.iceHoleManager.getCurrentHole();
-                playerWorldX = currentHole ? currentHole.x : this.worldX;
-            } else {
-                // Nature simulation mode - no player to track
-                isNatureSimulation = true;
-                playerWorldX = GameConfig.CANVAS_WIDTH / 2;
-            }
 
             // Check if fish has swum too far from player - mark for removal if so
             if (isNatureSimulation) {
@@ -254,12 +245,8 @@ export class Fish extends AquaticOrganism {
                 }
             }
 
-            // Get lake bottom depth at fish's current position
+            // Get lake bottom depth (use maxDepth from scene)
             let bottomDepth = this.scene.maxDepth || GameConfig.MAX_DEPTH;
-            if (this.scene.iceHoleManager) {
-                // Use ice hole manager's depth calculation
-                bottomDepth = this.scene.iceHoleManager.getDepthAtPosition(this.x);
-            }
 
             // Keep fish above lake bottom (with 5 feet buffer)
             // Allow fish to swim all the way to surface (y=0) now that ice rendering is removed

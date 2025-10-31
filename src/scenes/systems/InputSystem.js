@@ -184,42 +184,7 @@ export class InputSystem {
         const leftStickX = window.gamepadManager.getAxis(0); // Left stick X
         const leftStickY = window.gamepadManager.getAxis(1); // Left stick Y
 
-        // === ICE HOLE MOVEMENT MODE (Ice fishing only) ===
-        if (this.scene.iceHoleManager) {
-            // Triangle/Y button: Toggle movement mode (walk on ice)
-            if (yBtn.pressed && !this.gamepadState.lastY) {
-                if (this.scene.iceHoleManager.movementMode) {
-                    this.scene.iceHoleManager.exitMovementMode();
-                } else {
-                    this.scene.iceHoleManager.enterMovementMode();
-                }
-            }
-            this.gamepadState.lastY = yBtn.pressed;
-
-            // If in movement mode, different controls apply
-            if (this.scene.iceHoleManager.movementMode) {
-                // L/R movement on ice surface - slower, more sensitive
-                // Controls are inverted: left button moves holes left (player moves right in world)
-                const moveSpeed = 2;
-                if (dpadLeftBtn.pressed || leftStickX < -DEAD_ZONE) {
-                    this.scene.iceHoleManager.movePlayer(moveSpeed); // Move player right, holes appear to move left
-                }
-                if (dpadRightBtn.pressed || leftStickX > DEAD_ZONE) {
-                    this.scene.iceHoleManager.movePlayer(-moveSpeed); // Move player left, holes appear to move right
-                }
-
-                // Square/X button: Drill new hole
-                if (xBtn.pressed && !this.gamepadState.lastX) {
-                    this.scene.iceHoleManager.drillNewHole();
-                }
-                this.gamepadState.lastX = xBtn.pressed;
-
-                // Exit early - don't process fishing controls
-                return;
-            }
-        }
-
-        // === FISHING MODE (ice fishing only) ===
+        // === FISHING MODE ===
 
         // === RIGHT TRIGGER (R2): VARIABLE SPEED REELING ===
         // R2 trigger controls reel speed based on pressure (like a real baitcaster)
