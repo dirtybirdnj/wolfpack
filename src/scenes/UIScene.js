@@ -3,7 +3,6 @@ import GameConfig from '../config/GameConfig.js';
 export class UIScene extends Phaser.Scene {
     constructor() {
         super({ key: 'UIScene' });
-        this.score = 0;
         this.fishCaught = 0;
         this.fishLost = 0;
         this.gameTime = 0;
@@ -21,18 +20,11 @@ export class UIScene extends Phaser.Scene {
         const gameScene = this.scene.get('GameScene');
         if (gameScene) {
             // Events kept for future use if needed
-            gameScene.events.on('updateScore', this.updateScore, this);
             gameScene.events.on('updateLureInfo', this.updateLureInfo, this);
             gameScene.events.on('updateTime', this.updateTime, this);
             gameScene.events.on('updateWaterTemp', this.updateWaterTemp, this);
             gameScene.events.on('updateFishLost', this.updateFishLost, this);
         }
-    }
-    
-    updateScore(data) {
-        // Data stored for compatibility
-        this.score = data.score;
-        this.fishCaught = data.caught;
     }
 
     updateLureInfo(info) {

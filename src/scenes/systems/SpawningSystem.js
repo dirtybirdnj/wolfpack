@@ -471,14 +471,24 @@ export class SpawningSystem {
             worldX = playerWorldX + offsetX;
         }
 
-        // Spawn on the bottom (95-100 feet depth - very bottom)
-        const depth = Utils.randomBetween(95, 100);
+        // Spawn on the actual bottom depth at this position (with small offset to rest on ground)
+        let depth;
+        if (this.scene.iceHoleManager) {
+            // Ice fishing mode: use actual bottom depth at this position
+            depth = this.scene.iceHoleManager.getDepthAtPosition(worldX);
+        } else {
+            // Nature simulation: use max depth
+            depth = this.scene.maxDepth || GameConfig.MAX_DEPTH;
+        }
 
         // Use dynamic depth scale from scene
         const depthScale = this.scene.sonarDisplay ?
             this.scene.sonarDisplay.getDepthScale() :
             GameConfig.DEPTH_SCALE;
-        const y = depth * depthScale;
+
+        // Place crayfish on bottom with same offset as lure uses to appear grounded
+        const BOTTOM_OFFSET_PX = 12;
+        const y = (depth * depthScale) + BOTTOM_OFFSET_PX;
 
         // Create crayfish
         const crayfish = new Crayfish(this.scene, worldX, y);

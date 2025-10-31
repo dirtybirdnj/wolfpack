@@ -30,7 +30,6 @@ wolfpack/
 │   │       ├── InputSystem.js       # Keyboard/gamepad (447 lines)
 │   │       ├── CollisionSystem.js   # Cloud split/merge (146 lines)
 │   │       ├── DebugSystem.js       # Debug visualization (200 lines)
-│   │       ├── ScoreSystem.js       # Scoring/achievements (210 lines)
 │   │       └── NotificationSystem.js # Messages/pause menu (847 lines)
 │   ├── entities/
 │   │   ├── Fish.js          # Fish rendering wrapper/factory (252 lines)
@@ -116,7 +115,6 @@ Start → BootScene → MenuScene → NavigationScene → GameScene + UIScene
 - Fish fight mode transitions
 - Collision detection
 - Input handling delegation
-- Score tracking
 - Timer management (arcade mode)
 - Registry data management
 
@@ -130,7 +128,6 @@ Start → BootScene → MenuScene → NavigationScene → GameScene + UIScene
 
 **UIScene** (68 lines)
 - HUD overlay (runs parallel to GameScene)
-- Score and statistics
 - Fish caught/lost count
 - Lure depth and speed
 - Depth zone indicator
@@ -141,7 +138,6 @@ Start → BootScene → MenuScene → NavigationScene → GameScene + UIScene
 - Results summary
 - Fish caught/lost statistics
 - Largest catch highlight
-- Final score display
 - Replay or return to menu
 
 ---
@@ -212,23 +208,6 @@ mergeNearbyClouds(clouds)                 // Combine close clouds
 - FPS and entity count display
 
 **Toggle**: Backtick (`) key or Square/X button
-
-### ScoreSystem (210 lines)
-
-**Responsibilities**:
-- Score accumulation and display
-- Fish caught/lost tracking
-- Achievement checking
-- Arcade timer (2-minute countdown)
-- Game over condition detection
-
-**Key Methods**:
-```javascript
-addScore(points)                          // Add to score
-addFishCaught()                           // Increment caught count
-checkAchievements()                       // Achievement detection
-updateTimer(delta)                        // Arcade timer
-```
 
 ### NotificationSystem (847 lines) - *Largest system*
 
@@ -547,7 +526,6 @@ GameScene.update(time, delta)
   ├─ lure.update()                      // Physics simulation
   ├─ fishingLine.update()               // Line rendering
   ├─ collisionSystem.update()           // Cloud management
-  ├─ scoreSystem.update()               // Timer and achievements
   ├─ notificationSystem.update()        // UI animations
   └─ debugSystem.update()               // Debug visualization
 ```
