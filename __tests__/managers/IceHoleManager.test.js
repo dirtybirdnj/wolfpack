@@ -9,6 +9,18 @@ import { jest } from '@jest/globals';
 import { IceHoleManager } from '../../src/managers/IceHoleManager.js';
 import GameConfig from '../../src/config/GameConfig.js';
 
+// Mock document object for DOM manipulation
+global.document = {
+  getElementById: jest.fn(() => ({
+    textContent: '',
+    style: {},
+    classList: {
+      add: jest.fn(),
+      remove: jest.fn()
+    }
+  }))
+};
+
 // Mock scene object with minimal required properties
 const createMockScene = (options = {}) => {
   return {
