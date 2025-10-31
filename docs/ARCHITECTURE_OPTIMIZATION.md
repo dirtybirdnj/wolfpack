@@ -14,6 +14,142 @@ The Wolfpack fishing simulator has **good foundations** for AI-agent friendly ar
 
 ---
 
+## Architecture Visual Overview
+
+### Current Architecture (Tightly Coupled)
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                    Phaser.Game                          │
+│  ┌───────────────────────────────────────────────────┐  │
+│  │            GameScene (1,608 LOC)                 │  │
+│  │                                                   │  │
+│  │  ┌──────────────────────────────────────────┐   │  │
+│  │  │  SpawningSystem ─── Needs scene          │   │  │
+│  │  │  CollisionSystem ─── Needs scene          │   │  │
+│  │  │  InputSystem ─────── Hardcoded Phaser     │   │  │
+│  │  │  ScoreSystem ─────── Uses scene.time      │   │  │
+│  │  │  NotificationSystem ─ Uses scene.add      │   │  │
+│  │  │  DebugSystem ─────── Heavy rendering      │   │  │
+│  │  │  SonarDisplay ─────── 567 LOC rendering   │   │  │
+│  │  └──────────────────────────────────────────┘   │  │
+│  │                                                   │  │
+│  │  ┌──────────────────────────────────────────┐   │  │
+│  │  │  Entity Layer (Rendering)                │   │  │
+│  │  │                                          │   │  │
+│  │  │  ┌────────────────────────────────────┐ │   │  │
+│  │  │  │ Fish (entity)                      │ │   │  │
+│  │  │  │ ├─ .graphics (scene.add.graphics) │ │   │  │
+│  │  │  │ ├─ .sprite (scene.add.sprite)     │ │   │  │
+│  │  │  │ └─ .model (fish.js)               │ │   │  │
+│  │  │  │    └─ .ai (FishAI)                │ │   │  │
+│  │  │  │       └─ this.fish → scene refs   │ │   │  │
+│  │  │  └────────────────────────────────────┘ │   │  │
+│  │  │                                          │   │  │
+│  │  │  FishingLine, Lure, Baitfish...        │   │  │
+│  │  └──────────────────────────────────────────┘   │  │
+│  │                                                   │  │
+│  │  HTML/DOM Integration                           │  │
+│  │  └─ updateDevTools() (Every 100ms!)            │  │
+│  │     └─ document.getElementById() calls         │  │
+│  │     └─ DOM serialization                       │  │
+│  └───────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────┘
+
+Problem: AI Testing Impossible!
+  X Cannot import GameScene without Phaser
+  X Cannot test FishAI without mocking scene
+  X Cannot run game logic in Node.js
+  X Cannot query game state without DOM
+```
+
+### Target Architecture (Decoupled)
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│                                                                  │
+│  ┌─────────────────────────────────────────┐                    │
+│  │      Core Logic (Game-Agnostic)        │                    │
+│  │      Can run in Node.js, Deno, etc     │                    │
+│  │                                         │                    │
+│  │  ┌──────────────────────────────────┐  │                    │
+│  │  │  GameEngine (NEW)                │  │  ✓ Pure logic      │
+│  │  │  ├─ update(delta)                │  │  ✓ No Phaser       │
+│  │  │  ├─ spawnFish()                  │  │  ✓ Testable        │
+│  │  │  ├─ checkCollisions()            │  │  ✓ Serializable    │
+│  │  │  └─ toJSON()                     │  │                    │
+│  │  └──────────────────────────────────┘  │                    │
+│  │           ↓                              │                    │
+│  │  ┌──────────────────────────────────┐  │                    │
+│  │  │  Systems (Refactored)            │  │                    │
+│  │  │  ├─ SpawningSystem               │  │  ✓ Scene-optional  │
+│  │  │  ├─ CollisionSystem              │  │  ✓ Configurable    │
+│  │  │  ├─ ScoreSystem                  │  │  ✓ Testable        │
+│  │  │  └─ (UI systems lazy-loaded)     │  │                    │
+│  │  └──────────────────────────────────┘  │                    │
+│  │           ↓                              │                    │
+│  │  ┌──────────────────────────────────┐  │                    │
+│  │  │  Logic Layer (NEW)               │  │                    │
+│  │  │  ├─ FishAILogic                  │  │  ✓ Pure decisions  │
+│  │  │  ├─ FightMechanics               │  │  ✓ No graphics     │
+│  │  │  ├─ SpawningLogic                │  │  ✓ Cached/fast     │
+│  │  │  └─ CollisionLogic               │  │                    │
+│  │  └──────────────────────────────────┘  │                    │
+│  │           ↓                              │                    │
+│  │  ┌──────────────────────────────────┐  │                    │
+│  │  │  Config & Models (Already Pure)  │  │                    │
+│  │  │  ├─ GameConfig                   │  │  ✓ Existing        │
+│  │  │  ├─ SpeciesData                  │  │  ✓ Great!          │
+│  │  │  ├─ ReelModel                    │  │                    │
+│  │  │  └─ FishingLineModel             │  │                    │
+│  │  └──────────────────────────────────┘  │                    │
+│  └─────────────────────────────────────────┘                    │
+│                                                                  │
+│  ┌──────────────────────────────────────────┐                   │
+│  │  API Layer (NEW)                        │                   │
+│  │  ├─ GameLogicAPI (stateless)            │  ✓ No state       │
+│  │  ├─ ConfigAPI (REST endpoints)          │  ✓ Queryable      │
+│  │  ├─ ValidationAPI                       │  ✓ Safe           │
+│  │  └─ Exposed via Express/HTTP            │  ✓ Remote access  │
+│  └──────────────────────────────────────────┘                   │
+│                                                                  │
+│  ┌──────────────────────────────────────────┐                   │
+│  │  UI Layer (Phaser-Specific)             │                   │
+│  │  Only for rendering!                    │                   │
+│  │                                          │                   │
+│  │  ┌──────────────────────────────────┐   │                   │
+│  │  │  GameScene (Refactored)          │   │                   │
+│  │  │  ├─ this.engine = GameEngine()   │   │  ✓ Light!         │
+│  │  │  ├─ render(engine.state)         │   │  ✓ 200 LOC        │
+│  │  │  └─ systems.ui ← lazy-load       │   │                   │
+│  │  └──────────────────────────────────┘   │                   │
+│  │           ↓                               │                   │
+│  │  ┌──────────────────────────────────┐   │                   │
+│  │  │  Entity Renderers (Refactored)   │   │                   │
+│  │  │  ├─ FishRenderer                 │   │  ✓ Graphics only  │
+│  │  │  ├─ LureRenderer                 │   │  ✓ From state     │
+│  │  │  ├─ SonarRenderer (lazy-load)    │   │  ✓ Optional       │
+│  │  │  └─ UIRenderer (lazy-load)       │   │                   │
+│  │  └──────────────────────────────────┘   │                   │
+│  │           ↓                               │                   │
+│  │  ┌──────────────────────────────────┐   │                   │
+│  │  │  HTML/DOM (Lightweight)          │   │                   │
+│  │  │  └─ Dirty-flag UI updates        │   │  ✓ Optimized!     │
+│  │  └──────────────────────────────────┘   │                   │
+│  └──────────────────────────────────────────┘                   │
+│                                                                  │
+└──────────────────────────────────────────────────────────────────┘
+
+Result: AI Development Unlocked!
+  ✓ Import GameEngine in Node.js
+  ✓ Test FishAI decisions instantly
+  ✓ Run 10,000 game simulations
+  ✓ Query API endpoints
+  ✓ Train AI agents deterministically
+```
+
+---
+
 ## 1. DECOUPLING OPPORTUNITIES: Game Logic from Rendering
 
 ### 1.1 **CRITICAL: GameScene Orchestration** 

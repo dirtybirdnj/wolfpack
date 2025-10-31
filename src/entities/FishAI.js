@@ -416,7 +416,7 @@ export class FishAI {
                 this.targetY = lure.y;
             } else if (this.fish.engagementState === 'loitering') {
                 // Stop and just look at the lure
-                this.targetX = this.fish.x; // Stay in place
+                this.targetX = this.fish.worldX; // Stay in place
                 this.targetY = this.fish.y;
 
                 // Smallmouth bass: Higher chance to bump while loitering/investigating
@@ -582,15 +582,16 @@ export class FishAI {
 
         // FAST FLEEING - Fish ran out of swipes
         if (this.fish.isFastFleeing) {
-            // Pick direction based on current position - swim off screen
-            const targetOffscreenX = this.fish.x < 400 ? -200 : 1000;
+            // Pick direction based on current world position - swim away from player
+            const playerWorldX = GameConfig.CANVAS_WIDTH / 2;
+            const targetOffscreenX = this.fish.worldX < playerWorldX ? playerWorldX - 500 : playerWorldX + 500;
             this.targetX = targetOffscreenX;
             this.targetY = this.fish.y; // Maintain current depth
 
-            // Check if fish has reached edge and should calm down
-            const distanceFromCenter = Math.abs(this.fish.x - 400);
+            // Check if fish has reached far enough and should calm down
+            const distanceFromPlayer = Math.abs(this.fish.worldX - playerWorldX);
 
-            if (this.fish.hasCalmedDown && distanceFromCenter > 200 && distanceFromCenter < 300) {
+            if (this.fish.hasCalmedDown && distanceFromPlayer > 300 && distanceFromPlayer < 400) {
                 // Fish calms down before exiting
                 console.log(`Fish ${this.fish.name} calmed down and stopped fleeing`);
                 this.fish.isFastFleeing = false;
@@ -602,17 +603,15 @@ export class FishAI {
                 return;
             }
 
-            // If fish reaches edge of play area, mark as invisible
-            if (Math.abs(this.fish.x) > 500 || this.fish.x > GameConfig.CANVAS_WIDTH + 100) {
-                console.log(`Fish ${this.fish.name} exited play area`);
-                this.fish.visible = false;
-                this.fish.isFastFleeing = false;
-            }
+            // Fish will be removed by the fish model when it swims too far (800+ units from player)
+            // No need to check edges here - let the fish model handle removal
             return;
         }
 
         // NORMAL FLEEING - Fish is spooked and swimming away
-        this.targetX = this.fish.x < 400 ? -100 : 900;
+        // Use world position instead of screen position to determine flee direction
+        const playerWorldX = GameConfig.CANVAS_WIDTH / 2;
+        this.targetX = this.fish.worldX < playerWorldX ? playerWorldX - 400 : playerWorldX + 400;
         this.targetY = this.depthPreference * GameConfig.DEPTH_SCALE;
 
         // After fleeing for a while, return to idle
@@ -665,7 +664,8 @@ export class FishAI {
             };
         }
 
-        const dx = this.targetX - this.fish.x;
+        // Use worldX for horizontal movement calculations (not screen x)
+        const dx = this.targetX - this.fish.worldX;
         const dy = this.targetY - this.fish.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
 

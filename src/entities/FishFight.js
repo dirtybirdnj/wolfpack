@@ -55,20 +55,108 @@ export class FishFight {
             this.reelModel.lineOut = initialLineOut;
         }
 
+        // Determine hookset quality based on fish engagement and timing
+        this.hookset = this.determineHooksetQuality();
+
         console.log(`Fish condition - Health: ${this.fish.health.toFixed(0)}%, Hunger: ${this.fish.hunger.toFixed(0)}%, Strength: ${this.fishStrength.toFixed(1)}, Initial Energy: ${this.fishEnergy.toFixed(1)}`);
         if (this.reelModel && this.fishingLine) {
-            console.log(`Reel: ${this.reelModel.getDisplayName()}, Drag: ${this.reelModel.dragSetting}% (${this.reelModel.getCurrentDragForce().toFixed(1)} lbs), Line: ${this.reelModel.lineTestStrength} lb test ${this.fishingLine.getDisplayName()}`);
+            const currentDragForce = this.reelModel.getCurrentDragForce();
+            const optimalMin = this.fish.weight * 0.5;
+            const optimalMax = this.fish.weight * 1.2; // Updated to 120% (sweet spot max)
+
+            console.log(`Reel: ${this.reelModel.getDisplayName()}, Drag: ${this.reelModel.dragSetting}% (${currentDragForce.toFixed(1)} lbs), Line: ${this.reelModel.lineTestStrength} lb test ${this.fishingLine.getDisplayName()}`);
+            console.log(`🎣 DRAG GUIDE: Fish weighs ${this.fish.weight.toFixed(1)} lbs. Optimal drag: ${optimalMin.toFixed(1)}-${optimalMax.toFixed(1)} lbs (${Math.round((optimalMin/this.reelModel.maxDragLimit)*100)}-${Math.round((optimalMax/this.reelModel.maxDragLimit)*100)}%)`);
+            console.log(`🪝 HOOKSET: ${this.hookset.toUpperCase()} - ${this.getHooksetDescription()}`);
         }
 
-
-        // Visual
-        this.tensionBar = scene.add.graphics();
-        this.tensionBar.setDepth(500);
 
         // Attach fish to lure visually
         this.attachFishToLure();
 
         console.log(`Fish fight started! Fish: ${this.fish.weight.toFixed(1)} lbs, Distance: ${this.fishDistance.toFixed(0)}px, State: ${this.fightState}`);
+    }
+
+    /**
+     * Determine hookset quality based on fish engagement and chance
+     * Returns: 'barely', 'bad', 'good', or 'great'
+     */
+    determineHooksetQuality() {
+        // Factors that affect hookset quality:
+        // 1. Fish engagement state (striking = best, fleeing = worst)
+        // 2. Fish hunger (hungry fish commit harder = better hookset)
+        // 3. Random chance
+
+        let hooksetScore = 0;
+
+        // Engagement state bonus (0-40 points)
+        if (this.fish.engagementState === 'striking') {
+            hooksetScore += 40; // Fish committed hard to the strike
+        } else if (this.fish.engagementState === 'waiting' || this.fish.engagementState === 'loitering') {
+            hooksetScore += 30; // Fish was cautious but took it
+        } else if (this.fish.engagementState === 'following') {
+            hooksetScore += 20; // Fish was interested
+        } else {
+            hooksetScore += 10; // Default/fleeing - barely hooked
+        }
+
+        // Hunger bonus (0-30 points) - hungry fish bite harder
+        const hungerFactor = this.fish.hunger / 100; // 0-1
+        hooksetScore += hungerFactor * 30;
+
+        // Random variance (0-30 points) - luck of the hookset
+        hooksetScore += Math.random() * 30;
+
+        // Convert score to quality (0-100 scale)
+        // 0-25: barely
+        // 26-50: bad
+        // 51-75: good
+        // 76-100: great
+        if (hooksetScore < 25) {
+            return 'barely';
+        } else if (hooksetScore < 50) {
+            return 'bad';
+        } else if (hooksetScore < 75) {
+            return 'good';
+        } else {
+            return 'great';
+        }
+    }
+
+    /**
+     * Get description of hookset quality
+     */
+    getHooksetDescription() {
+        switch (this.hookset) {
+            case 'barely':
+                return 'Hook barely caught, high risk of losing fish';
+            case 'bad':
+                return 'Poor hookset, fish may shake loose';
+            case 'good':
+                return 'Solid hookset, normal fight';
+            case 'great':
+                return 'Perfect hookset! Hook is deep and secure';
+            default:
+                return 'Unknown';
+        }
+    }
+
+    /**
+     * Get hookset multiplier for hook spit/pop-off chance
+     * Lower multiplier = less chance of losing fish
+     */
+    getHooksetSecurityMultiplier() {
+        switch (this.hookset) {
+            case 'barely':
+                return 2.5; // 2.5x more likely to pop off
+            case 'bad':
+                return 1.5; // 1.5x more likely to pop off
+            case 'good':
+                return 1.0; // Normal chance
+            case 'great':
+                return 0.3; // 70% less likely to pop off!
+            default:
+                return 1.0;
+        }
     }
 
     update(currentTime, spacePressed) {
@@ -129,8 +217,8 @@ export class FishFight {
         // Update fish position (pulled toward surface, swims down)
         this.updateFishPosition();
 
-        // Render tension bar
-        this.renderTensionBar();
+        // Emit tension update to scene for header display
+        this.scene.events.emit('updateLineTension', this.lineTension);
     }
 
     updateFightState() {
@@ -218,7 +306,18 @@ export class FishFight {
 
         // Higher energy fish more likely to spit hook
         const energyFactor = this.fishEnergy / 100;
-        return baseChance * (0.5 + energyFactor);
+        let finalChance = baseChance * (0.5 + energyFactor);
+
+        // Apply hookset quality modifier - HUGE impact!
+        const hooksetMultiplier = this.getHooksetSecurityMultiplier();
+        finalChance *= hooksetMultiplier;
+
+        // Log for debugging (occasionally)
+        if (Math.random() < 0.1) {
+            console.log(`Hook spit chance: ${(finalChance * 100).toFixed(1)}% (base: ${(baseChance * 100).toFixed(1)}%, hookset: ${this.hookset}, mult: ${hooksetMultiplier.toFixed(1)}x)`);
+        }
+
+        return finalChance;
     }
 
     spitHook() {
@@ -308,32 +407,37 @@ export class FishFight {
         // Fish behavior varies by state
         const energyMultiplier = this.fishEnergy / 100;
 
-        let pullStrength = 0;
+        // NEW: Fish pull force is based directly on fish weight in pounds
+        // This creates realistic drag scenarios
+        const basePullForce = this.fish.weight; // Fish pulls with force proportional to its weight
+
+        // State multipliers determine how hard the fish fights
+        let stateMultiplier = 1.0;
         let swimDownStrength = 0;
 
         switch (this.fightState) {
             case 'hookset':
-                // Initial panic - strong pull and swim down
-                pullStrength = GameConfig.FISH_PULL_BASE * this.fishStrength * 1.5;
+                // Initial panic - fish pulls at 150% of its weight
+                stateMultiplier = 1.5;
                 swimDownStrength = this.fishStrength * 2.0;
                 break;
 
             case 'fighting':
-                // Normal fighting - moderate pull and swim down
-                pullStrength = GameConfig.FISH_PULL_BASE * this.fishStrength * energyMultiplier;
+                // Normal fighting - fish pulls at its body weight
+                stateMultiplier = 1.0;
                 swimDownStrength = this.fishStrength * 1.2 * energyMultiplier;
 
-                // Occasional surges
+                // Occasional surges - fish suddenly pulls harder
                 if (energyMultiplier > 0.5 && Math.random() < 0.03) {
-                    pullStrength *= 1.5;
+                    stateMultiplier = 1.5;
                     swimDownStrength *= 1.5;
                 }
                 break;
 
             case 'thrashing':
-                // Violent thrashing - very strong pull but erratic
+                // Violent thrashing - fish pulls at 200% of its weight!
                 this.thrashDuration--;
-                pullStrength = GameConfig.FISH_PULL_BASE * this.fishStrength * 2.0 * this.thrashIntensity;
+                stateMultiplier = 2.0 * this.thrashIntensity;
                 swimDownStrength = this.fishStrength * 2.5 * this.thrashIntensity;
 
                 // Drain energy faster during thrashing
@@ -342,45 +446,74 @@ export class FishFight {
                 break;
 
             case 'giving_up':
-                // Weak fighting
-                pullStrength = GameConfig.FISH_PULL_BASE * this.fishStrength * 0.3;
+                // Weak fighting - fish only pulls at 30% of its weight
+                stateMultiplier = 0.3;
                 swimDownStrength = this.fishStrength * 0.4;
                 break;
         }
 
-        // Apply pull to line tension - affected by line stretch and shock absorption
-        const shockAbsorption = this.fishingLine ? this.fishingLine.getShockAbsorptionMultiplier() : 0.7;
-        const stretchFactor = this.fishingLine ? this.fishingLine.getStretchFactor() : 0.7;
+        // Energy affects how hard the fish can pull (tired fish pulls less)
+        const fishPullForce = basePullForce * stateMultiplier * energyMultiplier;
 
-        // Higher shock absorption = less tension increase
-        // More stretch = dampens tension spikes
-        const dampeningFactor = shockAbsorption * (2.0 - stretchFactor);
-        // Monofilament (shock=0.9, stretch=0.9): 0.9 * 1.1 = 0.99 (absorbs 99% of shock, transmits 1%)
-        // Braid (shock=0.5, stretch=0.5): 0.5 * 1.5 = 0.75 (transmits 25% more force)
-
-        const tensionIncrease = (pullStrength * 0.1) * (2.0 - dampeningFactor);
-        this.lineTension += tensionIncrease;
-        this.lineTension = Math.min(GameConfig.MAX_LINE_TENSION, this.lineTension);
-
-        // Check if fish pull exceeds drag setting - line slips instead of breaking
+        // REALISTIC DRAG SYSTEM: Check if fish pull exceeds drag setting
         if (this.reelModel) {
-            const currentDragForce = this.reelModel.getCurrentDragForce();
-            const fishPullForce = pullStrength; // Pull strength is already in appropriate scale
+            const currentDragForce = this.reelModel.getCurrentDragForce(); // in pounds
+            const shockAbsorption = this.fishingLine ? this.fishingLine.getShockAbsorptionMultiplier() : 0.7;
+            const stretchFactor = this.fishingLine ? this.fishingLine.getStretchFactor() : 0.7;
 
-            // If fish pull exceeds drag, line slips (fish takes line)
-            if (fishPullForce > currentDragForce && this.reelModel.dragSetting < 100) {
-                const lineSlip = (fishPullForce - currentDragForce) * 0.05; // feet of line going out
+            // If fish pull force exceeds drag force, line slips out (fish takes line)
+            if (fishPullForce > currentDragForce) {
+                // Calculate how much line slips based on excess force
+                const excessForce = fishPullForce - currentDragForce;
+                const forceRatio = excessForce / fishPullForce; // 0 to 1
+
+                // Line slips faster when fish pulls much harder than drag
+                // A 12 lb fish vs 10 lb drag (2 lb excess) = 16.7% slip rate = ~0.08 ft/frame
+                // A 12 lb fish vs 5 lb drag (7 lb excess) = 58% slip rate = ~0.3 ft/frame
+                const lineSlip = forceRatio * 0.5; // feet of line going out per frame
+
                 const spoolEmpty = this.reelModel.addLineOut(lineSlip);
 
                 // If spool empties, line breaks automatically
                 if (spoolEmpty) {
-                    console.log('SPOOL EMPTY! Line capacity exhausted.');
+                    console.log(`SPOOL EMPTY! Line capacity exhausted. Fish pull: ${fishPullForce.toFixed(1)} lbs > Drag: ${currentDragForce.toFixed(1)} lbs`);
                     this.breakLine();
                     return;
                 }
 
-                // Reduce tension when line slips (drag acting as shock absorber)
-                this.lineTension *= 0.95;
+                // When line slips, tension is RELIEVED (drag absorbs the force)
+                // The drag system prevents tension from building when fish pulls
+                this.lineTension *= 0.85; // Significant tension relief
+
+                // Visual feedback - show that line is slipping
+                if (Math.random() < 0.1) { // Occasional console log (10% of frames)
+                    console.log(`Line slipping! Fish: ${fishPullForce.toFixed(1)} lbs > Drag: ${currentDragForce.toFixed(1)} lbs (${lineSlip.toFixed(2)} ft out)`);
+                }
+            } else {
+                // Drag is holding - fish CANNOT pull line out
+                // Proper drag (50-100% of fish pull) maintains pressure and prevents hook spitting
+                // Only excessive drag (150%+) causes tension buildup
+
+                const dragRatio = currentDragForce / fishPullForce;
+
+                if (dragRatio > 1.5) {
+                    // Drag is TOO TIGHT (150%+ of fish pull) - creates significant tension
+                    const dampeningFactor = shockAbsorption * (2.0 - stretchFactor);
+                    const tensionIncrease = (fishPullForce * 0.3) * (2.0 - dampeningFactor);
+                    this.lineTension += tensionIncrease;
+                    this.lineTension = Math.min(GameConfig.MAX_LINE_TENSION, this.lineTension);
+                } else if (dragRatio > 1.2) {
+                    // Drag is tight but manageable (120-150%) - minor tension buildup
+                    const dampeningFactor = shockAbsorption * (2.0 - stretchFactor);
+                    const tensionIncrease = (fishPullForce * 0.1) * (2.0 - dampeningFactor);
+                    this.lineTension += tensionIncrease;
+                    this.lineTension = Math.min(GameConfig.MAX_LINE_TENSION, this.lineTension);
+                } else {
+                    // Drag is in the sweet spot (50-120% of fish pull)
+                    // This is IDEAL - maintains pressure, prevents hook spitting, no tension buildup
+                    // Tension actually decreases slightly as the drag does its job
+                    this.lineTension *= 0.98;
+                }
             }
         }
 
@@ -388,15 +521,16 @@ export class FishFight {
         this.swimDownForce = swimDownStrength;
 
         // Set swim down target based on state
+        // Fish can now pull harder and dive deeper thanks to hookset system preventing pop-offs
         if (this.fightState === 'thrashing' || this.fightState === 'hookset') {
-            // Try to swim deeper
-            this.swimDownTarget = this.fish.y + 50;
+            // Try to swim much deeper - aggressive diving!
+            this.swimDownTarget = this.fish.y + 80; // Increased from 50
         } else if (this.fightState === 'giving_up') {
             // Just maintain position
             this.swimDownTarget = this.fish.y;
         } else {
-            // Normal fighting - try to go down a bit
-            this.swimDownTarget = this.fish.y + 20;
+            // Normal fighting - moderate diving
+            this.swimDownTarget = this.fish.y + 40; // Increased from 20
         }
     }
 
@@ -415,11 +549,12 @@ export class FishFight {
         let targetY = this.initialDepth - (this.initialDepth * reelProgress);
 
         // Apply downward swimming force - fish tries to swim down
-        const swimDownEffect = this.swimDownForce * 0.3; // Scale down for realistic movement
+        const swimDownEffect = this.swimDownForce * 0.4; // Increased from 0.3 - stronger swim down
         targetY += swimDownEffect;
 
         // Clamp to prevent fish from swimming too deep or going above starting point
-        const maxDepth = Math.min(this.initialDepth + 30, GameConfig.MAX_DEPTH * GameConfig.DEPTH_SCALE);
+        // Fish can now dive up to 60 feet deeper than start (increased from 30)
+        const maxDepth = Math.min(this.initialDepth + 60, GameConfig.MAX_DEPTH * GameConfig.DEPTH_SCALE);
         targetY = Math.max(0, Math.min(maxDepth, targetY));
 
         // Fish thrashing animation - more intense during thrashing state
@@ -455,8 +590,10 @@ export class FishFight {
         this.lure.depth = this.lure.y / GameConfig.DEPTH_SCALE;
     }
 
+    // Tension bar moved to header UI - method kept for reference but not used
     renderTensionBar() {
-        this.tensionBar.clear();
+        // Commented out - tension now displayed in header
+        /* this.tensionBar.clear();
 
         const barX = 45;
         const barY = 90;
@@ -547,13 +684,42 @@ export class FishFight {
         );
         statsText.setDepth(501);
 
-        // Add drag and line info
+        // Add drag and line info with effectiveness indicator
+        let dragColor = lineRemainingColor;
+        let dragStatus = '';
+
+        if (this.reelModel) {
+            const currentDragForce = this.reelModel.getCurrentDragForce();
+            const basePullForce = this.fish.weight;
+
+            // Calculate drag effectiveness ranges
+            // Optimal: 50-120% of fish weight (sweet spot - prevents spitting, no tension)
+            // OK: 40-50% or 120-150% (workable)
+            // Too low: < 40% (fish runs easily)
+            // Too high: > 150% (builds tension quickly)
+
+            if (currentDragForce < basePullForce * 0.4) {
+                dragColor = '#ff6666'; // Red - too low, fish will run
+                dragStatus = ' TOO LOW!';
+            } else if (currentDragForce > basePullForce * 1.5) {
+                dragColor = '#ff6666'; // Red - too high, line will break
+                dragStatus = ' TOO HIGH!';
+            } else if (currentDragForce >= basePullForce * 0.5 && currentDragForce <= basePullForce * 1.2) {
+                dragColor = '#00ff00'; // Green - perfect sweet spot!
+                dragStatus = ' OPTIMAL';
+            } else {
+                dragColor = '#ffaa00'; // Orange - workable but not ideal
+                dragStatus = ' OK';
+            }
+        }
+
         const dragText = this.scene.add.text(barX + 300, barY + barHeight + 8,
-            `Drag: ${this.reelModel ? this.reelModel.dragSetting : '?'}% (${this.reelModel ? this.reelModel.getCurrentDragForce().toFixed(1) : '?'} lbs)`,
+            `Drag: ${this.reelModel ? this.reelModel.dragSetting : '?'}% (${this.reelModel ? this.reelModel.getCurrentDragForce().toFixed(1) : '?'} lbs)${dragStatus}`,
             {
                 fontSize: '10px',
                 fontFamily: 'Courier New',
-                color: lineRemainingColor
+                color: dragColor,
+                fontStyle: dragStatus ? 'bold' : 'normal'
             }
         );
         dragText.setDepth(501);
@@ -569,9 +735,9 @@ export class FishFight {
         );
         conditionText.setDepth(501);
 
-        // Instructions
+        // Instructions with drag adjustment controls
         const instructText = this.scene.add.text(barX, barY - 20,
-            'TAP SPACEBAR TO REEL - Manage tension or line breaks!',
+            'SPACEBAR: Reel | Q/E or D-Pad: Adjust Drag | Manage tension or line breaks!',
             {
                 fontSize: '9px',
                 fontFamily: 'Courier New',
@@ -580,6 +746,48 @@ export class FishFight {
         );
         instructText.setDepth(501);
 
+        // Show fish pull force vs drag force comparison
+        if (this.reelModel) {
+            const basePullForce = this.fish.weight;
+            const energyMultiplier = this.fishEnergy / 100;
+
+            // Estimate current state multiplier
+            let stateMultiplier = 1.0;
+            if (this.fightState === 'hookset') stateMultiplier = 1.5;
+            else if (this.fightState === 'thrashing') stateMultiplier = 2.0;
+            else if (this.fightState === 'giving_up') stateMultiplier = 0.3;
+
+            const estimatedPullForce = basePullForce * stateMultiplier * energyMultiplier;
+            const currentDragForce = this.reelModel.getCurrentDragForce();
+
+            let pullVsDragColor = '#ffffff';
+            let pullVsDragText = '';
+
+            if (estimatedPullForce > currentDragForce) {
+                pullVsDragColor = '#ff6666';
+                pullVsDragText = `⚠ Fish pulling ${estimatedPullForce.toFixed(1)} lbs > Drag ${currentDragForce.toFixed(1)} lbs - LINE SLIPPING!`;
+            } else {
+                pullVsDragColor = '#00ff00';
+                pullVsDragText = `✓ Drag ${currentDragForce.toFixed(1)} lbs > Fish ${estimatedPullForce.toFixed(1)} lbs - HOLDING!`;
+            }
+
+            const pullCompareText = this.scene.add.text(barX, barY + barHeight + 34,
+                pullVsDragText,
+                {
+                    fontSize: '9px',
+                    fontFamily: 'Courier New',
+                    color: pullVsDragColor,
+                    fontStyle: 'bold'
+                }
+            );
+            pullCompareText.setDepth(501);
+
+            // Clean up this text too
+            this.scene.time.delayedCall(10, () => {
+                pullCompareText.destroy();
+            });
+        }
+
         // Clean up text objects after render
         this.scene.time.delayedCall(10, () => {
             tensionText.destroy();
@@ -587,7 +795,7 @@ export class FishFight {
             dragText.destroy();
             conditionText.destroy();
             instructText.destroy();
-        });
+        }); */
     }
 
     breakLine() {
@@ -1051,6 +1259,12 @@ export class FishFight {
             repeat: -1
         });
 
+        // Track gamepad button state for debouncing
+        let lastXButtonState = false;
+
+        // Gamepad polling interval
+        let gamepadPollInterval = null;
+
         // Input handler to dismiss popup
         const dismissPopup = () => {
             // Remove all popup elements
@@ -1067,7 +1281,11 @@ export class FishFight {
 
             // Remove input listeners
             this.scene.input.keyboard.off('keydown', keyboardHandler);
-            this.scene.input.gamepad.off('down', gamepadHandler);
+
+            // Stop gamepad polling
+            if (gamepadPollInterval) {
+                gamepadPollInterval.remove();
+            }
 
             // Clear catch popup flag BEFORE resuming
             this.scene.catchPopupActive = false;
@@ -1080,16 +1298,9 @@ export class FishFight {
             this.fish.destroy();
         };
 
-        // Keyboard handler - accept spacebar or enter
+        // Keyboard handler - accept X, spacebar, or enter
         const keyboardHandler = (event) => {
-            if (event.keyCode === 32 || event.keyCode === 13) { // Space or Enter
-                dismissPopup();
-            }
-        };
-
-        // Gamepad handler - only accept X button (button 2)
-        const gamepadHandler = (pad, button, value) => {
-            if (button.index === 2) { // X button
+            if (event.keyCode === 88 || event.keyCode === 32 || event.keyCode === 13) { // X, Space, or Enter
                 dismissPopup();
             }
         };
@@ -1097,15 +1308,30 @@ export class FishFight {
         // Listen for keyboard input
         this.scene.input.keyboard.on('keydown', keyboardHandler);
 
-        // Listen for gamepad X button
-        if (this.scene.input.gamepad && this.scene.input.gamepad.total > 0) {
-            this.scene.input.gamepad.on('down', gamepadHandler);
+        // Poll gamepad X button using native gamepad manager
+        if (window.gamepadManager && window.gamepadManager.isConnected()) {
+            gamepadPollInterval = this.scene.time.addEvent({
+                delay: 50, // Check every 50ms
+                callback: () => {
+                    const xButton = window.gamepadManager.getButton('X'); // X on PS4, A on Xbox
+
+                    // Check for button press (not held)
+                    if (xButton.pressed && !lastXButtonState) {
+                        dismissPopup();
+                    }
+
+                    lastXButtonState = xButton.pressed;
+                },
+                loop: true
+            });
         }
     }
 
     endFight() {
         this.active = false;
-        this.tensionBar.destroy();
+
+        // Clear tension display in header
+        this.scene.events.emit('updateLineTension', 0);
 
         // Remove from scene
         if (this.scene.currentFight === this) {
