@@ -31,7 +31,9 @@
   ],
   "author": "",
   "license": "MIT",
-  "dependencies": {},
+  "dependencies": {
+    "@cheprasov/qrcode": "^0.1.0"
+  },
   "devDependencies": {
     "@types/jest": "^30.0.0",
     "concurrently": "^8.2.2",
