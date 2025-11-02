@@ -72,6 +72,7 @@ export class Fish extends AquaticOrganism {
         this.inFrenzy = false;
         this.frenzyTimer = 0;
         this.frenzyIntensity = 0;
+        this.frenzyTargetCloud = null; // Specific bait cloud this fish is frenzying on
 
         // Stomach contents - track what this fish has eaten
         this.stomachContents = []; // Array of { species: string, timestamp: number }
@@ -142,11 +143,13 @@ export class Fish extends AquaticOrganism {
             }
         }
 
+        // Frenzy cooldown - decays FASTER for short burst behavior
         if (this.frenzyTimer > 0) {
-            this.frenzyTimer--;
+            this.frenzyTimer -= 2; // Decay 2x faster (was 1 per frame)
             if (this.frenzyTimer <= 0) {
                 this.inFrenzy = false;
                 this.frenzyIntensity = 0;
+                this.frenzyTargetCloud = null; // Clear target cloud when frenzy ends
             }
         }
 

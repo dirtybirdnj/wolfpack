@@ -82,7 +82,7 @@ export class FishAI {
         return Utils.randomBetween(minDepth, maxDepth);
     }
 
-    detectFrenzy(lure, allFish) {
+    detectFrenzy(lure, allFish, baitfishClouds = []) {
         // Lake trout get excited when they see others chasing OR feeding on baitfish
         // Count other fish that are actively engaged (lure or baitfish)
         const excitedFish = allFish.filter(otherFish => {
@@ -106,13 +106,28 @@ export class FishAI {
                 // Enter frenzy state!
                 this.fish.inFrenzy = true;
 
-                // Duration scales with number of frenzied fish (base 300 frames = 5 sec)
-                const baseDuration = 300;
-                const scaledDuration = baseDuration * (1 + excitedFish.length * 0.4); // Increased from 0.3
+                // Duration scales with number of frenzied fish (base 180 frames = 3 sec)
+                // REDUCED: Frenzy should be short bursts, not long sustained states
+                const baseDuration = 180; // Reduced from 300 (5 sec -> 3 sec)
+                const scaledDuration = baseDuration * (1 + excitedFish.length * 0.15); // Reduced from 0.4
+                // 1 fish: 207 frames = 3.5 sec
+                // 2 fish: 234 frames = 3.9 sec
+                // 3 fish: 261 frames = 4.4 sec (much shorter!)
                 this.fish.frenzyTimer = Math.floor(scaledDuration);
 
                 // Intensity based on number of excited fish (stronger now)
                 this.fish.frenzyIntensity = Math.min(1.0, excitedFish.length * 0.3); // Increased from 0.25
+
+                // FIND WHICH BAIT CLOUD THE EXCITED FISH ARE HUNTING
+                // This makes frenzy focused on a specific cloud
+                let targetCloud = null;
+                for (const excitedOne of excitedFish) {
+                    if (excitedOne.ai && excitedOne.ai.targetBaitfishCloud) {
+                        targetCloud = excitedOne.ai.targetBaitfishCloud;
+                        break; // Found one hunting a cloud
+                    }
+                }
+                this.fish.frenzyTargetCloud = targetCloud;
 
                 // Frenzying fish get multiple strike attempts (2-3 swipes)
                 this.maxStrikeAttempts = Math.floor(Math.random() * 2) + 2; // 2 or 3 attempts
@@ -124,6 +139,10 @@ export class FishAI {
 
                 // Trigger visual feedback - fish entered frenzy!
                 this.fish.triggerInterestFlash(0.8); // High intensity for frenzy
+
+                if (targetCloud) {
+                    console.log(`🔥 Fish entered FRENZY targeting ${targetCloud.speciesType} cloud!`);
+                }
             }
         }
 
@@ -148,7 +167,7 @@ export class FishAI {
 
                     // Enter frenzy due to vertical strike instinct
                     this.fish.inFrenzy = true;
-                    this.fish.frenzyTimer = 400; // Longer duration for vertical strikes
+                    this.fish.frenzyTimer = 180; // REDUCED: Short burst (was 400 = 6.7 sec, now 3 sec)
                     this.fish.frenzyIntensity = 0.8; // High intensity
 
                     // Vertical strikers also get multiple attempts
@@ -206,7 +225,7 @@ export class FishAI {
         const lureSpeed = Math.abs(lure.velocity);
 
         // Detect frenzy feeding - other fish chasing excites this one
-        this.detectFrenzy(lure, allFish);
+        this.detectFrenzy(lure, allFish, baitfishClouds);
 
         // State machine for fish behavior
         switch (this.state) {
@@ -788,6 +807,13 @@ export class FishAI {
         const otherFishHunting = cloudInfo.cloud.lakersChasing.length;
         const frenzyBonus = Math.min(otherFishHunting * 0.5, 1.2); // Increased from 0.3/0.8 to 0.5/1.2
 
+        // FRENZY TARGET CLOUD BONUS - If this fish is frenzying and this is the target cloud, HUGE bonus!
+        let frenzyTargetBonus = 0;
+        if (this.fish.inFrenzy && this.fish.frenzyTargetCloud === cloudInfo.cloud) {
+            frenzyTargetBonus = 1.5; // MASSIVE bonus - fish will rush to this cloud!
+            console.log(`🎯 Fish locked onto frenzy target cloud!`);
+        }
+
         // DIET PREFERENCE - Lake trout prefer certain prey species (based on real-world data)
         const preySpecies = cloudInfo.cloud.speciesType;
         const dietPreference = calculateDietPreference('lake_trout', preySpecies);
@@ -804,7 +830,7 @@ export class FishAI {
                          this.fish.weight > 5 ? 0.10 : 0; // Medium: +10% hunt score
 
         // Base hunt score (hunger + distance + frenzy)
-        let huntScore = (hungerFactor * 0.6) + (distanceFactor * 0.3) + frenzyBonus;
+        let huntScore = (hungerFactor * 0.6) + (distanceFactor * 0.3) + frenzyBonus + frenzyTargetBonus;
 
         // Apply diet preference bonus
         huntScore += dietBonus;
