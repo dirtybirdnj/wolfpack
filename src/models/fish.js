@@ -222,9 +222,36 @@ export class Fish extends AquaticOrganism {
                 this.angle *= 0.9;
             }
 
-            // Apply movement in world coordinates
-            this.worldX += movement.x;
-            this.y += movement.y;
+            // Apply movement with inertia/momentum for fluid dynamics
+            // Initialize velocity if not exists
+            if (typeof this.velocityX === 'undefined') {
+                this.velocityX = 0;
+                this.velocityY = 0;
+            }
+
+            // Acceleration based on desired movement direction
+            const acceleration = 0.25; // How quickly fish can change speed
+            const drag = 0.92; // Friction/drag coefficient (0.92 = lose 8% speed per frame)
+
+            // Apply acceleration toward desired movement
+            this.velocityX += movement.x * acceleration;
+            this.velocityY += movement.y * acceleration;
+
+            // Apply drag to simulate water resistance
+            this.velocityX *= drag;
+            this.velocityY *= drag;
+
+            // Cap maximum velocity based on fish speed
+            const maxVelocity = this.speed * 3;
+            const currentSpeed = Math.sqrt(this.velocityX * this.velocityX + this.velocityY * this.velocityY);
+            if (currentSpeed > maxVelocity) {
+                this.velocityX = (this.velocityX / currentSpeed) * maxVelocity;
+                this.velocityY = (this.velocityY / currentSpeed) * maxVelocity;
+            }
+
+            // Update position with velocity (momentum)
+            this.worldX += this.velocityX;
+            this.y += this.velocityY;
             this.depth = this.y / depthScale;
 
             // Get player's world position (center of screen)
@@ -274,9 +301,9 @@ export class Fish extends AquaticOrganism {
             // Get lake bottom depth (use maxDepth from scene)
             let bottomDepth = this.scene.maxDepth || GameConfig.MAX_DEPTH;
 
-            // Keep fish above lake bottom (with 5 feet buffer)
-            // Allow fish to swim all the way to surface (y=0) now that ice rendering is removed
-            const maxY = (bottomDepth - 5) * depthScale;
+            // Allow fish to reach the actual lake bottom to feed on crayfish
+            // No buffer needed - fish can swim all the way to bottom
+            const maxY = bottomDepth * depthScale;
             const minY = 0;
 
             // Check if fish is trying to go beyond boundaries BEFORE clamping

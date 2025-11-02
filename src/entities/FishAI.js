@@ -676,8 +676,14 @@ export class FishAI {
         const dy = this.targetY - this.fish.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
 
-        if (distance < 1) {
-            return { x: 0, y: 0 };
+        // Don't force fish to stop - let momentum carry them
+        // Just slow down near target instead of stopping
+        if (distance < 5) {
+            const slowFactor = distance / 5; // Gradual slowdown
+            return {
+                x: (dx / distance) * this.fish.speed * slowFactor,
+                y: (dy / distance) * this.fish.speed * slowFactor
+            };
         }
 
         // Speed multiplier based on state
@@ -723,8 +729,9 @@ export class FishAI {
                 verticalSpeedMultiplier = 0.85 + (this.fish.hunger * GameConfig.HUNGER_VERTICAL_SCALING);
                 break;
             case Constants.FISH_STATE.FEEDING:
-                speedMultiplier = 0.3;
-                verticalSpeedMultiplier = 0.5;
+                // Don't slow down when feeding - maintain momentum!
+                speedMultiplier = 1.5; // Keep swimming through
+                verticalSpeedMultiplier = 1.0;
                 break;
         }
 
@@ -817,6 +824,7 @@ export class FishAI {
         this.state = Constants.FISH_STATE.HUNTING_BAITFISH;
         this.targetBaitfishCloud = cloudInfo.cloud;
         this.isFrenzying = cloudInfo.cloud.lakersChasing.length > 0;
+        this.consecutiveCatches = 0; // Reset for new hunting run
         this.decisionCooldown = 150; // Reduced from 300 for faster pursuit reactions
     }
 
@@ -847,8 +855,26 @@ export class FishAI {
                 const preySpecies = this.targetBaitfishCloud.speciesType;
                 this.targetBaitfishCloud.consumeBaitfish();
                 this.fish.feedOnBaitfish(preySpecies); // Pass species for nutrition calculation
-                this.state = Constants.FISH_STATE.FEEDING;
-                this.decisionCooldown = 100; // Reduced from 200 for faster feeding cycle
+
+                // Track consecutive catches for swim-through behavior
+                if (!this.consecutiveCatches) this.consecutiveCatches = 0;
+                if (!this.lastTurnTime) this.lastTurnTime = 0;
+                this.consecutiveCatches++;
+
+                // Keep swimming through cloud! Don't stop.
+                // After 2-3 catches or leaving cloud, do a quick 180 turn to dart back
+                // Limit turns to once every 2 seconds (120 frames at 60fps)
+                const timeSinceLastTurn = this.fish.frameAge - this.lastTurnTime;
+                if (this.consecutiveCatches >= 2 && Math.random() < 0.6 && timeSinceLastTurn > 120) {
+                    // Quick 180 turn to dart back through cloud
+                    this.targetX = this.fish.x - (this.targetX - this.fish.x);
+                    this.targetY = this.fish.y - (this.targetY - this.fish.y);
+                    this.consecutiveCatches = 0;
+                    this.lastTurnTime = this.fish.frameAge;
+                }
+
+                // Stay in hunting state - no pause!
+                this.decisionCooldown = 10; // Very short cooldown for rapid feeding
                 return;
             }
         } else {
@@ -880,19 +906,47 @@ export class FishAI {
     }
 
     feedingBehavior(baitfishClouds, lure) {
-        // Brief feeding state, then return to hunting or idle
-        if (this.targetBaitfishCloud &&
-            this.targetBaitfishCloud.visible &&
-            this.targetBaitfishCloud.baitfish.length > 0 &&
-            this.fish.hunger > 30) { // Lowered from 40 to keep hunting longer
-            // Still hungry and food available, keep hunting
+        // Continue swimming through cloud while feeding
+        // Check if we should continue hunting or turn back
+
+        const distanceToCloudCenter = Utils.calculateDistance(
+            this.fish.x, this.fish.y,
+            this.targetBaitfishCloud?.centerX || this.fish.x,
+            this.targetBaitfishCloud?.centerY || this.fish.y
+        );
+
+        // If we've swum past the cloud center, consider turning around
+        if (distanceToCloudCenter > GameConfig.BAITFISH_CLOUD_RADIUS * 1.5) {
+            // Swam through cloud - do 180 turn to dart back (with cooldown)
+            if (!this.lastTurnTime) this.lastTurnTime = 0;
+            const timeSinceLastTurn = this.fish.frameAge - this.lastTurnTime;
+
+            if (this.targetBaitfishCloud && this.targetBaitfishCloud.visible && this.fish.hunger > 30 && timeSinceLastTurn > 120) {
+                this.targetX = this.targetBaitfishCloud.centerX;
+                this.targetY = this.targetBaitfishCloud.centerY;
+                this.consecutiveCatches = 0;
+                this.lastTurnTime = this.fish.frameAge;
+                this.state = Constants.FISH_STATE.HUNTING_BAITFISH;
+            } else {
+                // Done feeding, return to idle
+                this.state = Constants.FISH_STATE.IDLE;
+                this.targetBaitfishCloud = null;
+                this.targetBaitfish = null;
+                this.consecutiveCatches = 0;
+            }
+        } else if (this.targetBaitfishCloud &&
+                   this.targetBaitfishCloud.visible &&
+                   this.targetBaitfishCloud.baitfish.length > 0 &&
+                   this.fish.hunger > 30) {
+            // Still in cloud, still hungry - keep hunting
             this.state = Constants.FISH_STATE.HUNTING_BAITFISH;
-            this.decisionCooldown = 80; // Reduced from 150 for rapid consecutive strikes
+            this.decisionCooldown = 20; // Very short for rapid feeding
         } else {
             // Satisfied or cloud depleted
             this.state = Constants.FISH_STATE.IDLE;
             this.targetBaitfishCloud = null;
             this.targetBaitfish = null;
+            this.consecutiveCatches = 0;
             this.decisionCooldown = 2000;
         }
     }

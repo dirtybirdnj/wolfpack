@@ -172,6 +172,9 @@ function setupDevTools(game) {
 
             // Update fish status panel
             updateFishStatus(natureScene);
+
+            // Handle gamepad input for spawn mode
+            handleSpawnModeGamepad(natureScene);
         }
         // Handle Game Scene
         else if (gameScene && gameScene.scene.isActive()) {
@@ -547,6 +550,25 @@ function setupDevTools(game) {
 
 function updateFishStatus(gameScene) {
     const container = document.getElementById('fish-status-container');
+    const entityCounts = document.getElementById('entity-counts');
+
+    // Update entity counts
+    if (gameScene && entityCounts) {
+        const fishCount = gameScene.fishes ? gameScene.fishes.length : 0;
+
+        // Check both schools (NatureSimulationScene) and baitfishClouds (GameScene) for cloud count
+        let cloudCount = 0;
+        if (gameScene.schools && Array.isArray(gameScene.schools)) {
+            cloudCount = gameScene.schools.length;
+        } else if (gameScene.baitfishClouds && Array.isArray(gameScene.baitfishClouds)) {
+            cloudCount = gameScene.baitfishClouds.filter(c => c && c.visible).length;
+        }
+
+        const crayfishCount = gameScene.crayfish ? gameScene.crayfish.filter(c => c && c.visible).length : 0;
+        const zooplanktonCount = gameScene.zooplankton ? gameScene.zooplankton.filter(z => z && z.visible).length : 0;
+
+        entityCounts.innerHTML = `🐟 ${fishCount} ☁️ ${cloudCount} 🦞 ${crayfishCount} 🪳 ${zooplanktonCount}`;
+    }
 
     if (!gameScene || !gameScene.fishes || gameScene.fishes.length === 0) {
         container.innerHTML = '<div style="color: #888; font-style: italic;">No fish spawned</div>';
@@ -573,6 +595,11 @@ function updateFishStatus(gameScene) {
     // Sort fish by depth (shallowest to deepest)
     allFish.sort((a, b) => a.fish.depth - b.fish.depth);
 
+    // Auto-select first fish if none selected
+    if (!gameScene.selectedFish && allFish.length > 0) {
+        gameScene.selectedFish = allFish[0].fish;
+    }
+
     // Helper function to render fish row (single line)
     const renderFish = ({ fish, index }) => {
         const info = fish.getInfo();
@@ -595,19 +622,19 @@ function updateFishStatus(gameScene) {
         const baitfishConsumed = fish.stomachContents ? fish.stomachContents.length : 0;
 
         // Check if this fish is selected
-        const isSelected = gameScene.selectedFishId === fish.model.id;
+        const isSelected = gameScene.selectedFish === fish;
         const selectedClass = isSelected ? 'fish-selected' : '';
         const selectedStyle = isSelected ? 'background: #ffffff20;' : `background: ${zoneColor}08;`;
 
         return `
             <div class="fish-status-row ${selectedClass}" data-fish-id="${fish.model.id}" style="border-left: 3px solid ${zoneColor}; ${selectedStyle} padding: 3px 5px; margin: 2px 0; cursor: pointer; font-size: 9px; display: flex; justify-content: space-between; align-items: center; white-space: nowrap; overflow: hidden;">
-                <span style="color: ${zoneColor}; min-width: 70px; max-width: 70px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${info.name}"><span style="color: ${genderColor};">${genderIcon}</span> 🐟 ${info.name}</span>
-                <span style="min-width: 18px; max-width: 18px; text-align: center;">${frenzyIndicator}</span>
-                <span style="color: #fff; min-width: 32px; max-width: 32px; text-align: right;">${fish.weight.toFixed(1)}</span>
-                <span style="color: #00ffff; min-width: 48px; max-width: 48px; text-align: center;">${fish.ai.state.substring(0, 6)}</span>
-                <span style="min-width: 42px; max-width: 42px; text-align: center;"><span style="color: ${hungerColor};">${fish.hunger.toFixed(0)}</span>/<span style="color: ${healthColor};">${fish.health.toFixed(0)}</span></span>
-                <span style="color: ${zoneColor}; min-width: 32px; max-width: 32px; text-align: right;">${Math.floor(fish.depth)}ft</span>
-                <span style="color: #ff9900; min-width: 18px; max-width: 18px; text-align: right;">${baitfishConsumed}</span>
+                <span style="color: ${zoneColor}; min-width: 45px; max-width: 45px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${info.name}"><span style="color: ${genderColor};">${genderIcon}</span> ${info.name}</span>
+                <span style="min-width: 15px; max-width: 15px; text-align: center;">${frenzyIndicator}</span>
+                <span style="color: #fff; min-width: 28px; max-width: 28px; text-align: right;">${fish.weight.toFixed(1)}</span>
+                <span style="color: #00ffff; min-width: 42px; max-width: 42px; text-align: center;">${fish.ai.state.substring(0, 5)}</span>
+                <span style="min-width: 38px; max-width: 38px; text-align: center;"><span style="color: ${hungerColor};">${fish.hunger.toFixed(0)}</span>/<span style="color: ${healthColor};">${fish.health.toFixed(0)}</span></span>
+                <span style="color: ${zoneColor}; min-width: 28px; max-width: 28px; text-align: right;">${Math.floor(fish.depth)}ft</span>
+                <span style="color: #ff9900; min-width: 15px; max-width: 15px; text-align: right;">${baitfishConsumed}</span>
             </div>
         `;
     };
@@ -615,65 +642,345 @@ function updateFishStatus(gameScene) {
     // Build HTML with header key
     let html = `
         <div style="background: #1a1a1a; border-bottom: 2px solid #00ff00; padding: 3px 5px; margin-bottom: 4px; font-size: 8px; color: #888; display: flex; justify-content: space-between; font-weight: bold; white-space: nowrap; overflow: hidden;">
-            <span style="min-width: 70px; max-width: 70px;">NAME</span>
-            <span style="min-width: 18px; max-width: 18px; text-align: center;">F</span>
-            <span style="min-width: 32px; max-width: 32px; text-align: right;">WEIGHT</span>
-            <span style="min-width: 48px; max-width: 48px; text-align: center;">STATE</span>
-            <span style="min-width: 42px; max-width: 42px; text-align: center;">H/H</span>
-            <span style="min-width: 32px; max-width: 32px; text-align: right;">DEPTH</span>
-            <span style="min-width: 18px; max-width: 18px; text-align: right;">ATE</span>
+            <span style="min-width: 45px; max-width: 45px;">NAME</span>
+            <span style="min-width: 15px; max-width: 15px; text-align: center;">F</span>
+            <span style="min-width: 28px; max-width: 28px; text-align: right;">WT</span>
+            <span style="min-width: 42px; max-width: 42px; text-align: center;">STATE</span>
+            <span style="min-width: 38px; max-width: 38px; text-align: center;">H/H</span>
+            <span style="min-width: 28px; max-width: 28px; text-align: right;">DEPTH</span>
+            <span style="min-width: 15px; max-width: 15px; text-align: right;">ATE</span>
         </div>
     `;
 
     html += allFish.map(renderFish).join('');
     container.innerHTML = html;
 
-    // Add click handlers to fish rows (no re-render on click)
+    // Add click handlers to fish rows
     container.querySelectorAll('.fish-status-row').forEach(row => {
         row.addEventListener('click', function(e) {
             e.stopPropagation(); // Prevent event bubbling
             const fishId = this.getAttribute('data-fish-id');
+            const selectedFish = gameScene.fishes.find(f => f.model.id === fishId);
 
             // Toggle selection - if clicking already selected fish, deselect
-            if (gameScene.selectedFishId === fishId) {
-                gameScene.selectedFishId = null;
-                console.log('Fish deselected');
+            if (gameScene.selectedFish === selectedFish) {
+                gameScene.selectFish(null);
             } else {
-                gameScene.selectedFishId = fishId;
-                const selectedFish = gameScene.fishes.find(f => f.model.id === fishId);
-                if (selectedFish) {
-                    console.log(`Selected fish: ${selectedFish.name}`);
-                }
+                gameScene.selectFish(selectedFish);
             }
-
-            // Update visual state without full re-render
-            container.querySelectorAll('.fish-status-row').forEach(r => {
-                r.classList.remove('fish-selected');
-                const rowFishId = r.getAttribute('data-fish-id');
-                const fish = gameScene.fishes.find(f => f.model.id === rowFishId);
-                if (fish) {
-                    const zoneColor = fish.depthZone.name === 'Surface' ? '#ffff00' :
-                                     fish.depthZone.name === 'Mid-Column' ? '#00ff00' : '#888888';
-                    r.style.background = `${zoneColor}08`;
-                }
-            });
-
-            if (gameScene.selectedFishId) {
-                this.classList.add('fish-selected');
-                this.style.background = '#ffffff20';
-            }
-        });
-
-        // Simplified hover effect using CSS opacity
-        row.addEventListener('mouseenter', function() {
-            if (!this.classList.contains('fish-selected')) {
-                this.style.opacity = '0.8';
-            }
-        });
-        row.addEventListener('mouseleave', function() {
-            this.style.opacity = '1';
         });
     });
+
+    // Update detailed info panel
+    updateFishDetailPanel(gameScene);
+
+    // Setup keyboard navigation (only once)
+    if (!window.fishListKeyboardSetup) {
+        window.fishListKeyboardSetup = true;
+        window.addEventListener('keydown', (e) => {
+            const gameScene = game.scene.getScene('GameScene');
+            const natureScene = game.scene.getScene('NatureSimulationScene');
+            const scene = natureScene && natureScene.scene.isActive() ? natureScene : gameScene;
+
+            if (!scene) return;
+
+            // Toggle spawn mode with X key
+            if (e.key === 'x' || e.key === 'X') {
+                e.preventDefault();
+                scene.spawnMode = !scene.spawnMode;
+                console.log('Toggled spawn mode:', scene.spawnMode ? 'ON' : 'OFF');
+                return;
+            }
+
+            // Handle spawn mode navigation
+            if (scene.spawnMode) {
+                if (e.key === 'ArrowLeft' || e.key === 'Left') {
+                    e.preventDefault();
+                    scene.selectedSpawnButton = Math.max(0, scene.selectedSpawnButton - 1);
+                } else if (e.key === 'ArrowRight' || e.key === 'Right') {
+                    e.preventDefault();
+                    scene.selectedSpawnButton = Math.min(3, scene.selectedSpawnButton + 1);
+                } else if (e.key === 'Enter') {
+                    e.preventDefault();
+                    const types = ['fish', 'cloud', 'crayfish', 'zooplankton'];
+                    spawnEntity(scene, types[scene.selectedSpawnButton]);
+                }
+                return;
+            }
+
+            // Handle fish list navigation (info mode)
+            if (!scene.fishes || scene.fishes.length === 0) return;
+
+            // Get sorted fish list
+            const sortedFish = scene.fishes
+                .filter(f => f && f.ai && typeof f.hunger === 'number' && f.depthZone)
+                .sort((a, b) => a.depth - b.depth);
+
+            if (sortedFish.length === 0) return;
+
+            const currentIndex = sortedFish.indexOf(scene.selectedFish);
+
+            if (e.key === 'ArrowUp' || e.key === 'Up') {
+                e.preventDefault();
+                const newIndex = Math.max(0, currentIndex - 1);
+                scene.selectFish(sortedFish[newIndex]);
+                console.log('Selected fish (up):', sortedFish[newIndex].getInfo().name);
+            } else if (e.key === 'ArrowDown' || e.key === 'Down') {
+                e.preventDefault();
+                const newIndex = Math.min(sortedFish.length - 1, currentIndex + 1);
+                scene.selectFish(sortedFish[newIndex]);
+                console.log('Selected fish (down):', sortedFish[newIndex].getInfo().name);
+            }
+        });
+
+        // Setup gamepad state tracker for spawn mode controls
+        window.spawnModeGamepadState = {
+            lastB: false,
+            lastX: false,
+            lastDpadLeft: false,
+            lastDpadRight: false,
+            lastA: false,
+            lastDpadUp: false,
+            lastDpadDown: false
+        };
+    }
+}
+
+/**
+ * Update the spawn buttons container
+ */
+function updateSpawnButtons(gameScene) {
+    const spawnContainer = document.getElementById('spawn-buttons-container');
+    if (!spawnContainer) return;
+
+    // Show/hide spawn buttons based on spawn mode
+    if (gameScene.spawnMode) {
+        spawnContainer.style.display = 'block';
+
+        const fishCount = gameScene.fishes ? gameScene.fishes.length : 0;
+
+        // Check both schools (NatureSimulationScene) and baitfishClouds (GameScene) for cloud count
+        let cloudCount = 0;
+        if (gameScene.schools && Array.isArray(gameScene.schools)) {
+            cloudCount = gameScene.schools.length;
+        } else if (gameScene.baitfishClouds && Array.isArray(gameScene.baitfishClouds)) {
+            cloudCount = gameScene.baitfishClouds.filter(c => c && c.visible).length;
+        }
+
+        const crayfishCount = gameScene.crayfish ? gameScene.crayfish.filter(c => c && c.visible).length : 0;
+        const zooplanktonCount = gameScene.zooplankton ? gameScene.zooplankton.filter(z => z && z.visible).length : 0;
+
+        const selected = gameScene.selectedSpawnButton;
+
+        spawnContainer.innerHTML = `
+            <div style="padding: 8px;">
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;">
+                    <button class="spawn-btn" data-spawn="fish" style="background: ${selected === 0 ? '#00ff0040' : '#1a1a1a'}; border: 2px solid ${selected === 0 ? '#00ff00' : '#00ff0080'}; color: #00ff00; padding: 12px 5px; cursor: pointer; font-size: 18px; display: flex; flex-direction: column; align-items: center; gap: 3px;">
+                        <span>🐟</span>
+                        <span style="font-size: 9px;">${fishCount}</span>
+                    </button>
+                    <button class="spawn-btn" data-spawn="cloud" style="background: ${selected === 1 ? '#00ff0040' : '#1a1a1a'}; border: 2px solid ${selected === 1 ? '#00ff00' : '#00ff0080'}; color: #00ff00; padding: 12px 5px; cursor: pointer; font-size: 18px; display: flex; flex-direction: column; align-items: center; gap: 3px;">
+                        <span>☁️</span>
+                        <span style="font-size: 9px;">${cloudCount}</span>
+                    </button>
+                    <button class="spawn-btn" data-spawn="crayfish" style="background: ${selected === 2 ? '#00ff0040' : '#1a1a1a'}; border: 2px solid ${selected === 2 ? '#00ff00' : '#00ff0080'}; color: #00ff00; padding: 12px 5px; cursor: pointer; font-size: 18px; display: flex; flex-direction: column; align-items: center; gap: 3px;">
+                        <span>🦞</span>
+                        <span style="font-size: 9px;">${crayfishCount}</span>
+                    </button>
+                    <button class="spawn-btn" data-spawn="zooplankton" style="background: ${selected === 3 ? '#00ff0040' : '#1a1a1a'}; border: 2px solid ${selected === 3 ? '#00ff00' : '#00ff0080'}; color: #00ff00; padding: 12px 5px; cursor: pointer; font-size: 18px; display: flex; flex-direction: column; align-items: center; gap: 3px;">
+                        <span>🪳</span>
+                        <span style="font-size: 9px;">${zooplanktonCount}</span>
+                    </button>
+                </div>
+            </div>
+        `;
+
+        // Add click handlers for spawn buttons
+        spawnContainer.querySelectorAll('.spawn-btn').forEach((btn, index) => {
+            btn.addEventListener('click', () => {
+                gameScene.selectedSpawnButton = index;
+                const spawnType = btn.getAttribute('data-spawn');
+                spawnEntity(gameScene, spawnType);
+            });
+        });
+    } else {
+        spawnContainer.style.display = 'none';
+    }
+}
+
+/**
+ * Update the detailed fish info panel at the bottom of the fish status
+ */
+function updateFishDetailPanel(gameScene) {
+    const detailPanel = document.getElementById('fish-detail-panel');
+    if (!detailPanel) return;
+
+    // Update spawn buttons (separate container)
+    updateSpawnButtons(gameScene);
+
+    // Always show fish info in detail panel (if a fish is selected)
+    if (!gameScene.selectedFish) {
+        detailPanel.innerHTML = '<div style="color: #888; font-style: italic; padding: 10px; text-align: center;">Press X for spawn mode</div>';
+        return;
+    }
+
+    const fish = gameScene.selectedFish;
+
+    // Defensive checks for fish properties
+    if (!fish || !fish.getInfo) {
+        detailPanel.innerHTML = '<div style="color: #ff6666; font-style: italic; padding: 10px; text-align: center;">Error: Invalid fish data</div>';
+        return;
+    }
+
+    const info = fish.getInfo();
+    const weight = (fish.weight !== undefined) ? fish.weight.toFixed(1) : 'N/A';
+    const length = (fish.length !== undefined) ? fish.length.toFixed(1) : 'N/A';
+    const depth = (fish.depth !== undefined) ? Math.floor(fish.depth) : 'N/A';
+    const zone = fish.depthZone?.name || 'N/A';
+    const hunger = (fish.hunger !== undefined) ? fish.hunger.toFixed(0) : 'N/A';
+    const health = (fish.health !== undefined) ? fish.health.toFixed(0) : 'N/A';
+    const state = fish.ai?.state || 'N/A';
+    const speed = fish.speed ? fish.speed.toFixed(1) : (fish.model?.speed?.toFixed(1) || 'N/A');
+    const baitfishEaten = fish.stomachContents ? fish.stomachContents.length : 0;
+
+    detailPanel.innerHTML = `
+        <div style="padding: 10px; font-size: 11px;">
+            <div style="color: #00ff00; font-weight: bold; font-size: 13px; margin-bottom: 8px;">${info.name || 'Unknown'} (${info.species || 'Unknown'})</div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px;">
+                <div><span style="color: #888;">Weight:</span> <span style="color: #fff;">${weight} lbs</span></div>
+                <div><span style="color: #888;">Length:</span> <span style="color: #fff;">${length} in</span></div>
+                <div><span style="color: #888;">Gender:</span> <span style="color: ${info.gender === 'male' ? '#66ccff' : '#ff99cc'};">${info.gender === 'male' ? '♂ Male' : '♀ Female'}</span></div>
+                <div><span style="color: #888;">Age:</span> <span style="color: #fff;">${info.age || 0} frames</span></div>
+                <div><span style="color: #888;">Depth:</span> <span style="color: #00ffff;">${depth}ft</span></div>
+                <div><span style="color: #888;">Zone:</span> <span style="color: #ffff00;">${zone}</span></div>
+                <div><span style="color: #888;">Hunger:</span> <span style="color: ${fish.hunger > 70 ? '#ff6666' : fish.hunger > 40 ? '#ffaa00' : '#00ff00'};">${hunger}</span></div>
+                <div><span style="color: #888;">Health:</span> <span style="color: ${fish.health < 30 ? '#ff6666' : fish.health < 60 ? '#ffaa00' : '#00ff00'};">${health}</span></div>
+                <div><span style="color: #888;">State:</span> <span style="color: #00ffff;">${state}</span></div>
+                <div><span style="color: #888;">Frenzy:</span> <span style="color: ${fish.inFrenzy ? '#ff0000' : '#00ff00'};">${fish.inFrenzy ? 'YES' : 'NO'}</span></div>
+                <div><span style="color: #888;">Baitfish Eaten:</span> <span style="color: #ff9900;">${baitfishEaten}</span></div>
+                <div><span style="color: #888;">Speed:</span> <span style="color: #fff;">${speed}</span></div>
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * Spawn an entity at a random location
+ */
+function spawnEntity(gameScene, type) {
+    if (!gameScene || !gameScene.spawningSystem) return;
+
+    console.log(`Spawning ${type}...`);
+
+    switch(type) {
+        case 'fish':
+            if (gameScene.spawningSystem.spawnFish) {
+                gameScene.spawningSystem.spawnFish();
+            } else if (gameScene.spawningSystem.trySpawnFish) {
+                gameScene.spawningSystem.trySpawnFish();
+            }
+            break;
+        case 'cloud':
+            // Try both methods for compatibility (NatureSimulationScene uses trySpawnBaitfishCloud which calls trySpawnBaitfishSchool)
+            if (gameScene.spawningSystem.trySpawnBaitfishCloud) {
+                gameScene.spawningSystem.trySpawnBaitfishCloud();
+            } else if (gameScene.spawningSystem.trySpawnBaitfishSchool) {
+                gameScene.spawningSystem.trySpawnBaitfishSchool();
+            }
+            break;
+        case 'crayfish':
+            gameScene.spawningSystem.trySpawnCrayfish();
+            break;
+        case 'zooplankton':
+            gameScene.spawningSystem.trySpawnZooplankton();
+            break;
+    }
+}
+
+/**
+ * Handle gamepad input for spawn mode controls
+ * Called from the stats update interval
+ */
+function handleSpawnModeGamepad(gameScene) {
+    // Exit if no gamepad connected
+    if (!window.gamepadManager || !window.gamepadManager.isConnected()) {
+        return;
+    }
+
+    // Exit if gamepad state not initialized
+    if (!window.spawnModeGamepadState) {
+        return;
+    }
+
+    const state = window.spawnModeGamepadState;
+
+    // Get button states
+    const bBtn = window.gamepadManager.getButton('Circle'); // B on 8BitDo, Circle on PS4
+    const xBtn = window.gamepadManager.getButton('Square'); // X on 8BitDo, Square on PS4
+    const aBtn = window.gamepadManager.getButton('X'); // A on Xbox, X on PS4
+    const dpadLeft = window.gamepadManager.getButton('DpadLeft');
+    const dpadRight = window.gamepadManager.getButton('DpadRight');
+    const dpadUp = window.gamepadManager.getButton('DpadUp');
+    const dpadDown = window.gamepadManager.getButton('DpadDown');
+
+    // Toggle spawn mode with B or X button (just pressed)
+    if ((bBtn.pressed && !state.lastB) || (xBtn.pressed && !state.lastX)) {
+        gameScene.spawnMode = !gameScene.spawnMode;
+        console.log(`Spawn mode: ${gameScene.spawnMode ? 'ON' : 'OFF'}`);
+    }
+    state.lastB = bBtn.pressed;
+    state.lastX = xBtn.pressed;
+
+    // Handle spawn mode controls
+    if (gameScene.spawnMode) {
+        // D-pad left - navigate spawn buttons left
+        if (dpadLeft.pressed && !state.lastDpadLeft) {
+            gameScene.selectedSpawnButton = Math.max(0, gameScene.selectedSpawnButton - 1);
+        }
+        state.lastDpadLeft = dpadLeft.pressed;
+
+        // D-pad right - navigate spawn buttons right
+        if (dpadRight.pressed && !state.lastDpadRight) {
+            gameScene.selectedSpawnButton = Math.min(3, gameScene.selectedSpawnButton + 1);
+        }
+        state.lastDpadRight = dpadRight.pressed;
+
+        // A button - spawn selected entity
+        if (aBtn.pressed && !state.lastA) {
+            const types = ['fish', 'cloud', 'crayfish', 'zooplankton'];
+            spawnEntity(gameScene, types[gameScene.selectedSpawnButton]);
+        }
+        state.lastA = aBtn.pressed;
+    }
+    // Handle info mode controls (fish list navigation)
+    else {
+        if (!gameScene.fishes || gameScene.fishes.length === 0) return;
+
+        // Get sorted fish list
+        const sortedFish = gameScene.fishes
+            .filter(f => f && f.ai && typeof f.hunger === 'number' && f.depthZone)
+            .sort((a, b) => a.depth - b.depth);
+
+        if (sortedFish.length === 0) return;
+
+        const currentIndex = sortedFish.indexOf(gameScene.selectedFish);
+
+        // D-pad up - navigate fish list up
+        if (dpadUp.pressed && !state.lastDpadUp) {
+            const newIndex = Math.max(0, currentIndex - 1);
+            gameScene.selectFish(sortedFish[newIndex]);
+            console.log('🎮 Selected fish (up):', sortedFish[newIndex].getInfo().name);
+        }
+        state.lastDpadUp = dpadUp.pressed;
+
+        // D-pad down - navigate fish list down
+        if (dpadDown.pressed && !state.lastDpadDown) {
+            const newIndex = Math.min(sortedFish.length - 1, currentIndex + 1);
+            gameScene.selectFish(sortedFish[newIndex]);
+            console.log('🎮 Selected fish (down):', sortedFish[newIndex].getInfo().name);
+        }
+        state.lastDpadDown = dpadDown.pressed;
+    }
 }
 
 // Export for module usage

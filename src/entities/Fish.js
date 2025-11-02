@@ -371,6 +371,13 @@ export class Fish {
             }
         }
 
+        // Frenzy indicator - red dot below fish when frenzying
+        if (this.model.inFrenzy) {
+            const dotY = this.model.y + bodySize + 5; // Position below fish
+            this.graphics.fillStyle(0xff0000, 0.9);
+            this.graphics.fillCircle(this.model.x, dotY, 3);
+        }
+
         // Selection circle - white circle around selected fish from status panel
         if (this.scene.selectedFishId && this.model.id === this.scene.selectedFishId) {
             const selectionSize = bodySize * 2.5;

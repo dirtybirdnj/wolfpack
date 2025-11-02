@@ -34,6 +34,15 @@ export class NatureSimulationScene extends Phaser.Scene {
         this.depthSelectionActive = true; // Show depth selection UI
         this.gameTime = 0;
         this.selectedButtonIndex = 7; // Start with 80ft button selected (index 7)
+
+        // Spawn mode state (for fish status panel)
+        this.spawnMode = false; // false = info mode, true = spawn mode
+        this.selectedSpawnButton = 0; // 0 = fish, 1 = cloud, 2 = crayfish, 3 = zooplankton
+        this.selectedFish = null; // Currently selected fish for detail view
+        this.selectedFishId = null; // Fish ID for visual selection circle
+
+        // Bind methods
+        this.selectFish = this.selectFish.bind(this);
     }
 
     create() {
@@ -975,6 +984,35 @@ export class NatureSimulationScene extends Phaser.Scene {
         this.baitfishClouds = this.baitfishClouds.filter(c => c.visible);
         this.zooplankton = this.zooplankton.filter(p => p.visible);
         this.crayfish = this.crayfish.filter(cf => cf.visible);
+
+        // Auto-select another fish if the selected one is no longer visible or valid
+        if (this.selectedFish && (!this.selectedFish.visible || !this.fishes.includes(this.selectedFish))) {
+            // Selected fish despawned or went off screen - select another
+            if (this.fishes.length > 0) {
+                // Sort by depth and select the shallowest fish
+                const sortedFish = this.fishes
+                    .filter(f => f && f.ai && typeof f.hunger === 'number' && f.depthZone)
+                    .sort((a, b) => a.depth - b.depth);
+
+                if (sortedFish.length > 0) {
+                    this.selectFish(sortedFish[0]);
+                } else {
+                    this.selectFish(null);
+                }
+            } else {
+                this.selectFish(null);
+            }
+        }
+    }
+
+    /**
+     * Select a fish to show detailed info
+     * @param {Fish} fish - The fish to select (or null to deselect)
+     */
+    selectFish(fish) {
+        this.selectedFish = fish;
+        this.selectedFishId = fish ? fish.model.id : null;
+        // UI will update on next frame via updateFishStatus in index.js
     }
 
     /**
