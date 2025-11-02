@@ -211,8 +211,14 @@ export class GameScene extends Phaser.Scene {
             // Set water temperature
             this.initializeWaterTemp();
 
+            // Initialize creature groups (Phaser Groups for all life forms)
+            this.initializeCreatureGroups();
+
             // Initialize all game systems
             this.initializeSystems();
+
+            // TEST: Spawn a baitfish school to see the new schooling behavior
+            this.spawnBaitfishSchool(GameConfig.CANVAS_WIDTH / 2, 150, 30, 'rainbow_smelt');
 
             // Event listeners
             this.events.on('fishStrike', this.handleFishStrike, this);
@@ -278,6 +284,37 @@ export class GameScene extends Phaser.Scene {
     initializeWaterTemp() {
         // Always use winter/ice fishing water temp
         this.waterTemp = Utils.randomBetween(GameConfig.WATER_TEMP_MIN, GameConfig.WATER_TEMP_MAX);
+    }
+
+    /**
+     * Initialize Phaser Groups for all creatures (ecological organization)
+     */
+    initializeCreatureGroups() {
+        console.log('🌊 Initializing creature groups...');
+
+        // Primary groups - organized by ecological role
+        this.creatures = {
+            baitfish: this.add.group({
+                classType: Fish,
+                runChildUpdate: true
+            }),
+            predators: this.add.group({
+                classType: Fish,
+                runChildUpdate: true
+            })
+            // More groups will be added later (zooplankton, crayfish, etc.)
+        };
+
+        // Functional groups - organized by interaction type
+        this.interactionGroups = {
+            sonarTargets: this.add.group(),
+            prey: this.add.group(),
+            hunters: this.add.group(),
+            swimming: this.add.group(),
+            schooling: this.add.group()
+        };
+
+        console.log('✅ Creature groups initialized');
     }
 
     /**
@@ -480,6 +517,40 @@ export class GameScene extends Phaser.Scene {
         if (this.spawningSystem) {
             this.spawningSystem.trySpawnFish();
         }
+    }
+
+    /**
+     * Spawn a baitfish school using unified Fish class with Phaser Groups
+     * @param {number} worldX - World X position
+     * @param {number} y - Screen Y position
+     * @param {number} count - Number of fish in school
+     * @param {string} species - Species name (rainbow_smelt, alewife, sculpin)
+     */
+    spawnBaitfishSchool(worldX, y, count, species = 'rainbow_smelt') {
+        console.log(`🐟 Spawning ${count} ${species} at (${worldX}, ${y})`);
+
+        for (let i = 0; i < count; i++) {
+            // Spread fish in a cluster
+            const offsetX = Phaser.Math.Between(-40, 40);
+            const offsetY = Phaser.Math.Between(-25, 25);
+
+            // Create baitfish using unified Fish class
+            const fish = new Fish(
+                this,
+                worldX + offsetX,
+                y + offsetY,
+                'TINY',
+                species
+            );
+
+            // Add to groups
+            this.creatures.baitfish.add(fish);
+            this.interactionGroups.sonarTargets.add(fish);
+            this.interactionGroups.prey.add(fish);
+            this.interactionGroups.schooling.add(fish);
+        }
+
+        console.log(`✅ School spawned: ${this.creatures.baitfish.getLength()} total baitfish`);
     }
 
     /**
