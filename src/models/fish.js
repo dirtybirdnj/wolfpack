@@ -316,6 +316,34 @@ export class Fish extends AquaticOrganism {
             } else {
                 const offsetFromPlayer = this.worldX - playerWorldX;
                 this.x = (actualGameWidth / 2) + offsetFromPlayer;
+
+                // SCREEN BOUNDARY DETECTION: Check if fish is stuck at screen edges
+                // Fish shouldn't be within 150px of screen edges (causes visual sticking)
+                const screenMargin = 150;
+                const atLeftEdge = this.x < screenMargin;
+                const atRightEdge = this.x > actualGameWidth - screenMargin;
+
+                if ((atLeftEdge || atRightEdge) && this.ai && this.ai.state === Constants.FISH_STATE.IDLE) {
+                    // Fish is too close to screen edge - adjust worldX to pull them back
+                    if (atLeftEdge) {
+                        // Too far left on screen - move worldX right
+                        this.worldX = playerWorldX - (actualGameWidth / 2) + screenMargin + 50;
+                        console.log(`${this.species} (${this.name}) too close to left screen edge - pulling back`);
+                    } else {
+                        // Too far right on screen - move worldX left
+                        this.worldX = playerWorldX + (actualGameWidth / 2) - screenMargin - 50;
+                        console.log(`${this.species} (${this.name}) too close to right screen edge - pulling back`);
+                    }
+
+                    // Flip direction and reset AI
+                    this.ai.idleDirection *= -1;
+                    this.ai.targetX = null;
+                    this.ai.targetY = null;
+
+                    // Recalculate screen position with corrected worldX
+                    const newOffsetFromPlayer = this.worldX - playerWorldX;
+                    this.x = (actualGameWidth / 2) + newOffsetFromPlayer;
+                }
             }
 
             // FROZEN DETECTION: Check if predator fish is stuck (not moving for extended period)
