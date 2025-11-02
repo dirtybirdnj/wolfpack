@@ -435,14 +435,14 @@ export class Fish extends AquaticOrganism {
 
         // Fish has consumed a baitfish, reduce hunger based on prey nutrition value
         const speciesData = getBaitfishSpecies(preySpecies);
-        const nutritionValue = speciesData.nutritionValue || 20; // Default to 20 if not specified
+        const nutritionValue = speciesData.nutritionValue || 12; // Default to 12 if not specified
 
-        // Different species provide different nutrition:
-        // Cisco: 30 (large, nutritious)
-        // Smelt: 25 (high-fat content)
-        // Alewife: 20 (abundant, standard)
-        // Perch: 18 (moderate)
-        // Sculpin: 15 (small, less nutritious)
+        // Different species provide different nutrition (reduced for more aggressive feeding):
+        // Cisco: 18 (large, nutritious)
+        // Smelt: 16 (high-fat content)
+        // Alewife: 12 (abundant, standard)
+        // Perch: 12 (moderate)
+        // Sculpin: 10 (small, less nutritious)
 
         const previousHunger = this.hunger;
         this.hunger = Math.max(0, this.hunger - nutritionValue);

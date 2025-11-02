@@ -45,7 +45,7 @@ export const BAITFISH_SPECIES = {
         spawnDepthPreference: [20, 80], // mid-depth spawning
 
         // Game mechanics
-        nutritionValue: 20, // how much hunger it reduces for predators
+        nutritionValue: 12, // how much hunger it reduces for predators (reduced for more aggressive feeding)
         catchDifficulty: 'easy', // for predators
         rarity: 'abundant', // most common prey species
         preferredBy: ['lake_trout'], // which predators prefer this species
@@ -111,7 +111,7 @@ export const BAITFISH_SPECIES = {
         spawnDepthPreference: [30, 80], // deep water except spring spawn
 
         // Game mechanics
-        nutritionValue: 25, // high fat content, very nutritious for predators
+        nutritionValue: 16, // high fat content, nutritious but reduced for aggressive feeding
         catchDifficulty: 'medium',
         rarity: 'common',
         preferredBy: ['lake_trout'], // highly preferred due to fat content
@@ -165,7 +165,7 @@ export const BAITFISH_SPECIES = {
         spawnDepthPreference: [80, 120], // deep bottom
 
         // Game mechanics
-        nutritionValue: 15, // less nutritious than pelagic species
+        nutritionValue: 10, // less nutritious than pelagic species (reduced for aggressive feeding)
         catchDifficulty: 'easy', // slow-moving
         rarity: 'uncommon', // less common than pelagic species
         preferredBy: ['lake_trout'], // bottom-feeding lakers target these
@@ -220,7 +220,7 @@ export const BAITFISH_SPECIES = {
         spawnDepthPreference: [10, 40], // shallow to mid-depth
 
         // Game mechanics
-        nutritionValue: 18, // moderate nutrition
+        nutritionValue: 12, // moderate nutrition (reduced for aggressive feeding)
         catchDifficulty: 'medium', // spiny, somewhat evasive
         rarity: 'common',
         preferredBy: ['lake_trout'], // secondary prey, opportunistic
@@ -272,7 +272,7 @@ export const BAITFISH_SPECIES = {
         spawnDepthPreference: [60, 100], // deep water spawning
 
         // Game mechanics
-        nutritionValue: 30, // large, highly nutritious
+        nutritionValue: 18, // large, nutritious but reduced for aggressive feeding
         catchDifficulty: 'hard', // fast, evasive
         rarity: 'rare', // historically important but now rare
         preferredBy: ['lake_trout'], // highly preferred where present

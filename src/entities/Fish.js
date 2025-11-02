@@ -431,6 +431,7 @@ export class Fish {
     get frameAge() { return this.model.frameAge; }
     get angle() { return this.model.angle; }
     get sonarStrength() { return this.model.sonarStrength; }
+    get stomachContents() { return this.model.stomachContents; }
 
     // Delegate methods to model
     feedOnBaitfish(preySpecies) {
