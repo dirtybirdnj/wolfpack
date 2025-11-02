@@ -63,8 +63,8 @@ export class Fish extends AquaticOrganism {
         this.frameAge = 0;
 
         // Biological properties (heavy - not used by baitfish)
-        this.hunger = Utils.randomBetween(50, 90);
-        this.health = Utils.randomBetween(60, 100);
+        this.hunger = Utils.randomBetween(75, 95); // Start hungry to encourage feeding (>75%)
+        this.health = Utils.randomBetween(40, 70); // Start with moderate health, not perfect
         this.lastFed = 0;
         this.metabolism = Utils.randomBetween(0.8, 1.2);
 
@@ -448,15 +448,22 @@ export class Fish extends AquaticOrganism {
         this.hunger = Math.max(0, this.hunger - nutritionValue);
         this.lastFed = this.frameAge;
 
-        // HEALTH RESTORATION: Once hunger reaches 0%, excess food restores health
-        if (previousHunger <= 0 && nutritionValue > 0) {
-            // Fish is already satiated - nutrition goes to healing
-            const healthGain = nutritionValue * 0.5; // 50% of nutrition converts to health
-            const previousHealth = this.health;
-            this.health = Math.min(100, this.health + healthGain);
-            const actualHealthGain = this.health - previousHealth;
-            if (actualHealthGain > 0) {
-                console.log(`${this.name} restored ${actualHealthGain.toFixed(1)} health from eating ${preySpecies} (now ${Math.floor(this.health)}%)`);
+        // HEALTH RESTORATION: Only when hunger reaches 0, excess nutrition restores health
+        // If this meal brought hunger to 0, calculate excess nutrition
+        if (this.hunger === 0 && previousHunger > 0) {
+            // Calculate how much nutrition was "wasted" (brought us below 0)
+            const excessNutrition = nutritionValue - previousHunger;
+
+            if (excessNutrition > 0) {
+                // Excess nutrition restores health (50% conversion rate)
+                const healthGain = excessNutrition * 0.5;
+                const previousHealth = this.health;
+                this.health = Math.min(100, this.health + healthGain);
+                const actualHealthGain = this.health - previousHealth;
+
+                if (actualHealthGain > 0) {
+                    console.log(`${this.name} full! Restored ${actualHealthGain.toFixed(1)} health from excess nutrition (now ${Math.floor(this.health)}%)`);
+                }
             }
         }
 
