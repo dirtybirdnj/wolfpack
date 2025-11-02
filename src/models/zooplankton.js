@@ -127,17 +127,21 @@ export class Zooplankton extends AquaticOrganism {
             return;
         }
 
-        const alpha = 0.8; // Increased visibility
+        const alpha = 1.0; // Full opacity for maximum visibility
         const screenX = this.x;
         const screenY = this.y;
 
-        // Outer glow (more visible)
-        graphics.fillStyle(0x00ff88, alpha * 0.3);
-        graphics.fillCircle(screenX, screenY, 4);
+        // Large outer glow (very visible)
+        graphics.fillStyle(0x00ff88, alpha * 0.4);
+        graphics.fillCircle(screenX, screenY, 8);
 
-        // Inner dot (larger and brighter)
-        graphics.fillStyle(0x88ffcc, alpha);
-        graphics.fillCircle(screenX, screenY, 2.5);
+        // Medium glow ring
+        graphics.fillStyle(0x44ffaa, alpha * 0.6);
+        graphics.fillCircle(screenX, screenY, 5);
+
+        // Bright inner dot
+        graphics.fillStyle(0xaaffee, alpha);
+        graphics.fillCircle(screenX, screenY, 3);
     }
 
     /**

@@ -32,7 +32,7 @@ export const GameConfig = {
     // Fish spawning
     FISH_SPAWN_CHANCE: 0.008, // per frame
     MIN_FISH_DEPTH: 20,
-    MAX_FISH_DEPTH: 140,
+    MAX_FISH_DEPTH: 148, // Increased from 140 to allow bottom feeding (lake is 150ft)
     FISH_SPEED_MIN: 0.3,
     FISH_SPEED_MAX: 1.2,
 
@@ -75,7 +75,7 @@ export const GameConfig = {
     WATER_TEMP_MIN: 38,
     WATER_TEMP_MAX: 45,
     LAKE_TROUT_PREFERRED_DEPTH_MIN: 40,
-    LAKE_TROUT_PREFERRED_DEPTH_MAX: 100,
+    LAKE_TROUT_PREFERRED_DEPTH_MAX: 130, // Increased from 100 to allow bottom feeding on sculpin/crayfish
 
     // UI settings
     UI_FONT_SIZE: 14,
