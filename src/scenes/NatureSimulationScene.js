@@ -910,6 +910,11 @@ export class NatureSimulationScene extends Phaser.Scene {
             }
         });
 
+        // Clean up consumed fish from school.members arrays
+        this.schools.forEach(school => {
+            school.members = school.members.filter(fish => fish.model.visible && !fish.model.consumed);
+        });
+
         // Update all fish
         // Pass null for lure (no fishing in nature mode), pass other fish and adapted schools for AI
         const adaptedSchools = this.getAdaptedSchoolsForAI();

@@ -609,6 +609,34 @@ export class Fish {
                 this.schooling.isPanicking = false;
             }
         }
+
+        // FROZEN DETECTION: Check if fish is stuck (not moving for extended period)
+        // This prevents baitfish from getting frozen in place
+        if (!this.schooling.lastPosition) {
+            this.schooling.lastPosition = { worldX: this.model.worldX, y: this.model.y };
+            this.schooling.frozenFrames = 0;
+        } else {
+            const dx = this.model.worldX - this.schooling.lastPosition.worldX;
+            const dy = this.model.y - this.schooling.lastPosition.y;
+            const distMoved = Math.sqrt(dx * dx + dy * dy);
+
+            // If fish hasn't moved more than 1 pixel in 60 frames (1 second)
+            if (distMoved < 1.0) {
+                this.schooling.frozenFrames++;
+
+                // After 60 frames of being frozen, give it a random nudge
+                if (this.schooling.frozenFrames > 60) {
+                    this.schooling.velocity.x += (Math.random() - 0.5) * 2.0;
+                    this.schooling.velocity.y += (Math.random() - 0.5) * 1.0;
+                    this.schooling.frozenFrames = 0; // Reset counter
+                    console.log(`Unfreezing stuck ${this._speciesName} baitfish`);
+                }
+            } else {
+                // Fish is moving, reset frozen counter
+                this.schooling.frozenFrames = 0;
+                this.schooling.lastPosition = { worldX: this.model.worldX, y: this.model.y };
+            }
+        }
     }
 
     /**

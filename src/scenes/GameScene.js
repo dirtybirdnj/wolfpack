@@ -948,6 +948,11 @@ export class GameScene extends Phaser.Scene {
             }
         });
 
+        // Clean up consumed fish from school.members arrays
+        this.schools.forEach(school => {
+            school.members = school.members.filter(fish => fish.model.visible && !fish.model.consumed);
+        });
+
         // Update fish (predators)
         // Create adapted schools that look like clouds to FishAI
         const adaptedSchools = this.getAdaptedSchoolsForAI();

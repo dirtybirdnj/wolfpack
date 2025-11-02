@@ -296,6 +296,46 @@ export class Fish extends AquaticOrganism {
                 const offsetFromPlayer = this.worldX - playerWorldX;
                 this.x = (actualGameWidth / 2) + offsetFromPlayer;
             }
+
+            // FROZEN DETECTION: Check if predator fish is stuck (not moving for extended period)
+            // Only apply to fish that SHOULD be moving (not pike ambush or other stationary behaviors)
+            if (!this.lastPosition) {
+                this.lastPosition = { worldX: this.worldX, y: this.y };
+                this.frozenFrames = 0;
+            } else {
+                const dx = this.worldX - this.lastPosition.worldX;
+                const dy = this.y - this.lastPosition.y;
+                const distMoved = Math.sqrt(dx * dx + dy * dy);
+
+                // If fish hasn't moved more than 2 pixels in 120 frames (2 seconds)
+                if (distMoved < 2.0) {
+                    this.frozenFrames = (this.frozenFrames || 0) + 1;
+
+                    // After 120 frames of being frozen, check if it SHOULD be moving
+                    if (this.frozenFrames > 120) {
+                        // Pike in AMBUSH state are SUPPOSED to be stationary - skip them
+                        const isPikeAmbushing = this.species === 'northern_pike' &&
+                                               this.ai.state === Constants.FISH_STATE.IDLE;
+
+                        if (!isPikeAmbushing) {
+                            // Fish is stuck and should be moving - reset AI
+                            console.log(`Unfreezing stuck ${this.species} (${this.name}) - resetting AI`);
+                            this.ai.state = Constants.FISH_STATE.IDLE;
+                            this.ai.targetX = null;
+                            this.ai.targetY = null;
+                            this.ai.decisionCooldown = 0; // Force new decision immediately
+                            this.frozenFrames = 0;
+                        } else {
+                            // Pike ambushing is normal - reset counter but don't intervene
+                            this.frozenFrames = 0;
+                        }
+                    }
+                } else {
+                    // Fish is moving, reset frozen counter
+                    this.frozenFrames = 0;
+                    this.lastPosition = { worldX: this.worldX, y: this.y };
+                }
+            }
         }
 
         return { updated: true };
