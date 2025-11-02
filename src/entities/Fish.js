@@ -13,7 +13,8 @@ import { BAITFISH_SPECIES } from '../config/SpeciesData.js';
 export class Fish {
     constructor(scene, x, y, size = 'MEDIUM', species = 'lake_trout') {
         this.scene = scene;
-        this._speciesName = species; // Store internally (model will have its own)
+        // Store species name internally (not as property, since we have a getter)
+        this._speciesName = species;
 
         // Detect if this is a baitfish species
         this.isBaitfish = BAITFISH_SPECIES.hasOwnProperty(species);
