@@ -13,7 +13,7 @@ import { BAITFISH_SPECIES } from '../config/SpeciesData.js';
 export class Fish {
     constructor(scene, x, y, size = 'MEDIUM', species = 'lake_trout') {
         this.scene = scene;
-        this.species = species;
+        this._speciesName = species; // Store internally (model will have its own)
 
         // Detect if this is a baitfish species
         this.isBaitfish = BAITFISH_SPECIES.hasOwnProperty(species);
@@ -43,7 +43,7 @@ export class Fish {
      * Initialize schooling behavior for baitfish
      */
     initializeSchoolingBehavior() {
-        const speciesData = BAITFISH_SPECIES[this.species];
+        const speciesData = BAITFISH_SPECIES[this._speciesName];
 
         // Boids parameters based on species schooling density
         const densityMap = {
@@ -442,7 +442,7 @@ export class Fish {
             if (other === this) return;
 
             // Only school with same species
-            if (other.species !== this.species) return;
+            if (other._speciesName !== this._speciesName) return;
 
             // Check distance
             const dx = other.model.worldX - this.model.worldX;
