@@ -11,6 +11,7 @@ export class Zooplankton {
 
         // Phaser-specific properties
         this.graphics = scene.add.graphics();
+        this.graphics.setDepth(5); // Render above background, below fish (depth 10)
     }
 
     // Delegate all properties to the model

@@ -131,16 +131,20 @@ export class Zooplankton extends AquaticOrganism {
         const screenX = this.x;
         const screenY = this.y;
 
-        // Large outer glow (very visible)
-        graphics.fillStyle(0x00ff88, alpha * 0.4);
-        graphics.fillCircle(screenX, screenY, 8);
+        // HUGE outer glow (extremely visible) - bright white
+        graphics.fillStyle(0xffffff, alpha * 0.3);
+        graphics.fillCircle(screenX, screenY, 15);
 
-        // Medium glow ring
-        graphics.fillStyle(0x44ffaa, alpha * 0.6);
-        graphics.fillCircle(screenX, screenY, 5);
+        // Large middle glow - bright cyan
+        graphics.fillStyle(0x00ffff, alpha * 0.5);
+        graphics.fillCircle(screenX, screenY, 10);
 
-        // Bright inner dot
-        graphics.fillStyle(0xaaffee, alpha);
+        // Medium glow - bright yellow-green
+        graphics.fillStyle(0xaaff00, alpha * 0.7);
+        graphics.fillCircle(screenX, screenY, 6);
+
+        // Bright white core
+        graphics.fillStyle(0xffffff, alpha);
         graphics.fillCircle(screenX, screenY, 3);
     }
 

@@ -16,6 +16,7 @@ export class Crayfish {
 
         // Phaser-specific properties
         this.graphics = scene.add.graphics();
+        this.graphics.setDepth(6); // Render above zooplankton (5), below fish (10)
     }
 
     // Delegate all properties to the model

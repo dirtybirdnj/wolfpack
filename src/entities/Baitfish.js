@@ -16,6 +16,7 @@ export class Baitfish {
 
         // Phaser-specific properties
         this.graphics = scene.add.graphics();
+        this.graphics.setDepth(8); // Render above crayfish (6), below predator fish (10)
         this.sonarTrail = [];
         this.maxTrailLength = 15;
     }
