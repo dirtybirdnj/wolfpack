@@ -644,12 +644,14 @@ export class GameScene extends Phaser.Scene {
             return {
                 // Cloud properties expected by FishAI
                 visible: school.members.length > 0,
-                baitfish: school.members, // Array of Fish objects
-                centerX: centerX,         // Screen X position
-                centerY: school.centerY,  // Screen Y position
-                worldX: school.centerWorldX, // World X position
-                
-                // Method that FishAI uses to check if lure is in cloud
+                baitfish: school.members,      // Array of Fish objects
+                centerX: centerX,              // Screen X position
+                centerY: school.centerY,       // Screen Y position
+                worldX: school.centerWorldX,   // World X position
+                speciesType: school.species,   // Species name (for diet preference)
+                lakersChasing: [],             // Predators currently chasing this school
+
+                // Method: Check if lure is in cloud
                 isPlayerLureInCloud(lure) {
                     const distance = Math.sqrt(
                         Math.pow(lure.x - centerX, 2) +
@@ -658,8 +660,38 @@ export class GameScene extends Phaser.Scene {
                     return distance < GameConfig.BAITFISH_CLOUD_RADIUS;
                 },
 
-                // Properties for hunting behavior
-                lakersChasing: [] // Predators currently chasing this school
+                // Method: Find closest baitfish to predator
+                getClosestBaitfish(x, y) {
+                    let closest = null;
+                    let minDistance = Infinity;
+
+                    for (const fish of school.members) {
+                        if (fish.model.consumed) continue;
+
+                        const distance = Math.sqrt(
+                            Math.pow(x - fish.model.x, 2) +
+                            Math.pow(y - fish.model.y, 2)
+                        );
+
+                        if (distance < minDistance) {
+                            minDistance = distance;
+                            closest = fish;
+                        }
+                    }
+
+                    return { baitfish: closest, distance: minDistance };
+                },
+
+                // Method: Consume a random baitfish (predator eats it)
+                consumeBaitfish() {
+                    const available = school.members.filter(f => !f.model.consumed);
+                    if (available.length > 0) {
+                        const target = available[Math.floor(Math.random() * available.length)];
+                        target.model.consumed = true;
+                        return target;
+                    }
+                    return null;
+                }
             };
         });
     }
