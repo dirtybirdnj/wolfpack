@@ -254,22 +254,37 @@ export class Fish extends AquaticOrganism {
             // Keep fish above lake bottom (with 5 feet buffer)
             // Allow fish to swim all the way to surface (y=0) now that ice rendering is removed
             const maxY = (bottomDepth - 5) * depthScale;
-            const oldY = this.y;
-            this.y = Math.max(0, Math.min(maxY, this.y));
+            const minY = 0;
 
-            // If fish hit a boundary, reset AI target to prevent getting stuck
-            if (this.y !== oldY && this.ai) {
-                // Fish hit top or bottom boundary - clear target so AI picks a new one
-                if (this.y === 0 || this.y === maxY) {
+            // Check if fish is trying to go beyond boundaries BEFORE clamping
+            const wouldHitBottom = this.y > maxY;
+            const wouldHitSurface = this.y < minY;
+
+            // Clamp position to boundaries
+            this.y = Math.max(minY, Math.min(maxY, this.y));
+
+            // If fish is at boundary and AI is still trying to move beyond it, reset AI
+            if (this.ai) {
+                const atBottom = Math.abs(this.y - maxY) < 1; // Within 1px of bottom
+                const atSurface = Math.abs(this.y - minY) < 1; // Within 1px of surface
+
+                if ((atBottom && wouldHitBottom) || (atSurface && wouldHitSurface)) {
+                    // Fish is stuck at boundary - reset AI target
                     this.ai.targetY = null;
                     this.ai.targetX = null;
-                    // Force AI to pick a new depth preference away from boundary
-                    if (this.y === maxY) {
+
+                    if (atBottom) {
                         // Hit bottom - prefer shallower depth
-                        this.ai.depthPreference = Math.max(10, this.ai.depthPreference - 20);
-                    } else if (this.y === 0) {
+                        const newDepthPreference = Math.max(10, bottomDepth / 2);
+                        this.ai.depthPreference = newDepthPreference;
+                        this.ai.state = Constants.FISH_STATE.IDLE; // Force state change
+                        this.ai.decisionCooldown = 0; // Make new decision immediately
+                    } else if (atSurface) {
                         // Hit surface - prefer deeper depth
-                        this.ai.depthPreference = Math.min(bottomDepth - 10, this.ai.depthPreference + 20);
+                        const newDepthPreference = Math.min(bottomDepth - 10, bottomDepth / 2);
+                        this.ai.depthPreference = newDepthPreference;
+                        this.ai.state = Constants.FISH_STATE.IDLE;
+                        this.ai.decisionCooldown = 0;
                     }
                 }
             }
