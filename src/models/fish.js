@@ -242,9 +242,30 @@ export class Fish extends AquaticOrganism {
                 const maxDistanceFromPlayer = 800;
                 const distanceFromPlayer = Math.abs(this.worldX - playerWorldX);
 
+                // Remove fish that are beyond the boundary
                 if (distanceFromPlayer > maxDistanceFromPlayer) {
                     this.visible = false;
                     return { removed: true };
+                }
+
+                // CRITICAL: Check if fish is stuck near the worldX boundary
+                // Fish that are within 50 units of boundary and trying to swim further should turn around
+                const nearBoundary = distanceFromPlayer > maxDistanceFromPlayer - 50;
+                const isOnLeftSide = this.worldX < playerWorldX;
+                const isOnRightSide = this.worldX > playerWorldX;
+
+                if (nearBoundary && this.ai) {
+                    // Check if fish is trying to swim further away from player
+                    const movingAwayFromPlayer = (isOnLeftSide && this.ai.idleDirection === -1) ||
+                                                (isOnRightSide && this.ai.idleDirection === 1);
+
+                    if (movingAwayFromPlayer && this.ai.state === Constants.FISH_STATE.IDLE) {
+                        // Fish is near boundary and swimming away from player - turn around!
+                        console.log(`${this.species} (${this.name}) near worldX boundary (${distanceFromPlayer.toFixed(0)}px) - turning around`);
+                        this.ai.idleDirection *= -1; // Flip direction
+                        this.ai.targetX = null;
+                        this.ai.targetY = null;
+                    }
                 }
             }
 
@@ -302,12 +323,32 @@ export class Fish extends AquaticOrganism {
             if (!this.lastPosition) {
                 this.lastPosition = { worldX: this.worldX, y: this.y };
                 this.frozenFrames = 0;
+                this.vibrationFrames = 0;
             } else {
                 const dx = this.worldX - this.lastPosition.worldX;
                 const dy = this.y - this.lastPosition.y;
                 const distMoved = Math.sqrt(dx * dx + dy * dy);
+                const horizontalMoved = Math.abs(dx);
 
-                // If fish hasn't moved more than 2 pixels in 120 frames (2 seconds)
+                // VIBRATION DETECTION: Fish moving vertically but not horizontally (stuck at side)
+                if (horizontalMoved < 0.5 && Math.abs(dy) > 0.5) {
+                    this.vibrationFrames = (this.vibrationFrames || 0) + 1;
+
+                    // If fish has been vibrating for 60 frames (1 second), it's stuck at a boundary
+                    if (this.vibrationFrames > 60) {
+                        console.log(`${this.species} (${this.name}) vibrating at worldX boundary - unsticking`);
+                        this.ai.state = Constants.FISH_STATE.IDLE;
+                        this.ai.targetX = null;
+                        this.ai.targetY = null;
+                        this.ai.idleDirection *= -1; // Turn around
+                        this.ai.decisionCooldown = 0;
+                        this.vibrationFrames = 0;
+                    }
+                } else {
+                    this.vibrationFrames = 0;
+                }
+
+                // Original frozen detection: If fish hasn't moved more than 2 pixels in 120 frames (2 seconds)
                 if (distMoved < 2.0) {
                     this.frozenFrames = (this.frozenFrames || 0) + 1;
 
