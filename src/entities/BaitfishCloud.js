@@ -84,6 +84,15 @@ export class BaitfishCloud {
 
         this.age++;
 
+        // Check if cloud is empty or too small BEFORE doing any updates/rendering
+        // Single baitfish should disperse, not form a "cloud"
+        if (this.baitfish.length <= 1) {
+            // Destroy any remaining single baitfish
+            this.baitfish.forEach(bf => bf.destroy());
+            this.visible = false;
+            return null;
+        }
+
         // Check for nearby lakers first to determine behavior
         const lakersNearby = this.checkForLakersNearby(lakers);
 
@@ -216,6 +225,21 @@ export class BaitfishCloud {
                     nearbyZooplankton,
                     this.baitfish // Pass all baitfish for separation
                 );
+
+                // Check if baitfish has strayed too far from cloud center
+                // Allow 2x the normal cloud radius for stragglers
+                const maxStrayDistance = GameConfig.BAITFISH_CLOUD_RADIUS * 2;
+                const dx = baitfish.x - this.centerX;
+                const dy = baitfish.y - this.centerY;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+
+                if (distance > maxStrayDistance) {
+                    // Baitfish strayed too far - remove from THIS cloud (but don't destroy)
+                    // It can join another cloud or swim independently
+                    baitfish.cloudId = null;
+                    return false;
+                }
+
                 return true;
             } else if (baitfish.consumed) {
                 baitfish.destroy();

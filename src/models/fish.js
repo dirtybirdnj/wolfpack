@@ -63,8 +63,8 @@ export class Fish extends AquaticOrganism {
         this.frameAge = 0;
 
         // Biological properties (heavy - not used by baitfish)
-        this.hunger = Utils.randomBetween(50, 90);
-        this.health = Utils.randomBetween(60, 100);
+        this.hunger = Utils.randomBetween(75, 95); // Start hungry to encourage feeding (>75%)
+        this.health = Utils.randomBetween(40, 70); // Start with moderate health, not perfect
         this.lastFed = 0;
         this.metabolism = Utils.randomBetween(0.8, 1.2);
 
@@ -193,7 +193,9 @@ export class Fish extends AquaticOrganism {
         this.speed = this.baseSpeed * this.depthZone.speedMultiplier;
 
         if (!inActiveFight) {
-            this.ai.update(lure, this.scene.time.now, allFish, baitfishClouds);
+            // Pass crayfish array to AI for opportunistic bottom feeding
+            const crayfish = this.scene.crayfish || [];
+            this.ai.update(lure, this.scene.time.now, allFish, baitfishClouds, crayfish);
 
             const movement = this.ai.getMovementVector();
 
@@ -220,9 +222,36 @@ export class Fish extends AquaticOrganism {
                 this.angle *= 0.9;
             }
 
-            // Apply movement in world coordinates
-            this.worldX += movement.x;
-            this.y += movement.y;
+            // Apply movement with inertia/momentum for fluid dynamics
+            // Initialize velocity if not exists
+            if (typeof this.velocityX === 'undefined') {
+                this.velocityX = 0;
+                this.velocityY = 0;
+            }
+
+            // Acceleration based on desired movement direction
+            const acceleration = 0.25; // How quickly fish can change speed
+            const drag = 0.92; // Friction/drag coefficient (0.92 = lose 8% speed per frame)
+
+            // Apply acceleration toward desired movement
+            this.velocityX += movement.x * acceleration;
+            this.velocityY += movement.y * acceleration;
+
+            // Apply drag to simulate water resistance
+            this.velocityX *= drag;
+            this.velocityY *= drag;
+
+            // Cap maximum velocity based on fish speed
+            const maxVelocity = this.speed * 3;
+            const currentSpeed = Math.sqrt(this.velocityX * this.velocityX + this.velocityY * this.velocityY);
+            if (currentSpeed > maxVelocity) {
+                this.velocityX = (this.velocityX / currentSpeed) * maxVelocity;
+                this.velocityY = (this.velocityY / currentSpeed) * maxVelocity;
+            }
+
+            // Update position with velocity (momentum)
+            this.worldX += this.velocityX;
+            this.y += this.velocityY;
             this.depth = this.y / depthScale;
 
             // Get player's world position (center of screen)
@@ -272,9 +301,9 @@ export class Fish extends AquaticOrganism {
             // Get lake bottom depth (use maxDepth from scene)
             let bottomDepth = this.scene.maxDepth || GameConfig.MAX_DEPTH;
 
-            // Keep fish above lake bottom (with 5 feet buffer)
-            // Allow fish to swim all the way to surface (y=0) now that ice rendering is removed
-            const maxY = (bottomDepth - 5) * depthScale;
+            // Allow fish to reach the actual lake bottom to feed on crayfish
+            // No buffer needed - fish can swim all the way to bottom
+            const maxY = bottomDepth * depthScale;
             const minY = 0;
 
             // Check if fish is trying to go beyond boundaries BEFORE clamping
@@ -435,33 +464,78 @@ export class Fish extends AquaticOrganism {
 
         // Fish has consumed a baitfish, reduce hunger based on prey nutrition value
         const speciesData = getBaitfishSpecies(preySpecies);
-        const nutritionValue = speciesData.nutritionValue || 20; // Default to 20 if not specified
+        const nutritionValue = speciesData.nutritionValue || 12; // Default to 12 if not specified
 
-        // Different species provide different nutrition:
-        // Cisco: 30 (large, nutritious)
-        // Smelt: 25 (high-fat content)
-        // Alewife: 20 (abundant, standard)
-        // Perch: 18 (moderate)
-        // Sculpin: 15 (small, less nutritious)
+        // Different species provide different nutrition (reduced for more aggressive feeding):
+        // Cisco: 18 (large, nutritious)
+        // Smelt: 16 (high-fat content)
+        // Alewife: 12 (abundant, standard)
+        // Perch: 12 (moderate)
+        // Sculpin: 10 (small, less nutritious)
 
         const previousHunger = this.hunger;
         this.hunger = Math.max(0, this.hunger - nutritionValue);
         this.lastFed = this.frameAge;
 
-        // HEALTH RESTORATION: Once hunger reaches 0%, excess food restores health
-        if (previousHunger <= 0 && nutritionValue > 0) {
-            // Fish is already satiated - nutrition goes to healing
-            const healthGain = nutritionValue * 0.5; // 50% of nutrition converts to health
-            const previousHealth = this.health;
-            this.health = Math.min(100, this.health + healthGain);
-            const actualHealthGain = this.health - previousHealth;
-            if (actualHealthGain > 0) {
-                console.log(`${this.name} restored ${actualHealthGain.toFixed(1)} health from eating ${preySpecies} (now ${Math.floor(this.health)}%)`);
+        // HEALTH RESTORATION: Only when hunger reaches 0, excess nutrition restores health
+        // If this meal brought hunger to 0, calculate excess nutrition
+        if (this.hunger === 0 && previousHunger > 0) {
+            // Calculate how much nutrition was "wasted" (brought us below 0)
+            const excessNutrition = nutritionValue - previousHunger;
+
+            if (excessNutrition > 0) {
+                // Excess nutrition restores health (50% conversion rate)
+                const healthGain = excessNutrition * 0.5;
+                const previousHealth = this.health;
+                this.health = Math.min(100, this.health + healthGain);
+                const actualHealthGain = this.health - previousHealth;
+
+                if (actualHealthGain > 0) {
+                    console.log(`${this.name} full! Restored ${actualHealthGain.toFixed(1)} health from excess nutrition (now ${Math.floor(this.health)}%)`);
+                }
             }
         }
 
         // Log feeding for debugging (commented out for production)
         // console.log(`${this.name} fed on ${preySpecies}, hunger reduced by ${nutritionValue} (now ${Math.floor(this.hunger)}%)`);
+    }
+
+    feedOnCrayfish() {
+        // Defensive check: Only predatory fish have hunger and health properties
+        if (this.hunger === undefined || this.health === undefined) {
+            return;
+        }
+
+        // Record what this fish ate
+        if (this.stomachContents) {
+            this.stomachContents.push({
+                species: 'crayfish',
+                timestamp: this.frameAge
+            });
+        }
+
+        // Crayfish provide moderate nutrition (similar to sculpin)
+        const nutritionValue = 10;
+
+        const previousHunger = this.hunger;
+        this.hunger = Math.max(0, this.hunger - nutritionValue);
+        this.lastFed = this.frameAge;
+
+        // HEALTH RESTORATION: Only when hunger reaches 0, excess nutrition restores health
+        if (this.hunger === 0 && previousHunger > 0) {
+            const excessNutrition = nutritionValue - previousHunger;
+
+            if (excessNutrition > 0) {
+                const healthGain = excessNutrition * 0.5;
+                const previousHealth = this.health;
+                this.health = Math.min(100, this.health + healthGain);
+                const actualHealthGain = this.health - previousHealth;
+
+                if (actualHealthGain > 0) {
+                    console.log(`${this.name} full! Restored ${actualHealthGain.toFixed(1)} health from crayfish (now ${Math.floor(this.health)}%)`);
+                }
+            }
+        }
     }
 
     getInfo() {

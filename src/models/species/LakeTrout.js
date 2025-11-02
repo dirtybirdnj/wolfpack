@@ -11,7 +11,10 @@ export class LakeTrout extends Fish {
         super(scene, x, y, size, 'lake_trout');
 
         // Lake trout are MUCH hungrier - voracious predators
-        this.hunger = Utils.randomBetween(80, 100);
+        this.hunger = Utils.randomBetween(85, 100);
+
+        // Higher metabolism means they get hungry faster and feed more aggressively
+        this.metabolism = Utils.randomBetween(1.5, 2.0); // Increased from base 0.8-1.2
     }
 
     calculateLength() {

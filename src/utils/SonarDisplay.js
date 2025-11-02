@@ -40,7 +40,6 @@ export class SonarDisplay {
             baitfishMin: 0,
             baitfishCloudMin: 0,
             fishMin: 0,
-            baitfishMax: 0,
             fishMax: 0
         };
         this.dragState = {
@@ -501,126 +500,64 @@ export class SonarDisplay {
         const maxDepth = this.getActualMaxDepth();
         const depthScale = this.getDepthScale();
 
-        // BAITFISH CONSTRAINTS
+        // BAITFISH CONSTRAINTS - Hidden for cleaner display
         // Minimum Y for baitfish (0.25 feet from surface)
-        const baitfishMinY = 0.25 * depthScale + this.debugBoundaryOffsets.baitfishMin;
-        this.graphics.lineStyle(3, 0xff0000, 0.8); // RED line - baitfish minimum
-        this.graphics.lineBetween(0, baitfishMinY, this.canvasWidth, baitfishMinY);
-        this.createInteractiveZone('baitfishMin', baitfishMinY, 0xff0000);
+        // const baitfishMinY = 0.25 * depthScale + this.debugBoundaryOffsets.baitfishMin;
+        // this.graphics.lineStyle(3, 0xff0000, 0.8); // RED line - baitfish minimum
+        // this.graphics.lineBetween(0, baitfishMinY, this.canvasWidth, baitfishMinY);
+        // this.createInteractiveZone('baitfishMin', baitfishMinY, 0xff0000);
 
         // Add label for baitfish minimum
-        const baitfishMinLabel = this.scene.add.text(10, baitfishMinY + 5, 'BAITFISH MIN (0.25ft)', {
-            fontSize: '10px',
-            fontFamily: 'Courier New',
-            color: '#ff0000',
-            backgroundColor: '#000000'
-        });
-        baitfishMinLabel.setDepth(1000);
-        this.scene.time.delayedCall(50, () => baitfishMinLabel.destroy());
+        // const baitfishMinLabel = this.scene.add.text(10, baitfishMinY + 5, 'BAITFISH MIN (0.25ft)', {
+        //     fontSize: '10px',
+        //     fontFamily: 'Courier New',
+        //     color: '#ff0000',
+        //     backgroundColor: '#000000'
+        // });
+        // baitfishMinLabel.setDepth(1000);
+        // this.scene.time.delayedCall(50, () => baitfishMinLabel.destroy());
 
-        // BAITFISH CLOUD CONSTRAINTS
+        // BAITFISH CLOUD CONSTRAINTS - Hidden for cleaner display
         // Minimum Y for baitfish clouds (0.5 feet from surface)
-        const baitfishCloudMinY = 0.5 * depthScale + this.debugBoundaryOffsets.baitfishCloudMin;
-        this.graphics.lineStyle(3, 0xff8800, 0.8); // ORANGE line - baitfish cloud minimum
-        this.graphics.lineBetween(0, baitfishCloudMinY, this.canvasWidth, baitfishCloudMinY);
-        this.createInteractiveZone('baitfishCloudMin', baitfishCloudMinY, 0xff8800);
+        // const baitfishCloudMinY = 0.5 * depthScale + this.debugBoundaryOffsets.baitfishCloudMin;
+        // this.graphics.lineStyle(3, 0xff8800, 0.8); // ORANGE line - baitfish cloud minimum
+        // this.graphics.lineBetween(0, baitfishCloudMinY, this.canvasWidth, baitfishCloudMinY);
+        // this.createInteractiveZone('baitfishCloudMin', baitfishCloudMinY, 0xff8800);
 
         // Add label for baitfish cloud minimum
-        const cloudMinLabel = this.scene.add.text(10, baitfishCloudMinY + 5, 'BAITFISH CLOUD MIN (0.5ft)', {
-            fontSize: '10px',
-            fontFamily: 'Courier New',
-            color: '#ff8800',
-            backgroundColor: '#000000'
-        });
-        cloudMinLabel.setDepth(1000);
-        this.scene.time.delayedCall(50, () => cloudMinLabel.destroy());
+        // const cloudMinLabel = this.scene.add.text(10, baitfishCloudMinY + 5, 'BAITFISH CLOUD MIN (0.5ft)', {
+        //     fontSize: '10px',
+        //     fontFamily: 'Courier New',
+        //     color: '#ff8800',
+        //     backgroundColor: '#000000'
+        // });
+        // cloudMinLabel.setDepth(1000);
+        // this.scene.time.delayedCall(50, () => cloudMinLabel.destroy());
 
-        // FISH CONSTRAINTS (Regular fish like lakers)
+        // FISH CONSTRAINTS (Regular fish like lakers) - Hidden for cleaner display
         // Minimum Y for fish (0 feet - can reach surface)
-        const fishMinY = 0 + this.debugBoundaryOffsets.fishMin;
-        this.graphics.lineStyle(2, 0x00ff00, 0.6); // GREEN line - fish minimum (at surface)
-        this.graphics.lineBetween(0, fishMinY, this.canvasWidth, fishMinY);
-        this.createInteractiveZone('fishMin', fishMinY, 0x00ff00);
+        // const fishMinY = 0 + this.debugBoundaryOffsets.fishMin;
+        // this.graphics.lineStyle(2, 0x00ff00, 0.6); // GREEN line - fish minimum (at surface)
+        // this.graphics.lineBetween(0, fishMinY, this.canvasWidth, fishMinY);
+        // this.createInteractiveZone('fishMin', fishMinY, 0x00ff00);
 
         // Add label for fish minimum
-        const fishMinLabel = this.scene.add.text(10, fishMinY + 2, 'FISH MIN (0ft - SURFACE)', {
-            fontSize: '10px',
-            fontFamily: 'Courier New',
-            color: '#00ff00',
-            backgroundColor: '#000000'
-        });
-        fishMinLabel.setDepth(1000);
-        this.scene.time.delayedCall(50, () => fishMinLabel.destroy());
+        // const fishMinLabel = this.scene.add.text(10, fishMinY + 2, 'FISH MIN (0ft - SURFACE)', {
+        //     fontSize: '10px',
+        //     fontFamily: 'Courier New',
+        //     color: '#00ff00',
+        //     backgroundColor: '#000000'
+        // });
+        // fishMinLabel.setDepth(1000);
+        // this.scene.time.delayedCall(50, () => fishMinLabel.destroy());
 
-        // MAXIMUM CONSTRAINTS
-        // Maximum Y for baitfish (3 feet from bottom)
-        const baitfishMaxY = (maxDepth - 3) * depthScale + this.debugBoundaryOffsets.baitfishMax;
-        this.graphics.lineStyle(2, 0x00ffff, 0.6); // CYAN line - baitfish maximum
-        this.graphics.lineBetween(0, baitfishMaxY, this.canvasWidth, baitfishMaxY);
-        this.createInteractiveZone('baitfishMax', baitfishMaxY, 0x00ffff);
+        // MAXIMUM DEPTH CONSTRAINT - Hidden for cleaner display
+        // const maxDepthY = maxDepth * depthScale + this.debugBoundaryOffsets.fishMax;
+        // this.graphics.lineStyle(3, 0xff00ff, 0.8);
+        // this.graphics.lineBetween(0, maxDepthY, this.canvasWidth, maxDepthY);
+        // this.createInteractiveZone('fishMax', maxDepthY, 0xff00ff);
 
-        // Add label for baitfish maximum
-        const baitfishMaxLabel = this.scene.add.text(10, baitfishMaxY - 15, `BAITFISH MAX (${maxDepth-3}ft)`, {
-            fontSize: '10px',
-            fontFamily: 'Courier New',
-            color: '#00ffff',
-            backgroundColor: '#000000'
-        });
-        baitfishMaxLabel.setDepth(1000);
-        this.scene.time.delayedCall(50, () => baitfishMaxLabel.destroy());
-
-        // Maximum Y for fish (5 feet from bottom)
-        const fishMaxY = (maxDepth - 5) * depthScale + this.debugBoundaryOffsets.fishMax;
-        this.graphics.lineStyle(2, 0x0088ff, 0.6); // BLUE line - fish maximum
-        this.graphics.lineBetween(0, fishMaxY, this.canvasWidth, fishMaxY);
-        this.createInteractiveZone('fishMax', fishMaxY, 0x0088ff);
-
-        // Add label for fish maximum
-        const fishMaxLabel = this.scene.add.text(10, fishMaxY - 15, `FISH MAX (${maxDepth-5}ft)`, {
-            fontSize: '10px',
-            fontFamily: 'Courier New',
-            color: '#0088ff',
-            backgroundColor: '#000000'
-        });
-        fishMaxLabel.setDepth(1000);
-        this.scene.time.delayedCall(50, () => fishMaxLabel.destroy());
-
-        // Draw legend box for debug boundaries
-        const legendX = this.canvasWidth - 250;
-        const legendY = this.canvasHeight - 120;
-
-        this.graphics.fillStyle(0x000000, 0.8);
-        this.graphics.fillRect(legendX - 5, legendY - 5, 240, 110);
-        this.graphics.lineStyle(2, 0xffff00, 0.8);
-        this.graphics.strokeRect(legendX - 5, legendY - 5, 240, 110);
-
-        const legendTitle = this.scene.add.text(legendX, legendY, '🐟 DEBUG: FISH BOUNDARIES', {
-            fontSize: '11px',
-            fontFamily: 'Courier New',
-            color: '#ffff00',
-            fontStyle: 'bold'
-        });
-        legendTitle.setDepth(1000);
-        this.scene.time.delayedCall(50, () => legendTitle.destroy());
-
-        const legendItems = [
-            { color: '#ff0000', text: 'Baitfish Min (0.25ft)' },
-            { color: '#ff8800', text: 'Cloud Min (0.5ft)' },
-            { color: '#00ff00', text: 'Fish Min (Surface)' },
-            { color: '#00ffff', text: 'Baitfish Max (3ft from bottom)' },
-            { color: '#0088ff', text: 'Fish Max (5ft from bottom)' }
-        ];
-
-        legendItems.forEach((item, index) => {
-            const y = legendY + 18 + (index * 16);
-            const legendItem = this.scene.add.text(legendX, y, `█ ${item.text}`, {
-                fontSize: '9px',
-                fontFamily: 'Courier New',
-                color: item.color
-            });
-            legendItem.setDepth(1000);
-            this.scene.time.delayedCall(50, () => legendItem.destroy());
-        });
+        // Debug legend removed - boundary lines are self-explanatory with their labels
     }
 
     handleResize(gameSize) {

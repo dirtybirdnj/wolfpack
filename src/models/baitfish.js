@@ -87,7 +87,7 @@ export class Baitfish extends AquaticOrganism {
         const bottomDepth = this.getBottomDepthAtPosition();
         // Allow baitfish near surface but not at absolute top (prevents sticking at Y=0)
         const minY = 0.25 * depthScale; // 0.25 feet from surface (about 1 pixel)
-        const maxY = (bottomDepth - 3) * depthScale; // 3 feet from bottom
+        const maxY = bottomDepth * depthScale; // Can reach actual bottom (matches fish max depth)
         this.y = Math.max(minY, Math.min(maxY, this.y));
 
         // Update screen position and check if too far from player
@@ -200,22 +200,38 @@ export class Baitfish extends AquaticOrganism {
             const moveSpeed = this.speed * speedMultiplier;
             const verticalMultiplier = this.panicMode ? 0.9 : 0.7;
 
-            const moveDx = (dx / distance) * moveSpeed;
-            const moveDy = (dy / distance) * moveSpeed * verticalMultiplier;
+            const desiredDx = (dx / distance) * moveSpeed;
+            const desiredDy = (dy / distance) * moveSpeed * verticalMultiplier;
 
-            this.worldX += moveDx;
-            this.y += moveDy;
+            // Apply inertia/momentum for fluid movement
+            const acceleration = 0.3; // Baitfish turn slightly faster than predators
+            const drag = 0.90; // More drag than predators (smaller fish)
 
-            // Update velocity for alignment rule
-            this.velocityX = moveDx;
-            this.velocityY = moveDy;
+            this.velocityX += desiredDx * acceleration;
+            this.velocityY += desiredDy * acceleration;
+
+            // Apply drag
+            this.velocityX *= drag;
+            this.velocityY *= drag;
+
+            // Cap max velocity
+            const maxVelocity = this.speed * 2.5;
+            const currentSpeed = Math.sqrt(this.velocityX * this.velocityX + this.velocityY * this.velocityY);
+            if (currentSpeed > maxVelocity) {
+                this.velocityX = (this.velocityX / currentSpeed) * maxVelocity;
+                this.velocityY = (this.velocityY / currentSpeed) * maxVelocity;
+            }
+
+            // Apply movement with momentum
+            this.worldX += this.velocityX;
+            this.y += this.velocityY;
 
             // Update angle for rendering
-            this.angle = Math.atan2(moveDy, moveDx);
+            this.angle = Math.atan2(this.velocityY, this.velocityX);
         } else {
             // Not moving, decay velocity
-            this.velocityX *= 0.9;
-            this.velocityY *= 0.9;
+            this.velocityX *= 0.85;
+            this.velocityY *= 0.85;
         }
 
         // Reset panic after a while
@@ -394,19 +410,35 @@ export class Baitfish extends AquaticOrganism {
             if (distance > 1) {
                 const moveSpeed = this.speed * 1.0;
 
-                const moveDx = (dx / distance) * moveSpeed;
-                const moveDy = (dy / distance) * moveSpeed;
+                const desiredDx = (dx / distance) * moveSpeed;
+                const desiredDy = (dy / distance) * moveSpeed;
 
-                this.worldX += moveDx;
-                this.y += moveDy;
+                // Apply inertia for hunting behavior
+                const acceleration = 0.3;
+                const drag = 0.90;
 
-                // Update velocity and angle
-                this.velocityX = moveDx;
-                this.velocityY = moveDy;
-                this.angle = Math.atan2(moveDy, moveDx);
+                this.velocityX += desiredDx * acceleration;
+                this.velocityY += desiredDy * acceleration;
+
+                this.velocityX *= drag;
+                this.velocityY *= drag;
+
+                // Cap max velocity
+                const maxVelocity = this.speed * 2.5;
+                const currentSpeed = Math.sqrt(this.velocityX * this.velocityX + this.velocityY * this.velocityY);
+                if (currentSpeed > maxVelocity) {
+                    this.velocityX = (this.velocityX / currentSpeed) * maxVelocity;
+                    this.velocityY = (this.velocityY / currentSpeed) * maxVelocity;
+                }
+
+                // Apply movement with momentum
+                this.worldX += this.velocityX;
+                this.y += this.velocityY;
+
+                this.angle = Math.atan2(this.velocityY, this.velocityX);
             } else {
-                this.velocityX *= 0.9;
-                this.velocityY *= 0.9;
+                this.velocityX *= 0.85;
+                this.velocityY *= 0.85;
             }
         }
     }

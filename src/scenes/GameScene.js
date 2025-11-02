@@ -44,6 +44,16 @@ export class GameScene extends Phaser.Scene {
         this.zooplankton = [];
         this.crayfish = [];
 
+        // Selected fish for detailed view
+        this.selectedFish = null;
+
+        // Spawn mode state
+        this.spawnMode = false; // false = info mode, true = spawn mode
+        this.selectedSpawnButton = 0; // 0 = fish, 1 = cloud, 2 = crayfish, 3 = zooplankton
+
+        // Bind select fish method so it can be called from Fish entities
+        this.selectFish = this.selectFish.bind(this);
+
         // Game state
         this.fishCaught = 0;
         this.fishLost = 0;
@@ -560,6 +570,24 @@ export class GameScene extends Phaser.Scene {
     }
 
     /**
+     * Wrapper method for spawning baitfish cloud via spawning system
+     * Used by spawn mode UI for consistency with NatureSimulationScene
+     */
+    trySpawnBaitfishCloud() {
+        // Use spawning system to spawn new baitfish school
+        if (this.spawningSystem) {
+            try {
+                const success = this.spawningSystem.trySpawnBaitfishSchool();
+                if (!success) {
+                    console.log('⚠️ Could not spawn baitfish (max schools reached)');
+                }
+            } catch (error) {
+                console.error('Error spawning baitfish:', error);
+            }
+        }
+    }
+
+    /**
      * Get the player's center position (always at center of actual canvas width)
      * This adapts to any screen size/resolution
      */
@@ -896,6 +924,34 @@ export class GameScene extends Phaser.Scene {
         });
         // Add any new clouds created by splitting
         this.baitfishClouds.push(...newCloudsFromSplits);
+
+        // Merge overlapping clouds of the same species
+        for (let i = 0; i < this.baitfishClouds.length; i++) {
+            const cloudA = this.baitfishClouds[i];
+            if (!cloudA.visible) continue;
+
+            for (let j = i + 1; j < this.baitfishClouds.length; j++) {
+                const cloudB = this.baitfishClouds[j];
+                if (!cloudB.visible) continue;
+
+                // Allow cross-species schooling (except sculpin - they're solitary)
+                // Sculpin won't merge with anything, and nothing merges with sculpin
+                if (cloudA.speciesType === 'sculpin' || cloudB.speciesType === 'sculpin') continue;
+
+                // Check if clouds are overlapping (within 1.5x cloud radius)
+                // Use worldX for proper distance calculation across scrolling world
+                const dx = cloudA.worldX - cloudB.worldX;
+                const dy = cloudA.centerY - cloudB.centerY;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                const mergeDistance = GameConfig.BAITFISH_CLOUD_RADIUS * 1.5;
+
+                if (distance < mergeDistance) {
+                    // Merge cloudB into cloudA
+                    cloudA.mergeWith(cloudB);
+                    // cloudB is now invisible and will be removed next frame
+                }
+            }
+        }
 
         // Update school centers first (they drift/wander like BaitfishCloud)
         this.schools.forEach(school => {
@@ -1922,6 +1978,15 @@ export class GameScene extends Phaser.Scene {
             this.tackleBoxGraphics.destroy();
             this.tackleBoxGraphics = null;
         }
+    }
+
+    /**
+     * Select a fish to show detailed info
+     */
+    selectFish(fish) {
+        this.selectedFish = fish;
+        this.selectedFishId = fish ? fish.model.id : null;
+        // UI will update on next frame via updateFishStatus in index.js
     }
 }
 

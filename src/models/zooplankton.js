@@ -127,17 +127,19 @@ export class Zooplankton extends AquaticOrganism {
             return;
         }
 
-        const alpha = 0.6;
         const screenX = this.x;
         const screenY = this.y;
 
-        // Outer glow (very subtle)
-        graphics.fillStyle(0x00ff88, alpha * 0.2);
-        graphics.fillCircle(screenX, screenY, 2);
+        // Tiny green speck - barely visible, like real zooplankton
+        // Use a muted greenish color with low opacity
+        graphics.fillStyle(0x66aa44, 0.5); // Dim olive-green
+        graphics.fillCircle(screenX, screenY, 1.5); // Very small - almost single pixel
 
-        // Inner dot
-        graphics.fillStyle(0x88ffcc, alpha);
-        graphics.fillCircle(screenX, screenY, 1);
+        // Optional: tiny subtle highlight (50% chance to add variety)
+        if (Math.random() < 0.5) {
+            graphics.fillStyle(0x88cc66, 0.3); // Slightly brighter green
+            graphics.fillCircle(screenX, screenY, 1);
+        }
     }
 
     /**
