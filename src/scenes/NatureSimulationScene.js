@@ -29,7 +29,7 @@ export class NatureSimulationScene extends Phaser.Scene {
 
         // Simulation state
         this.waterTemp = 40;
-        this.debugMode = true; // Always show debug info in nature mode
+        this.debugMode = false; // Hidden by default, toggle with Circle/A
         this.selectedDepth = 80; // Default depth (80ft is typical for Lake Champlain)
         this.depthSelectionActive = true; // Show depth selection UI
         this.gameTime = 0;
@@ -55,9 +55,9 @@ export class NatureSimulationScene extends Phaser.Scene {
         // Initialize spawning system (no lure needed in nature mode)
         this.spawningSystem = new SpawningSystem(this);
 
-        // Initialize debug system (always enabled in nature mode for observation)
+        // Initialize debug system (hidden by default, toggle with Circle/A)
         this.debugSystem = new DebugSystem(this);
-        this.debugSystem.setEnabled(true);
+        this.debugSystem.setEnabled(false);
 
         // Create depth selection UI (hidden initially)
         this.createDepthSelectionUI();
@@ -289,12 +289,6 @@ export class NatureSimulationScene extends Phaser.Scene {
             this.sonarDisplay = new SonarDisplay(this, 'observation');
         }
 
-        // Update info text
-        if (this.infoText) {
-            this.infoText.destroy();
-            this.createInfoText();
-        }
-
         console.log(`Nature simulation started at ${depth}ft depth`);
     }
 
@@ -332,45 +326,7 @@ export class NatureSimulationScene extends Phaser.Scene {
         }
     }
 
-    createInfoText() {
-        const { width } = this.cameras.main;
-
-        // Info panel at top
-        this.infoText = this.add.text(width / 2, 30, '', {
-            fontSize: '14px',
-            fontFamily: 'Courier New',
-            color: '#00ff00',
-            backgroundColor: '#1a2a3a',
-            padding: { x: 15, y: 8 },
-            align: 'center'
-        }).setOrigin(0.5);
-
-        this.updateInfoText();
-    }
-
-    updateInfoText() {
-        if (!this.infoText || this.depthSelectionActive) {return;}
-
-        const minutes = Math.floor(this.gameTime / 60);
-        const secs = this.gameTime % 60;
-        const timeStr = `${minutes}:${secs.toString().padStart(2, '0')}`;
-
-        const fishCount = this.fishes.length;
-        const baitfishCount = this.schools.length;
-        const zooplanktonCount = this.zooplankton.length;
-
-        // Show different controls based on whether gamepad is connected
-        let controlsText = 'ESC: Menu | D: Toggle Debug | SPACE: Spawn Fish | B: Spawn Baitfish';
-        if (this.gamepadDetected && window.gamepadManager && window.gamepadManager.isConnected()) {
-            controlsText = 'Start: Menu | D: Debug | X: Spawn Fish | Y: Spawn Baitfish';
-        }
-
-        this.infoText.setText([
-            `NATURE SIMULATION | Depth: ${this.maxDepth}ft | Temp: ${this.waterTemp}°F | Time: ${timeStr}`,
-            `Fish: ${fishCount} | Baitfish Schools: ${baitfishCount} | Zooplankton: ${zooplanktonCount}`,
-            controlsText
-        ].join('\n'));
-    }
+    // Info text removed - cleaner observation mode
 
     setupControls() {
         // Set up keyboard cursors
@@ -384,8 +340,8 @@ export class NatureSimulationScene extends Phaser.Scene {
             this.scene.start('MenuScene');
         });
 
-        // D to toggle debug mode (only when not in depth selection)
-        this.input.keyboard.on('keydown-D', () => {
+        // A to toggle debug mode (only when not in depth selection)
+        this.input.keyboard.on('keydown-A', () => {
             if (!this.depthSelectionActive && this.debugSystem) {
                 this.debugMode = !this.debugMode;
                 this.debugSystem.setEnabled(this.debugMode);
@@ -393,11 +349,14 @@ export class NatureSimulationScene extends Phaser.Scene {
             }
         });
 
-        // B to spawn baitfish (only when not in depth selection)
+        // B to spawn zooplankton and crayfish (only when not in depth selection)
         this.input.keyboard.on('keydown-B', () => {
-            if (!this.depthSelectionActive) {
-                this.trySpawnBaitfishCloud();
-                console.log('Manually spawned baitfish cloud');
+            if (!this.depthSelectionActive && this.spawningSystem) {
+                // Spawn zooplankton cluster
+                this.spawningSystem.trySpawnZooplankton();
+                // Spawn a crayfish
+                this.spawningSystem.trySpawnCrayfish();
+                console.log('Manually spawned zooplankton and crayfish');
             }
         });
 
@@ -413,6 +372,7 @@ export class NatureSimulationScene extends Phaser.Scene {
                 lastDpadUp: false,
                 lastDpadDown: false,
                 lastA: false,
+                lastCircle: false,
                 lastX: false,
                 lastY: false,
                 lastStart: false,
@@ -854,6 +814,7 @@ export class NatureSimulationScene extends Phaser.Scene {
         if (this.gamepadDetected && window.gamepadManager && window.gamepadManager.isConnected()) {
             const xButton = window.gamepadManager.getButton('X');
             const yButton = window.gamepadManager.getButton('Y');
+            const circleButton = window.gamepadManager.getButton('Circle');
             const startButton = window.gamepadManager.getButton('Start');
 
             // X button to spawn fish (like SPACE)
@@ -861,9 +822,16 @@ export class NatureSimulationScene extends Phaser.Scene {
                 this.trySpawnFish();
             }
 
-            // Y button to spawn baitfish (like B key)
+            // Y button to spawn baitfish school
             if (yButton.pressed && !this.gamepadState.lastY) {
                 this.trySpawnBaitfishCloud();
+            }
+
+            // Circle button to toggle debug (like A key)
+            if (circleButton.pressed && !this.gamepadState.lastCircle) {
+                this.debugMode = !this.debugMode;
+                this.debugSystem.setEnabled(this.debugMode);
+                console.log('Debug mode:', this.debugMode ? 'ON' : 'OFF');
             }
 
             // Start button to return to menu (like ESC)
@@ -874,14 +842,9 @@ export class NatureSimulationScene extends Phaser.Scene {
 
             this.gamepadState.lastX = xButton.pressed;
             this.gamepadState.lastY = yButton.pressed;
+            this.gamepadState.lastCircle = circleButton.pressed;
             this.gamepadState.lastStart = startButton.pressed;
         }
-
-        // Update info text
-        if (this.frameCount % 10 === 0) {
-            this.updateInfoText();
-        }
-        this.frameCount = (this.frameCount || 0) + 1;
 
         // Update sonar display
         if (this.sonarDisplay) {
