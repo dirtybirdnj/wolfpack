@@ -186,6 +186,8 @@ export class Fish {
     update(lure, allFish = [], baitfishClouds = []) {
         // Baitfish use schooling behavior instead of AI
         if (this.isBaitfish) {
+            // Store allFish array for schooling neighbor queries
+            this.allFishInScene = allFish;
             this.updateSchooling();
             this.updateSonarTrail();
             this.render();
@@ -239,8 +241,16 @@ export class Fish {
         const bodySize = Math.max(8, this.model.weight / 2);
 
         // Get movement direction to orient the fish
-        const movement = this.model.ai.getMovementVector();
-        const isMovingRight = movement.x >= 0;
+        let isMovingRight = true; // Default
+
+        if (this.isBaitfish && this.schooling) {
+            // Baitfish use schooling velocity
+            isMovingRight = this.schooling.velocity.x >= 0;
+        } else if (this.model.ai) {
+            // Predators use AI movement vector
+            const movement = this.model.ai.getMovementVector();
+            isMovingRight = movement.x >= 0;
+        }
 
         // If we have external artwork sprite, use it instead of procedural rendering
         if (this.sprite) {
@@ -253,7 +263,8 @@ export class Fish {
         }
 
         // Interest flash - green circle that fades to show player triggered interest
-        if (this.model.interestFlash > 0) {
+        // (Only for predators with AI)
+        if (this.model.interestFlash && this.model.interestFlash > 0) {
             const flashSize = bodySize * (2 + (1 - this.model.interestFlash) * 1.5);
             const flashAlpha = this.model.interestFlash * 0.8;
 
@@ -430,14 +441,15 @@ export class Fish {
      * Find nearby fish in the same group for schooling
      */
     findNearbySchoolmates() {
-        // Get all fish from scene - will need to be a group reference
-        const allFish = this.scene.allFish || this.scene.baitfishGroup;
-        if (!allFish) return [];
+        // Get all fish from scene (stored in update())
+        const allFish = this.allFishInScene;
+        if (!allFish || !Array.isArray(allFish)) return [];
 
         const neighbors = [];
         const radius = this.schooling.perceptionRadius;
 
-        allFish.getChildren().forEach(other => {
+        // Iterate through array of fish
+        allFish.forEach(other => {
             // Skip self
             if (other === this) return;
 

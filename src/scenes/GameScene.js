@@ -287,34 +287,17 @@ export class GameScene extends Phaser.Scene {
     }
 
     /**
-     * Initialize Phaser Groups for all creatures (ecological organization)
+     * Initialize creature arrays (ecological organization)
+     * Note: Using arrays instead of Phaser Groups because Fish entities aren't GameObjects
+     * Future: Refactor Fish to extend Phaser.GameObjects.Container to use Groups
      */
     initializeCreatureGroups() {
-        console.log('🌊 Initializing creature groups...');
+        console.log('🌊 Initializing creature arrays...');
 
-        // Primary groups - organized by ecological role
-        this.creatures = {
-            baitfish: this.add.group({
-                classType: Fish,
-                runChildUpdate: true
-            }),
-            predators: this.add.group({
-                classType: Fish,
-                runChildUpdate: true
-            })
-            // More groups will be added later (zooplankton, crayfish, etc.)
-        };
+        // Array for schooling baitfish (using new unified Fish class with Boids)
+        this.baitfishSchools = [];
 
-        // Functional groups - organized by interaction type
-        this.interactionGroups = {
-            sonarTargets: this.add.group(),
-            prey: this.add.group(),
-            hunters: this.add.group(),
-            swimming: this.add.group(),
-            schooling: this.add.group()
-        };
-
-        console.log('✅ Creature groups initialized');
+        console.log('✅ Creature arrays initialized');
     }
 
     /**
@@ -520,7 +503,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     /**
-     * Spawn a baitfish school using unified Fish class with Phaser Groups
+     * Spawn a baitfish school using unified Fish class with Boids algorithm
      * @param {number} worldX - World X position
      * @param {number} y - Screen Y position
      * @param {number} count - Number of fish in school
@@ -534,7 +517,7 @@ export class GameScene extends Phaser.Scene {
             const offsetX = Phaser.Math.Between(-40, 40);
             const offsetY = Phaser.Math.Between(-25, 25);
 
-            // Create baitfish using unified Fish class
+            // Create baitfish using unified Fish class (will detect species and enable schooling)
             const fish = new Fish(
                 this,
                 worldX + offsetX,
@@ -543,14 +526,11 @@ export class GameScene extends Phaser.Scene {
                 species
             );
 
-            // Add to groups
-            this.creatures.baitfish.add(fish);
-            this.interactionGroups.sonarTargets.add(fish);
-            this.interactionGroups.prey.add(fish);
-            this.interactionGroups.schooling.add(fish);
+            // Add to baitfish schools array
+            this.baitfishSchools.push(fish);
         }
 
-        console.log(`✅ School spawned: ${this.creatures.baitfish.getLength()} total baitfish`);
+        console.log(`✅ School spawned: ${this.baitfishSchools.length} total baitfish`);
     }
 
     /**
@@ -663,7 +643,7 @@ export class GameScene extends Phaser.Scene {
             }
         });
 
-        // Update baitfish clouds
+        // Update baitfish clouds (old system)
         const newCloudsFromSplits = [];
         this.baitfishClouds = this.baitfishClouds.filter(cloud => {
             if (cloud.visible) {
@@ -681,7 +661,19 @@ export class GameScene extends Phaser.Scene {
         // Add any new clouds created by splitting
         this.baitfishClouds.push(...newCloudsFromSplits);
 
-        // Update fish
+        // Update baitfish schools (new unified Fish with Boids schooling)
+        this.baitfishSchools = this.baitfishSchools.filter(fish => {
+            if (fish.model.visible && !fish.model.consumed) {
+                // Pass all baitfish schools so each fish can find neighbors for Boids
+                fish.update(this.lure, this.baitfishSchools, []);
+                return true;
+            } else {
+                fish.destroy();
+                return false;
+            }
+        });
+
+        // Update fish (predators)
         this.fishes.forEach((fish, index) => {
             fish.update(this.lure, this.fishes, this.baitfishClouds);
 
