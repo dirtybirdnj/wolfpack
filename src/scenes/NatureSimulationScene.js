@@ -1,7 +1,6 @@
 import GameConfig from '../config/GameConfig.js';
 import SonarDisplay from '../utils/SonarDisplay.js';
 import Fish from '../entities/Fish.js';
-import BaitfishCloud from '../entities/BaitfishCloud.js';
 import SpawningSystem from './systems/SpawningSystem.js';
 import DebugSystem from './systems/DebugSystem.js';
 
@@ -20,9 +19,13 @@ export class NatureSimulationScene extends Phaser.Scene {
 
         // Entity arrays
         this.fishes = [];
-        this.baitfishClouds = [];
+        this.baitfishSchools = []; // New unified Fish entities with Boids schooling
+        this.schools = []; // School metadata (center, velocity)
         this.zooplankton = [];
         this.crayfish = [];
+
+        // Legacy array for any old code references
+        this.baitfishClouds = [];
 
         // Simulation state
         this.waterTemp = 40;
@@ -451,15 +454,56 @@ export class NatureSimulationScene extends Phaser.Scene {
         }
     }
 
+    /**
+     * Get player center X (for nature mode, this is just used for consistency)
+     * In nature mode there's no player, so this returns the actual game width center
+     */
+    getPlayerCenterX() {
+        return (this.scale.width || GameConfig.CANVAS_WIDTH) / 2;
+    }
+
+    /**
+     * Spawn a baitfish school using new unified Fish system
+     */
+    spawnBaitfishSchool(worldX, y, count, species = 'rainbow_smelt') {
+        const schoolId = `school_${Date.now()}_${Math.random()}`;
+        const school = {
+            id: schoolId,
+            species,
+            centerWorldX: worldX,
+            centerY: y,
+            velocity: {
+                x: (Math.random() - 0.5) * 0.6,
+                y: (Math.random() - 0.5) * 0.2
+            },
+            members: [],
+            age: 0
+        };
+
+        // Create individual fish in the school
+        for (let i = 0; i < count; i++) {
+            const offsetX = Phaser.Math.Between(-40, 40);
+            const offsetY = Phaser.Math.Between(-25, 25);
+
+            const fish = new Fish(this, worldX + offsetX, y + offsetY, 'TINY', species);
+            fish.schoolId = schoolId;
+            fish.schoolingOffset = { x: offsetX, y: offsetY };
+
+            school.members.push(fish);
+            this.baitfishSchools.push(fish);
+        }
+
+        this.schools.push(school);
+        console.log(`✓ Spawned ${species} school (${count} fish) at ${(y / GameConfig.DEPTH_SCALE).toFixed(1)}ft`);
+    }
+
     trySpawnBaitfishCloud() {
-        // Spawn a baitfish cloud using the spawning system with random species
+        // Use spawning system to spawn new baitfish school
         if (this.spawningSystem) {
             try {
-                const cloud = this.spawningSystem.trySpawnBaitfishCloud();
-                if (cloud) {
-                    console.log(`✓ Spawned ${cloud.speciesType} school (${cloud.initialCount} fish) at ${cloud.depth.toFixed(1)}ft`);
-                } else {
-                    console.log('⚠️ Could not spawn baitfish (max clouds reached)');
+                const success = this.spawningSystem.trySpawnBaitfishSchool();
+                if (!success) {
+                    console.log('⚠️ Could not spawn baitfish (max schools reached)');
                 }
             } catch (error) {
                 console.error('Error spawning baitfish:', error);
@@ -616,6 +660,110 @@ export class NatureSimulationScene extends Phaser.Scene {
         }
     }
 
+    /**
+     * Render fog effects and fish counts behind baitfish schools
+     * Same as GameScene implementation
+     */
+    renderSchoolEffects() {
+        if (!this.schoolEffectsGraphics) {
+            this.schoolEffectsGraphics = this.add.graphics();
+            this.schoolEffectsGraphics.setDepth(3);
+        }
+
+        if (!this.schoolCountTexts) {
+            this.schoolCountTexts = [];
+        }
+
+        this.schoolEffectsGraphics.clear();
+        this.schoolCountTexts.forEach(text => text.setVisible(false));
+
+        // Draw fog and count for each school
+        this.schools.forEach(school => {
+            if (school.members.length === 0) return;
+
+            // Calculate school bounds
+            let minX = Infinity, maxX = -Infinity;
+            let minY = Infinity, maxY = -Infinity;
+
+            school.members.forEach(fish => {
+                if (fish.model.consumed) return;
+                minX = Math.min(minX, fish.model.x);
+                maxX = Math.max(maxX, fish.model.x);
+                minY = Math.min(minY, fish.model.y);
+                maxY = Math.max(maxY, fish.model.y);
+            });
+
+            if (!isFinite(minX)) return;
+
+            const centerX = (minX + maxX) / 2;
+            const centerY = (minY + maxY) / 2;
+            const width = (maxX - minX) + 40;
+            const height = (maxY - minY) + 30;
+
+            // Fog color by species
+            const fogColor = school.species === 'alewife' ? 0x88ccff :
+                           school.species === 'rainbow_smelt' ? 0x88ffcc :
+                           school.species === 'yellow_perch' ? 0xffdd88 :
+                           school.species === 'cisco' ? 0xccccff :
+                           0x88cccc;
+
+            // Draw fog layers
+            for (let i = 3; i > 0; i--) {
+                const radius = (width / 2) * (i / 3);
+                const radiusY = (height / 2) * (i / 3);
+                const alpha = 0.06 / i;
+
+                this.schoolEffectsGraphics.fillStyle(fogColor, alpha);
+                this.schoolEffectsGraphics.fillEllipse(centerX, centerY, radius * 2, radiusY * 2);
+            }
+
+            // Count background
+            const visibleCount = school.members.filter(f => !f.model.consumed).length;
+            const textY = maxY + 15;
+            const textWidth = visibleCount >= 100 ? 30 : visibleCount >= 10 ? 24 : 18;
+            this.schoolEffectsGraphics.fillStyle(0x000000, 0.5);
+            this.schoolEffectsGraphics.fillRoundedRect(centerX - textWidth/2, textY - 8, textWidth, 14, 3);
+        });
+
+        // Draw count text
+        let textIndex = 0;
+        this.schools.forEach(school => {
+            if (school.members.length === 0) return;
+
+            let maxY = -Infinity;
+            school.members.forEach(fish => {
+                if (!fish.model.consumed) {
+                    maxY = Math.max(maxY, fish.model.y);
+                }
+            });
+            if (!isFinite(maxY)) return;
+
+            const centerX = (Math.min(...school.members.filter(f => !f.model.consumed).map(f => f.model.x)) +
+                           Math.max(...school.members.filter(f => !f.model.consumed).map(f => f.model.x))) / 2;
+            const visibleCount = school.members.filter(f => !f.model.consumed).length;
+            const textY = maxY + 15;
+
+            if (textIndex >= this.schoolCountTexts.length) {
+                const text = this.add.text(0, 0, '', {
+                    fontSize: '10px',
+                    fontFamily: 'monospace',
+                    color: '#ffffff',
+                    stroke: '#000000',
+                    strokeThickness: 2
+                });
+                text.setOrigin(0.5, 0.5);
+                text.setDepth(4);
+                this.schoolCountTexts.push(text);
+            }
+
+            const text = this.schoolCountTexts[textIndex];
+            text.setText(visibleCount.toString());
+            text.setPosition(centerX, textY);
+            text.setVisible(true);
+            textIndex++;
+        });
+    }
+
     update(time, delta) {
         if (this.depthSelectionActive) {
             // Handle keyboard navigation during depth selection
@@ -671,14 +819,70 @@ export class NatureSimulationScene extends Phaser.Scene {
             this.spawningSystem.update();
         }
 
-        // Update all fish
-        // Pass null for lure (no fishing in nature mode), but pass other fish and baitfish for AI
-        this.fishes.forEach(fish => {
-            fish.update(null, this.fishes, this.baitfishClouds);
+        // Update school centers (wandering behavior)
+        const depthScale = this.sonarDisplay ? this.sonarDisplay.getDepthScale() : GameConfig.DEPTH_SCALE;
+        const bottomDepth = this.maxDepth || GameConfig.MAX_DEPTH;
+
+        this.schools.forEach(school => {
+            school.age++;
+
+            // Active wandering
+            if (Math.random() < 0.08) {
+                school.velocity.x += (Math.random() - 0.5) * 1.2;
+                school.velocity.y += (Math.random() - 0.5) * 0.6;
+            }
+
+            // Gentle drift
+            school.velocity.x += (Math.random() - 0.5) * 0.1;
+            school.velocity.y += (Math.random() - 0.5) * 0.04;
+
+            // Velocity decay
+            school.velocity.x *= 0.99;
+            school.velocity.y *= 0.99;
+
+            // Limit speeds
+            school.velocity.x = Math.max(-2.0, Math.min(2.0, school.velocity.x));
+            school.velocity.y = Math.max(-1.0, Math.min(1.0, school.velocity.y));
+
+            // Update position
+            school.centerWorldX += school.velocity.x;
+            school.centerY += school.velocity.y;
+
+            // Keep in bounds
+            const minY = 20;
+            const maxY = (bottomDepth - 5) * depthScale;
+            school.centerY = Math.max(minY, Math.min(maxY, school.centerY));
         });
 
-        // Update all baitfish clouds
-        // Pass fish (as "lakers") and zooplankton for baitfish AI
+        // Render school fog and counts BEFORE individual fish
+        this.renderSchoolEffects();
+
+        // Update baitfish schools (new unified Fish with Boids schooling)
+        this.baitfishSchools = this.baitfishSchools.filter(fish => {
+            if (fish.model.visible && !fish.model.consumed) {
+                // Find this fish's school center
+                const school = this.schools.find(s => s.id === fish.schoolId);
+                fish.schoolCenter = school ? {
+                    worldX: school.centerWorldX,
+                    y: school.centerY
+                } : null;
+
+                // Pass all baitfish schools for Boids neighbors
+                fish.update(null, this.baitfishSchools, []);
+                return true;
+            } else {
+                fish.destroy();
+                return false;
+            }
+        });
+
+        // Update all fish
+        // Pass null for lure (no fishing in nature mode), pass other fish and baitfish schools for AI
+        this.fishes.forEach(fish => {
+            fish.update(null, this.fishes, this.baitfishSchools);
+        });
+
+        // Legacy: Update old baitfish clouds (if any still exist)
         this.baitfishClouds.forEach(cloud => {
             cloud.update(this.fishes, this.zooplankton);
         });
