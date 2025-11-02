@@ -661,6 +661,80 @@ export class NatureSimulationScene extends Phaser.Scene {
     }
 
     /**
+     * Adapt new schools to look like old BaitfishClouds for FishAI compatibility
+     * This creates a bridge layer so predators can hunt the new baitfish schools
+     * @returns {Array} Array of cloud-like objects that FishAI can understand
+     */
+    getAdaptedSchoolsForAI() {
+        return this.schools.map(school => {
+            // In nature mode, no player offset needed - use direct worldX
+            const centerX = school.centerWorldX;
+
+            return {
+                // Cloud properties expected by FishAI
+                visible: school.members.length > 0,
+                baitfish: school.members,
+                centerX: centerX,
+                centerY: school.centerY,
+                worldX: school.centerWorldX,
+                speciesType: school.species,
+                lakersChasing: [],
+
+                // Method: Check if lure is in cloud (not used in nature mode)
+                isPlayerLureInCloud(lure) {
+                    return false; // No lure in nature mode
+                },
+
+                // Track the last closest baitfish found
+                _lastClosestBaitfish: null,
+
+                // Method: Find closest baitfish to predator
+                getClosestBaitfish(x, y) {
+                    let closest = null;
+                    let minDistance = Infinity;
+
+                    for (const fish of school.members) {
+                        if (fish.model.consumed) continue;
+
+                        const distance = Math.sqrt(
+                            Math.pow(x - fish.model.x, 2) +
+                            Math.pow(y - fish.model.y, 2)
+                        );
+
+                        if (distance < minDistance) {
+                            minDistance = distance;
+                            closest = fish;
+                        }
+                    }
+
+                    this._lastClosestBaitfish = closest;
+                    return { baitfish: closest, distance: minDistance };
+                },
+
+                // Method: Consume the SPECIFIC baitfish that was targeted
+                consumeBaitfish() {
+                    if (this._lastClosestBaitfish && !this._lastClosestBaitfish.model.consumed) {
+                        const target = this._lastClosestBaitfish;
+                        target.model.consumed = true;
+                        target.model.visible = false;
+                        this._lastClosestBaitfish = null;
+                        return target;
+                    }
+
+                    const available = school.members.filter(f => !f.model.consumed);
+                    if (available.length > 0) {
+                        const target = available[Math.floor(Math.random() * available.length)];
+                        target.model.consumed = true;
+                        target.model.visible = false;
+                        return target;
+                    }
+                    return null;
+                }
+            };
+        });
+    }
+
+    /**
      * Render fog effects and fish counts behind baitfish schools
      * Same as GameScene implementation
      */
@@ -877,9 +951,12 @@ export class NatureSimulationScene extends Phaser.Scene {
         });
 
         // Update all fish
-        // Pass null for lure (no fishing in nature mode), pass other fish and baitfish schools for AI
+        // Pass null for lure (no fishing in nature mode), pass other fish and adapted schools for AI
+        const adaptedSchools = this.getAdaptedSchoolsForAI();
+        const allBaitfishTargets = [...this.baitfishClouds, ...adaptedSchools];
+
         this.fishes.forEach(fish => {
-            fish.update(null, this.fishes, this.baitfishSchools);
+            fish.update(null, this.fishes, allBaitfishTargets);
         });
 
         // Legacy: Update old baitfish clouds (if any still exist)
