@@ -246,9 +246,13 @@ export class MenuScene extends Phaser.Scene {
         container.btnHeight = btnHeight;
 
         // Make interactive
+        // Use a centered hit area that matches the button graphics exactly
         const hitArea = new Phaser.Geom.Rectangle(-btnWidth / 2, -btnHeight / 2, btnWidth, btnHeight);
-        container.setSize(btnWidth, btnHeight);
-        container.setInteractive(hitArea, Phaser.Geom.Rectangle.Contains);
+        container.setInteractive({
+            hitArea: hitArea,
+            hitAreaCallback: Phaser.Geom.Rectangle.Contains,
+            useHandCursor: true // Show pointer cursor on hover
+        });
 
         // Hover effects
         container.on('pointerover', () => {
