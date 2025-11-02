@@ -22,6 +22,10 @@ export class BootScene extends Phaser.Scene {
     create() {
         const { width, height } = this.cameras.main;
 
+        // Allow skipping boot animation with any gamepad button
+        this.canSkip = true;
+        this.hasSkipped = false;
+
         // Create black background box
         this.blackBox = this.add.graphics();
         this.blackBox.fillStyle(0x000000, 1);
@@ -189,7 +193,34 @@ export class BootScene extends Phaser.Scene {
     }
 
     update() {
-        // No update needed - tweens handle everything
+        // Allow skipping boot animation with any gamepad button
+        if (this.canSkip && !this.hasSkipped) {
+            const gamepads = navigator.getGamepads();
+
+            for (const gamepad of gamepads) {
+                if (!gamepad) continue;
+
+                // Check if any button is pressed
+                const anyButtonPressed = gamepad.buttons.some(button => button.pressed);
+
+                if (anyButtonPressed) {
+                    this.skipToMenu();
+                    break;
+                }
+            }
+        }
+    }
+
+    skipToMenu() {
+        this.hasSkipped = true;
+        this.canSkip = false;
+
+        // Stop all tweens and timers
+        this.tweens.killAll();
+        this.time.removeAllEvents();
+
+        // Go straight to menu
+        this.scene.start('MenuScene');
     }
 }
 
