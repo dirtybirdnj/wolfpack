@@ -585,28 +585,29 @@ function updateFishStatus(gameScene) {
                            fish.hunger > 40 ? '#ffaa00' : '#00ff00';
         const healthColor = fish.health < 30 ? '#ff6666' :
                            fish.health < 60 ? '#ffaa00' : '#00ff00';
-        const frenzyColor = fish.inFrenzy ? '#ff6600' : '#666666';
-        const frenzyText = fish.inFrenzy ? `🔥${info.frenzyIntensity}` : '---';
         const genderIcon = info.gender === 'male' ? '♂' : '♀';
         const genderColor = info.gender === 'male' ? '#66ccff' : '#ff99cc';
+
+        // Frenzy indicator - red circle if in frenzy
+        const frenzyIndicator = fish.inFrenzy ? '🔴' : '';
 
         // Count baitfish consumed (from stomach contents)
         const baitfishConsumed = fish.stomachContents ? fish.stomachContents.length : 0;
 
         // Check if this fish is selected
         const isSelected = gameScene.selectedFishId === fish.model.id;
-        const selectedStyle = isSelected ? 'background: #ffffff20; font-weight: bold;' : '';
+        const selectedClass = isSelected ? 'fish-selected' : '';
+        const selectedStyle = isSelected ? 'background: #ffffff20;' : `background: ${zoneColor}08;`;
 
         return `
-            <div class="fish-status-row" data-fish-id="${fish.model.id}" style="border-left: 3px solid ${zoneColor}; background: ${zoneColor}08; ${selectedStyle} padding: 3px 5px; margin: 2px 0; cursor: pointer; font-size: 9px; display: flex; justify-content: space-between; align-items: center; transition: background 0.2s;">
-                <span style="color: ${zoneColor}; min-width: 80px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${info.name}">🐟 ${info.name}</span>
+            <div class="fish-status-row ${selectedClass}" data-fish-id="${fish.model.id}" style="border-left: 3px solid ${zoneColor}; ${selectedStyle} padding: 3px 5px; margin: 2px 0; cursor: pointer; font-size: 9px; display: flex; justify-content: space-between; align-items: center;">
+                <span style="color: ${zoneColor}; min-width: 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${info.name}"><span style="color: ${genderColor};">${genderIcon}</span> 🐟 ${info.name}</span>
+                <span style="min-width: 15px; text-align: center;">${frenzyIndicator}</span>
                 <span style="color: #fff; min-width: 40px;">${info.weight}</span>
                 <span style="color: #00ffff; min-width: 50px; text-align: center;">${fish.ai.state.substring(0, 6)}</span>
                 <span style="min-width: 45px; text-align: center;"><span style="color: ${hungerColor};">${fish.hunger.toFixed(0)}</span>/<span style="color: ${healthColor};">${fish.health.toFixed(0)}</span></span>
                 <span style="color: ${zoneColor}; min-width: 35px; text-align: right;">${Math.floor(fish.depth)}ft</span>
-                <span style="color: ${frenzyColor}; min-width: 30px; text-align: center;">${frenzyText}</span>
                 <span style="color: #ff9900; min-width: 25px; text-align: right;">${baitfishConsumed}🐠</span>
-                <span style="color: ${genderColor}; font-size: 11px; margin-left: 3px;">${genderIcon}</span>
             </div>
         `;
     };
@@ -614,49 +615,63 @@ function updateFishStatus(gameScene) {
     // Build HTML with header key
     let html = `
         <div style="background: #1a1a1a; border-bottom: 2px solid #00ff00; padding: 3px 5px; margin-bottom: 4px; font-size: 8px; color: #888; display: flex; justify-content: space-between; font-weight: bold;">
-            <span style="min-width: 80px;">NAME</span>
+            <span style="min-width: 100px;">NAME</span>
+            <span style="min-width: 15px; text-align: center;">F</span>
             <span style="min-width: 40px;">WEIGHT</span>
             <span style="min-width: 50px; text-align: center;">STATE</span>
             <span style="min-width: 45px; text-align: center;">H/H</span>
             <span style="min-width: 35px; text-align: right;">DEPTH</span>
-            <span style="min-width: 30px; text-align: center;">FRENZY</span>
             <span style="min-width: 25px; text-align: right;">ATE</span>
-            <span style="margin-left: 3px;">⚥</span>
         </div>
     `;
 
     html += allFish.map(renderFish).join('');
     container.innerHTML = html;
 
-    // Add click handlers to fish rows
+    // Add click handlers to fish rows (no re-render on click)
     container.querySelectorAll('.fish-status-row').forEach(row => {
-        row.addEventListener('click', function() {
+        row.addEventListener('click', function(e) {
+            e.stopPropagation(); // Prevent event bubbling
             const fishId = this.getAttribute('data-fish-id');
-            // Find the fish and set it as selected
-            const selectedFish = gameScene.fishes.find(f => f.model.id === fishId);
-            if (selectedFish) {
-                gameScene.selectedFishId = fishId;
-                console.log(`Selected fish: ${selectedFish.name}`);
-                // Re-render to show selection
-                updateFishStatus(gameScene);
-            }
-        });
 
-        // Hover effect
-        row.addEventListener('mouseenter', function() {
-            this.style.background = '#ffffff15';
-        });
-        row.addEventListener('mouseleave', function() {
-            const fishId = this.getAttribute('data-fish-id');
-            const isSelected = gameScene.selectedFishId === fishId;
-            if (!isSelected) {
-                const fish = gameScene.fishes.find(f => f.model.id === fishId);
+            // Toggle selection - if clicking already selected fish, deselect
+            if (gameScene.selectedFishId === fishId) {
+                gameScene.selectedFishId = null;
+                console.log('Fish deselected');
+            } else {
+                gameScene.selectedFishId = fishId;
+                const selectedFish = gameScene.fishes.find(f => f.model.id === fishId);
+                if (selectedFish) {
+                    console.log(`Selected fish: ${selectedFish.name}`);
+                }
+            }
+
+            // Update visual state without full re-render
+            container.querySelectorAll('.fish-status-row').forEach(r => {
+                r.classList.remove('fish-selected');
+                const rowFishId = r.getAttribute('data-fish-id');
+                const fish = gameScene.fishes.find(f => f.model.id === rowFishId);
                 if (fish) {
                     const zoneColor = fish.depthZone.name === 'Surface' ? '#ffff00' :
                                      fish.depthZone.name === 'Mid-Column' ? '#00ff00' : '#888888';
-                    this.style.background = `${zoneColor}08`;
+                    r.style.background = `${zoneColor}08`;
                 }
+            });
+
+            if (gameScene.selectedFishId) {
+                this.classList.add('fish-selected');
+                this.style.background = '#ffffff20';
             }
+        });
+
+        // Simplified hover effect using CSS opacity
+        row.addEventListener('mouseenter', function() {
+            if (!this.classList.contains('fish-selected')) {
+                this.style.opacity = '0.8';
+            }
+        });
+        row.addEventListener('mouseleave', function() {
+            this.style.opacity = '1';
         });
     });
 }
