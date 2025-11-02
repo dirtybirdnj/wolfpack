@@ -573,10 +573,11 @@ export class Fish {
         this.model.y += this.schooling.velocity.y;
 
         // Update screen X position from world X (like predator fish do)
-        // Player is always at center of screen
-        const playerWorldX = GameConfig.CANVAS_WIDTH / 2;
+        // Player is always at center of screen (adapt to actual canvas width)
+        const actualCanvasWidth = this.scene.scale.width || GameConfig.CANVAS_WIDTH;
+        const playerWorldX = actualCanvasWidth / 2;
         const offsetFromPlayer = this.model.worldX - playerWorldX;
-        this.model.x = (GameConfig.CANVAS_WIDTH / 2) + offsetFromPlayer;
+        this.model.x = (actualCanvasWidth / 2) + offsetFromPlayer;
 
         // BOUNDARY ENFORCEMENT - Keep fish within valid depth range
         const depthScale = this.scene.sonarDisplay ?

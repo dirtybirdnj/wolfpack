@@ -163,7 +163,9 @@ export class GameScene extends Phaser.Scene {
             this.sonarDisplay = new SonarDisplay(this);
 
             // Create the player's lure - start at surface (0 feet)
-            this.lure = new Lure(this, GameConfig.CANVAS_WIDTH / 2, 0);
+            // Use actual game width (not hardcoded CANVAS_WIDTH) to center on any screen size
+            const actualGameWidth = this.scale.width || GameConfig.CANVAS_WIDTH;
+            this.lure = new Lure(this, actualGameWidth / 2, 0);
 
             // Apply lure weight from tackle box selection
             const lureWeight = this.registry.get('lureWeight');
@@ -557,13 +559,21 @@ export class GameScene extends Phaser.Scene {
     }
 
     /**
+     * Get the player's center position (always at center of actual canvas width)
+     * This adapts to any screen size/resolution
+     */
+    getPlayerCenterX() {
+        return (this.scale.width || GameConfig.CANVAS_WIDTH) / 2;
+    }
+
+    /**
      * Fish whistle - spawn trophy fish of each species + large bait clouds
      */
     spawnFishWhistleFish() {
         console.log('🎵 Fish whistle: Spawning trophy fish and large bait clouds...');
 
         // Use center of screen as player position
-        const playerWorldX = GameConfig.CANVAS_WIDTH / 2;
+        const playerWorldX = this.getPlayerCenterX();
 
         // Spawn 1 trophy fish of each species
         const species = ['yellow_perch', 'lake_trout', 'northern_pike', 'smallmouth_bass'];
@@ -635,9 +645,9 @@ export class GameScene extends Phaser.Scene {
     getAdaptedSchoolsForAI() {
         return this.schools.map(school => {
             // Convert school center worldX to screen X
-            const playerWorldX = GameConfig.CANVAS_WIDTH / 2;
+            const playerWorldX = this.getPlayerCenterX();
             const offsetFromPlayer = school.centerWorldX - playerWorldX;
-            const centerX = (GameConfig.CANVAS_WIDTH / 2) + offsetFromPlayer;
+            const centerX = this.getPlayerCenterX() + offsetFromPlayer;
 
             return {
                 // Cloud properties expected by FishAI
