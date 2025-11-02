@@ -782,6 +782,9 @@ export class GameScene extends Phaser.Scene {
                     return distance < GameConfig.BAITFISH_CLOUD_RADIUS;
                 },
 
+                // Track the last closest baitfish found (so we consume the RIGHT one)
+                _lastClosestBaitfish: null,
+
                 // Method: Find closest baitfish to predator
                 getClosestBaitfish(x, y) {
                     let closest = null;
@@ -801,15 +804,29 @@ export class GameScene extends Phaser.Scene {
                         }
                     }
 
+                    // Store the closest fish so consumeBaitfish() eats the RIGHT one
+                    this._lastClosestBaitfish = closest;
+
                     return { baitfish: closest, distance: minDistance };
                 },
 
-                // Method: Consume a random baitfish (predator eats it)
+                // Method: Consume the SPECIFIC baitfish that was targeted (not random!)
                 consumeBaitfish() {
+                    // Consume the specific fish that was found by getClosestBaitfish()
+                    if (this._lastClosestBaitfish && !this._lastClosestBaitfish.model.consumed) {
+                        const target = this._lastClosestBaitfish;
+                        target.model.consumed = true;
+                        target.model.visible = false; // Hide immediately
+                        this._lastClosestBaitfish = null; // Clear reference
+                        return target;
+                    }
+
+                    // Fallback: consume random available fish (shouldn't happen now)
                     const available = school.members.filter(f => !f.model.consumed);
                     if (available.length > 0) {
                         const target = available[Math.floor(Math.random() * available.length)];
                         target.model.consumed = true;
+                        target.model.visible = false;
                         return target;
                     }
                     return null;

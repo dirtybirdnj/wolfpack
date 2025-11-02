@@ -73,6 +73,9 @@ export class Fish extends AquaticOrganism {
         this.frenzyTimer = 0;
         this.frenzyIntensity = 0;
 
+        // Stomach contents - track what this fish has eaten
+        this.stomachContents = []; // Array of { species: string, timestamp: number }
+
         // Visual feedback
         this.interestFlash = 0;
         this.interestFlashDecay = 0.02;
@@ -267,6 +270,14 @@ export class Fish extends AquaticOrganism {
         // Defensive check: Only predatory fish have hunger and health properties
         if (this.hunger === undefined || this.health === undefined) {
             return; // Not a predatory fish, skip feeding logic
+        }
+
+        // Record what this fish ate (for display to player after catch)
+        if (this.stomachContents) {
+            this.stomachContents.push({
+                species: preySpecies,
+                timestamp: this.frameAge // When it was eaten
+            });
         }
 
         // Fish has consumed a baitfish, reduce hunger based on prey nutrition value
