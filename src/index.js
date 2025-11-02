@@ -850,7 +850,7 @@ function updateFishDetailPanel(gameScene) {
                 <div><span style="color: #888;">Weight:</span> <span style="color: #fff;">${weight} lbs</span></div>
                 <div><span style="color: #888;">Length:</span> <span style="color: #fff;">${length} in</span></div>
                 <div><span style="color: #888;">Gender:</span> <span style="color: ${info.gender === 'male' ? '#66ccff' : '#ff99cc'};">${info.gender === 'male' ? '♂ Male' : '♀ Female'}</span></div>
-                <div><span style="color: #888;">Age:</span> <span style="color: #fff;">${info.age || 0} frames</span></div>
+                <div><span style="color: #888;">Age:</span> <span style="color: #fff;">${info.age || 'N/A'}</span></div>
                 <div><span style="color: #888;">Depth:</span> <span style="color: #00ffff;">${depth}ft</span></div>
                 <div><span style="color: #888;">Zone:</span> <span style="color: #ffff00;">${zone}</span></div>
                 <div><span style="color: #888;">Hunger:</span> <span style="color: ${fish.hunger > 70 ? '#ff6666' : fish.hunger > 40 ? '#ffaa00' : '#00ff00'};">${hunger}</span></div>
