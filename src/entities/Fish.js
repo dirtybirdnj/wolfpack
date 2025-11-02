@@ -129,6 +129,22 @@ export class Fish {
             weight: speciesData.weightRange.max,
             sonarStrength: 0.3, // Weak sonar return for small fish
 
+            // Properties that Fish entity getters expect (for compatibility)
+            depthZone: 'mid', // Baitfish are typically mid-water
+            points: 0, // No points for baitfish
+            name: `${species} baitfish`,
+            gender: 'unknown',
+            age: 0,
+            caught: false,
+            ai: null, // Baitfish don't have AI
+            hunger: 0,
+            health: 100,
+            inFrenzy: false,
+            frenzyIntensity: 0,
+            interestFlash: 0,
+            frameAge: 0,
+            angle: 0,
+
             // Render baitfish with species-specific appearance (matches old BaitfishModel)
             render(graphics, bodySize, isMovingRight) {
                 if (!this.visible || this.consumed) return;
@@ -176,6 +192,45 @@ export class Fish {
                     graphics.lineStyle(1, color, 0.8);
                     graphics.strokeCircle(this.x, this.y, bodySize * 2);
                 }
+            },
+
+            // Methods that Fish entity might call
+            destroy() {
+                // Simple cleanup for baitfish model
+                // No AI to clean up, just mark as consumed
+                this.visible = false;
+                this.consumed = true;
+            },
+
+            // Stub methods for compatibility (baitfish don't use these)
+            feedOnBaitfish(preySpecies) {
+                return false; // Baitfish don't eat other fish
+            },
+
+            triggerInterestFlash(intensity) {
+                // Baitfish don't show interest flashes
+                return;
+            },
+
+            getInfo() {
+                return {
+                    species: this.species,
+                    length: this.length,
+                    weight: this.weight,
+                    name: this.name
+                };
+            },
+
+            renderAtPosition(graphics, x, y, bodySize) {
+                // Render at custom position (for catch popup - not used for baitfish)
+                // Just render at the specified position
+                const tempX = this.x;
+                const tempY = this.y;
+                this.x = x;
+                this.y = y;
+                this.render(graphics, bodySize, true);
+                this.x = tempX;
+                this.y = tempY;
             }
         };
     }

@@ -3,7 +3,6 @@ import { Constants, Utils } from '../utils/Constants.js';
 import SonarDisplay from '../utils/SonarDisplay.js';
 import Lure from '../entities/Lure.js';
 import Fish from '../entities/Fish.js';
-import BaitfishCloud from '../entities/BaitfishCloud.js';
 import Crayfish from '../entities/Crayfish.js';
 import FishFight from '../entities/FishFight.js';
 import FishingLine from '../entities/FishingLine.js';
@@ -599,7 +598,7 @@ export class GameScene extends Phaser.Scene {
             console.log(`  Spawned trophy ${speciesName} at ${depth}ft`);
         });
 
-        // Spawn 2 extra large bait clouds
+        // Spawn 2 extra large bait schools (using new school system)
         for (let i = 0; i < 2; i++) {
             const angle = Math.random() * Math.PI * 2;
             const distance = 200 + Math.random() * 200;
@@ -609,16 +608,15 @@ export class GameScene extends Phaser.Scene {
             const depth = Utils.randomBetween(20, 70);
             const y = depth * GameConfig.DEPTH_SCALE;
 
-            // Large cloud size (80-120 fish)
-            const cloudSize = Math.floor(Utils.randomBetween(80, 120));
+            // Large school size (80-120 fish)
+            const schoolSize = Math.floor(Utils.randomBetween(80, 120));
 
             // Random baitfish species
             const baitSpecies = ['alewife', 'rainbow_smelt', 'yellow_perch'][Math.floor(Math.random() * 3)];
 
-            const cloud = new BaitfishCloud(this, worldX, y, cloudSize, baitSpecies);
-
-            this.baitfishClouds.push(cloud);
-            console.log(`  Spawned large ${baitSpecies} cloud (${cloudSize} fish) at ${depth}ft`);
+            // Use new school spawning system
+            this.spawnBaitfishSchool(worldX, y, schoolSize, baitSpecies);
+            console.log(`  Spawned large ${baitSpecies} school (${schoolSize} fish) at ${depth}ft`);
         }
 
         // Show notification
@@ -1740,6 +1738,7 @@ export class GameScene extends Phaser.Scene {
         // Clean up entities
         this.fishes.forEach(fish => fish.destroy());
         this.baitfishClouds.forEach(cloud => cloud.destroy());
+        this.baitfishSchools.forEach(fish => fish.destroy());
         this.zooplankton.forEach(zp => zp.destroy());
 
         // Clean up core components
