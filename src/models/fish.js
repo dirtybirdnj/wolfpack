@@ -324,6 +324,15 @@ export class Fish extends AquaticOrganism {
                             this.ai.targetX = null;
                             this.ai.targetY = null;
                             this.ai.decisionCooldown = 0; // Force new decision immediately
+
+                            // CRITICAL: Randomize idle direction to prevent re-sticking
+                            // If fish was stuck swimming into a wall, this gives it a chance to turn around
+                            this.ai.idleDirection = Math.random() < 0.5 ? 1 : -1;
+
+                            // Also randomize depth preference to help break out of stuck positions
+                            const bottomDepth = this.scene.maxDepth || GameConfig.MAX_DEPTH;
+                            this.ai.depthPreference = Utils.randomBetween(bottomDepth * 0.3, bottomDepth * 0.7);
+
                             this.frozenFrames = 0;
                         } else {
                             // Pike ambushing is normal - reset counter but don't intervene
