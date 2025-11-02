@@ -63,9 +63,6 @@ export class NatureSimulationScene extends Phaser.Scene {
         this.createDepthSelectionUI();
         this.hideDepthSelectionUI();
 
-        // Create info text
-        this.createInfoText();
-
         // Set up keyboard controls
         this.setupControls();
 
