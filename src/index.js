@@ -573,7 +573,7 @@ function updateFishStatus(gameScene) {
     // Sort fish by depth (shallowest to deepest)
     allFish.sort((a, b) => a.fish.depth - b.fish.depth);
 
-    // Helper function to render fish card
+    // Helper function to render fish row (single line)
     const renderFish = ({ fish, index }) => {
         const info = fish.getInfo();
 
@@ -593,27 +593,72 @@ function updateFishStatus(gameScene) {
         // Count baitfish consumed (from stomach contents)
         const baitfishConsumed = fish.stomachContents ? fish.stomachContents.length : 0;
 
+        // Check if this fish is selected
+        const isSelected = gameScene.selectedFishId === fish.model.id;
+        const selectedStyle = isSelected ? 'background: #ffffff20; font-weight: bold;' : '';
+
         return `
-            <div style="border: 2px solid ${zoneColor}; background: ${zoneColor}08; padding: 5px; margin: 4px 0; border-radius: 4px; font-size: 10px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px;">
-                    <span style="font-weight: bold; color: ${zoneColor};">🐟 ${info.name}</span>
-                    <span style="color: ${genderColor}; font-size: 12px;">${genderIcon}</span>
-                </div>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2px; font-size: 9px;">
-                    <div><span style="color: #aaa;">Weight:</span> <span style="color: #fff;">${info.weight}</span></div>
-                    <div><span style="color: #aaa;">Depth:</span> <span style="color: ${zoneColor};">${Math.floor(fish.depth)}ft</span></div>
-                    <div><span style="color: #aaa;">State:</span> <span style="color: #00ffff;">${fish.ai.state.substring(0, 8)}</span></div>
-                    <div><span style="color: #aaa;">Frenzy:</span> <span style="color: ${frenzyColor};">${frenzyText}</span></div>
-                    <div><span style="color: #aaa;">H/H:</span> <span style="color: ${hungerColor};">${fish.hunger.toFixed(0)}</span>/<span style="color: ${healthColor};">${fish.health.toFixed(0)}</span></div>
-                    <div><span style="color: #aaa;">Ate:</span> <span style="color: #ff9900;">${baitfishConsumed} 🐠</span></div>
-                </div>
+            <div class="fish-status-row" data-fish-id="${fish.model.id}" style="border-left: 3px solid ${zoneColor}; background: ${zoneColor}08; ${selectedStyle} padding: 3px 5px; margin: 2px 0; cursor: pointer; font-size: 9px; display: flex; justify-content: space-between; align-items: center; transition: background 0.2s;">
+                <span style="color: ${zoneColor}; min-width: 80px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${info.name}">🐟 ${info.name}</span>
+                <span style="color: #fff; min-width: 40px;">${info.weight}</span>
+                <span style="color: #00ffff; min-width: 50px; text-align: center;">${fish.ai.state.substring(0, 6)}</span>
+                <span style="min-width: 45px; text-align: center;"><span style="color: ${hungerColor};">${fish.hunger.toFixed(0)}</span>/<span style="color: ${healthColor};">${fish.health.toFixed(0)}</span></span>
+                <span style="color: ${zoneColor}; min-width: 35px; text-align: right;">${Math.floor(fish.depth)}ft</span>
+                <span style="color: ${frenzyColor}; min-width: 30px; text-align: center;">${frenzyText}</span>
+                <span style="color: #ff9900; min-width: 25px; text-align: right;">${baitfishConsumed}🐠</span>
+                <span style="color: ${genderColor}; font-size: 11px; margin-left: 3px;">${genderIcon}</span>
             </div>
         `;
     };
 
-    // Render single sorted list
-    const html = allFish.map(renderFish).join('');
+    // Build HTML with header key
+    let html = `
+        <div style="background: #1a1a1a; border-bottom: 2px solid #00ff00; padding: 3px 5px; margin-bottom: 4px; font-size: 8px; color: #888; display: flex; justify-content: space-between; font-weight: bold;">
+            <span style="min-width: 80px;">NAME</span>
+            <span style="min-width: 40px;">WEIGHT</span>
+            <span style="min-width: 50px; text-align: center;">STATE</span>
+            <span style="min-width: 45px; text-align: center;">H/H</span>
+            <span style="min-width: 35px; text-align: right;">DEPTH</span>
+            <span style="min-width: 30px; text-align: center;">FRENZY</span>
+            <span style="min-width: 25px; text-align: right;">ATE</span>
+            <span style="margin-left: 3px;">⚥</span>
+        </div>
+    `;
+
+    html += allFish.map(renderFish).join('');
     container.innerHTML = html;
+
+    // Add click handlers to fish rows
+    container.querySelectorAll('.fish-status-row').forEach(row => {
+        row.addEventListener('click', function() {
+            const fishId = this.getAttribute('data-fish-id');
+            // Find the fish and set it as selected
+            const selectedFish = gameScene.fishes.find(f => f.model.id === fishId);
+            if (selectedFish) {
+                gameScene.selectedFishId = fishId;
+                console.log(`Selected fish: ${selectedFish.name}`);
+                // Re-render to show selection
+                updateFishStatus(gameScene);
+            }
+        });
+
+        // Hover effect
+        row.addEventListener('mouseenter', function() {
+            this.style.background = '#ffffff15';
+        });
+        row.addEventListener('mouseleave', function() {
+            const fishId = this.getAttribute('data-fish-id');
+            const isSelected = gameScene.selectedFishId === fishId;
+            if (!isSelected) {
+                const fish = gameScene.fishes.find(f => f.model.id === fishId);
+                if (fish) {
+                    const zoneColor = fish.depthZone.name === 'Surface' ? '#ffff00' :
+                                     fish.depthZone.name === 'Mid-Column' ? '#00ff00' : '#888888';
+                    this.style.background = `${zoneColor}08`;
+                }
+            }
+        });
+    });
 }
 
 // Export for module usage

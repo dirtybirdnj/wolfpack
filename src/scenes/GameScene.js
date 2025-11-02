@@ -53,6 +53,7 @@ export class GameScene extends Phaser.Scene {
         this.currentFight = null;
         this.controllerTestMode = false;
         this.controllerTestUI = null;
+        this.selectedFishId = null; // Fish selected in status panel
 
         // Hookset window state
         this.hooksetWindow = {

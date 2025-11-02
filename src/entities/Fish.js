@@ -370,6 +370,17 @@ export class Fish {
                 this.graphics.strokeCircle(this.model.x, this.model.y, pulseSize);
             }
         }
+
+        // Selection circle - white circle around selected fish from status panel
+        if (this.scene.selectedFishId && this.model.id === this.scene.selectedFishId) {
+            const selectionSize = bodySize * 2.5;
+            const pulseOffset = Math.sin(Date.now() * 0.005) * 3;
+
+            this.graphics.lineStyle(2, 0xffffff, 0.9);
+            this.graphics.strokeCircle(this.model.x, this.model.y, selectionSize + pulseOffset);
+            this.graphics.lineStyle(1, 0xffffff, 0.5);
+            this.graphics.strokeCircle(this.model.x, this.model.y, selectionSize + pulseOffset + 4);
+        }
     }
 
     handleCaught() {
