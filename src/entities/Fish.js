@@ -58,6 +58,10 @@ export class Fish {
 
         this.schooling = {
             enabled: true,
+            // Base Boids radii (will be modified by scaredLevel)
+            baseSeparationRadius: params.separation,
+            baseAlignmentRadius: params.alignment,
+            baseCohesionRadius: params.cohesion,
             separationRadius: params.separation,
             alignmentRadius: params.alignment,
             cohesionRadius: params.cohesion,
@@ -74,9 +78,11 @@ export class Fish {
             maxSpeed: speciesData.speed.base,
             panicSpeed: speciesData.speed.panic,
 
-            // State
+            // State (like old BaitfishCloud)
             isPanicking: false,
-            panicTimer: 0
+            panicTimer: 0,
+            scaredLevel: 0, // 0-1, increases when predators nearby
+            spreadMultiplier: 1.0 // 1.0 = normal, 0.5 = tight cluster, 2.0 = very loose
         };
 
         // Update frequency optimization
@@ -474,6 +480,39 @@ export class Fish {
         // Check for predators and flee if needed
         const flee = this.calculateFlee();
 
+        // UPDATE SCARED LEVEL based on predator proximity (like old BaitfishCloud)
+        const predators = this.scene.fishes || [];
+        let closestPredatorDist = Infinity;
+        predators.forEach(predator => {
+            const dx = this.model.worldX - predator.worldX;
+            const dy = this.model.y - predator.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            closestPredatorDist = Math.min(closestPredatorDist, dist);
+        });
+
+        const threatRadius = 150; // Same as flee radius
+        if (closestPredatorDist < threatRadius) {
+            // Get scared quickly when predators approach
+            this.schooling.scaredLevel = Math.min(1.0, this.schooling.scaredLevel + 0.15);
+        } else {
+            // Calm down slowly when no predators nearby
+            this.schooling.scaredLevel = Math.max(0, this.schooling.scaredLevel - 0.02);
+        }
+
+        // DYNAMIC SPREAD MULTIPLIER - Cluster tighter when scared
+        if (this.schooling.scaredLevel > 0.2) {
+            // Scared: compress to 0.5-0.8 (tighter clustering)
+            this.schooling.spreadMultiplier = Math.max(0.5, 0.8 - (this.schooling.scaredLevel * 0.3));
+        } else {
+            // Safe: spread out to 1.2-1.5 (looser, more natural)
+            this.schooling.spreadMultiplier = Math.min(1.5, 1.2 + (1 - this.schooling.scaredLevel) * 0.3);
+        }
+
+        // Apply spread multiplier to Boids radii (smaller radii = tighter clustering)
+        this.schooling.separationRadius = this.schooling.baseSeparationRadius * this.schooling.spreadMultiplier;
+        this.schooling.alignmentRadius = this.schooling.baseAlignmentRadius * this.schooling.spreadMultiplier;
+        this.schooling.cohesionRadius = this.schooling.baseCohesionRadius * this.schooling.spreadMultiplier;
+
         // SCHOOL CENTER ATTRACTION - Stay near your school's center (like BaitfishModel)
         // This provides group cohesion beyond just neighbor attraction
         let centerAttraction = { x: 0, y: 0 };
@@ -486,26 +525,28 @@ export class Fish {
             const dist = Math.sqrt(dx * dx + dy * dy);
 
             if (dist > 0) {
-                // Gentle pull toward school center position
+                // Pull toward school center - stronger when scared for tighter clustering
                 const strength = Math.min(dist / 100, 1.0); // Stronger when further away
-                centerAttraction.x = (dx / dist) * strength * 0.5;
-                centerAttraction.y = (dy / dist) * strength * 0.5;
+                const scaredPull = 0.5 + (this.schooling.scaredLevel * 0.8); // 0.5-1.3 based on fear
+                centerAttraction.x = (dx / dist) * strength * scaredPull;
+                centerAttraction.y = (dy / dist) * strength * scaredPull;
             }
         }
 
-        // Combine forces with weights
+        // Combine forces with weights (increase center weight when scared)
+        const centerWeight = 2.0 + (this.schooling.scaredLevel * 3.0); // 2.0-5.0 based on fear
         const forceX =
             separation.x * this.schooling.separationWeight +
             alignment.x * this.schooling.alignmentWeight +
             cohesion.x * this.schooling.cohesionWeight +
-            centerAttraction.x * 2.0 + // School center weight
+            centerAttraction.x * centerWeight + // Stronger pull when scared
             flee.x * this.schooling.fleeWeight;
 
         const forceY =
             separation.y * this.schooling.separationWeight +
             alignment.y * this.schooling.alignmentWeight +
             cohesion.y * this.schooling.cohesionWeight +
-            centerAttraction.y * 2.0 + // School center weight
+            centerAttraction.y * centerWeight + // Stronger pull when scared
             flee.y * this.schooling.fleeWeight;
 
         // Apply forces to velocity
