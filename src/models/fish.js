@@ -254,7 +254,25 @@ export class Fish extends AquaticOrganism {
             // Keep fish above lake bottom (with 5 feet buffer)
             // Allow fish to swim all the way to surface (y=0) now that ice rendering is removed
             const maxY = (bottomDepth - 5) * depthScale;
+            const oldY = this.y;
             this.y = Math.max(0, Math.min(maxY, this.y));
+
+            // If fish hit a boundary, reset AI target to prevent getting stuck
+            if (this.y !== oldY && this.ai) {
+                // Fish hit top or bottom boundary - clear target so AI picks a new one
+                if (this.y === 0 || this.y === maxY) {
+                    this.ai.targetY = null;
+                    this.ai.targetX = null;
+                    // Force AI to pick a new depth preference away from boundary
+                    if (this.y === maxY) {
+                        // Hit bottom - prefer shallower depth
+                        this.ai.depthPreference = Math.max(10, this.ai.depthPreference - 20);
+                    } else if (this.y === 0) {
+                        // Hit surface - prefer deeper depth
+                        this.ai.depthPreference = Math.min(bottomDepth - 10, this.ai.depthPreference + 20);
+                    }
+                }
+            }
 
             // Convert world position to screen position based on player position
             if (isNatureSimulation) {
