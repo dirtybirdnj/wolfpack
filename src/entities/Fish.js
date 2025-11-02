@@ -129,11 +129,43 @@ export class Fish {
             weight: speciesData.weightRange.max,
             sonarStrength: 0.3, // Weak sonar return for small fish
 
-            // Simple render method for baitfish
+            // Render baitfish as thin diamond shape
             render(graphics, bodySize, isMovingRight) {
                 const color = speciesData.color || 0x88ccff;
+
+                // Diamond shape: thin elongated diamond
+                const length = bodySize * 1.2; // Length of diamond
+                const width = bodySize * 0.4;  // Width (thin)
+
+                // Diamond points (horizontal orientation)
+                const points = [
+                    { x: this.x - length, y: this.y },      // Left point (nose)
+                    { x: this.x - width * 0.3, y: this.y - width }, // Top
+                    { x: this.x + length * 0.3, y: this.y },        // Right point (tail)
+                    { x: this.x - width * 0.3, y: this.y + width }  // Bottom
+                ];
+
+                // Flip horizontally based on direction
+                if (!isMovingRight) {
+                    points.forEach(point => {
+                        const offsetX = point.x - this.x;
+                        point.x = this.x - offsetX;
+                    });
+                }
+
+                // Draw filled diamond
                 graphics.fillStyle(color, 0.8);
-                graphics.fillCircle(this.x, this.y, bodySize * 0.5);
+                graphics.beginPath();
+                graphics.moveTo(points[0].x, points[0].y);
+                points.forEach(point => {
+                    graphics.lineTo(point.x, point.y);
+                });
+                graphics.closePath();
+                graphics.fillPath();
+
+                // Optional: Add subtle outline
+                graphics.lineStyle(0.5, color, 0.6);
+                graphics.strokePath();
             }
         };
     }

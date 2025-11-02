@@ -692,19 +692,23 @@ export class GameScene extends Phaser.Scene {
         this.schools.forEach(school => {
             school.age++;
 
-            // Add random wandering (like BaitfishCloud normal behavior)
-            if (Math.random() < 0.05) { // 5% chance per frame
-                school.velocity.x += Utils.randomBetween(-0.4, 0.4);
-                school.velocity.y += Utils.randomBetween(-0.2, 0.2);
+            // More active wandering - increased frequency and magnitude
+            if (Math.random() < 0.08) { // 8% chance per frame (more frequent)
+                school.velocity.x += Utils.randomBetween(-0.6, 0.6); // Larger changes
+                school.velocity.y += Utils.randomBetween(-0.3, 0.3);
             }
 
-            // Apply velocity decay
-            school.velocity.x *= 0.98;
-            school.velocity.y *= 0.98;
+            // Add constant gentle drift to prevent stagnation
+            school.velocity.x += Utils.randomBetween(-0.05, 0.05);
+            school.velocity.y += Utils.randomBetween(-0.02, 0.02);
 
-            // Clamp velocity
-            school.velocity.x = Math.max(-1.5, Math.min(1.5, school.velocity.x));
-            school.velocity.y = Math.max(-0.8, Math.min(0.8, school.velocity.y));
+            // Reduced velocity decay (keeps momentum longer)
+            school.velocity.x *= 0.99; // Was 0.98
+            school.velocity.y *= 0.99;
+
+            // Clamp velocity (allow faster horizontal movement)
+            school.velocity.x = Math.max(-2.0, Math.min(2.0, school.velocity.x)); // Was -1.5 to 1.5
+            school.velocity.y = Math.max(-1.0, Math.min(1.0, school.velocity.y)); // Was -0.8 to 0.8
 
             // Update center position
             school.centerWorldX += school.velocity.x;
