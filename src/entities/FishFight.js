@@ -180,8 +180,8 @@ export class FishFight {
         this.lineTension -= GameConfig.TENSION_DECAY_RATE;
         this.lineTension = Math.max(0, this.lineTension);
 
-        // Check for line break - scientifically accurate formula
-        // Line breaks when tension exceeds test strength, modified by shock absorption
+        // Check for line break - RARE occurrence, drag should prevent this
+        // Line breaks when tension MASSIVELY exceeds test strength
         if (this.reelModel && this.fishingLine) {
             const testStrength = this.reelModel.lineTestStrength; // pounds
             const shockAbsorptionMult = this.fishingLine.getShockAbsorptionMultiplier();
@@ -191,9 +191,10 @@ export class FishFight {
             const approximateForce = (this.lineTension / 100) * 20;
 
             // Apply shock absorption to effective break threshold
-            const effectiveBreakStrength = testStrength * shockAbsorptionMult * 1.2;
-            // Monofilament: 15 lb test * 0.9 shock * 1.2 = 16.2 lb effective
-            // Braid: 15 lb test * 0.5 shock * 1.2 = 9 lb effective (breaks easier)
+            // MUCH higher multiplier - line should rarely break if drag is set properly
+            const effectiveBreakStrength = testStrength * shockAbsorptionMult * 3.0;
+            // Monofilament: 15 lb test * 0.9 shock * 3.0 = 40.5 lb effective (very strong!)
+            // Braid: 15 lb test * 0.5 shock * 3.0 = 22.5 lb effective (still reasonable)
 
             if (approximateForce >= effectiveBreakStrength) {
                 console.log(`Line break! Force: ${approximateForce.toFixed(1)} lbs exceeded ${effectiveBreakStrength.toFixed(1)} lbs effective strength`);
@@ -393,6 +394,10 @@ export class FishFight {
             if (this.reelModel) {
                 this.reelModel.retrieveLine(reelDistance / GameConfig.DEPTH_SCALE); // Convert pixels to feet
             }
+
+            // REWARD ACTIVE FIGHTING: Reeling reduces tension
+            // This encourages the player to actively fight the fish
+            this.lineTension *= 0.93; // 7% tension reduction per reel
         }
 
         // Drain fish energy based on drag setting
@@ -483,11 +488,12 @@ export class FishFight {
 
                 // When line slips, tension is RELIEVED (drag absorbs the force)
                 // The drag system prevents tension from building when fish pulls
-                this.lineTension *= 0.85; // Significant tension relief
+                // This is the PRIMARY mechanic - drag should slip, NOT break!
+                this.lineTension *= 0.80; // Major tension relief when drag is working
 
                 // Visual feedback - show that line is slipping
                 if (Math.random() < 0.1) { // Occasional console log (10% of frames)
-                    console.log(`Line slipping! Fish: ${fishPullForce.toFixed(1)} lbs > Drag: ${currentDragForce.toFixed(1)} lbs (${lineSlip.toFixed(2)} ft out)`);
+                    console.log(`✓ DRAG WORKING! Fish: ${fishPullForce.toFixed(1)} lbs > Drag: ${currentDragForce.toFixed(1)} lbs (${lineSlip.toFixed(2)} ft out, tension relieved)`);
                 }
             } else {
                 // Drag is holding - fish CANNOT pull line out
@@ -496,23 +502,23 @@ export class FishFight {
 
                 const dragRatio = currentDragForce / fishPullForce;
 
-                if (dragRatio > 1.5) {
-                    // Drag is TOO TIGHT (150%+ of fish pull) - creates significant tension
+                if (dragRatio > 2.0) {
+                    // Drag is EXTREMELY TIGHT (200%+ of fish pull) - builds tension slowly
                     const dampeningFactor = shockAbsorption * (2.0 - stretchFactor);
-                    const tensionIncrease = (fishPullForce * 0.3) * (2.0 - dampeningFactor);
+                    const tensionIncrease = (fishPullForce * 0.08) * (2.0 - dampeningFactor);
                     this.lineTension += tensionIncrease;
                     this.lineTension = Math.min(GameConfig.MAX_LINE_TENSION, this.lineTension);
-                } else if (dragRatio > 1.2) {
-                    // Drag is tight but manageable (120-150%) - minor tension buildup
+                } else if (dragRatio > 1.5) {
+                    // Drag is TOO TIGHT (150-200%) - very minor tension buildup
                     const dampeningFactor = shockAbsorption * (2.0 - stretchFactor);
-                    const tensionIncrease = (fishPullForce * 0.1) * (2.0 - dampeningFactor);
+                    const tensionIncrease = (fishPullForce * 0.04) * (2.0 - dampeningFactor);
                     this.lineTension += tensionIncrease;
                     this.lineTension = Math.min(GameConfig.MAX_LINE_TENSION, this.lineTension);
                 } else {
-                    // Drag is in the sweet spot (50-120% of fish pull)
-                    // This is IDEAL - maintains pressure, prevents hook spitting, no tension buildup
-                    // Tension actually decreases slightly as the drag does its job
-                    this.lineTension *= 0.98;
+                    // Drag is in the sweet spot (0-150% of fish pull)
+                    // This is the NORMAL range - maintains pressure, prevents hook spitting
+                    // Tension actually decreases as the drag does its job
+                    this.lineTension *= 0.97;
                 }
             }
         }
