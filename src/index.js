@@ -601,9 +601,9 @@ function updateFishStatus(gameScene) {
 
         return `
             <div class="fish-status-row ${selectedClass}" data-fish-id="${fish.model.id}" style="border-left: 3px solid ${zoneColor}; ${selectedStyle} padding: 3px 5px; margin: 2px 0; cursor: pointer; font-size: 9px; display: flex; justify-content: space-between; align-items: center;">
-                <span style="color: ${zoneColor}; min-width: 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${info.name}"><span style="color: ${genderColor};">${genderIcon}</span> 🐟 ${info.name}</span>
-                <span style="min-width: 15px; text-align: center;">${frenzyIndicator}</span>
-                <span style="color: #fff; min-width: 40px;">${info.weight}</span>
+                <span style="color: ${zoneColor}; min-width: 75px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${info.name}"><span style="color: ${genderColor};">${genderIcon}</span> 🐟 ${info.name}</span>
+                <span style="min-width: 20px; text-align: center; padding: 0 3px;">${frenzyIndicator}</span>
+                <span style="color: #fff; min-width: 35px;">${fish.weight.toFixed(1)}</span>
                 <span style="color: #00ffff; min-width: 50px; text-align: center;">${fish.ai.state.substring(0, 6)}</span>
                 <span style="min-width: 45px; text-align: center;"><span style="color: ${hungerColor};">${fish.hunger.toFixed(0)}</span>/<span style="color: ${healthColor};">${fish.health.toFixed(0)}</span></span>
                 <span style="color: ${zoneColor}; min-width: 35px; text-align: right;">${Math.floor(fish.depth)}ft</span>
@@ -615,9 +615,9 @@ function updateFishStatus(gameScene) {
     // Build HTML with header key
     let html = `
         <div style="background: #1a1a1a; border-bottom: 2px solid #00ff00; padding: 3px 5px; margin-bottom: 4px; font-size: 8px; color: #888; display: flex; justify-content: space-between; font-weight: bold;">
-            <span style="min-width: 100px;">NAME</span>
-            <span style="min-width: 15px; text-align: center;">F</span>
-            <span style="min-width: 40px;">WEIGHT</span>
+            <span style="min-width: 75px;">NAME</span>
+            <span style="min-width: 20px; text-align: center; padding: 0 3px;">F</span>
+            <span style="min-width: 35px;">WEIGHT</span>
             <span style="min-width: 50px; text-align: center;">STATE</span>
             <span style="min-width: 45px; text-align: center;">H/H</span>
             <span style="min-width: 35px; text-align: right;">DEPTH</span>
