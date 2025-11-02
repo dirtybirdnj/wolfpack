@@ -129,43 +129,53 @@ export class Fish {
             weight: speciesData.weightRange.max,
             sonarStrength: 0.3, // Weak sonar return for small fish
 
-            // Render baitfish as thin diamond shape
+            // Render baitfish with species-specific appearance (matches old BaitfishModel)
             render(graphics, bodySize, isMovingRight) {
+                if (!this.visible || this.consumed) return;
+
+                // Flicker effect (shimmer on sonar)
+                if (!this.flickerPhase) this.flickerPhase = Math.random() * Math.PI * 2;
+                this.flickerPhase += 0.1;
+                const flickerIntensity = Math.sin(this.flickerPhase) * 0.3 + 0.7;
+
+                // Color
                 const color = speciesData.color || 0x88ccff;
 
-                // Diamond shape: thin elongated diamond
-                const length = bodySize * 1.2; // Length of diamond
-                const width = bodySize * 0.4;  // Width (thin)
+                // Body proportions from species appearance
+                const appearance = speciesData.appearance || {
+                    bodyShape: 'streamlined',
+                    length: 1.0,
+                    height: 1.0
+                };
+                const bodyLength = bodySize * 1.5 * appearance.length;
+                const bodyHeight = bodySize * 0.7 * appearance.height;
 
-                // Diamond points (horizontal orientation)
-                const points = [
-                    { x: this.x - length, y: this.y },      // Left point (nose)
-                    { x: this.x - width * 0.3, y: this.y - width }, // Top
-                    { x: this.x + length * 0.3, y: this.y },        // Right point (tail)
-                    { x: this.x - width * 0.3, y: this.y + width }  // Bottom
-                ];
+                // Draw body based on species shape
+                graphics.fillStyle(color, 0.6 * flickerIntensity);
 
-                // Flip horizontally based on direction
-                if (!isMovingRight) {
-                    points.forEach(point => {
-                        const offsetX = point.x - this.x;
-                        point.x = this.x - offsetX;
-                    });
+                if (appearance.bodyShape === 'slender') {
+                    // Slender, elongated (smelt, cisco)
+                    graphics.fillEllipse(this.x, this.y, bodyLength * 1.2, bodyHeight * 0.6);
+                } else if (appearance.bodyShape === 'deep') {
+                    // Deep-bodied (alewife, perch)
+                    graphics.fillEllipse(this.x, this.y, bodyLength, bodyHeight * 1.1);
+                } else if (appearance.bodyShape === 'bottom') {
+                    // Bottom-dwelling (sculpin) - flattened
+                    graphics.fillEllipse(this.x, this.y, bodyLength * 0.9, bodyHeight * 0.5);
+                } else {
+                    // Default streamlined shape
+                    graphics.fillEllipse(this.x, this.y, bodyLength, bodyHeight);
                 }
 
-                // Draw filled diamond
-                graphics.fillStyle(color, 0.8);
-                graphics.beginPath();
-                graphics.moveTo(points[0].x, points[0].y);
-                points.forEach(point => {
-                    graphics.lineTo(point.x, point.y);
-                });
-                graphics.closePath();
-                graphics.fillPath();
+                // Brighter center dot
+                graphics.fillStyle(color, 0.9 * flickerIntensity);
+                graphics.fillCircle(this.x, this.y, bodySize * 0.4);
 
-                // Optional: Add subtle outline
-                graphics.lineStyle(0.5, color, 0.6);
-                graphics.strokePath();
+                // Occasional flash (like light reflecting off scales on sonar)
+                if (Math.random() < 0.05) {
+                    graphics.lineStyle(1, color, 0.8);
+                    graphics.strokeCircle(this.x, this.y, bodySize * 2);
+                }
             }
         };
     }

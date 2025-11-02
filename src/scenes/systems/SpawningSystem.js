@@ -1,7 +1,6 @@
 import GameConfig from '../../config/GameConfig.js';
 import { Constants, Utils } from '../../utils/Constants.js';
 import Fish from '../../entities/Fish.js';
-import BaitfishCloud from '../../entities/BaitfishCloud.js';
 import Zooplankton from '../../entities/Zooplankton.js';
 import Crayfish from '../../entities/Crayfish.js';
 import { getBaitfishSpecies, selectRandomSpecies, getPredatorSpecies } from '../../config/SpeciesData.js';
@@ -47,10 +46,10 @@ export class SpawningSystem {
             loop: true
         });
 
-        // Start spawning baitfish clouds
+        // Start spawning baitfish schools
         this.scene.time.addEvent({
             delay: 2000,
-            callback: () => this.trySpawnBaitfishCloud(),
+            callback: () => this.trySpawnBaitfishSchool(),
             callbackScope: this,
             loop: true
         });
