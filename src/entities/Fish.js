@@ -3,15 +3,20 @@ import LakeTrout from '../models/species/LakeTrout.js';
 import NorthernPike from '../models/species/NorthernPike.js';
 import SmallmouthBass from '../models/species/SmallmouthBass.js';
 import YellowPerch from '../models/species/YellowPerch.js';
+import { BAITFISH_SPECIES } from '../config/SpeciesData.js';
 
 /**
- * Fish - Phaser rendering layer for fish
- * Composes with Fish model classes and handles only visual display
- * All game logic is delegated to the model
+ * Fish - Unified fish entity for ALL fish (predators and baitfish)
+ * Supports both AI-driven behavior (predators) and schooling behavior (baitfish)
+ * Composes with Fish model classes and handles visual display
  */
 export class Fish {
     constructor(scene, x, y, size = 'MEDIUM', species = 'lake_trout') {
         this.scene = scene;
+        this.species = species;
+
+        // Detect if this is a baitfish species
+        this.isBaitfish = BAITFISH_SPECIES.hasOwnProperty(species);
 
         // Create the appropriate model based on species
         this.model = this.createModel(scene, x, y, size, species);
@@ -27,12 +32,68 @@ export class Fish {
         // Sonar trail (visual only)
         this.sonarTrail = [];
         this.maxTrailLength = 30;
+
+        // Schooling behavior (for baitfish and schooling predators)
+        if (this.isBaitfish) {
+            this.initializeSchoolingBehavior();
+        }
+    }
+
+    /**
+     * Initialize schooling behavior for baitfish
+     */
+    initializeSchoolingBehavior() {
+        const speciesData = BAITFISH_SPECIES[this.species];
+
+        // Boids parameters based on species schooling density
+        const densityMap = {
+            'very_high': { separation: 15, alignment: 40, cohesion: 40 },
+            'high': { separation: 20, alignment: 50, cohesion: 50 },
+            'moderate': { separation: 30, alignment: 60, cohesion: 60 },
+            'low': { separation: 40, alignment: 80, cohesion: 80 },
+            'none': { separation: 60, alignment: 100, cohesion: 100 }
+        };
+
+        const params = densityMap[speciesData.schoolingDensity] || densityMap['moderate'];
+
+        this.schooling = {
+            enabled: true,
+            separationRadius: params.separation,
+            alignmentRadius: params.alignment,
+            cohesionRadius: params.cohesion,
+            perceptionRadius: Math.max(params.alignment, params.cohesion),
+
+            // Force weights
+            separationWeight: 1.5,
+            alignmentWeight: 1.0,
+            cohesionWeight: 1.0,
+            fleeWeight: 3.0,
+
+            // Velocity for schooling movement
+            velocity: { x: 0, y: 0 },
+            maxSpeed: speciesData.speed.base,
+            panicSpeed: speciesData.speed.panic,
+
+            // State
+            isPanicking: false,
+            panicTimer: 0
+        };
+
+        // Update frequency optimization
+        this.schoolingUpdateFrequency = 2; // Update every N frames
+        this.schoolingFrameCount = 0;
     }
 
     /**
      * Factory method to create the appropriate species model
      */
     createModel(scene, x, y, size, species) {
+        // Baitfish get a simple model (no AI)
+        if (this.isBaitfish) {
+            return this.createBaitfishModel(scene, x, y, species);
+        }
+
+        // Predator fish get species-specific models with AI
         switch(species) {
             case 'lake_trout':
                 return new LakeTrout(scene, x, y, size);
@@ -45,6 +106,36 @@ export class Fish {
             default:
                 return new LakeTrout(scene, x, y, size);
         }
+    }
+
+    /**
+     * Create a simple model for baitfish (no AI needed)
+     */
+    createBaitfishModel(scene, x, y, species) {
+        const speciesData = BAITFISH_SPECIES[species];
+
+        return {
+            scene,
+            x,
+            y,
+            worldX: x,
+            depth: 30, // Default depth in feet
+            species,
+            speciesData,
+            visible: true,
+            consumed: false,
+            size: (speciesData.sizeRange.min + speciesData.sizeRange.max) / 2,
+            length: speciesData.sizeRange.max,
+            weight: speciesData.weightRange.max,
+            sonarStrength: 0.3, // Weak sonar return for small fish
+
+            // Simple render method for baitfish
+            render(graphics, bodySize, isMovingRight) {
+                const color = speciesData.color || 0x88ccff;
+                graphics.fillStyle(color, 0.8);
+                graphics.fillCircle(this.x, this.y, bodySize * 0.5);
+            }
+        };
     }
 
     /**
@@ -93,7 +184,15 @@ export class Fish {
      * Update fish - delegates logic to model, handles rendering
      */
     update(lure, allFish = [], baitfishClouds = []) {
-        // Delegate logic update to model
+        // Baitfish use schooling behavior instead of AI
+        if (this.isBaitfish) {
+            this.updateSchooling();
+            this.updateSonarTrail();
+            this.render();
+            return;
+        }
+
+        // Predator fish use AI and model logic
         const result = this.model.update(lure, allFish, baitfishClouds);
 
         // Handle result from model
@@ -251,6 +350,234 @@ export class Fish {
         // Delegate rendering to the model with explicit coordinates
         // Model will render at the specified position without transformations
         this.model.renderAtPosition(graphics, x, y, bodySize);
+    }
+
+    // ==================== SCHOOLING BEHAVIOR (BOIDS ALGORITHM) ====================
+
+    /**
+     * Update schooling behavior using Boids algorithm
+     * Called from update() for baitfish
+     */
+    updateSchooling() {
+        if (!this.schooling || !this.schooling.enabled) return;
+
+        // Optimize: only update every N frames
+        if (this.schoolingFrameCount++ % this.schoolingUpdateFrequency !== 0) {
+            return;
+        }
+
+        // Find nearby fish from my group
+        const neighbors = this.findNearbySchoolmates();
+
+        // Calculate Boids forces
+        const separation = this.calculateSeparation(neighbors);
+        const alignment = this.calculateAlignment(neighbors);
+        const cohesion = this.calculateCohesion(neighbors);
+
+        // Check for predators and flee if needed
+        const flee = this.calculateFlee();
+
+        // Combine forces with weights
+        const forceX =
+            separation.x * this.schooling.separationWeight +
+            alignment.x * this.schooling.alignmentWeight +
+            cohesion.x * this.schooling.cohesionWeight +
+            flee.x * this.schooling.fleeWeight;
+
+        const forceY =
+            separation.y * this.schooling.separationWeight +
+            alignment.y * this.schooling.alignmentWeight +
+            cohesion.y * this.schooling.cohesionWeight +
+            flee.y * this.schooling.fleeWeight;
+
+        // Apply forces to velocity
+        this.schooling.velocity.x += forceX;
+        this.schooling.velocity.y += forceY;
+
+        // Limit speed
+        const currentSpeed = this.schooling.isPanicking ?
+            this.schooling.panicSpeed :
+            this.schooling.maxSpeed;
+
+        const speed = Math.sqrt(
+            this.schooling.velocity.x ** 2 +
+            this.schooling.velocity.y ** 2
+        );
+
+        if (speed > currentSpeed) {
+            this.schooling.velocity.x = (this.schooling.velocity.x / speed) * currentSpeed;
+            this.schooling.velocity.y = (this.schooling.velocity.y / speed) * currentSpeed;
+        }
+
+        // Apply velocity to position
+        this.model.worldX += this.schooling.velocity.x;
+        this.model.y += this.schooling.velocity.y;
+
+        // Apply damping
+        this.schooling.velocity.x *= 0.95;
+        this.schooling.velocity.y *= 0.95;
+
+        // Update panic state
+        if (this.schooling.isPanicking) {
+            this.schooling.panicTimer--;
+            if (this.schooling.panicTimer <= 0) {
+                this.schooling.isPanicking = false;
+            }
+        }
+    }
+
+    /**
+     * Find nearby fish in the same group for schooling
+     */
+    findNearbySchoolmates() {
+        // Get all fish from scene - will need to be a group reference
+        const allFish = this.scene.allFish || this.scene.baitfishGroup;
+        if (!allFish) return [];
+
+        const neighbors = [];
+        const radius = this.schooling.perceptionRadius;
+
+        allFish.getChildren().forEach(other => {
+            // Skip self
+            if (other === this) return;
+
+            // Only school with same species
+            if (other.species !== this.species) return;
+
+            // Check distance
+            const dx = other.model.worldX - this.model.worldX;
+            const dy = other.model.y - this.model.y;
+            const distSq = dx * dx + dy * dy;
+
+            if (distSq < radius * radius) {
+                neighbors.push({
+                    fish: other,
+                    distance: Math.sqrt(distSq),
+                    dx,
+                    dy
+                });
+            }
+        });
+
+        return neighbors;
+    }
+
+    /**
+     * BOID RULE 1: Separation - avoid crowding neighbors
+     */
+    calculateSeparation(neighbors) {
+        let steerX = 0;
+        let steerY = 0;
+
+        neighbors.forEach(({ fish, distance, dx, dy }) => {
+            if (distance < this.schooling.separationRadius && distance > 0) {
+                // Repel with force inversely proportional to distance
+                const force = 1.0 / distance;
+                steerX -= dx * force;
+                steerY -= dy * force;
+            }
+        });
+
+        return { x: steerX, y: steerY };
+    }
+
+    /**
+     * BOID RULE 2: Alignment - steer towards average heading of neighbors
+     */
+    calculateAlignment(neighbors) {
+        if (neighbors.length === 0) return { x: 0, y: 0 };
+
+        let avgVelX = 0;
+        let avgVelY = 0;
+        let count = 0;
+
+        neighbors.forEach(({ fish, distance }) => {
+            if (distance < this.schooling.alignmentRadius && fish.schooling) {
+                avgVelX += fish.schooling.velocity.x;
+                avgVelY += fish.schooling.velocity.y;
+                count++;
+            }
+        });
+
+        if (count === 0) return { x: 0, y: 0 };
+
+        avgVelX /= count;
+        avgVelY /= count;
+
+        // Steer towards average velocity
+        return {
+            x: (avgVelX - this.schooling.velocity.x) * 0.1,
+            y: (avgVelY - this.schooling.velocity.y) * 0.1
+        };
+    }
+
+    /**
+     * BOID RULE 3: Cohesion - steer towards center of mass of neighbors
+     */
+    calculateCohesion(neighbors) {
+        if (neighbors.length === 0) return { x: 0, y: 0 };
+
+        let centerX = 0;
+        let centerY = 0;
+        let count = 0;
+
+        neighbors.forEach(({ fish, distance }) => {
+            if (distance < this.schooling.cohesionRadius) {
+                centerX += fish.model.worldX;
+                centerY += fish.model.y;
+                count++;
+            }
+        });
+
+        if (count === 0) return { x: 0, y: 0 };
+
+        centerX /= count;
+        centerY /= count;
+
+        // Steer towards center
+        return {
+            x: (centerX - this.model.worldX) * 0.01,
+            y: (centerY - this.model.y) * 0.01
+        };
+    }
+
+    /**
+     * FLEE BEHAVIOR: Escape from nearby predators
+     */
+    calculateFlee() {
+        // Get predator fish from scene
+        const predators = this.scene.fishes || [];
+        if (predators.length === 0) return { x: 0, y: 0 };
+
+        let fleeX = 0;
+        let fleeY = 0;
+        let threatDetected = false;
+        const fleeRadius = 150; // Distance at which baitfish react to predators
+
+        predators.forEach(predator => {
+            // Skip if this IS a predator (shouldn't happen for baitfish)
+            if (predator === this) return;
+
+            const dx = this.model.worldX - predator.worldX;
+            const dy = this.model.y - predator.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            if (dist < fleeRadius && dist > 0) {
+                // Flee directly away from threat
+                const force = (fleeRadius - dist) / fleeRadius; // Stronger when closer
+                fleeX += (dx / dist) * force;
+                fleeY += (dy / dist) * force;
+                threatDetected = true;
+            }
+        });
+
+        // Trigger panic mode
+        if (threatDetected && !this.schooling.isPanicking) {
+            this.schooling.isPanicking = true;
+            this.schooling.panicTimer = 60; // Panic for ~60 frames (1 second at 60fps)
+        }
+
+        return { x: fleeX, y: fleeY };
     }
 }
 
