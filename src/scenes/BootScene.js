@@ -22,9 +22,16 @@ export class BootScene extends Phaser.Scene {
     create() {
         const { width, height } = this.cameras.main;
 
-        // Allow skipping boot animation with any gamepad button
+        // Allow skipping boot animation with any gamepad button or mouse click
         this.canSkip = true;
         this.hasSkipped = false;
+
+        // Add mouse click listener to skip boot animation
+        this.input.on('pointerdown', () => {
+            if (this.canSkip && !this.hasSkipped) {
+                this.skipToMenu();
+            }
+        });
 
         // Create black background box
         this.blackBox = this.add.graphics();
