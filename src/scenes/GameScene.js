@@ -590,19 +590,22 @@ export class GameScene extends Phaser.Scene {
         this.schools.forEach(school => {
             if (school.members.length === 0) return;
 
-            // Calculate school bounds (find extents of all fish)
+            // Filter to only visible, non-consumed fish
+            const visibleFish = school.members.filter(f => !f.model.consumed && f.model.visible);
+            if (visibleFish.length === 0) return; // Skip if no visible fish
+
+            // Calculate school bounds (find extents of all visible fish)
             let minX = Infinity, maxX = -Infinity;
             let minY = Infinity, maxY = -Infinity;
 
-            school.members.forEach(fish => {
-                if (fish.model.consumed) return;
+            visibleFish.forEach(fish => {
                 minX = Math.min(minX, fish.model.x);
                 maxX = Math.max(maxX, fish.model.x);
                 minY = Math.min(minY, fish.model.y);
                 maxY = Math.max(maxY, fish.model.y);
             });
 
-            // Skip if no valid fish
+            // Skip if no valid fish (shouldn't happen but safety check)
             if (!isFinite(minX)) return;
 
             // Calculate school center and size
@@ -630,7 +633,7 @@ export class GameScene extends Phaser.Scene {
             }
 
             // Draw fish count below school
-            const visibleCount = school.members.filter(f => !f.model.consumed).length;
+            const visibleCount = visibleFish.length; // Already filtered above
             const textY = maxY + 15; // Below the school
 
             // Draw count with background
@@ -644,18 +647,19 @@ export class GameScene extends Phaser.Scene {
         this.schools.forEach((school, index) => {
             if (school.members.length === 0) return;
 
-            // Find school bounds again for text positioning
-            let maxY = -Infinity;
-            school.members.forEach(fish => {
-                if (!fish.model.consumed) {
-                    maxY = Math.max(maxY, fish.model.y);
-                }
-            });
-            if (!isFinite(maxY)) return;
+            // Filter to only visible, non-consumed fish
+            const visibleFish = school.members.filter(f => !f.model.consumed && f.model.visible);
+            if (visibleFish.length === 0) return; // Skip if no visible fish
 
-            const centerX = (Math.min(...school.members.filter(f => !f.model.consumed).map(f => f.model.x)) +
-                           Math.max(...school.members.filter(f => !f.model.consumed).map(f => f.model.x))) / 2;
-            const visibleCount = school.members.filter(f => !f.model.consumed).length;
+            // Find school bounds for text positioning
+            const fishX = visibleFish.map(f => f.model.x);
+            const fishY = visibleFish.map(f => f.model.y);
+            const minX = Math.min(...fishX);
+            const maxX = Math.max(...fishX);
+            const maxY = Math.max(...fishY);
+
+            const centerX = (minX + maxX) / 2;
+            const visibleCount = visibleFish.length;
             const textY = maxY + 15;
 
             // Get or create text object
