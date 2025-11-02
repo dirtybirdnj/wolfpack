@@ -149,11 +149,6 @@ export class Fish {
             render(graphics, bodySize, isMovingRight) {
                 if (!this.visible || this.consumed) return;
 
-                // Flicker effect (shimmer on sonar)
-                if (!this.flickerPhase) this.flickerPhase = Math.random() * Math.PI * 2;
-                this.flickerPhase += 0.1;
-                const flickerIntensity = Math.sin(this.flickerPhase) * 0.3 + 0.7;
-
                 // Color
                 const color = speciesData.color || 0x88ccff;
 
@@ -166,8 +161,8 @@ export class Fish {
                 const bodyLength = bodySize * 1.5 * appearance.length;
                 const bodyHeight = bodySize * 0.7 * appearance.height;
 
-                // Draw body based on species shape
-                graphics.fillStyle(color, 0.6 * flickerIntensity);
+                // Draw body based on species shape (solid opacity)
+                graphics.fillStyle(color, 0.6);
 
                 if (appearance.bodyShape === 'slender') {
                     // Slender, elongated (smelt, cisco)
@@ -183,15 +178,9 @@ export class Fish {
                     graphics.fillEllipse(this.x, this.y, bodyLength, bodyHeight);
                 }
 
-                // Brighter center dot
-                graphics.fillStyle(color, 0.9 * flickerIntensity);
+                // Brighter center dot (solid, no flicker)
+                graphics.fillStyle(color, 0.9);
                 graphics.fillCircle(this.x, this.y, bodySize * 0.4);
-
-                // Occasional flash (like light reflecting off scales on sonar)
-                if (Math.random() < 0.05) {
-                    graphics.lineStyle(1, color, 0.8);
-                    graphics.strokeCircle(this.x, this.y, bodySize * 2);
-                }
             },
 
             // Methods that Fish entity might call
