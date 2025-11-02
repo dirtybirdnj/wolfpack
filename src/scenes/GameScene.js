@@ -567,6 +567,120 @@ export class GameScene extends Phaser.Scene {
     }
 
     /**
+     * Render fog effects and fish counts behind baitfish schools
+     * NOTE: This is a perfect test case for future shader implementation!
+     * For now using simple graphics, but shaders could make this look amazing.
+     */
+    renderSchoolEffects() {
+        if (!this.schoolEffectsGraphics) {
+            this.schoolEffectsGraphics = this.add.graphics();
+            this.schoolEffectsGraphics.setDepth(3); // Behind fish (depth 5) but above background
+        }
+
+        if (!this.schoolCountTexts) {
+            this.schoolCountTexts = [];
+        }
+
+        this.schoolEffectsGraphics.clear();
+
+        // Hide all text objects first (we'll show only the ones we need)
+        this.schoolCountTexts.forEach(text => text.setVisible(false));
+
+        // Draw fog and count for each school
+        this.schools.forEach(school => {
+            if (school.members.length === 0) return;
+
+            // Calculate school bounds (find extents of all fish)
+            let minX = Infinity, maxX = -Infinity;
+            let minY = Infinity, maxY = -Infinity;
+
+            school.members.forEach(fish => {
+                if (fish.model.consumed) return;
+                minX = Math.min(minX, fish.model.x);
+                maxX = Math.max(maxX, fish.model.x);
+                minY = Math.min(minY, fish.model.y);
+                maxY = Math.max(maxY, fish.model.y);
+            });
+
+            // Skip if no valid fish
+            if (!isFinite(minX)) return;
+
+            // Calculate school center and size
+            const centerX = (minX + maxX) / 2;
+            const centerY = (minY + maxY) / 2;
+            const width = (maxX - minX) + 40; // Add padding
+            const height = (maxY - minY) + 30; // Add padding
+
+            // Draw subtle fog (elliptical glow)
+            // TODO: Replace with shader for smoother gradient and better performance
+            const fogColor = school.species === 'alewife' ? 0x88ccff :
+                           school.species === 'rainbow_smelt' ? 0x88ffcc :
+                           school.species === 'yellow_perch' ? 0xffdd88 :
+                           school.species === 'cisco' ? 0xccccff :
+                           0x88cccc; // sculpin or default
+
+            // Draw multiple layers for smooth gradient effect
+            for (let i = 3; i > 0; i--) {
+                const radius = (width / 2) * (i / 3);
+                const radiusY = (height / 2) * (i / 3);
+                const alpha = 0.06 / i; // Subtle, fading outward
+
+                this.schoolEffectsGraphics.fillStyle(fogColor, alpha);
+                this.schoolEffectsGraphics.fillEllipse(centerX, centerY, radius * 2, radiusY * 2);
+            }
+
+            // Draw fish count below school
+            const visibleCount = school.members.filter(f => !f.model.consumed).length;
+            const textY = maxY + 15; // Below the school
+
+            // Draw count with background
+            const textWidth = visibleCount >= 100 ? 30 : visibleCount >= 10 ? 24 : 18;
+            this.schoolEffectsGraphics.fillStyle(0x000000, 0.5);
+            this.schoolEffectsGraphics.fillRoundedRect(centerX - textWidth/2, textY - 8, textWidth, 14, 3);
+        });
+
+        // Draw count numbers using text objects (reuse from pool)
+        let textIndex = 0;
+        this.schools.forEach((school, index) => {
+            if (school.members.length === 0) return;
+
+            // Find school bounds again for text positioning
+            let maxY = -Infinity;
+            school.members.forEach(fish => {
+                if (!fish.model.consumed) {
+                    maxY = Math.max(maxY, fish.model.y);
+                }
+            });
+            if (!isFinite(maxY)) return;
+
+            const centerX = (Math.min(...school.members.filter(f => !f.model.consumed).map(f => f.model.x)) +
+                           Math.max(...school.members.filter(f => !f.model.consumed).map(f => f.model.x))) / 2;
+            const visibleCount = school.members.filter(f => !f.model.consumed).length;
+            const textY = maxY + 15;
+
+            // Get or create text object
+            if (textIndex >= this.schoolCountTexts.length) {
+                const text = this.add.text(0, 0, '', {
+                    fontSize: '10px',
+                    fontFamily: 'monospace',
+                    color: '#ffffff',
+                    stroke: '#000000',
+                    strokeThickness: 2
+                });
+                text.setOrigin(0.5, 0.5);
+                text.setDepth(4); // Above fog, below fish
+                this.schoolCountTexts.push(text);
+            }
+
+            const text = this.schoolCountTexts[textIndex];
+            text.setText(visibleCount.toString());
+            text.setPosition(centerX, textY);
+            text.setVisible(true);
+            textIndex++;
+        });
+    }
+
+    /**
      * Fish whistle - spawn trophy fish of each species + large bait clouds
      */
     spawnFishWhistleFish() {
@@ -794,6 +908,9 @@ export class GameScene extends Phaser.Scene {
             const maxY = (bottomDepth - 5) * depthScale;
             school.centerY = Math.max(minY, Math.min(maxY, school.centerY));
         });
+
+        // Render school fog and count labels BEFORE individual fish
+        this.renderSchoolEffects();
 
         // Update baitfish schools (new unified Fish with Boids schooling)
         this.baitfishSchools = this.baitfishSchools.filter(fish => {
