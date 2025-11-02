@@ -297,6 +297,9 @@ export class GameScene extends Phaser.Scene {
         // Array for schooling baitfish (using new unified Fish class with Boids)
         this.baitfishSchools = [];
 
+        // Array of school metadata (tracks center position and velocity for each school)
+        this.schools = [];
+
         console.log('✅ Creature arrays initialized');
     }
 
@@ -512,6 +515,21 @@ export class GameScene extends Phaser.Scene {
     spawnBaitfishSchool(worldX, y, count, species = 'rainbow_smelt') {
         console.log(`🐟 Spawning ${count} ${species} at (${worldX}, ${y})`);
 
+        // Create school metadata (like BaitfishCloud, tracks center and velocity)
+        const schoolId = `school_${Date.now()}_${Math.random()}`;
+        const school = {
+            id: schoolId,
+            species,
+            centerWorldX: worldX,
+            centerY: y,
+            velocity: {
+                x: Utils.randomBetween(-0.3, 0.3),
+                y: Utils.randomBetween(-0.1, 0.1)
+            },
+            members: [],
+            age: 0
+        };
+
         for (let i = 0; i < count; i++) {
             // Spread fish in a cluster
             const offsetX = Phaser.Math.Between(-40, 40);
@@ -526,11 +544,20 @@ export class GameScene extends Phaser.Scene {
                 species
             );
 
-            // Add to baitfish schools array
+            // Associate fish with school
+            fish.schoolId = schoolId;
+            fish.schoolingOffset = {
+                x: offsetX,
+                y: offsetY
+            };
+
+            // Add to arrays
+            school.members.push(fish);
             this.baitfishSchools.push(fish);
         }
 
-        console.log(`✅ School spawned: ${this.baitfishSchools.length} total baitfish`);
+        this.schools.push(school);
+        console.log(`✅ School spawned: ${this.baitfishSchools.length} total baitfish in ${this.schools.length} schools`);
     }
 
     /**
@@ -661,9 +688,46 @@ export class GameScene extends Phaser.Scene {
         // Add any new clouds created by splitting
         this.baitfishClouds.push(...newCloudsFromSplits);
 
+        // Update school centers first (they drift/wander like BaitfishCloud)
+        this.schools.forEach(school => {
+            school.age++;
+
+            // Add random wandering (like BaitfishCloud normal behavior)
+            if (Math.random() < 0.05) { // 5% chance per frame
+                school.velocity.x += Utils.randomBetween(-0.4, 0.4);
+                school.velocity.y += Utils.randomBetween(-0.2, 0.2);
+            }
+
+            // Apply velocity decay
+            school.velocity.x *= 0.98;
+            school.velocity.y *= 0.98;
+
+            // Clamp velocity
+            school.velocity.x = Math.max(-1.5, Math.min(1.5, school.velocity.x));
+            school.velocity.y = Math.max(-0.8, Math.min(0.8, school.velocity.y));
+
+            // Update center position
+            school.centerWorldX += school.velocity.x;
+            school.centerY += school.velocity.y;
+
+            // Keep school center in bounds
+            const depthScale = this.sonarDisplay ? this.sonarDisplay.getDepthScale() : GameConfig.DEPTH_SCALE;
+            const bottomDepth = this.maxDepth || GameConfig.MAX_DEPTH;
+            const minY = 20; // Min 20px from surface for school center
+            const maxY = (bottomDepth - 5) * depthScale;
+            school.centerY = Math.max(minY, Math.min(maxY, school.centerY));
+        });
+
         // Update baitfish schools (new unified Fish with Boids schooling)
         this.baitfishSchools = this.baitfishSchools.filter(fish => {
             if (fish.model.visible && !fish.model.consumed) {
+                // Find this fish's school center
+                const school = this.schools.find(s => s.id === fish.schoolId);
+                fish.schoolCenter = school ? {
+                    worldX: school.centerWorldX,
+                    y: school.centerY
+                } : null;
+
                 // Pass all baitfish schools so each fish can find neighbors for Boids
                 fish.update(this.lure, this.baitfishSchools, []);
                 return true;

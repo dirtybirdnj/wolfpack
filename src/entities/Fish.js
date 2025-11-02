@@ -388,17 +388,38 @@ export class Fish {
         // Check for predators and flee if needed
         const flee = this.calculateFlee();
 
+        // SCHOOL CENTER ATTRACTION - Stay near your school's center (like BaitfishModel)
+        // This provides group cohesion beyond just neighbor attraction
+        let centerAttraction = { x: 0, y: 0 };
+        if (this.schoolCenter && this.schoolingOffset) {
+            const targetWorldX = this.schoolCenter.worldX + this.schoolingOffset.x;
+            const targetY = this.schoolCenter.y + this.schoolingOffset.y;
+
+            const dx = targetWorldX - this.model.worldX;
+            const dy = targetY - this.model.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            if (dist > 0) {
+                // Gentle pull toward school center position
+                const strength = Math.min(dist / 100, 1.0); // Stronger when further away
+                centerAttraction.x = (dx / dist) * strength * 0.5;
+                centerAttraction.y = (dy / dist) * strength * 0.5;
+            }
+        }
+
         // Combine forces with weights
         const forceX =
             separation.x * this.schooling.separationWeight +
             alignment.x * this.schooling.alignmentWeight +
             cohesion.x * this.schooling.cohesionWeight +
+            centerAttraction.x * 2.0 + // School center weight
             flee.x * this.schooling.fleeWeight;
 
         const forceY =
             separation.y * this.schooling.separationWeight +
             alignment.y * this.schooling.alignmentWeight +
             cohesion.y * this.schooling.cohesionWeight +
+            centerAttraction.y * 2.0 + // School center weight
             flee.y * this.schooling.fleeWeight;
 
         // Apply forces to velocity
@@ -423,6 +444,25 @@ export class Fish {
         // Apply velocity to position
         this.model.worldX += this.schooling.velocity.x;
         this.model.y += this.schooling.velocity.y;
+
+        // BOUNDARY ENFORCEMENT - Keep fish within valid depth range
+        const depthScale = this.scene.sonarDisplay ?
+            this.scene.sonarDisplay.getDepthScale() :
+            GameConfig.DEPTH_SCALE;
+
+        const bottomDepth = this.scene.maxDepth || GameConfig.MAX_DEPTH;
+        const minY = 0.5 * depthScale; // 0.5 feet from surface (prevents going above water)
+        const maxY = (bottomDepth - 3) * depthScale; // 3 feet from bottom
+
+        // Clamp position
+        this.model.y = Math.max(minY, Math.min(maxY, this.model.y));
+
+        // If at boundary and moving toward it, reverse velocity component
+        if (this.model.y <= minY && this.schooling.velocity.y < 0) {
+            this.schooling.velocity.y = Math.abs(this.schooling.velocity.y) * 0.5; // Bounce down
+        } else if (this.model.y >= maxY && this.schooling.velocity.y > 0) {
+            this.schooling.velocity.y = -Math.abs(this.schooling.velocity.y) * 0.5; // Bounce up
+        }
 
         // Apply damping
         this.schooling.velocity.x *= 0.95;
