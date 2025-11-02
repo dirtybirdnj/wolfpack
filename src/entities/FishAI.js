@@ -162,7 +162,7 @@ export class FishAI {
         }
     }
 
-    update(lure, currentTime, allFish = [], baitfishClouds = []) {
+    update(lure, currentTime, allFish = [], baitfishClouds = [], crayfish = []) {
         // Make decisions at intervals, not every frame
         if (currentTime - this.lastDecisionTime < this.decisionCooldown) {
             return;
@@ -174,11 +174,16 @@ export class FishAI {
         // Fish prioritize real food over lures, especially when hungry
         const nearbyBaitfishCloud = this.findNearestBaitfishCloud(baitfishClouds);
 
+        // Check for crayfish (opportunistic bottom feeding for lake trout)
+        const nearbyCrayfish = this.findNearestCrayfish(crayfish);
+
         // In nature simulation mode (no lure), fish only hunt baitfish or idle
         if (!lure) {
             // Nature simulation mode - no lure to track
             if (nearbyBaitfishCloud && this.shouldHuntBaitfish(nearbyBaitfishCloud)) {
                 this.startHuntingBaitfish(nearbyBaitfishCloud);
+            } else if (nearbyCrayfish && this.shouldHuntCrayfish(nearbyCrayfish)) {
+                this.huntCrayfish(nearbyCrayfish);
             } else if (this.state === Constants.FISH_STATE.HUNTING_BAITFISH) {
                 this.huntingBaitfishBehavior(baitfishClouds, null);
             } else if (this.state === Constants.FISH_STATE.FEEDING) {
@@ -904,6 +909,89 @@ export class FishAI {
         }
 
         return false;
+    }
+
+    /**
+     * Find nearest crayfish (opportunistic bottom feeding)
+     */
+    findNearestCrayfish(crayfish) {
+        if (!crayfish || crayfish.length === 0) {
+            return null;
+        }
+
+        let nearest = null;
+        let nearestDistance = Infinity;
+
+        for (const cf of crayfish) {
+            if (!cf.visible || cf.consumed) {
+                continue;
+            }
+
+            const distance = Utils.calculateDistance(
+                this.fish.x, this.fish.y,
+                cf.x, cf.y
+            );
+
+            if (distance < nearestDistance) {
+                nearestDistance = distance;
+                nearest = cf;
+            }
+        }
+
+        return nearest;
+    }
+
+    /**
+     * Should this fish hunt crayfish? (Only lake trout when hungry and near bottom)
+     */
+    shouldHuntCrayfish(crayfish) {
+        // Only lake trout hunt crayfish (opportunistic bottom feeders)
+        if (this.fish.species !== 'lake_trout') {
+            return false;
+        }
+
+        // Must be hungry
+        if (this.fish.hunger < 40) {
+            return false;
+        }
+
+        // Must be near bottom (within 20 feet of crayfish)
+        const depthDifference = Math.abs(this.fish.depth - crayfish.depth);
+        if (depthDifference > 20) {
+            return false;
+        }
+
+        // Must be within reasonable hunting range
+        const distance = Utils.calculateDistance(
+            this.fish.x, this.fish.y,
+            crayfish.x, crayfish.y
+        );
+
+        return distance < 150; // Hunt if within 150 pixels
+    }
+
+    /**
+     * Hunt crayfish (lake trout bottom feeding)
+     */
+    huntCrayfish(crayfish) {
+        // Move toward crayfish
+        this.targetX = crayfish.x;
+        this.targetY = crayfish.y;
+        this.state = Constants.FISH_STATE.HUNTING_BAITFISH; // Reuse hunting state
+
+        // Check if close enough to eat
+        const distance = Utils.calculateDistance(
+            this.fish.x, this.fish.y,
+            crayfish.x, crayfish.y
+        );
+
+        if (distance < 15) {
+            // Consume the crayfish!
+            crayfish.consume();
+            this.fish.feedOnCrayfish();
+            this.state = Constants.FISH_STATE.FEEDING;
+            this.decisionCooldown = 100; // Brief pause after eating
+        }
     }
 }
 

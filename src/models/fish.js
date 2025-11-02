@@ -193,7 +193,9 @@ export class Fish extends AquaticOrganism {
         this.speed = this.baseSpeed * this.depthZone.speedMultiplier;
 
         if (!inActiveFight) {
-            this.ai.update(lure, this.scene.time.now, allFish, baitfishClouds);
+            // Pass crayfish array to AI for opportunistic bottom feeding
+            const crayfish = this.scene.crayfish || [];
+            this.ai.update(lure, this.scene.time.now, allFish, baitfishClouds, crayfish);
 
             const movement = this.ai.getMovementVector();
 
@@ -469,6 +471,44 @@ export class Fish extends AquaticOrganism {
 
         // Log feeding for debugging (commented out for production)
         // console.log(`${this.name} fed on ${preySpecies}, hunger reduced by ${nutritionValue} (now ${Math.floor(this.hunger)}%)`);
+    }
+
+    feedOnCrayfish() {
+        // Defensive check: Only predatory fish have hunger and health properties
+        if (this.hunger === undefined || this.health === undefined) {
+            return;
+        }
+
+        // Record what this fish ate
+        if (this.stomachContents) {
+            this.stomachContents.push({
+                species: 'crayfish',
+                timestamp: this.frameAge
+            });
+        }
+
+        // Crayfish provide moderate nutrition (similar to sculpin)
+        const nutritionValue = 10;
+
+        const previousHunger = this.hunger;
+        this.hunger = Math.max(0, this.hunger - nutritionValue);
+        this.lastFed = this.frameAge;
+
+        // HEALTH RESTORATION: Only when hunger reaches 0, excess nutrition restores health
+        if (this.hunger === 0 && previousHunger > 0) {
+            const excessNutrition = nutritionValue - previousHunger;
+
+            if (excessNutrition > 0) {
+                const healthGain = excessNutrition * 0.5;
+                const previousHealth = this.health;
+                this.health = Math.min(100, this.health + healthGain);
+                const actualHealthGain = this.health - previousHealth;
+
+                if (actualHealthGain > 0) {
+                    console.log(`${this.name} full! Restored ${actualHealthGain.toFixed(1)} health from crayfish (now ${Math.floor(this.health)}%)`);
+                }
+            }
+        }
     }
 
     getInfo() {
