@@ -356,7 +356,7 @@ export class NatureSimulationScene extends Phaser.Scene {
         const timeStr = `${minutes}:${secs.toString().padStart(2, '0')}`;
 
         const fishCount = this.fishes.length;
-        const baitfishCount = this.baitfishClouds.length;
+        const baitfishCount = this.schools.length;
         const zooplanktonCount = this.zooplankton.length;
 
         // Show different controls based on whether gamepad is connected
