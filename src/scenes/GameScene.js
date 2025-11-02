@@ -217,9 +217,6 @@ export class GameScene extends Phaser.Scene {
             // Initialize all game systems
             this.initializeSystems();
 
-            // TEST: Spawn a baitfish school to see the new schooling behavior
-            this.spawnBaitfishSchool(GameConfig.CANVAS_WIDTH / 2, 150, 30, 'rainbow_smelt');
-
             // Event listeners
             this.events.on('fishStrike', this.handleFishStrike, this);
             this.events.on('fishCaught', this.handleFishCaught, this);
@@ -631,6 +628,42 @@ export class GameScene extends Phaser.Scene {
     /**
      * Update all entities (fish, baitfish, zooplankton, crayfish)
      */
+
+    /**
+     * Adapt new schools to look like old BaitfishClouds for FishAI compatibility
+     * This creates a bridge layer so predators can hunt the new baitfish schools
+     * @returns {Array} Array of cloud-like objects that FishAI can understand
+     */
+    getAdaptedSchoolsForAI() {
+        return this.schools.map(school => {
+            // Convert school center worldX to screen X
+            const playerWorldX = GameConfig.CANVAS_WIDTH / 2;
+            const offsetFromPlayer = school.centerWorldX - playerWorldX;
+            const centerX = (GameConfig.CANVAS_WIDTH / 2) + offsetFromPlayer;
+
+            return {
+                // Cloud properties expected by FishAI
+                visible: school.members.length > 0,
+                baitfish: school.members, // Array of Fish objects
+                centerX: centerX,         // Screen X position
+                centerY: school.centerY,  // Screen Y position
+                worldX: school.centerWorldX, // World X position
+                
+                // Method that FishAI uses to check if lure is in cloud
+                isPlayerLureInCloud(lure) {
+                    const distance = Math.sqrt(
+                        Math.pow(lure.x - centerX, 2) +
+                        Math.pow(lure.y - school.centerY, 2)
+                    );
+                    return distance < GameConfig.BAITFISH_CLOUD_RADIUS;
+                },
+
+                // Properties for hunting behavior
+                lakersChasing: [] // Predators currently chasing this school
+            };
+        });
+    }
+
     updateEntities() {
         // Update zooplankton
         this.zooplankton = this.zooplankton.filter(zp => {
@@ -742,8 +775,13 @@ export class GameScene extends Phaser.Scene {
         });
 
         // Update fish (predators)
+        // Create adapted schools that look like clouds to FishAI
+        const adaptedSchools = this.getAdaptedSchoolsForAI();
+        // Combine old clouds (if any remain) with new adapted schools
+        const allBaitfishTargets = [...this.baitfishClouds, ...adaptedSchools];
+
         this.fishes.forEach((fish, index) => {
-            fish.update(this.lure, this.fishes, this.baitfishClouds);
+            fish.update(this.lure, this.fishes, allBaitfishTargets);
 
             // Remove fish that are no longer visible or caught
             if (!fish.visible) {
