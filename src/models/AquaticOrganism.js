@@ -14,6 +14,9 @@ export class AquaticOrganism {
     constructor(scene, worldX, y, species = null, speciesData = null) {
         this.scene = scene;
 
+        // Unique identifier for this organism (used for fish status panel selection)
+        this.id = `organism_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+
         // Species identification (optional for simple organisms)
         this.species = species;
         this.speciesData = speciesData;

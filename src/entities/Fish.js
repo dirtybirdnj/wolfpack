@@ -59,6 +59,10 @@ export class Fish {
 
         this.schooling = {
             enabled: true,
+            // Base Boids radii (will be modified by scaredLevel)
+            baseSeparationRadius: params.separation,
+            baseAlignmentRadius: params.alignment,
+            baseCohesionRadius: params.cohesion,
             separationRadius: params.separation,
             alignmentRadius: params.alignment,
             cohesionRadius: params.cohesion,
@@ -75,9 +79,11 @@ export class Fish {
             maxSpeed: speciesData.speed.base,
             panicSpeed: speciesData.speed.panic,
 
-            // State
+            // State (like old BaitfishCloud)
             isPanicking: false,
-            panicTimer: 0
+            panicTimer: 0,
+            scaredLevel: 0, // 0-1, increases when predators nearby
+            spreadMultiplier: 1.0 // 1.0 = normal, 0.5 = tight cluster, 2.0 = very loose
         };
 
         // Update frequency optimization
@@ -130,11 +136,97 @@ export class Fish {
             weight: speciesData.weightRange.max,
             sonarStrength: 0.3, // Weak sonar return for small fish
 
-            // Simple render method for baitfish
+            // Properties that Fish entity getters expect (for compatibility)
+            depthZone: 'mid', // Baitfish are typically mid-water
+            points: 0, // No points for baitfish
+            name: `${species} baitfish`,
+            gender: 'unknown',
+            age: 0,
+            caught: false,
+            ai: null, // Baitfish don't have AI
+            hunger: 0,
+            health: 100,
+            inFrenzy: false,
+            frenzyIntensity: 0,
+            interestFlash: 0,
+            frameAge: 0,
+            angle: 0,
+
+            // Render baitfish with species-specific appearance (matches old BaitfishModel)
             render(graphics, bodySize, isMovingRight) {
+                if (!this.visible || this.consumed) return;
+
+                // Color
                 const color = speciesData.color || 0x88ccff;
-                graphics.fillStyle(color, 0.8);
-                graphics.fillCircle(this.x, this.y, bodySize * 0.5);
+
+                // Body proportions from species appearance
+                const appearance = speciesData.appearance || {
+                    bodyShape: 'streamlined',
+                    length: 1.0,
+                    height: 1.0
+                };
+                const bodyLength = bodySize * 1.5 * appearance.length;
+                const bodyHeight = bodySize * 0.7 * appearance.height;
+
+                // Draw body based on species shape (solid opacity)
+                graphics.fillStyle(color, 0.6);
+
+                if (appearance.bodyShape === 'slender') {
+                    // Slender, elongated (smelt, cisco)
+                    graphics.fillEllipse(this.x, this.y, bodyLength * 1.2, bodyHeight * 0.6);
+                } else if (appearance.bodyShape === 'deep') {
+                    // Deep-bodied (alewife, perch)
+                    graphics.fillEllipse(this.x, this.y, bodyLength, bodyHeight * 1.1);
+                } else if (appearance.bodyShape === 'bottom') {
+                    // Bottom-dwelling (sculpin) - flattened
+                    graphics.fillEllipse(this.x, this.y, bodyLength * 0.9, bodyHeight * 0.5);
+                } else {
+                    // Default streamlined shape
+                    graphics.fillEllipse(this.x, this.y, bodyLength, bodyHeight);
+                }
+
+                // Brighter center dot (solid, no flicker)
+                graphics.fillStyle(color, 0.9);
+                graphics.fillCircle(this.x, this.y, bodySize * 0.4);
+            },
+
+            // Methods that Fish entity might call
+            destroy() {
+                // Simple cleanup for baitfish model
+                // No AI to clean up, just mark as consumed
+                this.visible = false;
+                this.consumed = true;
+            },
+
+            // Stub methods for compatibility (baitfish don't use these)
+            feedOnBaitfish(preySpecies) {
+                return false; // Baitfish don't eat other fish
+            },
+
+            triggerInterestFlash(intensity) {
+                // Baitfish don't show interest flashes
+                return;
+            },
+
+            getInfo() {
+                return {
+                    species: this.species,
+                    length: this.length,
+                    weight: this.weight,
+                    name: this.name
+                };
+            },
+
+            renderAtPosition(graphics, x, y, bodySize) {
+                // Render at custom position (for catch popup - not used for baitfish)
+                // Just render at the specified position
+                const tempX = this.x;
+                const tempY = this.y;
+                this.x = x;
+                this.y = y;
+                this.render(graphics, bodySize, true);
+                this.x = tempX;
+                this.y = tempY;
             }
         };
     }
@@ -187,6 +279,8 @@ export class Fish {
     update(lure, allFish = [], baitfishClouds = []) {
         // Baitfish use schooling behavior instead of AI
         if (this.isBaitfish) {
+            // Store allFish array for schooling neighbor queries
+            this.allFishInScene = allFish;
             this.updateSchooling();
             this.updateSonarTrail();
             this.render();
@@ -240,8 +334,16 @@ export class Fish {
         const bodySize = Math.max(8, this.model.weight / 2);
 
         // Get movement direction to orient the fish
-        const movement = this.model.ai.getMovementVector();
-        const isMovingRight = movement.x >= 0;
+        let isMovingRight = true; // Default
+
+        if (this.isBaitfish && this.schooling) {
+            // Baitfish use schooling velocity
+            isMovingRight = this.schooling.velocity.x >= 0;
+        } else if (this.model.ai) {
+            // Predators use AI movement vector
+            const movement = this.model.ai.getMovementVector();
+            isMovingRight = movement.x >= 0;
+        }
 
         // If we have external artwork sprite, use it instead of procedural rendering
         if (this.sprite) {
@@ -254,7 +356,8 @@ export class Fish {
         }
 
         // Interest flash - green circle that fades to show player triggered interest
-        if (this.model.interestFlash > 0) {
+        // (Only for predators with AI)
+        if (this.model.interestFlash && this.model.interestFlash > 0) {
             const flashSize = bodySize * (2 + (1 - this.model.interestFlash) * 1.5);
             const flashAlpha = this.model.interestFlash * 0.8;
 
@@ -266,6 +369,17 @@ export class Fish {
                 this.graphics.lineStyle(2, 0x00ff00, flashAlpha * 0.5);
                 this.graphics.strokeCircle(this.model.x, this.model.y, pulseSize);
             }
+        }
+
+        // Selection circle - white circle around selected fish from status panel
+        if (this.scene.selectedFishId && this.model.id === this.scene.selectedFishId) {
+            const selectionSize = bodySize * 2.5;
+            const pulseOffset = Math.sin(Date.now() * 0.005) * 3;
+
+            this.graphics.lineStyle(2, 0xffffff, 0.9);
+            this.graphics.strokeCircle(this.model.x, this.model.y, selectionSize + pulseOffset);
+            this.graphics.lineStyle(1, 0xffffff, 0.5);
+            this.graphics.strokeCircle(this.model.x, this.model.y, selectionSize + pulseOffset + 4);
         }
     }
 
@@ -378,17 +492,73 @@ export class Fish {
         // Check for predators and flee if needed
         const flee = this.calculateFlee();
 
-        // Combine forces with weights
+        // UPDATE SCARED LEVEL based on predator proximity (like old BaitfishCloud)
+        const predators = this.scene.fishes || [];
+        let closestPredatorDist = Infinity;
+        predators.forEach(predator => {
+            const dx = this.model.worldX - predator.worldX;
+            const dy = this.model.y - predator.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            closestPredatorDist = Math.min(closestPredatorDist, dist);
+        });
+
+        const threatRadius = 150; // Same as flee radius
+        if (closestPredatorDist < threatRadius) {
+            // Get scared quickly when predators approach
+            this.schooling.scaredLevel = Math.min(1.0, this.schooling.scaredLevel + 0.15);
+        } else {
+            // Calm down slowly when no predators nearby
+            this.schooling.scaredLevel = Math.max(0, this.schooling.scaredLevel - 0.02);
+        }
+
+        // DYNAMIC SPREAD MULTIPLIER - Cluster tighter when scared
+        if (this.schooling.scaredLevel > 0.2) {
+            // Scared: compress to 0.5-0.8 (tighter clustering)
+            this.schooling.spreadMultiplier = Math.max(0.5, 0.8 - (this.schooling.scaredLevel * 0.3));
+        } else {
+            // Safe: spread out to 1.2-1.5 (looser, more natural)
+            this.schooling.spreadMultiplier = Math.min(1.5, 1.2 + (1 - this.schooling.scaredLevel) * 0.3);
+        }
+
+        // Apply spread multiplier to Boids radii (smaller radii = tighter clustering)
+        this.schooling.separationRadius = this.schooling.baseSeparationRadius * this.schooling.spreadMultiplier;
+        this.schooling.alignmentRadius = this.schooling.baseAlignmentRadius * this.schooling.spreadMultiplier;
+        this.schooling.cohesionRadius = this.schooling.baseCohesionRadius * this.schooling.spreadMultiplier;
+
+        // SCHOOL CENTER ATTRACTION - Stay near your school's center (like BaitfishModel)
+        // This provides group cohesion beyond just neighbor attraction
+        let centerAttraction = { x: 0, y: 0 };
+        if (this.schoolCenter && this.schoolingOffset) {
+            const targetWorldX = this.schoolCenter.worldX + this.schoolingOffset.x;
+            const targetY = this.schoolCenter.y + this.schoolingOffset.y;
+
+            const dx = targetWorldX - this.model.worldX;
+            const dy = targetY - this.model.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            if (dist > 0) {
+                // Pull toward school center - stronger when scared for tighter clustering
+                const strength = Math.min(dist / 100, 1.0); // Stronger when further away
+                const scaredPull = 0.5 + (this.schooling.scaredLevel * 0.8); // 0.5-1.3 based on fear
+                centerAttraction.x = (dx / dist) * strength * scaredPull;
+                centerAttraction.y = (dy / dist) * strength * scaredPull;
+            }
+        }
+
+        // Combine forces with weights (increase center weight when scared)
+        const centerWeight = 2.0 + (this.schooling.scaredLevel * 3.0); // 2.0-5.0 based on fear
         const forceX =
             separation.x * this.schooling.separationWeight +
             alignment.x * this.schooling.alignmentWeight +
             cohesion.x * this.schooling.cohesionWeight +
+            centerAttraction.x * centerWeight + // Stronger pull when scared
             flee.x * this.schooling.fleeWeight;
 
         const forceY =
             separation.y * this.schooling.separationWeight +
             alignment.y * this.schooling.alignmentWeight +
             cohesion.y * this.schooling.cohesionWeight +
+            centerAttraction.y * centerWeight + // Stronger pull when scared
             flee.y * this.schooling.fleeWeight;
 
         // Apply forces to velocity
@@ -414,6 +584,32 @@ export class Fish {
         this.model.worldX += this.schooling.velocity.x;
         this.model.y += this.schooling.velocity.y;
 
+        // Update screen X position from world X (like predator fish do)
+        // Player is always at center of screen (adapt to actual canvas width)
+        const actualCanvasWidth = this.scene.scale.width || GameConfig.CANVAS_WIDTH;
+        const playerWorldX = actualCanvasWidth / 2;
+        const offsetFromPlayer = this.model.worldX - playerWorldX;
+        this.model.x = (actualCanvasWidth / 2) + offsetFromPlayer;
+
+        // BOUNDARY ENFORCEMENT - Keep fish within valid depth range
+        const depthScale = this.scene.sonarDisplay ?
+            this.scene.sonarDisplay.getDepthScale() :
+            GameConfig.DEPTH_SCALE;
+
+        const bottomDepth = this.scene.maxDepth || GameConfig.MAX_DEPTH;
+        const minY = 0.5 * depthScale; // 0.5 feet from surface (prevents going above water)
+        const maxY = (bottomDepth - 3) * depthScale; // 3 feet from bottom
+
+        // Clamp position
+        this.model.y = Math.max(minY, Math.min(maxY, this.model.y));
+
+        // If at boundary and moving toward it, reverse velocity component
+        if (this.model.y <= minY && this.schooling.velocity.y < 0) {
+            this.schooling.velocity.y = Math.abs(this.schooling.velocity.y) * 0.5; // Bounce down
+        } else if (this.model.y >= maxY && this.schooling.velocity.y > 0) {
+            this.schooling.velocity.y = -Math.abs(this.schooling.velocity.y) * 0.5; // Bounce up
+        }
+
         // Apply damping
         this.schooling.velocity.x *= 0.95;
         this.schooling.velocity.y *= 0.95;
@@ -425,20 +621,49 @@ export class Fish {
                 this.schooling.isPanicking = false;
             }
         }
+
+        // FROZEN DETECTION: Check if fish is stuck (not moving for extended period)
+        // This prevents baitfish from getting frozen in place
+        if (!this.schooling.lastPosition) {
+            this.schooling.lastPosition = { worldX: this.model.worldX, y: this.model.y };
+            this.schooling.frozenFrames = 0;
+        } else {
+            const dx = this.model.worldX - this.schooling.lastPosition.worldX;
+            const dy = this.model.y - this.schooling.lastPosition.y;
+            const distMoved = Math.sqrt(dx * dx + dy * dy);
+
+            // If fish hasn't moved more than 1 pixel in 60 frames (1 second)
+            if (distMoved < 1.0) {
+                this.schooling.frozenFrames++;
+
+                // After 60 frames of being frozen, give it a random nudge
+                if (this.schooling.frozenFrames > 60) {
+                    this.schooling.velocity.x += (Math.random() - 0.5) * 2.0;
+                    this.schooling.velocity.y += (Math.random() - 0.5) * 1.0;
+                    this.schooling.frozenFrames = 0; // Reset counter
+                    console.log(`Unfreezing stuck ${this._speciesName} baitfish`);
+                }
+            } else {
+                // Fish is moving, reset frozen counter
+                this.schooling.frozenFrames = 0;
+                this.schooling.lastPosition = { worldX: this.model.worldX, y: this.model.y };
+            }
+        }
     }
 
     /**
      * Find nearby fish in the same group for schooling
      */
     findNearbySchoolmates() {
-        // Get all fish from scene - will need to be a group reference
-        const allFish = this.scene.allFish || this.scene.baitfishGroup;
-        if (!allFish) return [];
+        // Get all fish from scene (stored in update())
+        const allFish = this.allFishInScene;
+        if (!allFish || !Array.isArray(allFish)) return [];
 
         const neighbors = [];
         const radius = this.schooling.perceptionRadius;
 
-        allFish.getChildren().forEach(other => {
+        // Iterate through array of fish
+        allFish.forEach(other => {
             // Skip self
             if (other === this) return;
 

@@ -50,6 +50,12 @@ export class Lure {
     }
     
     update() {
+        // Keep lure centered horizontally (player is always at center of screen)
+        // Use actual game width to handle any screen size/resolution
+        const actualGameWidth = this.scene.scale.width || GameConfig.CANVAS_WIDTH;
+        this.x = actualGameWidth / 2;
+        this.startX = this.x; // Keep startX in sync
+
         // Update time in water
         if (this.state !== Constants.LURE_STATE.SURFACE) {
             this.timeInWater++;

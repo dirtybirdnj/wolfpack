@@ -583,7 +583,8 @@ export class FishAI {
         // FAST FLEEING - Fish ran out of swipes
         if (this.fish.isFastFleeing) {
             // Pick direction based on current world position - swim away from player
-            const playerWorldX = GameConfig.CANVAS_WIDTH / 2;
+            const actualGameWidth = this.fish.scene.scale.width || GameConfig.CANVAS_WIDTH;
+            const playerWorldX = actualGameWidth / 2;
             const targetOffscreenX = this.fish.worldX < playerWorldX ? playerWorldX - 500 : playerWorldX + 500;
             this.targetX = targetOffscreenX;
             this.targetY = this.fish.y; // Maintain current depth
@@ -610,7 +611,8 @@ export class FishAI {
 
         // NORMAL FLEEING - Fish is spooked and swimming away
         // Use world position instead of screen position to determine flee direction
-        const playerWorldX = GameConfig.CANVAS_WIDTH / 2;
+        const actualGameWidth = this.fish.scene.scale.width || GameConfig.CANVAS_WIDTH;
+        const playerWorldX = actualGameWidth / 2;
         this.targetX = this.fish.worldX < playerWorldX ? playerWorldX - 400 : playerWorldX + 400;
         this.targetY = this.depthPreference * GameConfig.DEPTH_SCALE;
 

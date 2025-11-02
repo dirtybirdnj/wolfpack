@@ -31,12 +31,15 @@ export class CollisionSystem {
 
     /**
      * Check if lure is passing through baitfish clouds and split them
+     * NOTE: Splitting disabled for new school system (schools use Boids)
      */
     checkCloudSplitting() {
         // Only check when lure is dropping
         if (this.scene.lure.state !== Constants.LURE_STATE.DROPPING) {
             return;
         }
+
+        // TODO: Implement school scatter behavior when lure passes through
 
         const newClouds = []; // Store new clouds created from splits
 

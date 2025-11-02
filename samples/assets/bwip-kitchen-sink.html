@@ -1,0 +1,752 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>bwip-error-codes - Barcode Generator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            color: #e2e8f0;
+            padding: 40px 20px;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 50px;
+        }
+        
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, #60a5fa, #34d399);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .subtitle {
+            color: #94a3b8;
+            font-size: 1.1em;
+        }
+        
+        .controls {
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 40px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .control-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #cbd5e1;
+            font-size: 0.95em;
+        }
+        
+        input[type="text"],
+        input[type="number"],
+        select {
+            width: 100%;
+            padding: 10px 12px;
+            background: rgba(15, 23, 42, 0.9);
+            border: 1px solid rgba(148, 163, 184, 0.3);
+            border-radius: 6px;
+            color: #e2e8f0;
+            font-size: 1em;
+            transition: all 0.3s ease;
+        }
+        
+        input[type="text"]:focus,
+        input[type="number"]:focus,
+        select:focus {
+            outline: none;
+            border-color: #60a5fa;
+            background: rgba(15, 23, 42, 1);
+            box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.1);
+        }
+        
+        textarea {
+            width: 100%;
+            padding: 10px 12px;
+            background: rgba(15, 23, 42, 0.9);
+            border: 1px solid rgba(148, 163, 184, 0.3);
+            border-radius: 6px;
+            color: #e2e8f0;
+            font-size: 1em;
+            transition: all 0.3s ease;
+            resize: vertical;
+        }
+        
+        textarea:focus {
+            outline: none;
+            border-color: #60a5fa;
+            background: rgba(15, 23, 42, 1);
+            box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.1);
+        }
+        
+        .controls-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        button {
+            background: linear-gradient(135deg, #3b82f6, #1e40af);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 1em;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(59, 130, 246, 0.3);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        .barcodes-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+        
+        .barcode-card {
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            border-radius: 12px;
+            padding: 25px;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+        
+        .barcode-card:hover {
+            border-color: rgba(148, 163, 184, 0.5);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+        
+        .barcode-title {
+            font-size: 1.3em;
+            font-weight: 700;
+            margin-bottom: 8px;
+            color: #60a5fa;
+        }
+        
+        .barcode-description {
+            color: #94a3b8;
+            font-size: 0.9em;
+            margin-bottom: 15px;
+            line-height: 1.5;
+        }
+        
+        .barcode-display {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 250px;
+            margin-bottom: 15px;
+            overflow: auto;
+        }
+        
+        .barcode-display img,
+        .barcode-display canvas,
+        .barcode-display svg {
+            max-width: 100%;
+            max-height: 100%;
+            display: block;
+        }
+        
+        .barcode-info {
+            background: rgba(15, 23, 42, 0.9);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 12px;
+        }
+        
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 0.9em;
+        }
+        
+        .info-row:last-child {
+            margin-bottom: 0;
+        }
+        
+        .info-label {
+            color: #cbd5e1;
+            font-weight: 600;
+        }
+        
+        .info-value {
+            color: #34d399;
+            font-family: 'Monaco', 'Courier New', monospace;
+        }
+        
+        .data-preview {
+            background: rgba(15, 23, 42, 0.9);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            border-radius: 6px;
+            padding: 12px;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 0.85em;
+            color: #60a5fa;
+            word-break: break-all;
+            max-height: 120px;
+            overflow: auto;
+        }
+        
+        .info-section {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(148, 163, 184, 0.2);
+        }
+        
+        .info-section h3 {
+            font-size: 1em;
+            color: #60a5fa;
+            margin-bottom: 12px;
+        }
+        
+        .specs-table {
+            width: 100%;
+            font-size: 0.9em;
+            border-collapse: collapse;
+        }
+        
+        .specs-table th {
+            background: rgba(15, 23, 42, 0.9);
+            color: #60a5fa;
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+        }
+        
+        .specs-table td {
+            padding: 8px;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+            color: #cbd5e1;
+        }
+        
+        .specs-table tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .capacity-bar {
+            width: 100%;
+            height: 8px;
+            background: rgba(15, 23, 42, 0.9);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+        
+        .capacity-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #34d399, #10b981);
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+        
+        footer {
+            text-align: center;
+            color: #64748b;
+            font-size: 0.9em;
+            margin-top: 50px;
+            padding-top: 30px;
+            border-top: 1px solid rgba(148, 163, 184, 0.2);
+        }
+        
+        .loading {
+            text-align: center;
+            color: #94a3b8;
+            padding: 40px;
+        }
+        
+        .error {
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid rgba(239, 68, 68, 0.5);
+            color: #fca5a5;
+            padding: 12px;
+            border-radius: 6px;
+            margin-top: 12px;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>bwip-error-codes</h1>
+            <p class="subtitle">Universal Barcode Generator • Code128 • QR Code • Aztec</p>
+        </header>
+        
+        <div class="controls">
+            <h2 style="margin-bottom: 20px; color: #cbd5e1;">Data Configuration</h2>
+            
+            <div class="control-group" style="margin-bottom: 30px;">
+                <label style="margin-bottom: 15px;">Data Input Mode</label>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <button onclick="window.barcodeApp.setMode('example')" id="modeExampleBtn" style="width: 100%; background: linear-gradient(135deg, #3b82f6, #1e40af); padding: 12px;">Use Example Data (Game State)</button>
+                    <button onclick="window.barcodeApp.setMode('custom')" id="modeCustomBtn" style="width: 100%; background: rgba(59, 130, 246, 0.3); padding: 12px;">Enter Custom Data</button>
+                </div>
+            </div>
+            
+            <!-- Example Data Mode -->
+            <div id="exampleDataSection" style="display: none;">
+                <h3 style="color: #cbd5e1; margin-bottom: 15px;">Wolfpack Game State Data</h3>
+                <div class="controls-row">
+                    <div class="control-group">
+                        <label>Game State</label>
+                        <select id="gameState">
+                            <option value="active">Active</option>
+                            <option value="paused">Paused</option>
+                            <option value="menu">Menu</option>
+                            <option value="gameover">Game Over</option>
+                        </select>
+                    </div>
+                    <div class="control-group">
+                        <label>Level / Location</label>
+                        <input type="text" id="level" value="Lake Champlain - North Basin" placeholder="Location name">
+                    </div>
+                    <div class="control-group">
+                        <label>Player Latitude</label>
+                        <input type="number" id="playerLat" value="44.4" step="0.1" min="-90" max="90">
+                    </div>
+                    <div class="control-group">
+                        <label>Player Longitude</label>
+                        <input type="number" id="playerLon" value="-73.2" step="0.1" min="-180" max="180">
+                    </div>
+                </div>
+                
+                <div class="controls-row">
+                    <div class="control-group">
+                        <label>Fish Count</label>
+                        <input type="number" id="fishCount" value="5" min="0" max="100">
+                    </div>
+                    <div class="control-group">
+                        <label>Sonar Gain (0-1)</label>
+                        <input type="number" id="sonarGain" value="0.8" step="0.1" min="0" max="1">
+                    </div>
+                    <div class="control-group">
+                        <label>Line Tension (lbs)</label>
+                        <input type="number" id="lineTension" value="8.5" step="0.5" min="0" max="20">
+                    </div>
+                    <div class="control-group">
+                        <label>Last Action</label>
+                        <select id="lastAction">
+                            <option value="cast">Cast</option>
+                            <option value="reel">Reel</option>
+                            <option value="idle">Idle</option>
+                            <option value="hooked">Hooked</option>
+                            <option value="landed">Landed</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Custom Data Mode -->
+            <div id="customDataSection" style="display: none;">
+                <h3 style="color: #cbd5e1; margin-bottom: 15px;">Enter Your Data</h3>
+                <div class="control-group">
+                    <label>Custom Data String (any format, up to 3KB)</label>
+                    <textarea id="customDataInput" style="width: 100%; padding: 10px 12px; background: rgba(15, 23, 42, 0.9); border: 1px solid rgba(148, 163, 184, 0.3); border-radius: 6px; color: #e2e8f0; font-size: 1em; min-height: 120px; font-family: 'Monaco', 'Courier New', monospace; resize: vertical;">error_code=DB_TIMEOUT&severity=high&timestamp=1730470335&message=Connection%20pool%20exhausted&retry_count=3</textarea>
+                    <div style="font-size: 0.85em; color: #94a3b8; margin-top: 8px;">
+                        <span id="customDataLength">0</span> / 2953 bytes
+                    </div>
+                </div>
+            </div>
+            
+            <button onclick="window.barcodeApp.generateBarcodes()" style="width: 100%; padding: 14px; margin-top: 20px;">Generate Barcodes</button>
+        </div>
+        
+        <div class="barcodes-grid">
+            <div class="barcode-card">
+                <div class="barcode-title">Code 128 Barcode</div>
+                <div class="barcode-description">Traditional 1D barcode. Good for simple IDs and strings up to ~40 characters.</div>
+                <div class="barcode-display" id="code128Display">
+                    <div class="loading">Loading...</div>
+                </div>
+                <div class="barcode-info">
+                    <div class="info-row">
+                        <span class="info-label">Format:</span>
+                        <span class="info-value">Code 128</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Dimensions:</span>
+                        <span class="info-value">1D Linear</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Max Capacity:</span>
+                        <span class="info-value">~40 characters practical</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Use Case:</span>
+                        <span class="info-value">Short IDs, action codes</span>
+                    </div>
+                </div>
+                <div class="info-section">
+                    <h3>Current Data (truncated)</h3>
+                    <div class="data-preview" id="code128Data">state=active&ts=1730470335</div>
+                    <div class="capacity-bar">
+                        <div class="capacity-fill" id="code128Capacity" style="width: 15%;"></div>
+                    </div>
+                    <div style="font-size: 0.8em; color: #94a3b8; margin-top: 6px;">
+                        <span id="code128Chars">0</span> / 40 characters
+                    </div>
+                </div>
+            </div>
+            
+            <div class="barcode-card">
+                <div class="barcode-title">QR Code</div>
+                <div class="barcode-description">2D code extremely popular and widely supported. Stores up to ~3KB of data reliably.</div>
+                <div class="barcode-display" id="qrDisplay">
+                    <div class="loading">Loading...</div>
+                </div>
+                <div class="barcode-info">
+                    <div class="info-row">
+                        <span class="info-label">Format:</span>
+                        <span class="info-value">QR Code (Version 40)</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Dimensions:</span>
+                        <span class="info-value">2D Matrix (177×177 modules)</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Max Capacity:</span>
+                        <span class="info-value">2,953 bytes (~3 KB)</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Use Case:</span>
+                        <span class="info-value">Full game state + metadata</span>
+                    </div>
+                </div>
+                <div class="info-section">
+                    <h3>Current Data</h3>
+                    <div class="data-preview" id="qrData">Loading...</div>
+                    <div class="capacity-bar">
+                        <div class="capacity-fill" id="qrCapacity" style="width: 15%;"></div>
+                    </div>
+                    <div style="font-size: 0.8em; color: #94a3b8; margin-top: 6px;">
+                        <span id="qrChars">0</span> / 2953 bytes
+                    </div>
+                </div>
+            </div>
+            
+            <div class="barcode-card">
+                <div class="barcode-title">Aztec Code</div>
+                <div class="barcode-description">Modern 2D format with fewer dots than QR. Compact, robust, better at odd angles.</div>
+                <div class="barcode-display" id="aztecDisplay">
+                    <div class="loading">Loading...</div>
+                </div>
+                <div class="barcode-info">
+                    <div class="info-row">
+                        <span class="info-label">Format:</span>
+                        <span class="info-value">Aztec Code</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Dimensions:</span>
+                        <span class="info-value">2D Matrix (optimized)</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Max Capacity:</span>
+                        <span class="info-value">~3.8 KB</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Use Case:</span>
+                        <span class="info-value">When space is tight</span>
+                    </div>
+                </div>
+                <div class="info-section">
+                    <h3>Current Data</h3>
+                    <div class="data-preview" id="aztecData">Loading...</div>
+                    <div class="capacity-bar">
+                        <div class="capacity-fill" id="aztecCapacity" style="width: 15%;"></div>
+                    </div>
+                    <div style="font-size: 0.8em; color: #94a3b8; margin-top: 6px;">
+                        <span id="aztecChars">0</span> / 3800 bytes
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div style="background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(148, 163, 184, 0.2); border-radius: 12px; padding: 25px; backdrop-filter: blur(10px);">
+            <h2 style="color: #cbd5e1; margin-bottom: 20px;">Format Comparison</h2>
+            <table class="specs-table">
+                <thead>
+                    <tr>
+                        <th>Aspect</th>
+                        <th>Code 128</th>
+                        <th>QR Code</th>
+                        <th>Aztec</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Type</td>
+                        <td>1D Linear</td>
+                        <td>2D Matrix</td>
+                        <td>2D Matrix</td>
+                    </tr>
+                    <tr>
+                        <td>Max Capacity</td>
+                        <td>~40 chars</td>
+                        <td>~2,953 bytes</td>
+                        <td>~3,800 bytes</td>
+                    </tr>
+                    <tr>
+                        <td>Reading Speed</td>
+                        <td>⚡ Very Fast</td>
+                        <td>⚡ Fast</td>
+                        <td>⚡ Fast</td>
+                    </tr>
+                    <tr>
+                        <td>Error Correction</td>
+                        <td>~30%</td>
+                        <td>7-30%</td>
+                        <td>23-36%</td>
+                    </tr>
+                    <tr>
+                        <td>Rotation Tolerance</td>
+                        <td>0° only</td>
+                        <td>360°</td>
+                        <td>360°</td>
+                    </tr>
+                    <tr>
+                        <td>Size for 100 bytes</td>
+                        <td>~2cm wide</td>
+                        <td>~3×3cm</td>
+                        <td>~2×2cm</td>
+                    </tr>
+                    <tr>
+                        <td>Best For</td>
+                        <td>Simple IDs</td>
+                        <td>Full game state</td>
+                        <td>Space-constrained HUDs</td>
+                    </tr>
+                    <tr>
+                        <td>Scanner Support</td>
+                        <td>Universal</td>
+                        <td>Universal</td>
+                        <td>Modern only</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <footer>
+            <p>💡 <strong>Pro Tip:</strong> Use QR codes for your game HUD. They're small, universally readable, and can hold all your debug data. Take a screenshot, send it to Claude with "Read the barcode", and get instant game state analysis!</p>
+        </footer>
+    </div>
+    
+    <script src="https://unpkg.com/bwip-js@4.7.0/dist/bwip-js-0.x.umd.min.js"></script>
+    <script>
+        window.barcodeApp = {
+            mode: 'example',
+            bwipjsReady: false,
+            
+            waitForBwipjs: function(callback, attempts = 0) {
+                if (typeof bwipjs !== 'undefined') {
+                    this.bwipjsReady = true;
+                    callback();
+                } else if (attempts < 50) {
+                    setTimeout(() => this.waitForBwipjs(callback, attempts + 1), 100);
+                } else {
+                    console.error('bwip-js failed to load');
+                    document.querySelectorAll('.barcode-display').forEach(el => {
+                        el.innerHTML = '<div class="error">Error: bwip-js library failed to load. Check internet connection.</div>';
+                    });
+                }
+            },
+            
+            setMode: function(newMode) {
+                this.mode = newMode;
+                
+                // Update UI
+                document.getElementById('modeExampleBtn').style.background = newMode === 'example' ? 'linear-gradient(135deg, #3b82f6, #1e40af)' : 'rgba(59, 130, 246, 0.3)';
+                document.getElementById('modeCustomBtn').style.background = newMode === 'custom' ? 'linear-gradient(135deg, #3b82f6, #1e40af)' : 'rgba(59, 130, 246, 0.3)';
+                
+                document.getElementById('exampleDataSection').style.display = newMode === 'example' ? 'block' : 'none';
+                document.getElementById('customDataSection').style.display = newMode === 'custom' ? 'block' : 'none';
+                
+                // Auto-generate when switching modes (only if bwipjs is ready)
+                if (this.bwipjsReady) {
+                    this.generateBarcodes();
+                }
+            },
+            
+            generateBarcodes: function() {
+                let fullData, shortData;
+                
+                if (this.mode === 'example') {
+                    const gameState = document.getElementById('gameState').value;
+                    const level = document.getElementById('level').value;
+                    const playerLat = document.getElementById('playerLat').value;
+                    const playerLon = document.getElementById('playerLon').value;
+                    const fishCount = document.getElementById('fishCount').value;
+                    const sonarGain = document.getElementById('sonarGain').value;
+                    const lineTension = document.getElementById('lineTension').value;
+                    const lastAction = document.getElementById('lastAction').value;
+                    const timestamp = Math.floor(Date.now() / 1000);
+                    
+                    // Full game state data for QR and Aztec
+                    fullData = `gameState=${gameState}&level=${encodeURIComponent(level)}&playerLat=${playerLat}&playerLon=${playerLon}&fishCount=${fishCount}&sonarGain=${sonarGain}&lineTension=${lineTension}&lastAction=${lastAction}&timestamp=${timestamp}`;
+                    
+                    // Truncated data for Code128 (1D barcodes have practical limits)
+                    shortData = `${gameState.substring(0, 1).toUpperCase()}|${level.substring(0, 10)}|${fishCount}|${lastAction.substring(0, 1).toUpperCase()}`;
+                } else {
+                    // Custom mode
+                    fullData = document.getElementById('customDataInput').value;
+                    // For 1D code, use first 40 chars
+                    shortData = fullData.substring(0, 40);
+                    
+                    // Update character counter
+                    document.getElementById('customDataLength').textContent = fullData.length;
+                }
+                
+                // Update data displays
+                document.getElementById('code128Data').textContent = shortData;
+                document.getElementById('qrData').textContent = fullData;
+                document.getElementById('aztecData').textContent = fullData;
+                
+                // Update character counts
+                document.getElementById('code128Chars').textContent = shortData.length;
+                document.getElementById('qrChars').textContent = fullData.length;
+                document.getElementById('aztecChars').textContent = fullData.length;
+                
+                // Update capacity bars
+                document.getElementById('code128Capacity').style.width = (shortData.length / 40) * 100 + '%';
+                document.getElementById('qrCapacity').style.width = (fullData.length / 2953) * 100 + '%';
+                document.getElementById('aztecCapacity').style.width = (fullData.length / 3800) * 100 + '%';
+                
+                // Generate Code128
+                this.generateCode128(shortData);
+                
+                // Generate QR Code
+                this.generateQRCode(fullData);
+                
+                // Generate Aztec
+                this.generateAztec(fullData);
+            },
+            
+            generateCode128: function(data) {
+                const canvas = document.createElement('canvas');
+                
+                try {
+                    bwipjs.toCanvas(canvas, {
+                        bcid: 'code128',
+                        text: data,
+                        scale: 2,
+                        height: 10,
+                        includetext: true,
+                        textxoffset: 0
+                    }, function(err, canvas) {
+                        if (err) {
+                            document.getElementById('code128Display').innerHTML = '<div class="error">Error: ' + err.message + '</div>';
+                        } else {
+                            document.getElementById('code128Display').innerHTML = '';
+                            document.getElementById('code128Display').appendChild(canvas);
+                        }
+                    });
+                } catch (e) {
+                    document.getElementById('code128Display').innerHTML = '<div class="error">Error: ' + e.message + '</div>';
+                }
+            },
+            
+            generateQRCode: function(data) {
+                const canvas = document.createElement('canvas');
+                
+                try {
+                    bwipjs.toCanvas(canvas, {
+                        bcid: 'qrcode',
+                        text: data,
+                        scale: 3,
+                        margin: 10
+                    }, function(err, canvas) {
+                        if (err) {
+                            document.getElementById('qrDisplay').innerHTML = '<div class="error">Error: ' + err.message + '</div>';
+                        } else {
+                            document.getElementById('qrDisplay').innerHTML = '';
+                            document.getElementById('qrDisplay').appendChild(canvas);
+                        }
+                    });
+                } catch (e) {
+                    document.getElementById('qrDisplay').innerHTML = '<div class="error">Error: ' + e.message + '</div>';
+                }
+            },
+            
+            generateAztec: function(data) {
+                const canvas = document.createElement('canvas');
+                
+                try {
+                    bwipjs.toCanvas(canvas, {
+                        bcid: 'azteccode',
+                        text: data,
+                        scale: 3,
+                        margin: 10
+                    }, function(err, canvas) {
+                        if (err) {
+                            document.getElementById('aztecDisplay').innerHTML = '<div class="error">Error: ' + err.message + '</div>';
+                        } else {
+                            document.getElementById('aztecDisplay').innerHTML = '';
+                            document.getElementById('aztecDisplay').appendChild(canvas);
+                        }
+                    });
+                } catch (e) {
+                    document.getElementById('aztecDisplay').innerHTML = '<div class="error">Error: ' + e.message + '</div>';
+                }
+            }
+        };
+        
+        // Generate on page load
+        window.addEventListener('DOMContentLoaded', function() {
+            // Set up event listener for custom data input
+            document.getElementById('customDataInput').addEventListener('input', function() {
+                if (window.barcodeApp.mode === 'custom' && window.barcodeApp.bwipjsReady) {
+                    window.barcodeApp.generateBarcodes();
+                }
+            });
+            
+            // Wait for bwipjs to load, then initialize
+            window.barcodeApp.waitForBwipjs(function() {
+                window.barcodeApp.setMode('example');
+            });
+        });
+    </script>
+</body>
+</html>

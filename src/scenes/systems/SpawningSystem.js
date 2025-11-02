@@ -1,7 +1,6 @@
 import GameConfig from '../../config/GameConfig.js';
 import { Constants, Utils } from '../../utils/Constants.js';
 import Fish from '../../entities/Fish.js';
-import BaitfishCloud from '../../entities/BaitfishCloud.js';
 import Zooplankton from '../../entities/Zooplankton.js';
 import Crayfish from '../../entities/Crayfish.js';
 import { getBaitfishSpecies, selectRandomSpecies, getPredatorSpecies } from '../../config/SpeciesData.js';
@@ -47,10 +46,10 @@ export class SpawningSystem {
             loop: true
         });
 
-        // Start spawning baitfish clouds
+        // Start spawning baitfish schools
         this.scene.time.addEvent({
             delay: 2000,
-            callback: () => this.trySpawnBaitfishCloud(),
+            callback: () => this.trySpawnBaitfishSchool(),
             callbackScope: this,
             loop: true
         });
@@ -196,17 +195,18 @@ export class SpawningSystem {
     }
 
     /**
-     * Try to spawn a baitfish cloud with species-specific behavior
-     * @returns {BaitfishCloud|null} The spawned cloud or null if spawn failed
+    /**
+     * Try to spawn a baitfish school with species-specific behavior
+     * Uses new unified Fish class with Boids schooling
+     * @returns {boolean} True if school was spawned
      */
-    trySpawnBaitfishCloud() {
-        // Don't spawn too many clouds at once - increased to sustain hungry lakers
-        if (this.scene.baitfishClouds.length >= 5) {
-            return null;
+    trySpawnBaitfishSchool() {
+        // Don't spawn too many schools at once
+        if (this.scene.schools.length >= 5) {
+            return false;
         }
 
         // Select species based on weighted spawn rates (realistic Lake Champlain distribution)
-        // Alewife: 40%, Smelt: 30%, Perch: 20%, Sculpin: 10%, Cisco: rare (handled separately)
         let speciesType = 'alewife';
         const speciesRoll = Math.random();
         if (speciesRoll < 0.40) {
@@ -227,25 +227,25 @@ export class SpawningSystem {
         // Load species data to determine spawn parameters
         const speciesData = getBaitfishSpecies(speciesType);
 
-        // Determine cloud size based on species schooling behavior
-        let cloudSize;
-        const schoolSize = speciesData.schoolSize;
+        // Determine school size based on species schooling behavior
+        let schoolSize;
+        const schoolSizeRange = speciesData.schoolSize;
 
         if (speciesData.schoolingDensity === 'none') {
             // Solitary or small groups (sculpin)
-            cloudSize = Math.floor(Utils.randomBetween(schoolSize.min, schoolSize.max));
+            schoolSize = Math.floor(Utils.randomBetween(schoolSizeRange.min, schoolSizeRange.max));
         } else {
             // Schooling species - use weighted distribution
             const sizeRoll = Math.random();
             if (sizeRoll < 0.6) {
                 // Small schools
-                cloudSize = Math.floor(Utils.randomBetween(schoolSize.min, schoolSize.min + 10));
+                schoolSize = Math.floor(Utils.randomBetween(schoolSizeRange.min, schoolSizeRange.min + 10));
             } else if (sizeRoll < 0.9) {
                 // Medium schools
-                cloudSize = Math.floor(Utils.randomBetween(schoolSize.min + 10, schoolSize.max));
+                schoolSize = Math.floor(Utils.randomBetween(schoolSizeRange.min + 10, schoolSizeRange.max));
             } else {
                 // Large schools (massive aggregations)
-                cloudSize = Math.floor(Utils.randomBetween(schoolSize.max, schoolSize.max + 20));
+                schoolSize = Math.floor(Utils.randomBetween(schoolSizeRange.max, schoolSizeRange.max + 20));
             }
         }
 
@@ -255,82 +255,49 @@ export class SpawningSystem {
 
         // Species-specific depth tweaks
         if (speciesType === 'sculpin') {
-            // Sculpin prefer deeper, bottom areas
             depth = Utils.randomBetween(80, 120);
         } else if (speciesType === 'cisco') {
-            // Cisco are deep-water specialists
             depth = Utils.randomBetween(60, 100);
         } else if (speciesType === 'yellow_perch') {
-            // Perch prefer shallower, warmer water
             depth = Utils.randomBetween(10, 40);
         } else if (speciesType === 'rainbow_smelt') {
-            // Smelt prefer mid-depth cold water
             depth = Utils.randomBetween(30, 80);
         }
 
-        // Check if water is deep enough for this baitfish species
+        // Check if water is deep enough
         const actualDepth = this.scene.maxDepth || GameConfig.MAX_DEPTH;
-        const minRequiredDepth = speciesType === 'yellow_perch' ? 15 : 25; // Perch shallow, others deeper
+        const minRequiredDepth = speciesType === 'yellow_perch' ? 15 : 25;
 
         if (actualDepth < minRequiredDepth) {
-            // Water too shallow for this baitfish species, skip spawning
             console.log(`⚠️ Water too shallow (${actualDepth}ft) for ${speciesType} (needs ${minRequiredDepth}ft)`);
-            return null;
+            return false;
         }
 
-        // Constrain depth to actual water depth (spawn at least 5ft above bottom)
+        // Constrain depth to actual water depth
         const maxBaitfishDepth = Math.max(10, actualDepth - 5);
         depth = Math.min(depth, maxBaitfishDepth);
 
-        // Get player world position
-        // In nature simulation mode, spawn randomly across screen
-        let playerWorldX;
-        let isNatureSimulation = false;
-
-        // Always use center of screen as player position
-        playerWorldX = GameConfig.CANVAS_WIDTH / 2;
-
-        // Spawn in world coordinates at a distance from player (200-400 units away)
-        // In nature simulation mode, spawn randomly across screen
-        let worldX;
+        // Get spawn position
+        const playerWorldX = GameConfig.CANVAS_WIDTH / 2;
         const fromLeft = Math.random() < 0.5;
+        const spawnDistance = Utils.randomBetween(200, 400);
+        const worldX = playerWorldX + (fromLeft ? -spawnDistance : spawnDistance);
 
-        if (isNatureSimulation) {
-            const screenLeft = -200;
-            const screenRight = GameConfig.CANVAS_WIDTH + 200;
-            worldX = Utils.randomBetween(screenLeft, screenRight);
-        } else {
-            const spawnDistance = Utils.randomBetween(200, 400);
-            worldX = playerWorldX + (fromLeft ? -spawnDistance : spawnDistance);
-        }
-
-        // Use dynamic depth scale from scene
+        // Convert depth to screen Y
         const depthScale = this.scene.sonarDisplay ?
             this.scene.sonarDisplay.getDepthScale() :
             GameConfig.DEPTH_SCALE;
         const y = depth * depthScale;
 
-        // Create the baitfish cloud with species type
-        const cloud = new BaitfishCloud(this.scene, worldX, y, cloudSize, speciesType);
-
-        // Set initial drift direction
-        if (isNatureSimulation) {
-            // Nature mode: random horizontal drift in either direction (not toward center!)
-            cloud.velocity.x = Utils.randomBetween(-0.8, 0.8);
-            cloud.velocity.y = Utils.randomBetween(-0.3, 0.3);
-        } else {
-            // Normal mode: drift toward and past player
-            cloud.velocity.x = fromLeft ? Utils.randomBetween(0.3, 0.8) : Utils.randomBetween(-0.8, -0.3);
-        }
-
-        this.scene.baitfishClouds.push(cloud);
+        // Spawn the school using GameScene's method
+        this.scene.spawnBaitfishSchool(worldX, y, schoolSize, speciesType);
 
         // Log rare species spawns
         if (speciesType === 'cisco') {
             console.log('🐟 RARE: Cisco school spotted at', Math.floor(depth), 'feet!');
         }
 
-        return cloud;
+        return true;
     }
 
     /**
@@ -657,7 +624,7 @@ export class SpawningSystem {
         }
 
         if (Math.random() < GameConfig.BAITFISH_CLOUD_SPAWN_CHANCE) {
-            this.trySpawnBaitfishCloud();
+            this.trySpawnBaitfishSchool();
         }
 
         // Update emergency fish if any exist

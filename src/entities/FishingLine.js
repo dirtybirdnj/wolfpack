@@ -55,7 +55,9 @@ export class FishingLine {
         this.graphics.clear();
 
         // Get line start position (always center of screen when fishing)
-        const lineStartX = GameConfig.CANVAS_WIDTH / 2;
+        // Use actual game width to support all screen sizes
+        const actualGameWidth = this.scene.scale.width || GameConfig.CANVAS_WIDTH;
+        const lineStartX = actualGameWidth / 2;
         // Line always starts from top of screen (no ice hole visible)
         const surfaceY = 0;
 

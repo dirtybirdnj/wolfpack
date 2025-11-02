@@ -553,115 +553,127 @@ function updateFishStatus(gameScene) {
         return;
     }
 
-    // Group fish by depth zone
-    const surfaceFish = [];
-    const midColumnFish = [];
-    const bottomFish = [];
-
+    // Collect all valid fish
+    const allFish = [];
     gameScene.fishes.forEach((fish, index) => {
-        // Defensive check for fish and depthZone
-        if (!fish || !fish.depthZone || !fish.depthZone.name) {
+        // Defensive check: Only Fish objects have AI, hunger, health, etc.
+        if (!fish || !fish.ai || typeof fish.hunger !== 'number' || !fish.depthZone) {
+            return; // Not a fish, skip
+        }
+
+        // Defensive check for depthZone
+        if (!fish.depthZone.name) {
             console.warn('Fish with invalid depthZone encountered:', fish);
             return;
         }
 
-        const fishData = { fish, index };
-        if (fish.depthZone.name === 'Surface') {
-            surfaceFish.push(fishData);
-        } else if (fish.depthZone.name === 'Mid-Column') {
-            midColumnFish.push(fishData);
-        } else {
-            bottomFish.push(fishData);
-        }
+        allFish.push({ fish, index });
     });
 
-    // Helper function to render fish card
-    const renderFish = ({ fish, index }) => {
-        // Defensive check: Only Fish objects have AI, hunger, health, etc.
-        // Skip non-fish entities (zooplankton, crayfish)
-        if (!fish.ai || typeof fish.hunger !== 'number' || !fish.depthZone) {
-            return ''; // Not a fish, skip rendering
-        }
+    // Sort fish by depth (shallowest to deepest)
+    allFish.sort((a, b) => a.fish.depth - b.fish.depth);
 
+    // Helper function to render fish row (single line)
+    const renderFish = ({ fish, index }) => {
         const info = fish.getInfo();
+
+        // Border color based on depth zone (yellow=surface, green=mid, grey=deep)
         const zoneColor = fish.depthZone.name === 'Surface' ? '#ffff00' :
                          fish.depthZone.name === 'Mid-Column' ? '#00ff00' : '#888888';
+
         const hungerColor = fish.hunger > 70 ? '#ff6666' :
                            fish.hunger > 40 ? '#ffaa00' : '#00ff00';
         const healthColor = fish.health < 30 ? '#ff6666' :
                            fish.health < 60 ? '#ffaa00' : '#00ff00';
-        const frenzyColor = fish.inFrenzy ? '#ff6600' : '#666666';
-        const frenzyText = fish.inFrenzy ? `🔥${info.frenzyIntensity}` : '---';
         const genderIcon = info.gender === 'male' ? '♂' : '♀';
         const genderColor = info.gender === 'male' ? '#66ccff' : '#ff99cc';
 
+        // Frenzy indicator - red circle if in frenzy
+        const frenzyIndicator = fish.inFrenzy ? '🔴' : '';
+
+        // Count baitfish consumed (from stomach contents)
+        const baitfishConsumed = fish.stomachContents ? fish.stomachContents.length : 0;
+
+        // Check if this fish is selected
+        const isSelected = gameScene.selectedFishId === fish.model.id;
+        const selectedClass = isSelected ? 'fish-selected' : '';
+        const selectedStyle = isSelected ? 'background: #ffffff20;' : `background: ${zoneColor}08;`;
+
         return `
-            <div style="border: 1px solid ${zoneColor}30; background: ${zoneColor}10; padding: 4px; margin: 3px 0; border-radius: 3px; font-size: 10px;">
-                <div style="font-weight: bold; color: ${zoneColor}; display: flex; justify-content: space-between; align-items: center;">
-                    <span>🐟 ${info.name}</span>
-                    <span style="color: ${genderColor}; font-size: 12px;">${genderIcon}</span>
-                </div>
-                <div style="display: flex; justify-content: space-between; font-size: 9px;">
-                    <span style="color: #aaa;">${info.weight}</span>
-                    <span style="color: #00ff00;">${Math.floor(fish.depth)}ft</span>
-                </div>
-                <div style="display: flex; justify-content: space-between;">
-                    <span style="color: #aaa;">State:</span>
-                    <span style="color: #00ffff; font-size: 9px;">${fish.ai.state.substring(0, 8)}</span>
-                </div>
-                <div style="display: flex; justify-content: space-between;">
-                    <span style="color: #aaa;">Frenzy:</span>
-                    <span style="color: ${frenzyColor};">${frenzyText}</span>
-                </div>
-                <div style="display: flex; justify-content: space-between;">
-                    <span style="color: #aaa;">H/H:</span>
-                    <span style="color: ${hungerColor};">${fish.hunger.toFixed(0)}</span>/<span style="color: ${healthColor};">${fish.health.toFixed(0)}</span>
-                </div>
+            <div class="fish-status-row ${selectedClass}" data-fish-id="${fish.model.id}" style="border-left: 3px solid ${zoneColor}; ${selectedStyle} padding: 3px 5px; margin: 2px 0; cursor: pointer; font-size: 9px; display: flex; justify-content: space-between; align-items: center; white-space: nowrap; overflow: hidden;">
+                <span style="color: ${zoneColor}; min-width: 70px; max-width: 70px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${info.name}"><span style="color: ${genderColor};">${genderIcon}</span> 🐟 ${info.name}</span>
+                <span style="min-width: 18px; max-width: 18px; text-align: center;">${frenzyIndicator}</span>
+                <span style="color: #fff; min-width: 32px; max-width: 32px; text-align: right;">${fish.weight.toFixed(1)}</span>
+                <span style="color: #00ffff; min-width: 48px; max-width: 48px; text-align: center;">${fish.ai.state.substring(0, 6)}</span>
+                <span style="min-width: 42px; max-width: 42px; text-align: center;"><span style="color: ${hungerColor};">${fish.hunger.toFixed(0)}</span>/<span style="color: ${healthColor};">${fish.health.toFixed(0)}</span></span>
+                <span style="color: ${zoneColor}; min-width: 32px; max-width: 32px; text-align: right;">${Math.floor(fish.depth)}ft</span>
+                <span style="color: #ff9900; min-width: 18px; max-width: 18px; text-align: right;">${baitfishConsumed}</span>
             </div>
         `;
     };
 
-    // Render zones top to bottom (Surface -> Mid -> Bottom)
-    // Each zone has a fixed height to prevent UI jumping
-    let html = '';
-
-    // Surface Zone (0-40ft) - Fixed height
-    html += `
-        <div style="margin-bottom: 8px;">
-            <div style="background: #ffff0020; border: 2px solid #ffff00; padding: 4px; font-weight: bold; font-size: 11px; color: #ffff00;">
-                ☀️ SURFACE (0-40ft) [${surfaceFish.length}]
-            </div>
-            <div style="height: 150px; overflow-y: auto; overflow-x: hidden;">
-                ${surfaceFish.length > 0 ? surfaceFish.map(renderFish).join('') : ''}
-            </div>
+    // Build HTML with header key
+    let html = `
+        <div style="background: #1a1a1a; border-bottom: 2px solid #00ff00; padding: 3px 5px; margin-bottom: 4px; font-size: 8px; color: #888; display: flex; justify-content: space-between; font-weight: bold; white-space: nowrap; overflow: hidden;">
+            <span style="min-width: 70px; max-width: 70px;">NAME</span>
+            <span style="min-width: 18px; max-width: 18px; text-align: center;">F</span>
+            <span style="min-width: 32px; max-width: 32px; text-align: right;">WEIGHT</span>
+            <span style="min-width: 48px; max-width: 48px; text-align: center;">STATE</span>
+            <span style="min-width: 42px; max-width: 42px; text-align: center;">H/H</span>
+            <span style="min-width: 32px; max-width: 32px; text-align: right;">DEPTH</span>
+            <span style="min-width: 18px; max-width: 18px; text-align: right;">ATE</span>
         </div>
     `;
 
-    // Mid-Column Zone (40-100ft) - Prime lake trout zone - Fixed height (larger)
-    html += `
-        <div style="margin-bottom: 8px;">
-            <div style="background: #00ff0020; border: 2px solid #00ff00; padding: 4px; font-weight: bold; font-size: 11px; color: #00ff00;">
-                🎯 MID-COLUMN (40-100ft) [${midColumnFish.length}]
-            </div>
-            <div style="height: 240px; overflow-y: auto; overflow-x: hidden;">
-                ${midColumnFish.length > 0 ? midColumnFish.map(renderFish).join('') : ''}
-            </div>
-        </div>
-    `;
-
-    // Bottom Zone (100-150ft) - Fixed height
-    html += `
-        <div style="margin-bottom: 8px;">
-            <div style="background: #88888820; border: 2px solid #888888; padding: 4px; font-weight: bold; font-size: 11px; color: #888888;">
-                ⚓ BOTTOM (100-150ft) [${bottomFish.length}]
-            </div>
-            <div style="height: 150px; overflow-y: auto; overflow-x: hidden;">
-                ${bottomFish.length > 0 ? bottomFish.map(renderFish).join('') : ''}
-            </div>
-        </div>
-    `;
-
+    html += allFish.map(renderFish).join('');
     container.innerHTML = html;
+
+    // Add click handlers to fish rows (no re-render on click)
+    container.querySelectorAll('.fish-status-row').forEach(row => {
+        row.addEventListener('click', function(e) {
+            e.stopPropagation(); // Prevent event bubbling
+            const fishId = this.getAttribute('data-fish-id');
+
+            // Toggle selection - if clicking already selected fish, deselect
+            if (gameScene.selectedFishId === fishId) {
+                gameScene.selectedFishId = null;
+                console.log('Fish deselected');
+            } else {
+                gameScene.selectedFishId = fishId;
+                const selectedFish = gameScene.fishes.find(f => f.model.id === fishId);
+                if (selectedFish) {
+                    console.log(`Selected fish: ${selectedFish.name}`);
+                }
+            }
+
+            // Update visual state without full re-render
+            container.querySelectorAll('.fish-status-row').forEach(r => {
+                r.classList.remove('fish-selected');
+                const rowFishId = r.getAttribute('data-fish-id');
+                const fish = gameScene.fishes.find(f => f.model.id === rowFishId);
+                if (fish) {
+                    const zoneColor = fish.depthZone.name === 'Surface' ? '#ffff00' :
+                                     fish.depthZone.name === 'Mid-Column' ? '#00ff00' : '#888888';
+                    r.style.background = `${zoneColor}08`;
+                }
+            });
+
+            if (gameScene.selectedFishId) {
+                this.classList.add('fish-selected');
+                this.style.background = '#ffffff20';
+            }
+        });
+
+        // Simplified hover effect using CSS opacity
+        row.addEventListener('mouseenter', function() {
+            if (!this.classList.contains('fish-selected')) {
+                this.style.opacity = '0.8';
+            }
+        });
+        row.addEventListener('mouseleave', function() {
+            this.style.opacity = '1';
+        });
+    });
 }
 
 // Export for module usage
