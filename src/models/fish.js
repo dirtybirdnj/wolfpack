@@ -226,7 +226,9 @@ export class Fish extends AquaticOrganism {
             this.depth = this.y / depthScale;
 
             // Get player's world position (center of screen)
-            let playerWorldX = GameConfig.CANVAS_WIDTH / 2;
+            // Use actual game width to support all screen sizes (ultrawide, etc.)
+            const actualGameWidth = this.scene.scale.width || GameConfig.CANVAS_WIDTH;
+            let playerWorldX = actualGameWidth / 2;
             let isNatureSimulation = false;
 
             // Check if fish has swum too far from player - mark for removal if so
@@ -259,7 +261,7 @@ export class Fish extends AquaticOrganism {
                 this.x = this.worldX;
             } else {
                 const offsetFromPlayer = this.worldX - playerWorldX;
-                this.x = (GameConfig.CANVAS_WIDTH / 2) + offsetFromPlayer;
+                this.x = (actualGameWidth / 2) + offsetFromPlayer;
             }
         }
 
