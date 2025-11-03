@@ -600,6 +600,11 @@ function setupDevTools(game) {
     // to avoid duplicate event listeners that could interfere with game state
 }
 
+// Throttle fish list re-ordering to reduce visual jarring
+let lastSortTime = 0;
+let cachedFishOrder = null;
+const SORT_THROTTLE_MS = 1500; // Re-sort every 1.5 seconds
+
 function updateFishStatus(gameScene) {
     const container = document.getElementById('fish-status-container');
     const entityCounts = document.getElementById('entity-counts');
@@ -657,8 +662,35 @@ function updateFishStatus(gameScene) {
         allFish.push({ fish, index });
     });
 
-    // Sort fish by depth (shallowest to deepest)
-    allFish.sort((a, b) => a.fish.depth - b.fish.depth);
+    // Throttled sorting - only re-sort every SORT_THROTTLE_MS to reduce visual jarring
+    const currentTime = Date.now();
+    const shouldResort = (currentTime - lastSortTime) >= SORT_THROTTLE_MS || !cachedFishOrder;
+
+    if (shouldResort) {
+        // Sort fish by depth (shallowest to deepest)
+        allFish.sort((a, b) => a.fish.depth - b.fish.depth);
+        // Cache the sorted order by fish IDs
+        cachedFishOrder = allFish.map(f => f.fish.model.id);
+        lastSortTime = currentTime;
+    } else {
+        // Use cached order - rebuild allFish array in previous sort order
+        const fishById = new Map(allFish.map(f => [f.fish.model.id, f]));
+        const reorderedFish = [];
+        cachedFishOrder.forEach(id => {
+            const fishData = fishById.get(id);
+            if (fishData) {
+                reorderedFish.push(fishData);
+            }
+        });
+        // Add any new fish not in cached order to the end
+        allFish.forEach(f => {
+            if (!cachedFishOrder.includes(f.fish.model.id)) {
+                reorderedFish.push(f);
+            }
+        });
+        allFish.length = 0;
+        allFish.push(...reorderedFish);
+    }
 
     // Auto-select hooked fish (highest priority) or first fish if none selected
     if (gameScene.currentFight && gameScene.currentFight.fish) {
