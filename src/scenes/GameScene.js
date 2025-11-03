@@ -1012,6 +1012,34 @@ export class GameScene extends Phaser.Scene {
         // Clean up consumed fish from school.members arrays
         this.schools.forEach(school => {
             school.members = school.members.filter(fish => fish.model.visible && !fish.model.consumed);
+
+            // Check for stragglers - fish that have strayed too far from school center
+            // Calculate actual school center from member positions
+            if (school.members.length > 0) {
+                let centerX = 0, centerY = 0;
+                school.members.forEach(fish => {
+                    centerX += fish.model.x;
+                    centerY += fish.model.y;
+                });
+                centerX /= school.members.length;
+                centerY /= school.members.length;
+
+                // Remove stragglers (allow 2x cloud radius for flexibility)
+                const maxStrayDistance = GameConfig.BAITFISH_CLOUD_RADIUS * 2;
+                school.members = school.members.filter(fish => {
+                    const dx = fish.model.x - centerX;
+                    const dy = fish.model.y - centerY;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+
+                    if (distance > maxStrayDistance) {
+                        // Fish strayed too far - remove from school
+                        fish.schoolId = null;
+                        console.log(`🐟 Straggler removed from school (${distance.toFixed(0)}px from center)`);
+                        return false;
+                    }
+                    return true;
+                });
+            }
         });
 
         // Update fish (predators)
