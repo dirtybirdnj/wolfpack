@@ -200,8 +200,9 @@ export class FishAI {
         // Check for crayfish (opportunistic bottom feeding for lake trout)
         const nearbyCrayfish = this.findNearestCrayfish(crayfish);
 
-        // In nature simulation mode (no lure), fish only hunt baitfish or idle
-        if (!lure) {
+        // In observation mode (no lure OR lure out of water), fish only hunt baitfish or idle
+        // This allows player to "pause" fishing and observe natural behavior by reeling lure above surface
+        if (!lure || !lure.inWater) {
             // Nature simulation mode - no lure to track
             if (nearbyBaitfishCloud && this.shouldHuntBaitfish(nearbyBaitfishCloud)) {
                 this.startHuntingBaitfish(nearbyBaitfishCloud);

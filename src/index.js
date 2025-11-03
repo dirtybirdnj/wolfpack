@@ -196,9 +196,17 @@ function setupDevTools(game) {
                 // Game info panel
                 const uiDepth = document.getElementById('ui-depth');
                 const uiState = document.getElementById('ui-lure-state');
+                const uiMode = document.getElementById('ui-mode');
 
                 if (uiDepth) uiDepth.textContent = lureInfo.depth;
                 if (uiState) uiState.textContent = lureInfo.state;
+
+                // Update mode indicator based on lure water state
+                if (uiMode) {
+                    const inWater = gameScene.lure.inWater;
+                    uiMode.textContent = inWater ? 'FISHING' : 'OBSERVING';
+                    uiMode.style.color = inWater ? '#00ff00' : '#ffaa00'; // Green when fishing, amber when observing
+                }
 
                 // Update zone color
                 const depth = parseFloat(lureInfo.depth);

@@ -985,6 +985,43 @@ export class GameScene extends Phaser.Scene {
         // Add any new clouds created by splitting
         this.baitfishClouds.push(...newCloudsFromSplits);
 
+        // Check for cloud splitting when lure passes through (only when lure is in water)
+        if (this.lure && this.lure.inWater && this.lure.state === Constants.LURE_STATE.DROPPING) {
+            const newCloudsFromLure = []; // Store new clouds created from lure splits
+
+            for (const cloud of this.baitfishClouds) {
+                if (!cloud.visible) continue;
+
+                // Check if lure is within the cloud
+                const distance = Math.sqrt(
+                    Math.pow(this.lure.x - cloud.centerX, 2) +
+                    Math.pow(this.lure.y - cloud.centerY, 2)
+                );
+
+                // If lure passes through cloud, 50% chance to split
+                if (distance < GameConfig.BAITFISH_CLOUD_RADIUS) {
+                    // Only split if we haven't already split this cloud this frame
+                    // and if random chance succeeds
+                    if (!cloud.splitThisFrame && Math.random() < 0.5) {
+                        const newCloud = cloud.split();
+                        if (newCloud) {
+                            newCloudsFromLure.push(newCloud);
+                            cloud.splitThisFrame = true; // Mark to prevent re-splitting
+                            console.log('🎣 Lure split baitfish cloud!');
+                        }
+                    }
+                }
+            }
+
+            // Add new split clouds to the array
+            this.baitfishClouds.push(...newCloudsFromLure);
+        }
+
+        // Reset split flags for next frame
+        this.baitfishClouds.forEach(cloud => {
+            cloud.splitThisFrame = false;
+        });
+
         // Merge overlapping clouds of the same species
         for (let i = 0; i < this.baitfishClouds.length; i++) {
             const cloudA = this.baitfishClouds[i];
