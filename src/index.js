@@ -616,8 +616,12 @@ function updateFishStatus(gameScene) {
     // Sort fish by depth (shallowest to deepest)
     allFish.sort((a, b) => a.fish.depth - b.fish.depth);
 
-    // Auto-select first fish if none selected
-    if (!gameScene.selectedFish && allFish.length > 0) {
+    // Auto-select hooked fish (highest priority) or first fish if none selected
+    if (gameScene.currentFight && gameScene.currentFight.fish) {
+        // Always select the hooked fish to show its details
+        gameScene.selectedFish = gameScene.currentFight.fish;
+    } else if (!gameScene.selectedFish && allFish.length > 0) {
+        // Auto-select first fish if none selected and no fight
         gameScene.selectedFish = allFish[0].fish;
     }
 
@@ -642,10 +646,12 @@ function updateFishStatus(gameScene) {
         // Count baitfish consumed (from stomach contents)
         const baitfishConsumed = fish.stomachContents ? fish.stomachContents.length : 0;
 
-        // Check if this fish is selected
+        // Check if this fish is selected or hooked
         const isSelected = gameScene.selectedFish === fish;
-        const selectedClass = isSelected ? 'fish-selected' : '';
-        const selectedStyle = isSelected ? 'background: #ffffff20;' : `background: ${zoneColor}08;`;
+        const isHooked = gameScene.currentFight && gameScene.currentFight.fish === fish;
+        const selectedClass = (isSelected || isHooked) ? 'fish-selected' : '';
+        const selectedStyle = isHooked ? 'background: #ff660020; border-left: 3px solid #ff6600 !important;' :
+                             isSelected ? 'background: #ffffff20;' : `background: ${zoneColor}08;`;
 
         return `
             <div class="fish-status-row ${selectedClass}" data-fish-id="${fish.model.id}" style="border-left: 3px solid ${zoneColor}; ${selectedStyle} padding: 3px 5px; margin: 2px 0; cursor: pointer; font-size: 9px; display: flex; justify-content: space-between; align-items: center; white-space: nowrap; overflow: hidden;">

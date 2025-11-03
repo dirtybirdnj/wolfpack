@@ -737,7 +737,8 @@ export class SpawningSystem {
 
                 // Bait starts returning after area is safe
                 // When enough bait has returned, transition back to ABUNDANT
-                if (baitCloudCount >= 3 && totalBaitfish >= 50) {
+                // Reduced threshold: 2+ clouds and 30+ baitfish (was 3 clouds, 50 fish)
+                if (baitCloudCount >= 2 && totalBaitfish >= 30) {
                     this.ecosystemState = 'ABUNDANT';
                     console.log('🌊 Ecosystem: RECOVERING → ABUNDANT (bait has returned, predators will follow)');
                 }
