@@ -90,10 +90,10 @@ export const GameConfig = {
     COLOR_BAITFISH_PANIC: 0xccddff, // Brighter when panicking
 
     // Baitfish pursuit mechanics (works with 0-100 hunger scale) - More aggressive pursuit
-    BAITFISH_DETECTION_RANGE: 140, // Reduced from 150 to balance with lure detection
+    BAITFISH_DETECTION_RANGE: 200, // Increased from 140 - fish should notice nearby bait clouds
     BAITFISH_PURSUIT_SPEED: 2.8, // Increased from 2.2 for more aggressive hunting
-    BAITFISH_VERTICAL_PURSUIT_RANGE: 250, // Increased from 200 for better vertical pursuit
-    HUNGER_VERTICAL_SCALING: 0.015, // Increased from 0.01 for more aggressive vertical pursuit
+    BAITFISH_VERTICAL_PURSUIT_RANGE: 350, // Increased from 250 for better vertical awareness (~97ft at 3.6px/ft)
+    HUNGER_VERTICAL_SCALING: 0.02, // Increased from 0.015 - even low-hunger fish should hunt nearby bait
     BAITFISH_CONSUMPTION_HUNGER_REDUCTION: 15, // Hunger reduced when eating baitfish
 
     // Depth-based behavior zones - Improved thresholds for better gameplay

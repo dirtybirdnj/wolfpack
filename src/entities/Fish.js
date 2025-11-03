@@ -384,6 +384,38 @@ export class Fish {
             this.graphics.fillCircle(this.model.x, dotY, 3);
         }
 
+        // Detection cone visualization - shows fish vision range (only for predators)
+        if (this.model.ai && this.scene.debugMode) {
+            const detectionRange = GameConfig.BAITFISH_DETECTION_RANGE;
+            const verticalRange = GameConfig.BAITFISH_VERTICAL_PURSUIT_RANGE * (this.model.hunger * GameConfig.HUNGER_VERTICAL_SCALING);
+
+            // Draw detection cone as a triangle/wedge in front of fish
+            const direction = isMovingRight ? 1 : -1;
+            const coneWidth = verticalRange * 0.6; // Cone spreads vertically
+
+            // Triangle points: fish position -> cone tip -> upper/lower spread
+            const tipX = this.model.x + (direction * detectionRange);
+            const tipY = this.model.y;
+            const upperY = this.model.y - coneWidth;
+            const lowerY = this.model.y + coneWidth;
+
+            // Draw semi-transparent cone
+            this.graphics.fillStyle(0x00ff00, 0.08); // Very subtle green
+            this.graphics.lineStyle(1, 0x00ff00, 0.3); // Faint green outline
+
+            this.graphics.beginPath();
+            this.graphics.moveTo(this.model.x, this.model.y);
+            this.graphics.lineTo(tipX, upperY);
+            this.graphics.lineTo(tipX, lowerY);
+            this.graphics.closePath();
+            this.graphics.fillPath();
+            this.graphics.strokePath();
+
+            // Add range indicator lines
+            this.graphics.lineStyle(1, 0x00ff00, 0.2);
+            this.graphics.lineBetween(this.model.x, this.model.y, tipX, tipY);
+        }
+
         // Selection circle - white circle around selected fish from status panel
         if (this.scene.selectedFishId && this.model.id === this.scene.selectedFishId) {
             const selectionSize = bodySize * 2.5;
