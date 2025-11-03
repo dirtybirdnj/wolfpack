@@ -347,10 +347,11 @@ function setupDevTools(game) {
                 const state = gameScene.spawningSystem.getEcosystemState();
                 const mode = gameScene.spawningSystem.spawnMode;
 
-                // Color code ecosystem state (green=FEEDING, yellow=RECOVERING)
+                // Color code ecosystem state (green=FEEDING, yellow=RECOVERING, cyan=WAITING)
                 const stateColors = {
                     'FEEDING': '#00ff00',
-                    'RECOVERING': '#ffff00'
+                    'RECOVERING': '#ffff00',
+                    'WAITING': '#00ffff'
                 };
                 uiEcosystemState.style.color = stateColors[state] || '#ffffff';
                 uiEcosystemState.textContent = state;

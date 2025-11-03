@@ -970,6 +970,13 @@ export class GameScene extends Phaser.Scene {
         // Update baitfish clouds (old system)
         const newCloudsFromSplits = [];
         this.baitfishClouds = this.baitfishClouds.filter(cloud => {
+            // Remove sculpin clouds - sculpin are solitary bottom feeders, not schooling fish
+            if (cloud.speciesType === 'sculpin') {
+                console.warn('⚠️ Removing sculpin cloud - sculpin should not school!');
+                cloud.destroy();
+                return false;
+            }
+
             if (cloud.visible) {
                 const newCloud = cloud.update(this.fishes, this.zooplankton);
                 // If cloud split, add the new cloud to our collection

@@ -722,9 +722,19 @@ export class SpawningSystem {
             totalBaitfish += count;
         });
 
+        // Count predators
+        const predatorCount = this.scene.fishes?.length || 0;
+
         // CALCULATED STATE: Based on what's actually on screen
-        // RECOVERING: No bait or very little bait (< 10 fish)
+        // WAITING: Predators were despawned, waiting for bait to reach trigger threshold (30+)
+        // RECOVERING: No bait or very little bait (< 10 fish), predators still present
         // FEEDING: Bait present (10+ fish)
+
+        if (this.hasDespawnedPredators && predatorCount <= 2) {
+            // After predator despawn, show WAITING until enough bait builds up
+            return totalBaitfish >= 30 ? 'FEEDING' : 'WAITING';
+        }
+
         const state = totalBaitfish >= 10 ? 'FEEDING' : 'RECOVERING';
         return state;
     }

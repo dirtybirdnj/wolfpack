@@ -379,6 +379,12 @@ export class BaitfishCloud {
     }
 
     split() {
+        // Sculpin are solitary and should never split or be in clouds
+        if (this.speciesType === 'sculpin') {
+            console.warn('⚠️ Attempted to split sculpin cloud - sculpin are solitary!');
+            return null;
+        }
+
         // Split this cloud in half, return the new cloud
         if (this.baitfish.length < 4) {
             // Too small to split
