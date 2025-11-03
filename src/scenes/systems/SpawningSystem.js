@@ -712,13 +712,19 @@ export class SpawningSystem {
         // Count total baitfish in all schools
         let totalBaitfish = 0;
         visibleSchools.forEach(school => {
-            totalBaitfish += school.members?.length || 0;
+            const count = school.members?.length || 0;
+            totalBaitfish += count;
+            console.log(`School: ${school.speciesType} has ${count} members, visible=${school.visible}`);
         });
+
+        console.log(`Total schools: ${schoolsArray.length}, Visible: ${visibleSchools.length}, Total baitfish: ${totalBaitfish}`);
 
         // CALCULATED STATE: Based on what's actually on screen
         // RECOVERING: No bait or very little bait (< 10 fish)
         // FEEDING: Bait present (10+ fish)
-        return totalBaitfish >= 10 ? 'FEEDING' : 'RECOVERING';
+        const state = totalBaitfish >= 10 ? 'FEEDING' : 'RECOVERING';
+        console.log(`Ecosystem state: ${state} (${totalBaitfish} fish)`);
+        return state;
     }
 
     /**
