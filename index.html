@@ -400,8 +400,15 @@
             <div id="game-info-panel" class="panel">
                 <div style="display: grid; grid-template-columns: repeat(10, 1fr) auto auto auto; gap: 8px; font-size: 10px; align-items: center;">
                     <div>
-                        <div style="color: var(--text-muted); font-size: 8px;">CAUGHT/LOST</div>
-                        <div style="font-weight: bold; font-size: 11px;"><span id="ui-caught" style="color: var(--text-primary);">0</span>/<span id="ui-lost" style="color: #ff6666;">0</span></div>
+                        <div style="color: var(--text-muted); font-size: 8px;">LINE <span id="ui-line-test" style="color: var(--text-primary);">15lb</span></div>
+                        <div style="display: flex; align-items: center; gap: 3px;">
+                            <div style="flex: 1; height: 10px; background: rgba(0, 0, 0, 0.5); border: 1px solid var(--text-muted); border-radius: 2px; position: relative; overflow: hidden; min-width: 40px;">
+                                <div id="line-strain-fill" style="position: absolute; left: 0; top: 0; bottom: 0; width: 0%; background: linear-gradient(90deg, #00ff00 0%, #ffff00 50%, #ff9900 75%, #ff0000 100%); transition: width 0.1s linear;"></div>
+                            </div>
+                            <div style="color: var(--text-primary); font-size: 9px; font-weight: bold; min-width: 22px;">
+                                <span id="line-strain-percent">0</span>%
+                            </div>
+                        </div>
                     </div>
                     <div id="depth-display">
                         <div style="color: var(--text-muted); font-size: 8px;">DEPTH</div>
@@ -455,8 +462,16 @@
                         </div>
                     </div>
                     <div>
-                        <div style="color: var(--text-muted); font-size: 8px;">TEMP</div>
-                        <div style="font-weight: bold; color: var(--border-secondary); font-size: 11px;"><span id="ui-temp">40</span>°F</div>
+                        <div style="color: var(--text-muted); font-size: 8px;">ECOSYSTEM</div>
+                        <div style="font-weight: bold; font-size: 9px;">
+                            <span id="ui-ecosystem-state">FEEDING</span>
+                        </div>
+                    </div>
+                    <div>
+                        <div style="color: var(--text-muted); font-size: 8px;">SPAWN</div>
+                        <div style="font-weight: bold; font-size: 9px;">
+                            <span id="ui-spawn-mode">WAITING</span>
+                        </div>
                     </div>
                     <div>
                         <div style="color: var(--text-muted); font-size: 8px;">TIME</div>

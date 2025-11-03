@@ -82,7 +82,7 @@ export class FishAI {
         return Utils.randomBetween(minDepth, maxDepth);
     }
 
-    detectFrenzy(lure, allFish) {
+    detectFrenzy(lure, allFish, baitfishClouds = []) {
         // Lake trout get excited when they see others chasing OR feeding on baitfish
         // Count other fish that are actively engaged (lure or baitfish)
         const excitedFish = allFish.filter(otherFish => {
@@ -106,21 +106,44 @@ export class FishAI {
                 // Enter frenzy state!
                 this.fish.inFrenzy = true;
 
-                // Duration scales with number of frenzied fish (base 300 frames = 5 sec)
-                const baseDuration = 300;
-                const scaledDuration = baseDuration * (1 + excitedFish.length * 0.4); // Increased from 0.3
+                // Duration scales with number of frenzied fish (base 180 frames = 3 sec)
+                // REDUCED: Frenzy should be short bursts, not long sustained states
+                const baseDuration = 180; // Reduced from 300 (5 sec -> 3 sec)
+                const scaledDuration = baseDuration * (1 + excitedFish.length * 0.15); // Reduced from 0.4
+                // 1 fish: 207 frames = 3.5 sec
+                // 2 fish: 234 frames = 3.9 sec
+                // 3 fish: 261 frames = 4.4 sec (much shorter!)
                 this.fish.frenzyTimer = Math.floor(scaledDuration);
 
                 // Intensity based on number of excited fish (stronger now)
                 this.fish.frenzyIntensity = Math.min(1.0, excitedFish.length * 0.3); // Increased from 0.25
 
+                // FIND WHICH BAIT CLOUD THE EXCITED FISH ARE HUNTING
+                // This makes frenzy focused on a specific cloud
+                let targetCloud = null;
+                for (const excitedOne of excitedFish) {
+                    if (excitedOne.ai && excitedOne.ai.targetBaitfishCloud) {
+                        targetCloud = excitedOne.ai.targetBaitfishCloud;
+                        break; // Found one hunting a cloud
+                    }
+                }
+                this.fish.frenzyTargetCloud = targetCloud;
+
                 // Frenzying fish get multiple strike attempts (2-3 swipes)
                 this.maxStrikeAttempts = Math.floor(Math.random() * 2) + 2; // 2 or 3 attempts
                 this.strikeAttempts = 0;
 
-                // Immediately become interested in the lure
-                this.state = Constants.FISH_STATE.INTERESTED;
-                this.decisionCooldown = 100; // Quick response during frenzy
+                // If there's a target cloud, rush to hunt it! Otherwise, become interested in lure
+                if (targetCloud) {
+                    this.state = Constants.FISH_STATE.HUNTING_BAITFISH;
+                    this.targetBaitfishCloud = targetCloud; // Set as active target
+                    this.decisionCooldown = 100; // Quick response during frenzy
+                    console.log(`🔥 Fish entered FRENZY, rushing to ${targetCloud.speciesType} cloud!`);
+                } else {
+                    // No cloud to hunt, become interested in the lure instead
+                    this.state = Constants.FISH_STATE.INTERESTED;
+                    this.decisionCooldown = 100; // Quick response during frenzy
+                }
 
                 // Trigger visual feedback - fish entered frenzy!
                 this.fish.triggerInterestFlash(0.8); // High intensity for frenzy
@@ -148,7 +171,7 @@ export class FishAI {
 
                     // Enter frenzy due to vertical strike instinct
                     this.fish.inFrenzy = true;
-                    this.fish.frenzyTimer = 400; // Longer duration for vertical strikes
+                    this.fish.frenzyTimer = 180; // REDUCED: Short burst (was 400 = 6.7 sec, now 3 sec)
                     this.fish.frenzyIntensity = 0.8; // High intensity
 
                     // Vertical strikers also get multiple attempts
@@ -206,7 +229,7 @@ export class FishAI {
         const lureSpeed = Math.abs(lure.velocity);
 
         // Detect frenzy feeding - other fish chasing excites this one
-        this.detectFrenzy(lure, allFish);
+        this.detectFrenzy(lure, allFish, baitfishClouds);
 
         // State machine for fish behavior
         switch (this.state) {
@@ -748,30 +771,50 @@ export class FishAI {
             return null;
         }
 
-        let nearest = null;
-        let minDistance = Infinity;
+        let bestCloud = null;
+        let bestScore = -Infinity;
 
         for (const cloud of baitfishClouds) {
-            if (!cloud.visible || cloud.baitfish.length === 0) {continue;}
+            // Check if cloud is valid and has baitfish (works for both systems)
+            const baitfishArray = cloud.baitfish || cloud.members || [];
+            const cloudVisible = cloud.visible !== false || cloud.members; // Schools don't have visible property
+            if (!cloudVisible || baitfishArray.length === 0) {continue;}
 
             const distance = Utils.calculateDistance(
                 this.fish.x, this.fish.y,
-                cloud.centerX, cloud.centerY
+                cloud.centerX || cloud.centerWorldX,
+                cloud.centerY
             );
 
             // Hunger affects how far vertically fish will pursue baitfish (0-100 scale)
             const verticalDistance = Math.abs(this.fish.y - cloud.centerY);
             const maxVerticalRange = GameConfig.BAITFISH_VERTICAL_PURSUIT_RANGE * (this.fish.hunger * GameConfig.HUNGER_VERTICAL_SCALING);
 
-            if (distance < minDistance &&
-                distance < GameConfig.BAITFISH_DETECTION_RANGE &&
-                verticalDistance < maxVerticalRange) {
-                minDistance = distance;
-                nearest = cloud;
+            // Check if cloud is within range
+            if (distance < GameConfig.BAITFISH_DETECTION_RANGE && verticalDistance < maxVerticalRange) {
+                // SCORE-BASED SELECTION to spread predators across clouds
+                // Prefer clouds with fewer hunters and more baitfish
+                const hunterCount = cloud.lakersChasing?.length || 0;
+                const baitfishCount = baitfishArray.length;
+
+                // Score formula:
+                // - Closer clouds score higher (inverted distance)
+                // - Clouds with fewer hunters score higher
+                // - Clouds with more baitfish score higher
+                const distanceScore = (GameConfig.BAITFISH_DETECTION_RANGE - distance) / GameConfig.BAITFISH_DETECTION_RANGE;
+                const hunterPenalty = hunterCount * 0.3; // Each hunter reduces score by 0.3
+                const baitfishBonus = baitfishCount * 0.01; // Each baitfish adds small bonus
+
+                const score = distanceScore - hunterPenalty + baitfishBonus;
+
+                if (score > bestScore) {
+                    bestScore = score;
+                    bestCloud = cloud;
+                }
             }
         }
 
-        return nearest ? { cloud: nearest, distance: minDistance } : null;
+        return bestCloud ? { cloud: bestCloud, distance: bestScore } : null;
     }
 
     shouldHuntBaitfish(cloudInfo) {
@@ -787,6 +830,13 @@ export class FishAI {
         // INCREASED bonus for feeding activity - makes frenzy more likely!
         const otherFishHunting = cloudInfo.cloud.lakersChasing.length;
         const frenzyBonus = Math.min(otherFishHunting * 0.5, 1.2); // Increased from 0.3/0.8 to 0.5/1.2
+
+        // FRENZY TARGET CLOUD BONUS - If this fish is frenzying and this is the target cloud, HUGE bonus!
+        let frenzyTargetBonus = 0;
+        if (this.fish.inFrenzy && this.fish.frenzyTargetCloud === cloudInfo.cloud) {
+            frenzyTargetBonus = 1.5; // MASSIVE bonus - fish will rush to this cloud!
+            console.log(`🎯 Fish locked onto frenzy target cloud!`);
+        }
 
         // DIET PREFERENCE - Lake trout prefer certain prey species (based on real-world data)
         const preySpecies = cloudInfo.cloud.speciesType;
@@ -804,7 +854,7 @@ export class FishAI {
                          this.fish.weight > 5 ? 0.10 : 0; // Medium: +10% hunt score
 
         // Base hunt score (hunger + distance + frenzy)
-        let huntScore = (hungerFactor * 0.6) + (distanceFactor * 0.3) + frenzyBonus;
+        let huntScore = (hungerFactor * 0.6) + (distanceFactor * 0.3) + frenzyBonus + frenzyTargetBonus;
 
         // Apply diet preference bonus
         huntScore += dietBonus;
@@ -829,10 +879,13 @@ export class FishAI {
     }
 
     huntingBaitfishBehavior(baitfishClouds, lure) {
-        // Verify target cloud still exists and has baitfish
-        if (!this.targetBaitfishCloud ||
-            !this.targetBaitfishCloud.visible ||
-            this.targetBaitfishCloud.baitfish.length === 0) {
+        // Verify target cloud still exists and has baitfish (works for both systems)
+        const baitfishArray = this.targetBaitfishCloud?.baitfish || this.targetBaitfishCloud?.members || [];
+        const cloudVisible = this.targetBaitfishCloud && (
+            this.targetBaitfishCloud.visible !== false || this.targetBaitfishCloud.members
+        );
+
+        if (!this.targetBaitfishCloud || !cloudVisible || baitfishArray.length === 0) {
             // Cloud depleted or gone, return to idle
             this.state = Constants.FISH_STATE.IDLE;
             this.targetBaitfishCloud = null;
@@ -856,31 +909,19 @@ export class FishAI {
                 this.targetBaitfishCloud.consumeBaitfish();
                 this.fish.feedOnBaitfish(preySpecies); // Pass species for nutrition calculation
 
-                // Track consecutive catches for swim-through behavior
-                if (!this.consecutiveCatches) this.consecutiveCatches = 0;
-                if (!this.lastTurnTime) this.lastTurnTime = 0;
-                this.consecutiveCatches++;
-
-                // Keep swimming through cloud! Don't stop.
-                // After 2-3 catches or leaving cloud, do a quick 180 turn to dart back
-                // Limit turns to once every 2 seconds (120 frames at 60fps)
-                const timeSinceLastTurn = this.fish.frameAge - this.lastTurnTime;
-                if (this.consecutiveCatches >= 2 && Math.random() < 0.6 && timeSinceLastTurn > 120) {
-                    // Quick 180 turn to dart back through cloud
-                    this.targetX = this.fish.x - (this.targetX - this.fish.x);
-                    this.targetY = this.fish.y - (this.targetY - this.fish.y);
-                    this.consecutiveCatches = 0;
-                    this.lastTurnTime = this.fish.frameAge;
-                }
-
-                // Stay in hunting state - no pause!
+                // Keep swimming through cloud - no turning back!
+                // Just keep hunting next baitfish in smooth swim-through pattern
                 this.decisionCooldown = 10; // Very short cooldown for rapid feeding
                 return;
             }
         } else {
-            // No baitfish available, head to cloud center
-            this.targetX = this.targetBaitfishCloud.centerX;
-            this.targetY = this.targetBaitfishCloud.centerY;
+            // No baitfish available - cloud is depleted or all consumed
+            // Return to idle instead of getting stuck at cloud center
+            this.state = Constants.FISH_STATE.IDLE;
+            this.targetBaitfishCloud = null;
+            this.targetBaitfish = null;
+            this.decisionCooldown = 1000;
+            return;
         }
 
         // IMPORTANT: Check if lure is in the baitfish cloud
@@ -906,43 +947,27 @@ export class FishAI {
     }
 
     feedingBehavior(baitfishClouds, lure) {
-        // Continue swimming through cloud while feeding
-        // Check if we should continue hunting or turn back
+        // After eating, check if we should continue hunting or return to idle
+        // REMOVED: All cloud-center targeting logic - predators only chase individual fish
 
-        const distanceToCloudCenter = Utils.calculateDistance(
-            this.fish.x, this.fish.y,
-            this.targetBaitfishCloud?.centerX || this.fish.x,
-            this.targetBaitfishCloud?.centerY || this.fish.y
-        );
+        // Check if cloud still has baitfish to hunt
+        if (this.targetBaitfishCloud && this.fish.hunger > 30) {
+            const baitfishArray = this.targetBaitfishCloud.baitfish || this.targetBaitfishCloud.members || [];
+            const cloudVisible = this.targetBaitfishCloud.visible !== false || this.targetBaitfishCloud.members;
 
-        // If we've swum past the cloud center, consider turning around
-        if (distanceToCloudCenter > GameConfig.BAITFISH_CLOUD_RADIUS * 1.5) {
-            // Swam through cloud - do 180 turn to dart back (with cooldown)
-            if (!this.lastTurnTime) this.lastTurnTime = 0;
-            const timeSinceLastTurn = this.fish.frameAge - this.lastTurnTime;
-
-            if (this.targetBaitfishCloud && this.targetBaitfishCloud.visible && this.fish.hunger > 30 && timeSinceLastTurn > 120) {
-                this.targetX = this.targetBaitfishCloud.centerX;
-                this.targetY = this.targetBaitfishCloud.centerY;
-                this.consecutiveCatches = 0;
-                this.lastTurnTime = this.fish.frameAge;
+            if (cloudVisible && baitfishArray.length > 0) {
+                // Still baitfish available and still hungry - keep hunting
                 this.state = Constants.FISH_STATE.HUNTING_BAITFISH;
+                this.decisionCooldown = 20; // Very short for rapid feeding
             } else {
-                // Done feeding, return to idle
+                // Cloud depleted, return to idle
                 this.state = Constants.FISH_STATE.IDLE;
                 this.targetBaitfishCloud = null;
                 this.targetBaitfish = null;
                 this.consecutiveCatches = 0;
             }
-        } else if (this.targetBaitfishCloud &&
-                   this.targetBaitfishCloud.visible &&
-                   this.targetBaitfishCloud.baitfish.length > 0 &&
-                   this.fish.hunger > 30) {
-            // Still in cloud, still hungry - keep hunting
-            this.state = Constants.FISH_STATE.HUNTING_BAITFISH;
-            this.decisionCooldown = 20; // Very short for rapid feeding
         } else {
-            // Satisfied or cloud depleted
+            // Satisfied or no target cloud - return to idle
             this.state = Constants.FISH_STATE.IDLE;
             this.targetBaitfishCloud = null;
             this.targetBaitfish = null;
@@ -957,7 +982,9 @@ export class FishAI {
         }
 
         for (const cloud of baitfishClouds) {
-            if (cloud.visible && cloud.isPlayerLureInCloud(lure)) {
+            // Check if cloud is visible (works for both systems - schools don't have visible)
+            const cloudVisible = cloud.visible !== false || cloud.members;
+            if (cloudVisible && cloud.isPlayerLureInCloud && cloud.isPlayerLureInCloud(lure)) {
                 return true;
             }
         }

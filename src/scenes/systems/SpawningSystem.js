@@ -30,17 +30,33 @@ export class SpawningSystem {
         this.scene = scene;
         this.emergencyFishSpawned = false;
 
+        // Ecosystem state for ebb and flow dynamics
+        // States: RECOVERING (no bait, predators gone) or FEEDING (bait present, predators feeding)
+        this.spawnMode = null; // TRICKLE or WOLFPACK
+        this.timeSinceBaitGone = 0; // Time since all bait was consumed
+        this.timeObservingRecovery = 0; // Time observing recovery with bait but no predators
+        this.lastBaitfishCount = 0; // Track baitfish population trend
+        this.hasDespawnedPredators = false; // Track if we've cleared predators
+
         // Spawn initial crayfish population (3 on load)
         this.spawnInitialCrayfish();
 
         // Set up spawn timers
         this.setupSpawnTimers();
+
+        // Monitor ecosystem health
+        this.scene.time.addEvent({
+            delay: 2000, // Check every 2 seconds
+            callback: () => this.updateEcosystemState(),
+            callbackScope: this,
+            loop: true
+        });
     }
 
     setupSpawnTimers() {
-        // Start spawning fish
+        // Start spawning fish (fast spawn rate to build population quickly)
         this.scene.time.addEvent({
-            delay: 1000,
+            delay: 500, // Reduced from 1000 - spawn every 0.5 seconds
             callback: () => this.trySpawnFish(),
             callbackScope: this,
             loop: true
@@ -76,9 +92,40 @@ export class SpawningSystem {
      * @returns {Fish|null} The spawned fish or null if spawn failed
      */
     trySpawnFish() {
-        // Don't spawn too many fish at once
-        if (this.scene.fishes.length >= 20) {
-            return null;
+        // BYPASS CHECKS during wolfpack burst spawning
+        if (!this.isSpawningWolfpack) {
+            const ecosystemState = this.getEcosystemState();
+
+            // RECOVERING STATE: Only allow 1-2 scout predators
+            if (ecosystemState === 'RECOVERING') {
+                if (this.scene.fishes.length < 2 && Math.random() < 0.10) {
+                    // 10% chance to spawn a scout predator during recovery
+                    // Continue to normal spawn logic
+                } else {
+                    return null; // No spawning during recovery
+                }
+            }
+
+            // FEEDING STATE: Spawn based on mode
+            if (ecosystemState === 'FEEDING') {
+                // TRICKLE MODE: Spawn normally until bait starts decreasing
+                if (this.spawnMode === 'TRICKLE') {
+                    // Keep spawning in trickle mode
+                }
+                // WOLFPACK MODE: Don't spawn more (wolfpack already spawned)
+                else if (this.spawnMode === 'WOLFPACK') {
+                    return null; // Wolfpack already spawned, no more spawning
+                }
+                // NO MODE: Don't spawn yet (waiting for spawn mode to be set)
+                else if (this.spawnMode === null) {
+                    return null;
+                }
+            }
+
+            // Don't spawn too many fish at once
+            if (this.scene.fishes.length >= 20) {
+                return null;
+            }
         }
 
         // Get player position in world coordinates (depends on fishing type)
@@ -201,8 +248,14 @@ export class SpawningSystem {
      * @returns {boolean} True if school was spawned
      */
     trySpawnBaitfishSchool() {
+        // Ecosystem-aware spawning: Faster bait recovery when predators are gone
+        let maxSchools = 5;
+        if (this.ecosystemState === 'RECOVERING') {
+            maxSchools = 8; // Allow more bait clouds during recovery
+        }
+
         // Don't spawn too many schools at once
-        if (this.scene.schools.length >= 5) {
+        if (this.scene.schools.length >= maxSchools) {
             return false;
         }
 
@@ -651,10 +704,176 @@ export class SpawningSystem {
     }
 
     /**
+     * Calculate ecosystem state based on what's actually on screen
+     * Returns: 'RECOVERING' or 'FEEDING'
+     */
+    getEcosystemState() {
+        // Use NEW school system only
+        const schoolsArray = this.scene.schools || [];
+
+        // Don't filter by 'visible' - schools don't have that property!
+        // Just count all schools that exist
+        const activeSchools = schoolsArray.filter(s => s && s.members);
+
+        // Count total baitfish in all schools
+        let totalBaitfish = 0;
+        activeSchools.forEach(school => {
+            const count = school.members?.length || 0;
+            totalBaitfish += count;
+        });
+
+        // CALCULATED STATE: Based on what's actually on screen
+        // RECOVERING: No bait or very little bait (< 10 fish)
+        // FEEDING: Bait present (10+ fish)
+        const state = totalBaitfish >= 10 ? 'FEEDING' : 'RECOVERING';
+        return state;
+    }
+
+    /**
+     * Update ecosystem dynamics - manage predator spawning based on bait presence
+     */
+    updateEcosystemState() {
+        // Use NEW school system only
+        const schoolsArray = this.scene.schools || [];
+
+        // Don't filter by 'visible' - schools don't have that property!
+        const activeSchools = schoolsArray.filter(s => s && s.members);
+
+        const predatorCount = this.scene.fishes.length;
+
+        // Count total baitfish in all schools
+        let totalBaitfish = 0;
+        activeSchools.forEach(school => {
+            totalBaitfish += school.members?.length || 0;
+        });
+
+        const ecosystemState = this.getEcosystemState();
+
+        // Track when bait is completely gone
+        if (totalBaitfish === 0 && predatorCount > 0) {
+            this.timeSinceBaitGone += 2000; // 2 seconds per check
+
+            // After 5 seconds with no bait, despawn all predators
+            if (this.timeSinceBaitGone > 5000 && !this.hasDespawnedPredators) {
+                console.log('💀 All bait gone! Predators swimming away...');
+                this.despawnAllPredators();
+                this.hasDespawnedPredators = true;
+                this.spawnMode = null; // Clear spawn mode
+            }
+        } else if (totalBaitfish > 0) {
+            // Reset timers when bait exists
+            this.timeSinceBaitGone = 0;
+            this.hasDespawnedPredators = false;
+        }
+
+        // OBSERVATION: If we have bait (30+) but no/few predators (≤2), observe for 5 seconds
+        // NO STATE GATE - just use baitfish count directly!
+        if (totalBaitfish >= 30 && predatorCount <= 2) {
+            this.timeObservingRecovery += 2000; // 2 seconds per check
+
+            // After 5 seconds of observing recovery, trigger spawn mode
+            if (this.timeObservingRecovery > 5000 && this.spawnMode === null) {
+                // 50% chance of TRICKLE or WOLFPACK
+                if (Math.random() < 0.5) {
+                    this.spawnMode = 'WOLFPACK';
+                    this.spawnWolfpack();
+                    console.log(`🐺 WOLFPACK arriving! (${totalBaitfish} baitfish, observed for 5s)`);
+                } else {
+                    this.spawnMode = 'TRICKLE';
+                    this.lastBaitfishCount = totalBaitfish; // Track for trickle termination
+                    console.log(`💧 TRICKLE mode starting (${totalBaitfish} baitfish, observed for 5s)`);
+                }
+            }
+        } else {
+            this.timeObservingRecovery = 0; // Reset if conditions not met
+        }
+
+        // TRICKLE MODE: Use predator:baitfish ratio to determine if spawn mode should end
+        // Goal ratio: 1 predator per 10 baitfish (roughly)
+        // End TRICKLE when we have enough predators OR bait is being consumed
+        if (this.spawnMode === 'TRICKLE') {
+            const targetRatio = 10; // 1 predator per 10 baitfish
+            const currentRatio = totalBaitfish > 0 ? totalBaitfish / predatorCount : 0;
+
+            // End trickle if:
+            // 1. We have a good predator ratio (close to 1:10)
+            // 2. OR baitfish count is dropping (being consumed)
+            if (currentRatio <= targetRatio || totalBaitfish < this.lastBaitfishCount) {
+                console.log(`💧 TRICKLE ended: Ratio ${currentRatio.toFixed(1)}:1 (${predatorCount} predators, ${totalBaitfish} baitfish)`);
+                this.spawnMode = null;
+            }
+            this.lastBaitfishCount = totalBaitfish;
+        }
+    }
+
+    /**
+     * Despawn ALL predators by making them swim off-screen
+     * More natural than instant despawn
+     */
+    despawnAllPredators() {
+        const count = this.scene.fishes.length;
+        console.log(`🏊 ${count} predators swimming away (no more food)...`);
+
+        // Make each predator flee off-screen instead of instant destroy
+        this.scene.fishes.forEach(fish => {
+            if (fish && fish.model && fish.model.ai) {
+                // Set fish to FLEEING state - they'll swim away naturally
+                fish.model.ai.state = Constants.FISH_STATE.FLEEING;
+                fish.model.ai.decisionCooldown = 5000; // Stay fleeing for 5 seconds
+
+                // Set flee target off-screen (down and away)
+                const edgeX = Math.random() < 0.5 ? -200 : GameConfig.CANVAS_WIDTH + 200;
+                const edgeY = GameConfig.CANVAS_HEIGHT + 100; // Off bottom of screen
+                fish.model.ai.targetX = edgeX;
+                fish.model.ai.targetY = edgeY;
+            }
+        });
+
+        // Schedule actual cleanup after fish have time to swim away (10 seconds)
+        this.scene.time.delayedCall(10000, () => {
+            this.scene.fishes.forEach(fish => {
+                if (fish) fish.destroy();
+            });
+            this.scene.fishes = [];
+            console.log('✅ Predators cleared! Area is safe for bait recovery.');
+        });
+    }
+
+    /**
+     * Spawn a wolfpack - burst spawn 10-15 predators at once
+     * Creates intense feeding frenzy right away
+     */
+    spawnWolfpack() {
+        const packSize = Math.floor(Math.random() * 6) + 10; // 10-15 fish
+        console.log(`🐺 WOLFPACK incoming! Spawning ${packSize} predators...`);
+
+        // Set flag to bypass spawn mode checks during wolfpack burst
+        this.isSpawningWolfpack = true;
+
+        let spawned = 0;
+        for (let i = 0; i < packSize; i++) {
+            const fish = this.trySpawnFish();
+            if (fish) {
+                spawned++;
+            }
+        }
+
+        // Clear flag
+        this.isSpawningWolfpack = false;
+
+        console.log(`🐺 WOLFPACK spawned ${spawned} predators!`);
+    }
+
+    /**
      * Reset the spawning system (for new game)
      */
     reset() {
         this.emergencyFishSpawned = false;
+        this.spawnMode = null;
+        this.timeSinceBaitGone = 0;
+        this.timeObservingRecovery = 0;
+        this.lastBaitfishCount = 0;
+        this.hasDespawnedPredators = false;
     }
 
     /**

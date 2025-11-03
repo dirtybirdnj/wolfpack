@@ -296,6 +296,27 @@ function setupDevTools(game) {
                 });
             }
 
+            // Listen for line strain updates from FishFight
+            if (gameScene && !gameScene._lineStrainListenerAdded) {
+                gameScene._lineStrainListenerAdded = true;
+                gameScene.events.on('updateLineStrain', (data) => {
+                    const lineTestDisplay = document.getElementById('ui-line-test');
+                    const lineStrainFill = document.getElementById('line-strain-fill');
+                    const lineStrainPercent = document.getElementById('line-strain-percent');
+
+                    if (lineTestDisplay && lineStrainFill && lineStrainPercent) {
+                        // Update line test strength display
+                        lineTestDisplay.textContent = `${data.testStrength}lb`;
+
+                        // Update strain bar width
+                        lineStrainFill.style.width = `${data.strainPercent}%`;
+
+                        // Update percentage text
+                        lineStrainPercent.textContent = data.strainPercent;
+                    }
+                });
+            }
+
             // Time - show countdown for arcade, count up for unlimited
             let timeStr;
             if (gameScene.gameMode === GameConfig.GAME_MODE_ARCADE) {
@@ -310,9 +331,31 @@ function setupDevTools(game) {
             const uiTime = document.getElementById('ui-time');
             if (uiTime) uiTime.textContent = timeStr;
 
-            // Water temp
-            const uiTemp = document.getElementById('ui-temp');
-            if (uiTemp) uiTemp.textContent = Math.floor(gameScene.waterTemp || 40);
+            // Ecosystem state display
+            const uiEcosystemState = document.getElementById('ui-ecosystem-state');
+            const uiSpawnMode = document.getElementById('ui-spawn-mode');
+
+            if (uiEcosystemState && uiSpawnMode && gameScene.spawningSystem) {
+                const state = gameScene.spawningSystem.getEcosystemState();
+                const mode = gameScene.spawningSystem.spawnMode;
+
+                // Color code ecosystem state (green=FEEDING, yellow=RECOVERING)
+                const stateColors = {
+                    'FEEDING': '#00ff00',
+                    'RECOVERING': '#ffff00'
+                };
+                uiEcosystemState.style.color = stateColors[state] || '#ffffff';
+                uiEcosystemState.textContent = state;
+
+                // Color code spawn mode (active modes in color, WAITING in grey)
+                const modeColors = {
+                    'TRICKLE': '#00ccff',
+                    'WOLFPACK': '#ff00ff'
+                };
+                const modeDisplay = mode === null ? 'WAITING' : mode;
+                uiSpawnMode.style.color = mode === null ? '#888888' : (modeColors[mode] || '#ffffff');
+                uiSpawnMode.textContent = modeDisplay;
+            }
 
             // Update fish status panel
             updateFishStatus(gameScene);
@@ -558,16 +601,29 @@ function updateFishStatus(gameScene) {
 
         // Check both schools (NatureSimulationScene) and baitfishClouds (GameScene) for cloud count
         let cloudCount = 0;
+        let baitfishCount = 0;
         if (gameScene.schools && Array.isArray(gameScene.schools)) {
             cloudCount = gameScene.schools.length;
+            // Count total baitfish in all schools
+            gameScene.schools.forEach(school => {
+                if (school && school.members) {
+                    baitfishCount += school.members.length;
+                }
+            });
         } else if (gameScene.baitfishClouds && Array.isArray(gameScene.baitfishClouds)) {
             cloudCount = gameScene.baitfishClouds.filter(c => c && c.visible).length;
+            // Count baitfish in old cloud system
+            gameScene.baitfishClouds.forEach(cloud => {
+                if (cloud && cloud.visible && cloud.baitfish) {
+                    baitfishCount += cloud.baitfish.length;
+                }
+            });
         }
 
         const crayfishCount = gameScene.crayfish ? gameScene.crayfish.filter(c => c && c.visible).length : 0;
         const zooplanktonCount = gameScene.zooplankton ? gameScene.zooplankton.filter(z => z && z.visible).length : 0;
 
-        entityCounts.innerHTML = `🐟 ${fishCount} ☁️ ${cloudCount} 🦞 ${crayfishCount} 🪳 ${zooplanktonCount}`;
+        entityCounts.innerHTML = `🐟 ${fishCount} 🍽️ ${baitfishCount} ☁️ ${cloudCount} 🦞 ${crayfishCount} 🪳 ${zooplanktonCount}`;
     }
 
     if (!gameScene || !gameScene.fishes || gameScene.fishes.length === 0) {
@@ -595,8 +651,12 @@ function updateFishStatus(gameScene) {
     // Sort fish by depth (shallowest to deepest)
     allFish.sort((a, b) => a.fish.depth - b.fish.depth);
 
-    // Auto-select first fish if none selected
-    if (!gameScene.selectedFish && allFish.length > 0) {
+    // Auto-select hooked fish (highest priority) or first fish if none selected
+    if (gameScene.currentFight && gameScene.currentFight.fish) {
+        // Always select the hooked fish to show its details
+        gameScene.selectedFish = gameScene.currentFight.fish;
+    } else if (!gameScene.selectedFish && allFish.length > 0) {
+        // Auto-select first fish if none selected and no fight
         gameScene.selectedFish = allFish[0].fish;
     }
 
@@ -621,10 +681,12 @@ function updateFishStatus(gameScene) {
         // Count baitfish consumed (from stomach contents)
         const baitfishConsumed = fish.stomachContents ? fish.stomachContents.length : 0;
 
-        // Check if this fish is selected
+        // Check if this fish is selected or hooked
         const isSelected = gameScene.selectedFish === fish;
-        const selectedClass = isSelected ? 'fish-selected' : '';
-        const selectedStyle = isSelected ? 'background: #ffffff20;' : `background: ${zoneColor}08;`;
+        const isHooked = gameScene.currentFight && gameScene.currentFight.fish === fish;
+        const selectedClass = (isSelected || isHooked) ? 'fish-selected' : '';
+        const selectedStyle = isHooked ? 'background: #ff660020; border-left: 3px solid #ff6600 !important;' :
+                             isSelected ? 'background: #ffffff20;' : `background: ${zoneColor}08;`;
 
         return `
             <div class="fish-status-row ${selectedClass}" data-fish-id="${fish.model.id}" style="border-left: 3px solid ${zoneColor}; ${selectedStyle} padding: 3px 5px; margin: 2px 0; cursor: pointer; font-size: 9px; display: flex; justify-content: space-between; align-items: center; white-space: nowrap; overflow: hidden;">
@@ -850,7 +912,7 @@ function updateFishDetailPanel(gameScene) {
                 <div><span style="color: #888;">Weight:</span> <span style="color: #fff;">${weight} lbs</span></div>
                 <div><span style="color: #888;">Length:</span> <span style="color: #fff;">${length} in</span></div>
                 <div><span style="color: #888;">Gender:</span> <span style="color: ${info.gender === 'male' ? '#66ccff' : '#ff99cc'};">${info.gender === 'male' ? '♂ Male' : '♀ Female'}</span></div>
-                <div><span style="color: #888;">Age:</span> <span style="color: #fff;">${info.age || 0} frames</span></div>
+                <div><span style="color: #888;">Age:</span> <span style="color: #fff;">${info.age || 'N/A'}</span></div>
                 <div><span style="color: #888;">Depth:</span> <span style="color: #00ffff;">${depth}ft</span></div>
                 <div><span style="color: #888;">Zone:</span> <span style="color: #ffff00;">${zone}</span></div>
                 <div><span style="color: #888;">Hunger:</span> <span style="color: ${fish.hunger > 70 ? '#ff6666' : fish.hunger > 40 ? '#ffaa00' : '#00ff00'};">${hunger}</span></div>
