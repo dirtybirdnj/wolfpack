@@ -168,9 +168,13 @@ export class FishFight {
         // Update fight state based on energy and time
         this.updateFightState();
 
+        // Track if player is actively reeling this frame
+        this.isReeling = false;
+
         // Handle spacebar reeling
         if (spacePressed && currentTime - this.lastReelTime > GameConfig.MIN_REEL_INTERVAL) {
             this.reel(currentTime);
+            this.isReeling = true; // Player is actively reeling
         }
 
         // Fish pulls on line and tries to swim down based on state
@@ -476,7 +480,15 @@ export class FishFight {
 
         // REALISTIC DRAG SYSTEM: Check if fish pull exceeds drag setting
         if (this.reelModel) {
-            const currentDragForce = this.reelModel.getCurrentDragForce(); // in pounds
+            let currentDragForce = this.reelModel.getCurrentDragForce(); // in pounds
+
+            // CRITICAL FIX: When actively reeling, reel's mechanical advantage creates MUCH higher effective drag
+            // This allows you to actually bring the fish in when reeling hard
+            // Reel gear ratio (typically 5:1 to 6:1) means you can pull with 5-6x more force
+            if (this.isReeling) {
+                currentDragForce *= 5.0; // 5x drag when actively reeling (reel's mechanical advantage)
+            }
+
             const shockAbsorption = this.fishingLine ? this.fishingLine.getShockAbsorptionMultiplier() : 0.7;
             const stretchFactor = this.fishingLine ? this.fishingLine.getStretchFactor() : 0.7;
 
