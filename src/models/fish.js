@@ -389,33 +389,33 @@ export class Fish extends AquaticOrganism {
                 this.x = (actualGameWidth / 2) + offsetFromPlayer;
 
                 // SCREEN BOUNDARY DETECTION: Check if fish is stuck at screen edges
-                // Fish shouldn't be within 150px of screen edges (causes visual sticking)
-                const screenMargin = 150;
+                // Only apply when IDLE to avoid warping during hunting
+                const screenMargin = 100; // Reduced from 150 - only extreme edges
                 const atLeftEdge = this.x < screenMargin;
                 const atRightEdge = this.x > actualGameWidth - screenMargin;
 
-                if ((atLeftEdge || atRightEdge) && this.ai) {
-                    // Fish is too close to screen edge - adjust worldX to pull them back (works in all states)
+                // Only enforce boundaries when IDLE or INTERESTED (not when actively hunting)
+                const canEnforceBoundary = this.ai && (
+                    this.ai.state === Constants.FISH_STATE.IDLE ||
+                    this.ai.state === Constants.FISH_STATE.INTERESTED
+                );
+
+                if ((atLeftEdge || atRightEdge) && canEnforceBoundary) {
+                    // Gentle boundary nudge - don't teleport, just redirect
                     if (atLeftEdge) {
-                        // Too far left on screen - move worldX right
-                        this.worldX = playerWorldX - (actualGameWidth / 2) + screenMargin + 50;
-                        console.log(`${this.species} (${this.name}) too close to left screen edge - pulling back`);
+                        // Too far left - set target to swim right
+                        this.ai.targetX = playerWorldX + 200; // 200px right of center
+                        this.ai.targetY = this.y;
+                        console.log(`${this.species} (${this.name}) at left edge - turning around`);
                     } else {
-                        // Too far right on screen - move worldX left
-                        this.worldX = playerWorldX + (actualGameWidth / 2) - screenMargin - 50;
-                        console.log(`${this.species} (${this.name}) too close to right screen edge - pulling back`);
+                        // Too far right - set target to swim left
+                        this.ai.targetX = playerWorldX - 200; // 200px left of center
+                        this.ai.targetY = this.y;
+                        console.log(`${this.species} (${this.name}) at right edge - turning around`);
                     }
 
-                    // Flip direction if idle
-                    if (this.ai.state === Constants.FISH_STATE.IDLE) {
-                        this.ai.idleDirection *= -1;
-                        this.ai.targetX = null;
-                        this.ai.targetY = null;
-                    }
-
-                    // Recalculate screen position with corrected worldX
-                    const newOffsetFromPlayer = this.worldX - playerWorldX;
-                    this.x = (actualGameWidth / 2) + newOffsetFromPlayer;
+                    // Flip idle direction
+                    this.ai.idleDirection *= -1;
                 }
             }
 

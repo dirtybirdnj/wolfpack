@@ -31,7 +31,7 @@ export class SpawningSystem {
         this.emergencyFishSpawned = false;
 
         // Simple population targets
-        this.MAX_BAITFISH = 100; // Increased - fish stay on screen now with boundary avoidance
+        this.MAX_BAITFISH = 60; // Reduced back to reasonable level
         this.MAX_PREDATORS = 8;
         this.MIN_BAIT_FOR_PREDATORS = 20; // Require more bait before spawning predators
 
