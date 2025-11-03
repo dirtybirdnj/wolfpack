@@ -750,17 +750,17 @@ export class SpawningSystem {
         const ecosystemState = this.getEcosystemState();
 
         // Track when bait is completely gone
-        if (totalBaitfish === 0) {
+        if (totalBaitfish === 0 && predatorCount > 0) {
             this.timeSinceBaitGone += 2000; // 2 seconds per check
 
             // After 5 seconds with no bait, despawn all predators
             if (this.timeSinceBaitGone > 5000 && !this.hasDespawnedPredators) {
-                console.log('💀 All bait gone! Clearing predators...');
+                console.log('💀 All bait gone! Predators swimming away...');
                 this.despawnAllPredators();
                 this.hasDespawnedPredators = true;
                 this.spawnMode = null; // Clear spawn mode
             }
-        } else {
+        } else if (totalBaitfish > 0) {
             // Reset timers when bait exists
             this.timeSinceBaitGone = 0;
             this.hasDespawnedPredators = false;
@@ -807,20 +807,36 @@ export class SpawningSystem {
     }
 
     /**
-     * Despawn ALL predators immediately when bait is gone
-     * Makes all fish "swim away" at once
+     * Despawn ALL predators by making them swim off-screen
+     * More natural than instant despawn
      */
     despawnAllPredators() {
         const count = this.scene.fishes.length;
-        console.log(`🏊 Clearing ${count} predators from game area...`);
+        console.log(`🏊 ${count} predators swimming away (no more food)...`);
 
-        // Remove all predators
-        while (this.scene.fishes.length > 0) {
-            const fish = this.scene.fishes.pop();
-            fish.destroy();
-        }
+        // Make each predator flee off-screen instead of instant destroy
+        this.scene.fishes.forEach(fish => {
+            if (fish && fish.model && fish.model.ai) {
+                // Set fish to FLEEING state - they'll swim away naturally
+                fish.model.ai.state = Constants.FISH_STATE.FLEEING;
+                fish.model.ai.decisionCooldown = 5000; // Stay fleeing for 5 seconds
 
-        console.log('✅ All predators cleared! Area is safe for bait recovery.');
+                // Set flee target off-screen (down and away)
+                const edgeX = Math.random() < 0.5 ? -200 : GameConfig.CANVAS_WIDTH + 200;
+                const edgeY = GameConfig.CANVAS_HEIGHT + 100; // Off bottom of screen
+                fish.model.ai.targetX = edgeX;
+                fish.model.ai.targetY = edgeY;
+            }
+        });
+
+        // Schedule actual cleanup after fish have time to swim away (10 seconds)
+        this.scene.time.delayedCall(10000, () => {
+            this.scene.fishes.forEach(fish => {
+                if (fish) fish.destroy();
+            });
+            this.scene.fishes = [];
+            console.log('✅ Predators cleared! Area is safe for bait recovery.');
+        });
     }
 
     /**
