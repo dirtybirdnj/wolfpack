@@ -705,19 +705,12 @@ export class SpawningSystem {
      * Returns: 'RECOVERING' or 'FEEDING'
      */
     getEcosystemState() {
-        // Check both baitfishClouds (old system) and schools (new system)
-        const cloudsArray = this.scene.baitfishClouds || [];
+        // Use NEW school system only
         const schoolsArray = this.scene.schools || [];
-
-        // Count visible clouds from both systems
-        const visibleClouds = cloudsArray.filter(c => c && c.visible);
         const visibleSchools = schoolsArray.filter(s => s && s.visible);
 
-        // Count total baitfish across all clouds (both systems)
+        // Count total baitfish in all schools
         let totalBaitfish = 0;
-        visibleClouds.forEach(cloud => {
-            totalBaitfish += cloud.members?.length || 0;
-        });
         visibleSchools.forEach(school => {
             totalBaitfish += school.members?.length || 0;
         });
@@ -732,21 +725,14 @@ export class SpawningSystem {
      * Update ecosystem dynamics - manage predator spawning based on bait presence
      */
     updateEcosystemState() {
-        // Check both baitfishClouds (old system) and schools (new system)
-        const cloudsArray = this.scene.baitfishClouds || [];
+        // Use NEW school system only
         const schoolsArray = this.scene.schools || [];
-
-        // Count visible clouds from both systems
-        const visibleClouds = cloudsArray.filter(c => c && c.visible);
         const visibleSchools = schoolsArray.filter(s => s && s.visible);
 
         const predatorCount = this.scene.fishes.length;
 
-        // Count total baitfish across all clouds (both systems)
+        // Count total baitfish in all schools
         let totalBaitfish = 0;
-        visibleClouds.forEach(cloud => {
-            totalBaitfish += cloud.members?.length || 0;
-        });
         visibleSchools.forEach(school => {
             totalBaitfish += school.members?.length || 0;
         });
@@ -770,39 +756,35 @@ export class SpawningSystem {
             this.hasDespawnedPredators = false;
         }
 
-        // RECOVERING STATE: Observe recovery and decide when to introduce predators
-        if (ecosystemState === 'RECOVERING') {
-            // If we have bait but no/few predators, we're observing recovery
-            if (totalBaitfish >= 30 && predatorCount <= 2) {
-                this.timeObservingRecovery += 2000; // 2 seconds per check
+        // OBSERVATION: If we have bait (30+) but no/few predators (≤2), observe for 5 seconds
+        // NO STATE GATE - just use baitfish count directly!
+        if (totalBaitfish >= 30 && predatorCount <= 2) {
+            this.timeObservingRecovery += 2000; // 2 seconds per check
 
-                // After 5 seconds of observing recovery, trigger spawn mode
-                if (this.timeObservingRecovery > 5000 && this.spawnMode === null) {
-                    // 50% chance of TRICKLE or WOLFPACK
-                    if (Math.random() < 0.5) {
-                        this.spawnMode = 'WOLFPACK';
-                        this.spawnWolfpack();
-                        console.log('🐺 WOLFPACK arriving! (observed recovery for 5 seconds)');
-                    } else {
-                        this.spawnMode = 'TRICKLE';
-                        console.log('💧 TRICKLE mode starting (observed recovery for 5 seconds)');
-                    }
+            // After 5 seconds of observing recovery, trigger spawn mode
+            if (this.timeObservingRecovery > 5000 && this.spawnMode === null) {
+                // 50% chance of TRICKLE or WOLFPACK
+                if (Math.random() < 0.5) {
+                    this.spawnMode = 'WOLFPACK';
+                    this.spawnWolfpack();
+                    console.log(`🐺 WOLFPACK arriving! (${totalBaitfish} baitfish, observed for 5s)`);
+                } else {
+                    this.spawnMode = 'TRICKLE';
+                    this.lastBaitfishCount = totalBaitfish; // Track for trickle termination
+                    console.log(`💧 TRICKLE mode starting (${totalBaitfish} baitfish, observed for 5s)`);
                 }
-            } else {
-                this.timeObservingRecovery = 0; // Reset if conditions not met
             }
+        } else {
+            this.timeObservingRecovery = 0; // Reset if conditions not met
         }
 
-        // FEEDING STATE: Predators are actively feeding
-        if (ecosystemState === 'FEEDING') {
-            // TRICKLE MODE: Stop spawning when bait population starts decreasing
-            if (this.spawnMode === 'TRICKLE') {
-                if (totalBaitfish < this.lastBaitfishCount) {
-                    console.log('💧 TRICKLE ended: Bait population decreasing');
-                    this.spawnMode = null;
-                }
-                this.lastBaitfishCount = totalBaitfish;
+        // TRICKLE MODE: Stop spawning when bait population starts decreasing
+        if (this.spawnMode === 'TRICKLE') {
+            if (totalBaitfish < this.lastBaitfishCount) {
+                console.log(`💧 TRICKLE ended: Bait decreasing (${totalBaitfish} < ${this.lastBaitfishCount})`);
+                this.spawnMode = null;
             }
+            this.lastBaitfishCount = totalBaitfish;
         }
     }
 
