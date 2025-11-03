@@ -403,7 +403,10 @@ export class Fish {
     checkForZooplankton(zooplankton = []) {
         if (!zooplankton || zooplankton.length === 0) return;
 
-        const detectionRange = 25; // Small detection range for individual baitfish
+        // VERY small detection range - baitfish must actually TOUCH zooplankton to eat it
+        // Baitfish body size is ~4-6 pixels, zooplankton is ~2 pixels
+        // Range of 5 pixels means fish must swim right through it
+        const detectionRange = 5;
 
         for (const zp of zooplankton) {
             // Skip already consumed or invisible zooplankton
@@ -414,7 +417,7 @@ export class Fish {
             const dy = this.model.y - zp.y;
             const distance = Math.sqrt(dx * dx + dy * dy);
 
-            // If close enough, consume it
+            // If close enough, consume it (must be nearly touching)
             if (distance < detectionRange) {
                 zp.consume(); // Mark as consumed
                 // Baitfish gets small nutrition boost (not tracked currently)
