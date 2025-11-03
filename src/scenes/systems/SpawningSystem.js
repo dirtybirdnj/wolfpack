@@ -30,11 +30,25 @@ export class SpawningSystem {
         this.scene = scene;
         this.emergencyFishSpawned = false;
 
+        // Ecosystem state for ebb and flow dynamics
+        // States: ABUNDANT, HUNTING, DEPLETED, RECOVERING
+        this.ecosystemState = 'ABUNDANT';
+        this.timeSinceBaitDepleted = 0;
+        this.timeSincePredatorsDeparted = 0;
+
         // Spawn initial crayfish population (3 on load)
         this.spawnInitialCrayfish();
 
         // Set up spawn timers
         this.setupSpawnTimers();
+
+        // Monitor ecosystem health
+        this.scene.time.addEvent({
+            delay: 2000, // Check every 2 seconds
+            callback: () => this.updateEcosystemState(),
+            callbackScope: this,
+            loop: true
+        });
     }
 
     setupSpawnTimers() {
@@ -76,6 +90,21 @@ export class SpawningSystem {
      * @returns {Fish|null} The spawned fish or null if spawn failed
      */
     trySpawnFish() {
+        // Ecosystem-aware spawning: Don't spawn predators when bait is depleted or recovering
+        if (this.ecosystemState === 'DEPLETED' || this.ecosystemState === 'RECOVERING') {
+            // During recovery, only allow 1-2 scout predators to spawn slowly
+            if (this.ecosystemState === 'RECOVERING' && this.scene.fishes.length < 2) {
+                // 10% chance to spawn a scout predator during recovery
+                if (Math.random() < 0.10) {
+                    // Continue to normal spawn logic
+                } else {
+                    return null;
+                }
+            } else {
+                return null; // No predator spawning during DEPLETED
+            }
+        }
+
         // Don't spawn too many fish at once
         if (this.scene.fishes.length >= 20) {
             return null;
@@ -201,8 +230,14 @@ export class SpawningSystem {
      * @returns {boolean} True if school was spawned
      */
     trySpawnBaitfishSchool() {
+        // Ecosystem-aware spawning: Faster bait recovery when predators are gone
+        let maxSchools = 5;
+        if (this.ecosystemState === 'RECOVERING') {
+            maxSchools = 8; // Allow more bait clouds during recovery
+        }
+
         // Don't spawn too many schools at once
-        if (this.scene.schools.length >= 5) {
+        if (this.scene.schools.length >= maxSchools) {
             return false;
         }
 
@@ -651,10 +686,102 @@ export class SpawningSystem {
     }
 
     /**
+     * Update ecosystem state based on predator and prey populations
+     * Creates ebb and flow dynamics - bait depletes, predators leave, bait returns, predators return
+     */
+    updateEcosystemState() {
+        const baitCloudCount = this.scene.baitfishClouds.length;
+        const predatorCount = this.scene.fishes.length;
+
+        // Count total baitfish across all clouds
+        let totalBaitfish = 0;
+        this.scene.baitfishClouds.forEach(cloud => {
+            totalBaitfish += cloud.members.length;
+        });
+
+        const previousState = this.ecosystemState;
+
+        // State machine for ecosystem dynamics
+        switch (this.ecosystemState) {
+            case 'ABUNDANT':
+                // Bait is plentiful, predators are spawning normally
+                if (baitCloudCount === 0 || totalBaitfish < 10) {
+                    // Bait has been decimated!
+                    this.ecosystemState = 'DEPLETED';
+                    this.timeSinceBaitDepleted = 0;
+                    console.log('🌊 Ecosystem: ABUNDANT → DEPLETED (bait wiped out!)');
+                }
+                break;
+
+            case 'DEPLETED':
+                // No bait left, predators should leave
+                this.timeSinceBaitDepleted += 2; // 2 seconds per check
+
+                // After 10 seconds with no bait, start despawning predators
+                if (this.timeSinceBaitDepleted > 10000) {
+                    this.despawnPredators();
+                }
+
+                // Once most predators are gone, transition to RECOVERING
+                if (predatorCount <= 2) {
+                    this.ecosystemState = 'RECOVERING';
+                    this.timeSincePredatorsDeparted = 0;
+                    console.log('🌊 Ecosystem: DEPLETED → RECOVERING (predators departed, area is safe)');
+                }
+                break;
+
+            case 'RECOVERING':
+                // Predators gone, bait can return safely
+                this.timeSincePredatorsDeparted += 2; // 2 seconds per check
+
+                // Bait starts returning after area is safe
+                // When enough bait has returned, transition back to ABUNDANT
+                if (baitCloudCount >= 3 && totalBaitfish >= 50) {
+                    this.ecosystemState = 'ABUNDANT';
+                    console.log('🌊 Ecosystem: RECOVERING → ABUNDANT (bait has returned, predators will follow)');
+                }
+                break;
+        }
+
+        // Log state changes
+        if (previousState !== this.ecosystemState) {
+            console.log(`🐟 Ecosystem state: ${this.ecosystemState} | Bait clouds: ${baitCloudCount} | Baitfish: ${totalBaitfish} | Predators: ${predatorCount}`);
+        }
+    }
+
+    /**
+     * Despawn predators when ecosystem is depleted
+     * Makes fish "swim away" instead of just popping out
+     */
+    despawnPredators() {
+        // Despawn 1-2 predators per check (gradual exodus)
+        const predatorsToRemove = Math.min(2, this.scene.fishes.length);
+
+        for (let i = 0; i < predatorsToRemove; i++) {
+            if (this.scene.fishes.length > 0) {
+                // Pick a random fish to leave
+                const fishToRemove = Utils.randomFromArray(this.scene.fishes);
+
+                console.log(`🏊 ${fishToRemove.name} the ${fishToRemove.speciesData.name} swims away (no bait left)`);
+
+                // Remove from array and destroy entity
+                const index = this.scene.fishes.indexOf(fishToRemove);
+                if (index > -1) {
+                    this.scene.fishes.splice(index, 1);
+                }
+                fishToRemove.destroy();
+            }
+        }
+    }
+
+    /**
      * Reset the spawning system (for new game)
      */
     reset() {
         this.emergencyFishSpawned = false;
+        this.ecosystemState = 'ABUNDANT';
+        this.timeSinceBaitDepleted = 0;
+        this.timeSincePredatorsDeparted = 0;
     }
 
     /**

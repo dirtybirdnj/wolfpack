@@ -133,16 +133,20 @@ export class FishAI {
                 this.maxStrikeAttempts = Math.floor(Math.random() * 2) + 2; // 2 or 3 attempts
                 this.strikeAttempts = 0;
 
-                // Immediately become interested in the lure
-                this.state = Constants.FISH_STATE.INTERESTED;
-                this.decisionCooldown = 100; // Quick response during frenzy
+                // If there's a target cloud, rush to hunt it! Otherwise, become interested in lure
+                if (targetCloud) {
+                    this.state = Constants.FISH_STATE.HUNTING_BAITFISH;
+                    this.targetBaitfishCloud = targetCloud; // Set as active target
+                    this.decisionCooldown = 100; // Quick response during frenzy
+                    console.log(`🔥 Fish entered FRENZY, rushing to ${targetCloud.speciesType} cloud!`);
+                } else {
+                    // No cloud to hunt, become interested in the lure instead
+                    this.state = Constants.FISH_STATE.INTERESTED;
+                    this.decisionCooldown = 100; // Quick response during frenzy
+                }
 
                 // Trigger visual feedback - fish entered frenzy!
                 this.fish.triggerInterestFlash(0.8); // High intensity for frenzy
-
-                if (targetCloud) {
-                    console.log(`🔥 Fish entered FRENZY targeting ${targetCloud.speciesType} cloud!`);
-                }
             }
         }
 

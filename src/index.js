@@ -296,6 +296,27 @@ function setupDevTools(game) {
                 });
             }
 
+            // Listen for line strain updates from FishFight
+            if (gameScene && !gameScene._lineStrainListenerAdded) {
+                gameScene._lineStrainListenerAdded = true;
+                gameScene.events.on('updateLineStrain', (data) => {
+                    const lineTestDisplay = document.getElementById('ui-line-test');
+                    const lineStrainFill = document.getElementById('line-strain-fill');
+                    const lineStrainPercent = document.getElementById('line-strain-percent');
+
+                    if (lineTestDisplay && lineStrainFill && lineStrainPercent) {
+                        // Update line test strength display
+                        lineTestDisplay.textContent = `${data.testStrength}lb`;
+
+                        // Update strain bar width
+                        lineStrainFill.style.width = `${data.strainPercent}%`;
+
+                        // Update percentage text
+                        lineStrainPercent.textContent = data.strainPercent;
+                    }
+                });
+            }
+
             // Time - show countdown for arcade, count up for unlimited
             let timeStr;
             if (gameScene.gameMode === GameConfig.GAME_MODE_ARCADE) {

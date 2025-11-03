@@ -220,6 +220,20 @@ export class FishFight {
 
         // Emit tension update to scene for header display
         this.scene.events.emit('updateLineTension', this.lineTension);
+
+        // Emit line strain data for line capacity meter
+        if (this.reelModel && this.fishingLine) {
+            const testStrength = this.reelModel.lineTestStrength;
+            const shockAbsorptionMult = this.fishingLine.getShockAbsorptionMultiplier();
+            const approximateForce = (this.lineTension / 100) * 20;
+            const effectiveBreakStrength = testStrength * shockAbsorptionMult * 3.0;
+            const lineStrainPercent = Math.min(100, (approximateForce / effectiveBreakStrength) * 100);
+
+            this.scene.events.emit('updateLineStrain', {
+                testStrength: testStrength,
+                strainPercent: Math.round(lineStrainPercent)
+            });
+        }
     }
 
     updateFightState() {
@@ -1338,6 +1352,14 @@ export class FishFight {
 
         // Clear tension display in header
         this.scene.events.emit('updateLineTension', 0);
+
+        // Clear line strain meter
+        if (this.reelModel) {
+            this.scene.events.emit('updateLineStrain', {
+                testStrength: this.reelModel.lineTestStrength,
+                strainPercent: 0
+            });
+        }
 
         // Remove from scene
         if (this.scene.currentFight === this) {
