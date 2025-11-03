@@ -112,9 +112,8 @@ export class Zooplankton extends AquaticOrganism {
      * Check if within range of a position
      */
     isWithinRange(x, y, range) {
-        const dx = this.x - x;
-        const dy = this.y - y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
+        // Use Phaser's optimized distance calculation
+        const distance = Phaser.Math.Distance.Between(this.x, this.y, x, y);
         return distance < range;
     }
 

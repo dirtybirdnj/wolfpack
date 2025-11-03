@@ -572,6 +572,13 @@ export class SonarDisplay {
         this.noiseParticles = [];
         this.initNoiseParticles();
 
+        // Recreate depth markers with new dimensions/scale
+        // First destroy old markers
+        this.depthTexts.forEach(text => text.destroy());
+        this.depthTexts = [];
+        // Then create new ones at correct positions
+        this.createDepthMarkers();
+
         console.log(`📐 SonarDisplay resized to: ${gameSize.width}x${gameSize.height}`);
     }
 

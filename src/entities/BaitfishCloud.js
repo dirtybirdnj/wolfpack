@@ -109,7 +109,8 @@ export class BaitfishCloud {
                 const nearestLaker = this.lakersChasing[0];
                 const dx = this.worldX - nearestLaker.worldX;
                 const dy = this.centerY - nearestLaker.y;
-                const dist = Math.sqrt(dx * dx + dy * dy);
+                // Use Phaser's optimized distance calculation
+                const dist = Phaser.Math.Distance.Between(this.worldX, this.centerY, nearestLaker.worldX, nearestLaker.y);
 
                 if (dist > 0) {
                     const fleeSpeed = 1.2;
@@ -229,9 +230,8 @@ export class BaitfishCloud {
                 // Check if baitfish has strayed too far from cloud center
                 // Allow 2x the normal cloud radius for stragglers
                 const maxStrayDistance = GameConfig.BAITFISH_CLOUD_RADIUS * 2;
-                const dx = baitfish.x - this.centerX;
-                const dy = baitfish.y - this.centerY;
-                const distance = Math.sqrt(dx * dx + dy * dy);
+                // Use Phaser's optimized distance calculation
+                const distance = Phaser.Math.Distance.Between(baitfish.x, baitfish.y, this.centerX, this.centerY);
 
                 if (distance > maxStrayDistance) {
                     // Baitfish strayed too far - remove from THIS cloud (but don't destroy)

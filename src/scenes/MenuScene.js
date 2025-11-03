@@ -77,21 +77,21 @@ export class MenuScene extends Phaser.Scene {
         this.scale.on('resize', this.handleResize, this);
 
         // Title - Wolfpack Logo (moved down 1 inch = 96 pixels)
-        const wolfpackLogo = this.add.image(width / 2, 196, 'wolfpack-logo');
-        wolfpackLogo.setOrigin(0.5);
-        wolfpackLogo.setScale(0.5); // Adjust scale as needed
+        this.wolfpackLogo = this.add.image(width / 2, 196, 'wolfpack-logo');
+        this.wolfpackLogo.setOrigin(0.5);
+        this.wolfpackLogo.setScale(0.5); // Adjust scale as needed
 
         // VTJ Logo (bottom right, moved down 1/4 inch, half size, clickable)
-        const vtjLogo = this.add.image(width - 80, height - 56, 'vtj-logo');
-        vtjLogo.setOrigin(0.5);
-        vtjLogo.setScale(0.075); // Half the original size
-        vtjLogo.setInteractive({ useHandCursor: true });
-        vtjLogo.on('pointerdown', () => {
+        this.vtjLogo = this.add.image(width - 80, height - 56, 'vtj-logo');
+        this.vtjLogo.setOrigin(0.5);
+        this.vtjLogo.setScale(0.075); // Half the original size
+        this.vtjLogo.setInteractive({ useHandCursor: true });
+        this.vtjLogo.on('pointerdown', () => {
             window.open('https://www.verticaltubejig.com', '_blank');
         });
 
         // Game mode selection (moved up 1/4 inch = 24 pixels from 352)
-        const gameModeText = this.add.text(width / 2, 328, 'SELECT DIFFICULTY', {
+        this.gameModeText = this.add.text(width / 2, 328, 'SELECT DIFFICULTY', {
             fontSize: '18px',
             fontFamily: 'Courier New',
             color: '#00ffff',
@@ -100,7 +100,7 @@ export class MenuScene extends Phaser.Scene {
 
         // Add fade in/out animation to indicate readiness
         this.tweens.add({
-            targets: gameModeText,
+            targets: this.gameModeText,
             alpha: 0.3,
             duration: 1500,
             yoyo: true,
@@ -120,11 +120,16 @@ export class MenuScene extends Phaser.Scene {
         const startX = centerX - (totalWidth / 2) + (buttonWidth / 2);
 
         // Create Perch (Easy), Bass (Medium), and Lake Trout (Expert) difficulty buttons
+        // Each mode scales the game window to show a different water column depth:
+        // - Perch mode: 20ft water column (easy - large fish, easy to see)
+        // - Bass mode: 40ft water column (medium difficulty)
+        // - Lake Trout mode: 80ft water column (expert - small fish, hard to target)
+        // Species spawn based on their natural depth preferences
         const perch = this.createModeButton(
             startX, buttonY,
             'PERCH',
             'Easy Mode',
-            { fishingType: GameConfig.FISHING_TYPE_ICE, gameMode: GameConfig.GAME_MODE_UNLIMITED, difficulty: 'easy', maxDepth: 20 },
+            { fishingType: GameConfig.FISHING_TYPE_ICE, difficulty: 'easy', targetSpecies: 'perch', maxDepth: 20 },
             0
         );
 
@@ -132,7 +137,7 @@ export class MenuScene extends Phaser.Scene {
             startX + (buttonWidth + buttonSpacing), buttonY,
             'BASS',
             'More Difficult',
-            { fishingType: GameConfig.FISHING_TYPE_ICE, gameMode: GameConfig.GAME_MODE_UNLIMITED, difficulty: 'medium', maxDepth: 35 },
+            { fishingType: GameConfig.FISHING_TYPE_ICE, difficulty: 'medium', targetSpecies: 'bass', maxDepth: 40 },
             1
         );
 
@@ -140,7 +145,7 @@ export class MenuScene extends Phaser.Scene {
             startX + (buttonWidth + buttonSpacing) * 2, buttonY,
             'LAKE TROUT',
             'Expert Mode',
-            { fishingType: GameConfig.FISHING_TYPE_ICE, gameMode: GameConfig.GAME_MODE_UNLIMITED, difficulty: 'expert', maxDepth: 85 },
+            { fishingType: GameConfig.FISHING_TYPE_ICE, difficulty: 'expert', targetSpecies: 'laketrout', maxDepth: 80 },
             2
         );
 
@@ -240,7 +245,7 @@ export class MenuScene extends Phaser.Scene {
         container.btnBg = btnBg;
         container.titleText = titleText;
         container.descText = descText;
-        container.modeConfig = modeConfig; // Store both fishingType and gameMode
+        container.modeConfig = modeConfig; // Store fishing configuration
         container.index = index;
         container.btnWidth = btnWidth;
         container.btnHeight = btnHeight;
@@ -434,24 +439,62 @@ export class MenuScene extends Phaser.Scene {
     }
 
     handleResize(gameSize) {
+        const width = gameSize.width;
+        const height = gameSize.height;
+
         // Redraw background when window resizes
         this.drawBackground();
 
         // Update background image if it exists
         if (this.bgImage) {
-            this.bgImage.setPosition(gameSize.width / 2, gameSize.height / 2);
-            this.bgImage.setDisplaySize(gameSize.width, gameSize.height);
+            this.bgImage.setPosition(width / 2, height / 2);
+            this.bgImage.setDisplaySize(width, height);
         }
 
-        console.log(`📐 MenuScene resized to: ${gameSize.width}x${gameSize.height}`);
+        // Reposition logos
+        if (this.wolfpackLogo) {
+            this.wolfpackLogo.setPosition(width / 2, 196);
+        }
+        if (this.vtjLogo) {
+            this.vtjLogo.setPosition(width - 80, height - 56);
+        }
+
+        // Reposition game mode text
+        if (this.gameModeText) {
+            this.gameModeText.setPosition(width / 2, 328);
+        }
+
+        // Reposition buttons (re-center them)
+        if (this.buttons && this.buttons.length > 0) {
+            const buttonWidth = 150;
+            const buttonSpacing = 40;
+            const centerX = width / 2;
+            const buttonY = 496;
+            const totalWidth = (buttonWidth * 3) + (buttonSpacing * 2);
+            const startX = centerX - (totalWidth / 2) + (buttonWidth / 2);
+
+            this.buttons.forEach((button, index) => {
+                // button is already a container, not an object with a container property
+                button.setPosition(
+                    startX + (index * (buttonWidth + buttonSpacing)),
+                    buttonY
+                );
+            });
+        }
+
+        // Reposition controls text
+        if (this.controlsText) {
+            this.controlsText.setPosition(width / 2, 570);
+        }
+
+        console.log(`📐 MenuScene resized to: ${width}x${height}`);
     }
 
     startGame(modeConfig) {
-        // Store fishing type, game mode, and difficulty settings in registry
+        // Store fishing type and difficulty settings in registry
         this.registry.set('fishingType', modeConfig.fishingType);
-        this.registry.set('gameMode', modeConfig.gameMode);
         this.registry.set('difficulty', modeConfig.difficulty || 'expert');
-        this.registry.set('maxDepth', modeConfig.maxDepth || 85);
+        this.registry.set('targetSpecies', modeConfig.targetSpecies || 'laketrout');
 
         // Determine which scene to start
         let startingScene;
@@ -463,12 +506,13 @@ export class MenuScene extends Phaser.Scene {
             // Clear previous navigation position data to use default location
             this.registry.set('fishingWorldX', null);
             this.registry.set('fishingWorldY', 5000);
-            // Start at depth based on difficulty (Perch=20ft, Bass=35ft, Trout=85ft)
-            this.registry.set('currentDepth', modeConfig.maxDepth || 85);
+            // Set the lake depth based on difficulty mode
+            // Perch = 20ft, Bass = 40ft, Lake Trout = 80ft
+            this.registry.set('currentDepth', modeConfig.maxDepth || 80);
             startingScene = 'GameScene';
         }
 
-        console.log(`Starting ${modeConfig.fishingType} fishing in ${modeConfig.gameMode} mode`);
+        console.log(`Starting ${modeConfig.fishingType} fishing (${modeConfig.difficulty} difficulty)`);
         console.log(`-> Going to ${startingScene}`);
 
         // Fade out and start game

@@ -29,6 +29,11 @@ export class FishAI {
         this.targetBaitfish = null;
         this.isFrenzying = false;
 
+        // Baitfish detection timer - if no baitfish seen for 10 seconds, leave area
+        this.lastBaitfishSightingTime = null; // Will be set when fish spawns
+        this.baitfishTimeout = 10000; // 10 seconds in milliseconds
+        this.leavingArea = false; // Flag to indicate fish is swimming off-screen
+
         // Thermocline behavior (summer modes only)
         this.returningToThermocline = false;
 
@@ -186,6 +191,17 @@ export class FishAI {
     }
 
     update(lure, currentTime, allFish = [], baitfishClouds = [], crayfish = []) {
+        // Initialize baitfish sighting timer on first update
+        if (this.lastBaitfishSightingTime === null) {
+            this.lastBaitfishSightingTime = currentTime;
+        }
+
+        // Check if fish is already leaving - if so, just swim off-screen
+        if (this.leavingArea) {
+            this.swimOffScreen();
+            return;
+        }
+
         // Make decisions at intervals, not every frame
         if (currentTime - this.lastDecisionTime < this.decisionCooldown) {
             return;
@@ -196,6 +212,22 @@ export class FishAI {
         // PRIORITY: Check for baitfish clouds (natural food source)
         // Fish prioritize real food over lures, especially when hungry
         const nearbyBaitfishCloud = this.findNearestBaitfishCloud(baitfishClouds);
+
+        // Update baitfish sighting timer
+        if (nearbyBaitfishCloud) {
+            // Found baitfish - reset timer
+            this.lastBaitfishSightingTime = currentTime;
+        } else {
+            // No baitfish nearby - check if timeout exceeded
+            const timeSinceLastSighting = currentTime - this.lastBaitfishSightingTime;
+            if (timeSinceLastSighting > this.baitfishTimeout) {
+                // No baitfish for 10 seconds - leave area
+                console.log(`🐟 ${this.fish.species} leaving area - no baitfish for ${timeSinceLastSighting/1000}s`);
+                this.leavingArea = true;
+                this.state = Constants.FISH_STATE.IDLE;
+                return;
+            }
+        }
 
         // Check for crayfish (opportunistic bottom feeding for lake trout)
         const nearbyCrayfish = this.findNearestCrayfish(crayfish);
@@ -659,9 +691,11 @@ export class FishAI {
         if (this.state === Constants.FISH_STATE.IDLE || !this.targetX || !this.targetY) {
             // Northern Pike: ambush behavior - stay near ambush position
             if (this.isAmbushPredator) {
-                const dx = this.ambushPosition.x - this.fish.worldX;
-                const dy = this.ambushPosition.y - this.fish.y;
-                const distanceFromAmbush = Math.sqrt(dx * dx + dy * dy);
+                // Use Phaser's optimized distance calculation
+                const distanceFromAmbush = Phaser.Math.Distance.Between(
+                    this.fish.worldX, this.fish.y,
+                    this.ambushPosition.x, this.ambushPosition.y
+                );
 
                 // Dead zone: if very close to ambush position, stop completely
                 if (distanceFromAmbush < 10) {
@@ -698,7 +732,8 @@ export class FishAI {
         // Use worldX for horizontal movement calculations (not screen x)
         const dx = this.targetX - this.fish.worldX;
         const dy = this.targetY - this.fish.y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
+        // Use Phaser's optimized distance calculation
+        const distance = Phaser.Math.Distance.Between(this.fish.worldX, this.fish.y, this.targetX, this.targetY);
 
         // Don't force fish to stop - let momentum carry them
         // Just slow down near target instead of stopping
@@ -895,16 +930,35 @@ export class FishAI {
             return;
         }
 
-        // Find closest baitfish in the cloud
-        const result = this.targetBaitfishCloud.getClosestBaitfish(this.fish.x, this.fish.y);
+        // Calculate mouth position (front of fish body)
+        // Account for fish angle when calculating mouth position
+        const bodySize = Math.max(8, this.fish.weight / 2);
+        const mouthOffset = bodySize * 1.25; // Front of fish
+
+        // Get movement direction to know which way fish is facing
+        const movement = this.getMovementVector();
+        const isMovingRight = movement.x >= 0;
+
+        // Calculate mouth position accounting for fish angle
+        // IMPORTANT: The fish sprite has mouth on the LEFT (negative X) when not flipped
+        // When facing right (not flipped), mouth is at NEGATIVE X offset
+        // When facing left (flipped), mouth is at POSITIVE X offset
+        const angleOffset = this.fish.angle || 0;
+        const mouthX = isMovingRight ?
+            this.fish.x - Math.cos(angleOffset) * mouthOffset :  // Mouth on left side when facing right
+            this.fish.x + Math.cos(angleOffset) * mouthOffset;   // Mouth on right side when facing left
+        const mouthY = this.fish.y + Math.sin(angleOffset) * mouthOffset;
+
+        // Find closest baitfish to the MOUTH position (not fish center)
+        const result = this.targetBaitfishCloud.getClosestBaitfish(mouthX, mouthY);
 
         if (result.baitfish) {
             this.targetBaitfish = result.baitfish;
             this.targetX = result.baitfish.x;
             this.targetY = result.baitfish.y;
 
-            // Check if we're close enough to eat the baitfish
-            if (result.distance < 10) { // Increased from 8 for easier catches
+            // Check if mouth is touching the baitfish
+            if (result.distance < 8) { // Mouth must touch baitfish
                 // Consume the baitfish!
                 const preySpecies = this.targetBaitfishCloud.speciesType;
                 this.targetBaitfishCloud.consumeBaitfish();
@@ -1024,11 +1078,11 @@ export class FishAI {
     }
 
     /**
-     * Should this fish hunt crayfish? (Only lake trout when hungry and near bottom)
+     * Should this fish hunt crayfish? (Lake trout and smallmouth bass love crayfish!)
      */
     shouldHuntCrayfish(crayfish) {
-        // Only lake trout hunt crayfish (opportunistic bottom feeders)
-        if (this.fish.species !== 'lake_trout') {
+        // Lake trout and smallmouth bass hunt crayfish (bass LOVE crayfish!)
+        if (this.fish.species !== 'lake_trout' && this.fish.species !== 'smallmouth_bass') {
             return false;
         }
 
@@ -1053,7 +1107,7 @@ export class FishAI {
     }
 
     /**
-     * Hunt crayfish (lake trout bottom feeding)
+     * Hunt crayfish (lake trout and smallmouth bass bottom feeding)
      */
     huntCrayfish(crayfish) {
         // Move toward crayfish
@@ -1061,19 +1115,64 @@ export class FishAI {
         this.targetY = crayfish.y;
         this.state = Constants.FISH_STATE.HUNTING_BAITFISH; // Reuse hunting state
 
-        // Check if close enough to eat
+        // Calculate mouth position (front of fish body)
+        // Account for fish angle when calculating mouth position
+        const bodySize = Math.max(8, this.fish.weight / 2);
+        const mouthOffset = bodySize * 1.25; // Front of fish
+
+        // Get movement direction to know which way fish is facing
+        const movement = this.getMovementVector();
+        const isMovingRight = movement.x >= 0;
+
+        // Calculate mouth position accounting for fish angle
+        // IMPORTANT: The fish sprite has mouth on the LEFT (negative X) when not flipped
+        // When facing right (not flipped), mouth is at NEGATIVE X offset
+        // When facing left (flipped), mouth is at POSITIVE X offset
+        const angleOffset = this.fish.angle || 0;
+        const mouthX = isMovingRight ?
+            this.fish.x - Math.cos(angleOffset) * mouthOffset :  // Mouth on left side when facing right
+            this.fish.x + Math.cos(angleOffset) * mouthOffset;   // Mouth on right side when facing left
+        const mouthY = this.fish.y + Math.sin(angleOffset) * mouthOffset;
+
+        // Check if mouth is touching crayfish
         const distance = Utils.calculateDistance(
-            this.fish.x, this.fish.y,
+            mouthX, mouthY,
             crayfish.x, crayfish.y
         );
 
-        if (distance < 15) {
+        if (distance < 8) { // Mouth must touch crayfish
             // Consume the crayfish!
             crayfish.consume();
             this.fish.feedOnCrayfish();
             this.state = Constants.FISH_STATE.FEEDING;
             this.decisionCooldown = 100; // Brief pause after eating
         }
+    }
+
+    /**
+     * Make fish swim toward nearest screen edge to despawn
+     * Fish swims at normal speed toward the closest edge
+     */
+    swimOffScreen() {
+        // Determine which edge is closer (left or right)
+        const screenCenter = GameConfig.CANVAS_WIDTH / 2;
+        const distToLeft = this.fish.worldX;
+        const distToRight = GameConfig.CANVAS_WIDTH - this.fish.worldX;
+
+        // Swim toward nearest edge
+        if (distToLeft < distToRight) {
+            // Swim left (off left edge)
+            this.targetX = -400; // Target well off-screen
+        } else {
+            // Swim right (off right edge)
+            this.targetX = GameConfig.CANVAS_WIDTH + 400;
+        }
+
+        // Keep current depth while swimming off
+        this.targetY = this.fish.y;
+
+        // Mark state as leaving
+        this.state = Constants.FISH_STATE.IDLE;
     }
 }
 

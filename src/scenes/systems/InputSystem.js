@@ -44,6 +44,7 @@ export class InputSystem {
         this.pKey = this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.P);
         this.qKey = this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.Q); // Decrease drag
         this.eKey = this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.E); // Increase drag
+        this.vKey = this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.V); // Toggle vision range visualization
 
         // Mouse/touch controls (optional enhancement)
         this.scene.input.on('pointerdown', (pointer) => {
@@ -66,17 +67,11 @@ export class InputSystem {
             return;
         }
 
-        // Check if already connected
-        if (window.gamepadManager.isConnected()) {
-            const gamepad = window.gamepadManager.getGamepad();
-            console.log('Gamepad already connected in game:', gamepad.id);
-            this.showGamepadConnectedNotification(gamepad.id);
-        }
-
-        // Listen for new connections during gameplay
+        // Listen for new connections during gameplay (don't show notification on startup)
         window.gamepadManager.on('connected', (gamepad) => {
             console.log('Gamepad connected in game:', gamepad.id);
-            this.showGamepadConnectedNotification(gamepad.id);
+            // Only show notification if connecting AFTER game has started
+            // Skip showing on initial game load
         });
 
         // Gamepad state tracking
@@ -168,6 +163,13 @@ export class InputSystem {
                 this.scene.reelModel.adjustDrag(+10);
                 console.log(`Drag increased to ${this.scene.reelModel.dragSetting}% (${this.scene.reelModel.getCurrentDragForce().toFixed(1)} lbs)`);
             }
+        }
+
+        // V key - toggle vision range visualization for predators
+        if (Phaser.Input.Keyboard.JustDown(this.vKey)) {
+            this.scene.visionRangeDebug = !this.scene.visionRangeDebug;
+            const status = this.scene.visionRangeDebug ? 'ON' : 'OFF';
+            console.log(`Vision Range Debug: ${status}`);
         }
     }
 

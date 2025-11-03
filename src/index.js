@@ -163,10 +163,11 @@ function setupDevTools(game) {
             const uiTemp = document.getElementById('ui-temp');
             if (uiTemp) uiTemp.textContent = Math.floor(natureScene.waterTemp || 40);
 
-            // Update time
-            const minutes = Math.floor(natureScene.gameTime / 60);
+            // Update time - Format as HH:MM:SS
+            const hours = Math.floor(natureScene.gameTime / 3600);
+            const minutes = Math.floor((natureScene.gameTime % 3600) / 60);
             const secs = natureScene.gameTime % 60;
-            const timeStr = `${minutes}:${secs.toString().padStart(2, '0')}`;
+            const timeStr = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
             const uiTime = document.getElementById('ui-time');
             if (uiTime) uiTime.textContent = timeStr;
 
@@ -325,46 +326,14 @@ function setupDevTools(game) {
                 });
             }
 
-            // Time - show countdown for arcade, count up for unlimited
-            let timeStr;
-            if (gameScene.gameMode === GameConfig.GAME_MODE_ARCADE) {
-                const minutes = Math.floor(gameScene.timeRemaining / 60);
-                const secs = gameScene.timeRemaining % 60;
-                timeStr = `${minutes}:${secs.toString().padStart(2, '0')}`;
-            } else {
-                const minutes = Math.floor(gameScene.gameTime / 60);
-                const secs = gameScene.gameTime % 60;
-                timeStr = `${minutes}:${secs.toString().padStart(2, '0')}`;
-            }
+            // Time - always count up from zero (HH:MM:SS format for diagnostics)
+            const hours = Math.floor(gameScene.gameTime / 3600);
+            const minutes = Math.floor((gameScene.gameTime % 3600) / 60);
+            const secs = gameScene.gameTime % 60;
+            const timeStr = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
             const uiTime = document.getElementById('ui-time');
             if (uiTime) uiTime.textContent = timeStr;
 
-            // Ecosystem state display
-            const uiEcosystemState = document.getElementById('ui-ecosystem-state');
-            const uiSpawnMode = document.getElementById('ui-spawn-mode');
-
-            if (uiEcosystemState && uiSpawnMode && gameScene.spawningSystem) {
-                const state = gameScene.spawningSystem.getEcosystemState();
-                const mode = gameScene.spawningSystem.spawnMode;
-
-                // Color code ecosystem state (green=FEEDING, yellow=RECOVERING, cyan=WAITING)
-                const stateColors = {
-                    'FEEDING': '#00ff00',
-                    'RECOVERING': '#ffff00',
-                    'WAITING': '#00ffff'
-                };
-                uiEcosystemState.style.color = stateColors[state] || '#ffffff';
-                uiEcosystemState.textContent = state;
-
-                // Color code spawn mode (active modes in color, WAITING in grey)
-                const modeColors = {
-                    'TRICKLE': '#00ccff',
-                    'WOLFPACK': '#ff00ff'
-                };
-                const modeDisplay = mode === null ? 'WAITING' : mode;
-                uiSpawnMode.style.color = mode === null ? '#888888' : (modeColors[mode] || '#ffffff');
-                uiSpawnMode.textContent = modeDisplay;
-            }
 
             // Update fish status panel
             updateFishStatus(gameScene);
@@ -441,57 +410,6 @@ function setupDevTools(game) {
         });
     }
 
-    // Ecosystem State Control Buttons
-    const ecosystemStates = ['RECOVERING', 'WAITING', 'FEEDING'];
-    let currentStateIndex = 2; // Start at FEEDING
-
-    const ecosystemUpBtn = document.getElementById('ecosystem-up');
-    const ecosystemDownBtn = document.getElementById('ecosystem-down');
-
-    if (ecosystemUpBtn) {
-        ecosystemUpBtn.addEventListener('click', () => {
-            const gameScene = game.scene.getScene('GameScene');
-            if (gameScene && gameScene.scene.isActive() && gameScene.spawningSystem) {
-                currentStateIndex = (currentStateIndex + 1) % ecosystemStates.length;
-                const newState = ecosystemStates[currentStateIndex];
-
-                // Force the ecosystem state by manipulating spawning system flags
-                if (newState === 'RECOVERING') {
-                    // Low bait, predators present
-                    gameScene.spawningSystem.hasDespawnedPredators = false;
-                } else if (newState === 'WAITING') {
-                    // Predators despawned, waiting for bait buildup
-                    gameScene.spawningSystem.hasDespawnedPredators = true;
-                } else if (newState === 'FEEDING') {
-                    // Plenty of bait, feeding active
-                    gameScene.spawningSystem.hasDespawnedPredators = false;
-                }
-
-                console.log(`🔄 Ecosystem state changed to: ${newState}`);
-            }
-        });
-    }
-
-    if (ecosystemDownBtn) {
-        ecosystemDownBtn.addEventListener('click', () => {
-            const gameScene = game.scene.getScene('GameScene');
-            if (gameScene && gameScene.scene.isActive() && gameScene.spawningSystem) {
-                currentStateIndex = (currentStateIndex - 1 + ecosystemStates.length) % ecosystemStates.length;
-                const newState = ecosystemStates[currentStateIndex];
-
-                // Force the ecosystem state by manipulating spawning system flags
-                if (newState === 'RECOVERING') {
-                    gameScene.spawningSystem.hasDespawnedPredators = false;
-                } else if (newState === 'WAITING') {
-                    gameScene.spawningSystem.hasDespawnedPredators = true;
-                } else if (newState === 'FEEDING') {
-                    gameScene.spawningSystem.hasDespawnedPredators = false;
-                }
-
-                console.log(`🔄 Ecosystem state changed to: ${newState}`);
-            }
-        });
-    }
 
     // Lure Weight Buttons
     const lureWeights = [0.25, 0.5, 1, 2, 3, 4];

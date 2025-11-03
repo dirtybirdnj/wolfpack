@@ -130,7 +130,8 @@ export class Baitfish extends AquaticOrganism {
 
             const dx = this.worldX - other.worldX;
             const dy = this.y - other.y;
-            const distance = Math.sqrt(dx * dx + dy * dy);
+            // Use Phaser's optimized distance calculation
+            const distance = Phaser.Math.Distance.Between(this.worldX, this.y, other.worldX, other.y);
 
             // Rule 1: SEPARATION - If too close, add repulsion force
             if (distance < separationRadius && distance > 0) {
@@ -187,7 +188,8 @@ export class Baitfish extends AquaticOrganism {
         // Move towards target
         const dx = this.targetWorldX - this.worldX;
         const dy = this.targetY - this.y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
+        // Use Phaser's optimized distance calculation
+        const distance = Phaser.Math.Distance.Between(this.worldX, this.y, this.targetWorldX, this.targetY);
 
         if (distance > 1) {
             let speedMultiplier = 1.2; // Base multiplier for normal schooling
@@ -216,7 +218,8 @@ export class Baitfish extends AquaticOrganism {
 
             // Cap max velocity
             const maxVelocity = this.speed * 2.5;
-            const currentSpeed = Math.sqrt(this.velocityX * this.velocityX + this.velocityY * this.velocityY);
+            // Use Phaser's optimized distance calculation for velocity magnitude
+            const currentSpeed = Phaser.Math.Distance.Between(0, 0, this.velocityX, this.velocityY);
             if (currentSpeed > maxVelocity) {
                 this.velocityX = (this.velocityX / currentSpeed) * maxVelocity;
                 this.velocityY = (this.velocityY / currentSpeed) * maxVelocity;
@@ -367,7 +370,8 @@ export class Baitfish extends AquaticOrganism {
 
                 const dx = this.worldX - other.worldX;
                 const dy = this.y - other.y;
-                const dist = Math.sqrt(dx * dx + dy * dy);
+                // Use Phaser's optimized distance calculation
+                const dist = Phaser.Math.Distance.Between(this.worldX, this.y, other.worldX, other.y);
 
                 // Rule 1: SEPARATION
                 if (dist < separationRadius && dist > 0) {
@@ -405,7 +409,8 @@ export class Baitfish extends AquaticOrganism {
             // Move towards target
             const dx = this.targetWorldX - this.worldX;
             const dy = this.targetY - this.y;
-            const distance = Math.sqrt(dx * dx + dy * dy);
+            // Use Phaser's optimized distance calculation
+            const distance = Phaser.Math.Distance.Between(this.worldX, this.y, this.targetWorldX, this.targetY);
 
             if (distance > 1) {
                 const moveSpeed = this.speed * 1.0;
@@ -425,7 +430,8 @@ export class Baitfish extends AquaticOrganism {
 
                 // Cap max velocity
                 const maxVelocity = this.speed * 2.5;
-                const currentSpeed = Math.sqrt(this.velocityX * this.velocityX + this.velocityY * this.velocityY);
+                // Use Phaser's optimized distance calculation for velocity magnitude
+                const currentSpeed = Phaser.Math.Distance.Between(0, 0, this.velocityX, this.velocityY);
                 if (currentSpeed > maxVelocity) {
                     this.velocityX = (this.velocityX / currentSpeed) * maxVelocity;
                     this.velocityY = (this.velocityY / currentSpeed) * maxVelocity;

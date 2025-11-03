@@ -60,6 +60,7 @@ export class GameScene extends Phaser.Scene {
         this.gameTime = 0;
         this.waterTemp = 40;
         this.debugMode = false;
+        this.visionRangeDebug = false; // Toggle with V key to show predator vision cones
         this.currentFight = null;
         this.controllerTestMode = false;
         this.controllerTestUI = null;
@@ -85,8 +86,7 @@ export class GameScene extends Phaser.Scene {
         };
 
         // Game mode specific
-        this.gameMode = null; // 'arcade' or 'unlimited'
-        this.timeRemaining = 0;
+        // gameMode removed - only one mode now
         this.caughtFishData = [];
 
         // Systems (initialized in create())
@@ -149,23 +149,25 @@ export class GameScene extends Phaser.Scene {
      */
     create() {
         try {
-            // Get fishing type and game mode from registry (set by MenuScene)
+            // Get fishing type from registry (set by MenuScene)
             this.fishingType = this.registry.get('fishingType') || GameConfig.FISHING_TYPE_ICE;
-            this.gameMode = this.registry.get('gameMode') || GameConfig.GAME_MODE_UNLIMITED;
 
             // Get actual depth from bathymetric data (set by NavigationScene)
             this.maxDepth = this.registry.get('currentDepth') || GameConfig.MAX_DEPTH;
-            console.log(`Starting game: ${this.fishingType} fishing in ${this.gameMode} mode`);
+            console.log(`Starting game: ${this.fishingType} fishing`);
             console.log(`Water depth at location: ${this.maxDepth.toFixed(1)}ft`);
 
-            // Initialize timer based on game mode
-            if (this.gameMode === GameConfig.GAME_MODE_ARCADE) {
-                this.timeRemaining = GameConfig.ARCADE_TIME_LIMIT;
-                this.gameTime = 0;
-            } else {
-                this.timeRemaining = 0;
-                this.gameTime = 0;
-            }
+            // Initialize game timer (always counts up from zero for diagnostics)
+            this.gameTime = 0;
+
+            // Set up game timer (updates every second)
+            this.time.addEvent({
+                delay: 1000,
+                callback: () => {
+                    this.gameTime++;
+                },
+                loop: true
+            });
 
             // Hide unnecessary UI panels
             this.hideUnusedPanels();
@@ -173,10 +175,10 @@ export class GameScene extends Phaser.Scene {
             // Set up the sonar display
             this.sonarDisplay = new SonarDisplay(this);
 
-            // Create the player's lure - start at surface (0 feet)
+            // Create the player's lure - start ABOVE water in observing mode
             // Use actual game width (not hardcoded CANVAS_WIDTH) to center on any screen size
             const actualGameWidth = this.scale.width || GameConfig.CANVAS_WIDTH;
-            this.lure = new Lure(this, actualGameWidth / 2, 0);
+            this.lure = new Lure(this, actualGameWidth / 2, -20); // Start 20px above surface
 
             // Apply lure weight from tackle box selection
             const lureWeight = this.registry.get('lureWeight');
@@ -256,9 +258,6 @@ export class GameScene extends Phaser.Scene {
 
             // Fade in
             this.cameras.main.fadeIn(500);
-
-            // Show game mode notification
-            this.notificationSystem.showGameModeNotification();
 
             // Check for fish whistle activation from NavigationScene
             if (this.registry.get('fishWhistleActive')) {
@@ -539,10 +538,25 @@ export class GameScene extends Phaser.Scene {
             age: 0
         };
 
+        // Pre-calculate all fish positions in a schooling formation to prevent "bloom" effect
+        // Use a more natural circular/elliptical distribution
+        const positions = [];
+        const radius = 50; // School radius
+        const angleStep = (Math.PI * 2) / count;
+
         for (let i = 0; i < count; i++) {
-            // Spread fish in a cluster
-            const offsetX = Phaser.Math.Between(-40, 40);
-            const offsetY = Phaser.Math.Between(-25, 25);
+            // Use golden angle spiral for natural-looking distribution
+            const angle = i * angleStep + Math.random() * 0.5;
+            const distance = Math.sqrt(Math.random()) * radius; // Sqrt gives more uniform density
+            const offsetX = Math.cos(angle) * distance;
+            const offsetY = Math.sin(angle) * distance * 0.6; // Flatten vertically
+
+            positions.push({ offsetX, offsetY });
+        }
+
+        // Now spawn all fish at their pre-calculated positions
+        for (let i = 0; i < count; i++) {
+            const { offsetX, offsetY } = positions[i];
 
             // Create baitfish using unified Fish class (will detect species and enable schooling)
             const fish = new Fish(
@@ -559,6 +573,12 @@ export class GameScene extends Phaser.Scene {
                 x: offsetX,
                 y: offsetY
             };
+
+            // Set initial velocity to match school (prevents immediate scatter)
+            if (fish.schooling) {
+                fish.schooling.velocity.x = school.velocity.x;
+                fish.schooling.velocity.y = school.velocity.y;
+            }
 
             // Add to arrays
             school.members.push(fish);
@@ -808,10 +828,8 @@ export class GameScene extends Phaser.Scene {
 
                 // Method: Check if lure is in cloud
                 isPlayerLureInCloud(lure) {
-                    const distance = Math.sqrt(
-                        Math.pow(lure.x - centerX, 2) +
-                        Math.pow(lure.y - school.centerY, 2)
-                    );
+                    // Use Phaser's optimized distance calculation
+                    const distance = Phaser.Math.Distance.Between(lure.x, lure.y, centerX, school.centerY);
                     return distance < GameConfig.BAITFISH_CLOUD_RADIUS;
                 },
 
@@ -843,7 +861,8 @@ export class GameScene extends Phaser.Scene {
                     // Calculate direction from school center to predator
                     const dirX = x - schoolCenterX;
                     const dirY = y - schoolCenterY;
-                    const dirLength = Math.sqrt(dirX * dirX + dirY * dirY);
+                    // Use Phaser's optimized distance calculation
+                    const dirLength = Phaser.Math.Distance.Between(schoolCenterX, schoolCenterY, x, y);
                     const normalizedDirX = dirLength > 0 ? dirX / dirLength : 0;
                     const normalizedDirY = dirLength > 0 ? dirY / dirLength : 0;
 
@@ -855,21 +874,21 @@ export class GameScene extends Phaser.Scene {
                         if (fish.model.consumed) continue;
 
                         // Distance from predator to this fish
-                        const distToPredator = Math.sqrt(
-                            Math.pow(x - fish.model.x, 2) +
-                            Math.pow(y - fish.model.y, 2)
-                        );
+                        // Use Phaser's optimized distance calculation
+                        const distToPredator = Phaser.Math.Distance.Between(x, y, fish.model.x, fish.model.y);
 
                         // Distance from school center to this fish (edge detection)
-                        const distToCenter = Math.sqrt(
-                            Math.pow(fish.model.x - schoolCenterX, 2) +
-                            Math.pow(fish.model.y - schoolCenterY, 2)
+                        // Use Phaser's optimized distance calculation
+                        const distToCenter = Phaser.Math.Distance.Between(
+                            fish.model.x, fish.model.y,
+                            schoolCenterX, schoolCenterY
                         );
 
                         // Direction from school center to this fish
                         const fishDirX = fish.model.x - schoolCenterX;
                         const fishDirY = fish.model.y - schoolCenterY;
-                        const fishDirLength = Math.sqrt(fishDirX * fishDirX + fishDirY * fishDirY);
+                        // Use Phaser's optimized distance calculation
+                        const fishDirLength = Phaser.Math.Distance.Between(schoolCenterX, schoolCenterY, fish.model.x, fish.model.y);
 
                         // Dot product: is this fish on the same side as predator?
                         const alignment = fishDirLength > 0
@@ -895,10 +914,10 @@ export class GameScene extends Phaser.Scene {
                     // Store the best fish so consumeBaitfish() eats the RIGHT one
                     this._lastClosestBaitfish = bestFish;
 
-                    const finalDistance = bestFish ? Math.sqrt(
-                        Math.pow(x - bestFish.model.x, 2) +
-                        Math.pow(y - bestFish.model.y, 2)
-                    ) : Infinity;
+                    // Use Phaser's optimized distance calculation
+                    const finalDistance = bestFish ?
+                        Phaser.Math.Distance.Between(x, y, bestFish.model.x, bestFish.model.y) :
+                        Infinity;
 
                     return { baitfish: bestFish, distance: finalDistance };
                 },
@@ -946,17 +965,15 @@ export class GameScene extends Phaser.Scene {
             if (cf.visible && !cf.consumed) {
                 // Find nearby zooplankton for hunting
                 const nearbyZooplankton = this.zooplankton.filter(zp => {
-                    const dx = cf.x - zp.x;
-                    const dy = cf.y - zp.y;
-                    return Math.sqrt(dx * dx + dy * dy) < 150;
+                    // Use Phaser's optimized distance calculation
+                    return Phaser.Math.Distance.Between(cf.x, cf.y, zp.x, zp.y) < 150;
                 });
 
                 // Check if smallmouth bass nearby (predators)
                 const predatorsNearby = this.fishes.some(f => {
                     if (f.species !== 'smallmouth_bass') {return false;}
-                    const dx = cf.x - f.x;
-                    const dy = cf.y - f.y;
-                    return Math.sqrt(dx * dx + dy * dy) < 200;
+                    // Use Phaser's optimized distance calculation
+                    return Phaser.Math.Distance.Between(cf.x, cf.y, f.x, f.y) < 200;
                 });
 
                 cf.update(nearbyZooplankton, predatorsNearby);
@@ -1000,9 +1017,10 @@ export class GameScene extends Phaser.Scene {
                 if (!cloud.visible) continue;
 
                 // Check if lure is within the cloud
-                const distance = Math.sqrt(
-                    Math.pow(this.lure.x - cloud.centerX, 2) +
-                    Math.pow(this.lure.y - cloud.centerY, 2)
+                // Use Phaser's optimized distance calculation
+                const distance = Phaser.Math.Distance.Between(
+                    this.lure.x, this.lure.y,
+                    cloud.centerX, cloud.centerY
                 );
 
                 // If lure passes through cloud, 50% chance to split
@@ -1044,9 +1062,8 @@ export class GameScene extends Phaser.Scene {
 
                 // Check if clouds are overlapping (within 1.5x cloud radius)
                 // Use worldX for proper distance calculation across scrolling world
-                const dx = cloudA.worldX - cloudB.worldX;
-                const dy = cloudA.centerY - cloudB.centerY;
-                const distance = Math.sqrt(dx * dx + dy * dy);
+                // Use Phaser's optimized distance calculation
+                const distance = Phaser.Math.Distance.Between(cloudA.worldX, cloudA.centerY, cloudB.worldX, cloudB.centerY);
                 const mergeDistance = GameConfig.BAITFISH_CLOUD_RADIUS * 1.5;
 
                 if (distance < mergeDistance) {
@@ -1061,34 +1078,104 @@ export class GameScene extends Phaser.Scene {
         this.schools.forEach(school => {
             school.age++;
 
-            // More active wandering - increased frequency and magnitude
-            if (Math.random() < 0.08) { // 8% chance per frame (more frequent)
-                school.velocity.x += Utils.randomBetween(-0.6, 0.6); // Larger changes
-                school.velocity.y += Utils.randomBetween(-0.3, 0.3);
+            // Track zooplankton in vicinity of school
+            const zooplanktonSearchRadius = 100; // Pixels
+            const nearbyZooplankton = (this.zooplankton || []).filter(zp => {
+                if (!zp.visible || zp.consumed) return false;
+                // Use Phaser's optimized distance calculation
+                const dist = Phaser.Math.Distance.Between(zp.x, zp.y, school.centerWorldX, school.centerY);
+                return dist < zooplanktonSearchRadius;
+            });
+
+            // Initialize food tracking if not present
+            if (school.nearbyFoodCount === undefined) {
+                school.nearbyFoodCount = nearbyZooplankton.length;
+                school.lowFoodTimer = 0;
             }
 
-            // Add constant gentle drift to prevent stagnation
-            school.velocity.x += Utils.randomBetween(-0.05, 0.05);
-            school.velocity.y += Utils.randomBetween(-0.02, 0.02);
+            // Update food count
+            school.nearbyFoodCount = nearbyZooplankton.length;
+
+            // If food is depleted, start migration behavior
+            const FOOD_DEPLETED_THRESHOLD = 5; // Less than 5 zooplankton = depleted
+            const MIGRATION_TRIGGER_TIME = 180; // 3 seconds of low food triggers migration
+
+            if (school.nearbyFoodCount < FOOD_DEPLETED_THRESHOLD) {
+                school.lowFoodTimer++;
+
+                // After prolonged low food, trigger migration away from screen
+                if (school.lowFoodTimer > MIGRATION_TRIGGER_TIME && !school.migrating) {
+                    school.migrating = true;
+                    // Pick direction to migrate (away from center toward edge)
+                    const screenCenter = GameConfig.CANVAS_WIDTH / 2;
+                    school.migrationDirection = school.centerWorldX > screenCenter ? 1 : -1;
+                    console.log(`🌊 School ${school.id} food depleted - migrating ${school.migrationDirection > 0 ? 'right' : 'left'}`);
+                }
+            } else {
+                // Food available, reset migration
+                school.lowFoodTimer = Math.max(0, school.lowFoodTimer - 1);
+                if (school.migrating && school.nearbyFoodCount > FOOD_DEPLETED_THRESHOLD * 2) {
+                    school.migrating = false;
+                    console.log(`🌊 School ${school.id} found food - stopping migration`);
+                }
+            }
+
+            // Migration behavior - steady movement toward edge
+            if (school.migrating) {
+                school.velocity.x += school.migrationDirection * 0.15; // Steady push toward edge
+            } else {
+                // Normal wandering behavior
+                // More active wandering - increased frequency and magnitude
+                if (Math.random() < 0.08) { // 8% chance per frame (more frequent)
+                    school.velocity.x += Utils.randomBetween(-0.6, 0.6); // Larger changes
+                    school.velocity.y += Utils.randomBetween(-0.3, 0.3);
+                }
+
+                // Add constant gentle drift to prevent stagnation
+                school.velocity.x += Utils.randomBetween(-0.05, 0.05);
+                school.velocity.y += Utils.randomBetween(-0.02, 0.02);
+            }
 
             // Reduced velocity decay (keeps momentum longer)
-            school.velocity.x *= 0.99; // Was 0.98
+            school.velocity.x *= 0.99;
             school.velocity.y *= 0.99;
 
-            // Clamp velocity (allow faster horizontal movement)
-            school.velocity.x = Math.max(-2.0, Math.min(2.0, school.velocity.x)); // Was -1.5 to 1.5
-            school.velocity.y = Math.max(-1.0, Math.min(1.0, school.velocity.y)); // Was -0.8 to 0.8
+            // Clamp velocity (allow faster horizontal movement when migrating)
+            const maxVelX = school.migrating ? 3.0 : 2.0;
+            school.velocity.x = Math.max(-maxVelX, Math.min(maxVelX, school.velocity.x));
+            school.velocity.y = Math.max(-1.0, Math.min(1.0, school.velocity.y));
 
             // Update center position
             school.centerWorldX += school.velocity.x;
             school.centerY += school.velocity.y;
 
-            // Keep school center in bounds
+            // Keep school center in vertical bounds
             const depthScale = this.sonarDisplay ? this.sonarDisplay.getDepthScale() : GameConfig.DEPTH_SCALE;
             const bottomDepth = this.maxDepth || GameConfig.MAX_DEPTH;
             const minY = 20; // Min 20px from surface for school center
             const maxY = (bottomDepth - 5) * depthScale;
             school.centerY = Math.max(minY, Math.min(maxY, school.centerY));
+
+            // Despawn individual fish that wander way off screen
+            // Give them 300px margin beyond visible area before despawning
+            const despawnMargin = 300;
+            const gameAreaLeft = -despawnMargin;
+            const gameAreaRight = GameConfig.CANVAS_WIDTH + despawnMargin;
+
+            // Remove fish that are off-screen from this school
+            const initialCount = school.members.length;
+            school.members = school.members.filter(fish => {
+                if (fish.model.worldX < gameAreaLeft || fish.model.worldX > gameAreaRight) {
+                    fish.destroy();
+                    return false;
+                }
+                return true;
+            });
+
+            const despawnedCount = initialCount - school.members.length;
+            if (despawnedCount > 0) {
+                console.log(`🐟 ${despawnedCount} fish despawned off-screen from school ${school.id}`);
+            }
         });
 
         // Render school fog and count labels BEFORE individual fish
@@ -1097,7 +1184,36 @@ export class GameScene extends Phaser.Scene {
         // Update baitfish schools (new unified Fish with Boids schooling)
         this.baitfishSchools = this.baitfishSchools.filter(fish => {
             if (fish.model.visible && !fish.model.consumed) {
-                // Find this fish's school center
+                // Check if this is a fleeing straggler
+                if (fish.fleeing) {
+                    // Fleeing behavior - swim toward nearest edge at panic speed
+                    if (!fish.fleeDirection) {
+                        // Pick direction to flee (toward nearest edge)
+                        const screenCenter = GameConfig.CANVAS_WIDTH / 2;
+                        fish.fleeDirection = fish.model.worldX > screenCenter ? 1 : -1;
+                    }
+
+                    // Apply strong horizontal velocity toward edge
+                    if (fish.schooling) {
+                        fish.schooling.velocity.x += fish.fleeDirection * 0.5;
+                        fish.schooling.velocity.y *= 0.95; // Reduce vertical movement
+                        fish.schooling.isPanicking = true; // Use panic speed
+                    }
+
+                    // Check if way off screen and despawn
+                    // Give them 300px margin beyond visible area before despawning
+                    const despawnMargin = 300;
+                    const gameAreaLeft = -despawnMargin;
+                    const gameAreaRight = GameConfig.CANVAS_WIDTH + despawnMargin;
+
+                    if (fish.model.worldX < gameAreaLeft || fish.model.worldX > gameAreaRight) {
+                        console.log(`🐟 Fleeing straggler despawned off screen`);
+                        fish.destroy();
+                        return false;
+                    }
+                }
+
+                // Find this fish's school center (null if fleeing or no school)
                 const school = this.schools.find(s => s.id === fish.schoolId);
                 fish.schoolCenter = school ? {
                     worldX: school.centerWorldX,
@@ -1112,6 +1228,15 @@ export class GameScene extends Phaser.Scene {
                 fish.destroy();
                 return false;
             }
+        });
+
+        // Clean up empty schools (all fish have been consumed or despawned)
+        this.schools = this.schools.filter(school => {
+            if (school.members.length === 0) {
+                console.log(`🌊 School ${school.id} disbanded (no fish remaining)`);
+                return false; // Remove empty school
+            }
+            return true; // Keep school
         });
 
         // Clean up consumed fish from school.members arrays
@@ -1131,21 +1256,98 @@ export class GameScene extends Phaser.Scene {
 
                 // Remove stragglers (allow 2x cloud radius for flexibility)
                 const maxStrayDistance = GameConfig.BAITFISH_CLOUD_RADIUS * 2;
+                const stragglers = [];
+
                 school.members = school.members.filter(fish => {
-                    const dx = fish.model.x - centerX;
-                    const dy = fish.model.y - centerY;
-                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    // Use Phaser's optimized distance calculation
+                    const distance = Phaser.Math.Distance.Between(fish.model.x, fish.model.y, centerX, centerY);
 
                     if (distance > maxStrayDistance) {
-                        // Fish strayed too far - remove from school
-                        fish.schoolId = null;
-                        console.log(`🐟 Straggler removed from school (${distance.toFixed(0)}px from center)`);
+                        // Fish strayed too far - mark as straggler
+                        stragglers.push(fish);
                         return false;
                     }
                     return true;
                 });
+
+                // Handle stragglers - make them seek nearest school or flee off-screen
+                stragglers.forEach(straggler => {
+                    // Find nearest school within reasonable distance
+                    let nearestSchool = null;
+                    let nearestDist = Infinity;
+                    const SEEK_RANGE = 200; // Only seek schools within 200px
+
+                    this.schools.forEach(otherSchool => {
+                        if (otherSchool.members.length === 0) return;
+                        // Use Phaser's optimized distance calculation
+                        const dist = Phaser.Math.Distance.Between(
+                            straggler.model.worldX, straggler.model.y,
+                            otherSchool.centerWorldX, otherSchool.centerY
+                        );
+                        if (dist < nearestDist && dist < SEEK_RANGE) {
+                            nearestDist = dist;
+                            nearestSchool = otherSchool;
+                        }
+                    });
+
+                    if (nearestSchool) {
+                        // Join nearest school
+                        straggler.schoolId = nearestSchool.id;
+                        nearestSchool.members.push(straggler);
+                        console.log(`🐟 Straggler joined nearby school (${nearestDist.toFixed(0)}px away)`);
+                    } else {
+                        // No school nearby - flee off-screen
+                        straggler.schoolId = null;
+                        straggler.fleeing = true; // Mark for special behavior
+                        console.log(`🐟 Straggler fleeing off-screen (no schools within ${SEEK_RANGE}px)`);
+                    }
+                });
             }
         });
+
+        // Merge overlapping schools
+        // Check each pair of schools to see if they overlap
+        const mergeRadius = GameConfig.BAITFISH_CLOUD_RADIUS * 1.5; // Merge if centers within 1.5x cloud radius
+        const schoolsToRemove = new Set();
+
+        for (let i = 0; i < this.schools.length; i++) {
+            if (schoolsToRemove.has(i)) continue;
+
+            const schoolA = this.schools[i];
+            if (schoolA.members.length === 0) continue;
+
+            for (let j = i + 1; j < this.schools.length; j++) {
+                if (schoolsToRemove.has(j)) continue;
+
+                const schoolB = this.schools[j];
+                if (schoolB.members.length === 0) continue;
+
+                // Calculate distance between school centers
+                // Use Phaser's optimized distance calculation
+                const distance = Phaser.Math.Distance.Between(
+                    schoolA.centerWorldX, schoolA.centerY,
+                    schoolB.centerWorldX, schoolB.centerY
+                );
+
+                if (distance < mergeRadius) {
+                    // Merge schoolB into schoolA
+                    schoolB.members.forEach(fish => {
+                        fish.schoolId = schoolA.id;
+                        schoolA.members.push(fish);
+                    });
+
+                    console.log(`🌊 Schools merged: ${schoolB.members.length} fish from school ${schoolB.id} joined school ${schoolA.id} (distance: ${distance.toFixed(0)}px)`);
+
+                    // Mark schoolB for removal
+                    schoolsToRemove.add(j);
+                }
+            }
+        }
+
+        // Remove merged schools
+        if (schoolsToRemove.size > 0) {
+            this.schools = this.schools.filter((school, index) => !schoolsToRemove.has(index));
+        }
 
         // Update fish (predators)
         // Create adapted schools that look like clouds to FishAI
@@ -1153,14 +1355,30 @@ export class GameScene extends Phaser.Scene {
         // Combine old clouds (if any remain) with new adapted schools
         const allBaitfishTargets = [...this.baitfishClouds, ...adaptedSchools];
 
-        this.fishes.forEach((fish, index) => {
+        // Use filter to safely remove fish during iteration
+        this.fishes = this.fishes.filter(fish => {
             fish.update(this.lure, this.fishes, allBaitfishTargets);
 
             // Remove fish that are no longer visible or caught
             if (!fish.visible) {
                 fish.destroy();
-                this.fishes.splice(index, 1);
+                return false;
             }
+
+            // Check if fish is leaving and has gone off-screen
+            if (fish.ai && fish.ai.leavingArea) {
+                const despawnMargin = 300;
+                const gameAreaLeft = -despawnMargin;
+                const gameAreaRight = GameConfig.CANVAS_WIDTH + despawnMargin;
+
+                if (fish.model.worldX < gameAreaLeft || fish.model.worldX > gameAreaRight) {
+                    console.log(`🐟 ${fish.species} despawned (left area - no baitfish)`);
+                    fish.destroy();
+                    return false; // Remove from array
+                }
+            }
+
+            return true; // Keep fish
         });
     }
 
@@ -1325,9 +1543,8 @@ export class GameScene extends Phaser.Scene {
             let minDistance = Infinity;
 
             pike.forEach(rushingPike => {
-                const dx = cloud.centerX - rushingPike.x;
-                const dy = cloud.centerY - rushingPike.y;
-                const dist = Math.sqrt(dx * dx + dy * dy);
+                // Use Phaser's optimized distance calculation
+                const dist = Phaser.Math.Distance.Between(cloud.centerX, cloud.centerY, rushingPike.x, rushingPike.y);
 
                 if (dist < minDistance) {
                     minDistance = dist;
@@ -1339,7 +1556,8 @@ export class GameScene extends Phaser.Scene {
             if (closestPike && minDistance < 200) {
                 const dx = cloud.centerX - closestPike.x;
                 const dy = cloud.centerY - closestPike.y;
-                const dist = Math.sqrt(dx * dx + dy * dy);
+                // Use Phaser's optimized distance calculation
+                const dist = Phaser.Math.Distance.Between(cloud.centerX, cloud.centerY, closestPike.x, closestPike.y);
 
                 if (dist > 0) {
                     // Push away from pike - stronger when closer
@@ -1349,7 +1567,8 @@ export class GameScene extends Phaser.Scene {
 
                     // Cap velocity to prevent fleeing off screen
                     const maxVelocity = 2.0;
-                    const currentSpeed = Math.sqrt(cloud.velocity.x ** 2 + cloud.velocity.y ** 2);
+                    // Use Phaser's optimized distance calculation for velocity magnitude
+                    const currentSpeed = Phaser.Math.Distance.Between(0, 0, cloud.velocity.x, cloud.velocity.y);
                     if (currentSpeed > maxVelocity) {
                         cloud.velocity.x = (cloud.velocity.x / currentSpeed) * maxVelocity;
                         cloud.velocity.y = (cloud.velocity.y / currentSpeed) * maxVelocity;

@@ -30,39 +30,34 @@ export class SpawningSystem {
         this.scene = scene;
         this.emergencyFishSpawned = false;
 
-        // Ecosystem state for ebb and flow dynamics
-        // States: RECOVERING (no bait, predators gone) or FEEDING (bait present, predators feeding)
-        this.spawnMode = null; // TRICKLE or WOLFPACK
-        this.timeSinceBaitGone = 0; // Time since all bait was consumed
-        this.timeObservingRecovery = 0; // Time observing recovery with bait but no predators
-        this.lastBaitfishCount = 0; // Track baitfish population trend
-        this.hasDespawnedPredators = false; // Track if we've cleared predators
+        // Simple population targets
+        this.MAX_BAITFISH = 60;
+        this.MAX_PREDATORS = 8;
+        this.MIN_BAIT_FOR_PREDATORS = 15;
 
         // Spawn initial crayfish population (3 on load)
         this.spawnInitialCrayfish();
 
+        // Spawn initial zooplankton (food for baitfish)
+        this.spawnInitialZooplankton();
+
+        // Spawn initial baitfish schools and predators swimming in from sides
+        this.spawnInitialEcosystem();
+
         // Set up spawn timers
         this.setupSpawnTimers();
-
-        // Monitor ecosystem health
-        this.scene.time.addEvent({
-            delay: 2000, // Check every 2 seconds
-            callback: () => this.updateEcosystemState(),
-            callbackScope: this,
-            loop: true
-        });
     }
 
     setupSpawnTimers() {
-        // Start spawning fish (fast spawn rate to build population quickly)
+        // Spawn predator fish every 2 seconds
         this.scene.time.addEvent({
-            delay: 500, // Reduced from 1000 - spawn every 0.5 seconds
+            delay: 2000,
             callback: () => this.trySpawnFish(),
             callbackScope: this,
             loop: true
         });
 
-        // Start spawning baitfish schools
+        // Spawn baitfish schools every 2 seconds
         this.scene.time.addEvent({
             delay: 2000,
             callback: () => this.trySpawnBaitfishSchool(),
@@ -70,7 +65,7 @@ export class SpawningSystem {
             loop: true
         });
 
-        // Start spawning zooplankton at the bottom
+        // Spawn zooplankton every 1.5 seconds
         this.scene.time.addEvent({
             delay: 1500,
             callback: () => this.trySpawnZooplankton(),
@@ -78,9 +73,9 @@ export class SpawningSystem {
             loop: true
         });
 
-        // Maintain crayfish population (check every 30 seconds)
+        // Maintain crayfish population every 30 seconds
         this.scene.time.addEvent({
-            delay: 30000, // 30 seconds
+            delay: 30000,
             callback: () => this.maintainCrayfishPopulation(),
             callbackScope: this,
             loop: true
@@ -92,40 +87,23 @@ export class SpawningSystem {
      * @returns {Fish|null} The spawned fish or null if spawn failed
      */
     trySpawnFish() {
-        // BYPASS CHECKS during wolfpack burst spawning
-        if (!this.isSpawningWolfpack) {
-            const ecosystemState = this.getEcosystemState();
+        // Count current populations
+        const predatorCount = this.scene.fishes.length;
+        const baitCount = this.countBaitfish();
 
-            // RECOVERING STATE: Only allow 1-2 scout predators
-            if (ecosystemState === 'RECOVERING') {
-                if (this.scene.fishes.length < 2 && Math.random() < 0.10) {
-                    // 10% chance to spawn a scout predator during recovery
-                    // Continue to normal spawn logic
-                } else {
-                    return null; // No spawning during recovery
-                }
-            }
+        // Don't spawn if we're at max predators
+        if (predatorCount >= this.MAX_PREDATORS) {
+            return null;
+        }
 
-            // FEEDING STATE: Spawn based on mode
-            if (ecosystemState === 'FEEDING') {
-                // TRICKLE MODE: Spawn normally until bait starts decreasing
-                if (this.spawnMode === 'TRICKLE') {
-                    // Keep spawning in trickle mode
-                }
-                // WOLFPACK MODE: Don't spawn more (wolfpack already spawned)
-                else if (this.spawnMode === 'WOLFPACK') {
-                    return null; // Wolfpack already spawned, no more spawning
-                }
-                // NO MODE: Don't spawn yet (waiting for spawn mode to be set)
-                else if (this.spawnMode === null) {
-                    return null;
-                }
-            }
+        // Only spawn predators if there's enough bait
+        if (baitCount < this.MIN_BAIT_FOR_PREDATORS) {
+            return null;
+        }
 
-            // Don't spawn too many fish at once
-            if (this.scene.fishes.length >= 20) {
-                return null;
-            }
+        // Random spawn chance (15%)
+        if (Math.random() > 0.15) {
+            return null;
         }
 
         // Get player position in world coordinates (depends on fishing type)
@@ -203,23 +181,12 @@ export class SpawningSystem {
             size = 'TROPHY';
         }
 
-        // Spawn fish in world coordinates relative to player's hole
-        // Fish spawn at random distances around the player (200-400 units away)
-        // In nature simulation mode, spawn across full screen width
-        let worldX, fromLeft;
+        // Spawn randomly within the visible game area
+        // Fish will fade in using Phaser FX
+        const worldX = Utils.randomBetween(100, GameConfig.CANVAS_WIDTH - 100);
 
-        if (isNatureSimulation) {
-            // Nature simulation: spawn randomly across screen
-            const screenLeft = -200;
-            const screenRight = GameConfig.CANVAS_WIDTH + 200;
-            worldX = Utils.randomBetween(screenLeft, screenRight);
-            fromLeft = Math.random() < 0.5;
-        } else {
-            // Normal fishing mode: spawn relative to player
-            const spawnDistance = Utils.randomBetween(200, 400);
-            fromLeft = Math.random() < 0.5;
-            worldX = playerWorldX + (fromLeft ? -spawnDistance : spawnDistance);
-        }
+        // Random initial swim direction
+        const fromLeft = Math.random() < 0.5;
 
         // Use dynamic depth scale from scene
         const depthScale = this.scene.sonarDisplay ?
@@ -230,11 +197,9 @@ export class SpawningSystem {
         // Create the fish with species parameter (worldX will be used internally, x will be calculated for screen)
         const fish = new Fish(this.scene, worldX, y, size, species);
 
-        // Set initial movement direction - fish swim toward and past the player
-        if (fromLeft) {
-            fish.ai.idleDirection = 1; // Swim right (toward and past player)
-        } else {
-            fish.ai.idleDirection = -1; // Swim left (toward and past player)
+        // Set initial movement direction
+        if (fish.ai) {
+            fish.ai.idleDirection = fromLeft ? 1 : -1;
         }
 
         this.scene.fishes.push(fish);
@@ -243,19 +208,19 @@ export class SpawningSystem {
 
     /**
     /**
-     * Try to spawn a baitfish school with species-specific behavior
-     * Uses new unified Fish class with Boids schooling
+     * Try to spawn a baitfish school
      * @returns {boolean} True if school was spawned
      */
     trySpawnBaitfishSchool() {
-        // Ecosystem-aware spawning: Faster bait recovery when predators are gone
-        let maxSchools = 5;
-        if (this.ecosystemState === 'RECOVERING') {
-            maxSchools = 8; // Allow more bait clouds during recovery
+        const baitCount = this.countBaitfish();
+
+        // Don't spawn if we're at max baitfish
+        if (baitCount >= this.MAX_BAITFISH) {
+            return false;
         }
 
-        // Don't spawn too many schools at once
-        if (this.scene.schools.length >= maxSchools) {
+        // Random spawn chance (30%)
+        if (Math.random() > 0.3) {
             return false;
         }
 
@@ -330,11 +295,14 @@ export class SpawningSystem {
         const maxBaitfishDepth = Math.max(10, actualDepth - 5);
         depth = Math.min(depth, maxBaitfishDepth);
 
-        // Get spawn position
+        // Always spawn FAR off-screen so schools swim into view from sides
         const playerWorldX = GameConfig.CANVAS_WIDTH / 2;
         const fromLeft = Math.random() < 0.5;
-        const spawnDistance = Utils.randomBetween(200, 400);
-        const worldX = playerWorldX + (fromLeft ? -spawnDistance : spawnDistance);
+        const spawnDistance = Utils.randomBetween(600, 900); // Far off-screen
+
+        const worldX = fromLeft ?
+            (playerWorldX - GameConfig.CANVAS_WIDTH / 2 - spawnDistance) :
+            (playerWorldX + GameConfig.CANVAS_WIDTH / 2 + spawnDistance);
 
         // Convert depth to screen Y
         const depthScale = this.scene.sonarDisplay ?
@@ -424,6 +392,148 @@ export class SpawningSystem {
         }
 
         console.log(`🦞 Spawned ${initialCount} initial crayfish`);
+    }
+
+    /**
+     * Spawn initial zooplankton population (20-30 on game load)
+     */
+    spawnInitialZooplankton() {
+        const initialCount = Math.floor(Utils.randomBetween(20, 30));
+
+        for (let i = 0; i < initialCount; i++) {
+            this.trySpawnZooplankton();
+        }
+
+        console.log(`🦠 Spawned ${initialCount} initial zooplankton`);
+    }
+
+    /**
+     * Spawn initial ecosystem when game starts
+     * Spawns 4-6 baitfish schools and 2-3 predators IMMEDIATELY
+     */
+    spawnInitialEcosystem() {
+        // Spawn 4-6 baitfish schools from sides - synchronously (no delay!)
+        const schoolCount = Math.floor(Utils.randomBetween(4, 6));
+
+        for (let i = 0; i < schoolCount; i++) {
+            this.spawnSchoolFromSide();
+        }
+
+        // Spawn 2-3 predators from sides - synchronously (no delay!)
+        const predatorCount = Math.floor(Utils.randomBetween(2, 3));
+
+        for (let i = 0; i < predatorCount; i++) {
+            this.spawnPredatorFromSide();
+        }
+
+        console.log(`🌊 Initial ecosystem: ${schoolCount} baitfish schools, ${predatorCount} predators spawned`);
+    }
+
+    /**
+     * Spawn a baitfish school from the left or right edge of screen
+     */
+    spawnSchoolFromSide() {
+        // Select species
+        let speciesType = 'alewife';
+        const speciesRoll = Math.random();
+        if (speciesRoll < 0.40) {
+            speciesType = 'alewife';
+        } else if (speciesRoll < 0.70) {
+            speciesType = 'rainbow_smelt';
+        } else if (speciesRoll < 0.90) {
+            speciesType = 'yellow_perch';
+        } else {
+            speciesType = 'sculpin';
+        }
+
+        const speciesData = getBaitfishSpecies(speciesType);
+
+        // Determine school size
+        const schoolSizeRange = speciesData.schoolSize;
+        const schoolSize = Math.floor(Utils.randomBetween(schoolSizeRange.min, schoolSizeRange.max));
+
+        // Spawn depth
+        const depthRange = speciesData.depthRange;
+        let depth = Utils.randomBetween(depthRange.min, depthRange.max);
+
+        const actualDepth = this.scene.maxDepth || GameConfig.MAX_DEPTH;
+        const maxBaitfishDepth = Math.max(10, actualDepth - 5);
+        depth = Math.min(depth, maxBaitfishDepth);
+
+        // Spawn randomly within the visible game area
+        // Fish will fade in using Phaser FX
+        const worldX = Utils.randomBetween(100, GameConfig.CANVAS_WIDTH - 100);
+
+        // Convert depth to screen Y
+        const depthScale = this.scene.sonarDisplay ?
+            this.scene.sonarDisplay.getDepthScale() :
+            GameConfig.DEPTH_SCALE;
+        const y = depth * depthScale;
+
+        // Spawn the school
+        this.scene.spawnBaitfishSchool(worldX, y, schoolSize, speciesType);
+
+        console.log(`🐟 ${speciesType} school (${schoolSize}) spawning`);
+    }
+
+    /**
+     * Spawn a predator from the left or right edge of screen
+     * Spawns appropriate predator based on game mode depth
+     */
+    spawnPredatorFromSide() {
+        const actualDepth = this.scene.maxDepth || GameConfig.MAX_DEPTH;
+
+        // Select appropriate predator for depth
+        let species = 'lake_trout'; // Default
+
+        if (actualDepth <= 25) {
+            // Shallow water (Perch mode) - mostly perch, some bass
+            species = Math.random() < 0.7 ? 'yellow_perch_large' : 'smallmouth_bass';
+        } else if (actualDepth <= 45) {
+            // Medium depth (Bass mode) - bass, pike, occasional trout
+            const roll = Math.random();
+            if (roll < 0.5) {
+                species = 'smallmouth_bass';
+            } else if (roll < 0.8) {
+                species = 'northern_pike';
+            } else {
+                species = 'lake_trout';
+            }
+        } else {
+            // Deep water (Lake Trout mode) - trout, pike, bass
+            const roll = Math.random();
+            if (roll < 0.6) {
+                species = 'lake_trout';
+            } else if (roll < 0.85) {
+                species = 'northern_pike';
+            } else {
+                species = 'smallmouth_bass';
+            }
+        }
+
+        // Spawn at random depth appropriate for the water depth
+        // Don't use species depth range for initial spawns - just scatter them throughout the water column
+        let depth = Utils.randomBetween(10, actualDepth - 5);
+
+        // Spawn randomly within the visible game area
+        // Fish will fade in using Phaser FX
+        const worldX = Utils.randomBetween(100, GameConfig.CANVAS_WIDTH - 100);
+
+        // Convert depth to screen Y
+        const depthScale = this.scene.sonarDisplay ?
+            this.scene.sonarDisplay.getDepthScale() :
+            GameConfig.DEPTH_SCALE;
+        const y = depth * depthScale;
+
+        // Random size
+        const sizes = ['SMALL', 'MEDIUM', 'LARGE', 'TROPHY'];
+        const size = sizes[Math.floor(Math.random() * sizes.length)];
+
+        // Create fish
+        const fish = new Fish(this.scene, worldX, y, size, species);
+        this.scene.fishes.push(fish);
+
+        console.log(`🎣 ${species} (${size}) spawning at ${depth.toFixed(0)}ft`);
     }
 
     /**
@@ -689,189 +799,27 @@ export class SpawningSystem {
     }
 
     /**
-     * Check if we need to spawn emergency fish (arcade mode only)
-     * @returns {boolean} True if emergency fish was spawned
+     * Check if we need to spawn emergency fish (removed - no arcade mode)
+     * @returns {boolean} Always false now
      */
     checkEmergencySpawn() {
-        if (this.scene.gameMode === GameConfig.GAME_MODE_ARCADE &&
-            this.scene.timeRemaining < GameConfig.ARCADE_EMERGENCY_SPAWN_TIME &&
-            !this.emergencyFishSpawned &&
-            this.scene.fishCaught === 0) {
-            this.spawnEmergencyFish();
-            return true;
-        }
+        // No longer used - arcade mode removed
         return false;
     }
 
     /**
-     * Calculate ecosystem state based on what's actually on screen
-     * Returns: 'RECOVERING' or 'FEEDING'
+     * Count total baitfish in all schools
+     * @returns {number} Total baitfish count
      */
-    getEcosystemState() {
-        // Use NEW school system only
+    countBaitfish() {
         const schoolsArray = this.scene.schools || [];
-
-        // Don't filter by 'visible' - schools don't have that property!
-        // Just count all schools that exist
-        const activeSchools = schoolsArray.filter(s => s && s.members);
-
-        // Count total baitfish in all schools
-        let totalBaitfish = 0;
-        activeSchools.forEach(school => {
-            const count = school.members?.length || 0;
-            totalBaitfish += count;
-        });
-
-        // Count predators
-        const predatorCount = this.scene.fishes?.length || 0;
-
-        // CALCULATED STATE: Based on what's actually on screen
-        // WAITING: Predators were despawned, waiting for bait to reach trigger threshold (30+)
-        // RECOVERING: No bait or very little bait (< 10 fish), predators still present
-        // FEEDING: Bait present (10+ fish)
-
-        if (this.hasDespawnedPredators && predatorCount <= 2) {
-            // After predator despawn, show WAITING until enough bait builds up
-            return totalBaitfish >= 30 ? 'FEEDING' : 'WAITING';
-        }
-
-        const state = totalBaitfish >= 10 ? 'FEEDING' : 'RECOVERING';
-        return state;
-    }
-
-    /**
-     * Update ecosystem dynamics - manage predator spawning based on bait presence
-     */
-    updateEcosystemState() {
-        // Use NEW school system only
-        const schoolsArray = this.scene.schools || [];
-
-        // Don't filter by 'visible' - schools don't have that property!
-        const activeSchools = schoolsArray.filter(s => s && s.members);
-
-        const predatorCount = this.scene.fishes.length;
-
-        // Count total baitfish in all schools
-        let totalBaitfish = 0;
-        activeSchools.forEach(school => {
-            totalBaitfish += school.members?.length || 0;
-        });
-
-        const ecosystemState = this.getEcosystemState();
-
-        // Track when bait is completely gone
-        if (totalBaitfish === 0 && predatorCount > 0) {
-            this.timeSinceBaitGone += 2000; // 2 seconds per check
-
-            // After 5 seconds with no bait, despawn all predators
-            if (this.timeSinceBaitGone > 5000 && !this.hasDespawnedPredators) {
-                console.log('💀 All bait gone! Predators swimming away...');
-                this.despawnAllPredators();
-                this.hasDespawnedPredators = true;
-                this.spawnMode = null; // Clear spawn mode
-            }
-        } else if (totalBaitfish > 0) {
-            // Reset timers when bait exists
-            this.timeSinceBaitGone = 0;
-            this.hasDespawnedPredators = false;
-        }
-
-        // OBSERVATION: If we have bait (30+) but no/few predators (≤2), observe for 5 seconds
-        // NO STATE GATE - just use baitfish count directly!
-        if (totalBaitfish >= 30 && predatorCount <= 2) {
-            this.timeObservingRecovery += 2000; // 2 seconds per check
-
-            // After 5 seconds of observing recovery, trigger spawn mode
-            if (this.timeObservingRecovery > 5000 && this.spawnMode === null) {
-                // 50% chance of TRICKLE or WOLFPACK
-                if (Math.random() < 0.5) {
-                    this.spawnMode = 'WOLFPACK';
-                    this.spawnWolfpack();
-                    console.log(`🐺 WOLFPACK arriving! (${totalBaitfish} baitfish, observed for 5s)`);
-                } else {
-                    this.spawnMode = 'TRICKLE';
-                    this.lastBaitfishCount = totalBaitfish; // Track for trickle termination
-                    console.log(`💧 TRICKLE mode starting (${totalBaitfish} baitfish, observed for 5s)`);
-                }
-            }
-        } else {
-            this.timeObservingRecovery = 0; // Reset if conditions not met
-        }
-
-        // TRICKLE MODE: Use predator:baitfish ratio to determine if spawn mode should end
-        // Goal ratio: 1 predator per 10 baitfish (roughly)
-        // End TRICKLE when we have enough predators OR bait is being consumed
-        if (this.spawnMode === 'TRICKLE') {
-            const targetRatio = 10; // 1 predator per 10 baitfish
-            const currentRatio = totalBaitfish > 0 ? totalBaitfish / predatorCount : 0;
-
-            // End trickle if:
-            // 1. We have a good predator ratio (close to 1:10)
-            // 2. OR baitfish count is dropping (being consumed)
-            if (currentRatio <= targetRatio || totalBaitfish < this.lastBaitfishCount) {
-                console.log(`💧 TRICKLE ended: Ratio ${currentRatio.toFixed(1)}:1 (${predatorCount} predators, ${totalBaitfish} baitfish)`);
-                this.spawnMode = null;
-            }
-            this.lastBaitfishCount = totalBaitfish;
-        }
-    }
-
-    /**
-     * Despawn ALL predators by making them swim off-screen
-     * More natural than instant despawn
-     */
-    despawnAllPredators() {
-        const count = this.scene.fishes.length;
-        console.log(`🏊 ${count} predators swimming away (no more food)...`);
-
-        // Make each predator flee off-screen instead of instant destroy
-        this.scene.fishes.forEach(fish => {
-            if (fish && fish.model && fish.model.ai) {
-                // Set fish to FLEEING state - they'll swim away naturally
-                fish.model.ai.state = Constants.FISH_STATE.FLEEING;
-                fish.model.ai.decisionCooldown = 5000; // Stay fleeing for 5 seconds
-
-                // Set flee target off-screen (down and away)
-                const edgeX = Math.random() < 0.5 ? -200 : GameConfig.CANVAS_WIDTH + 200;
-                const edgeY = GameConfig.CANVAS_HEIGHT + 100; // Off bottom of screen
-                fish.model.ai.targetX = edgeX;
-                fish.model.ai.targetY = edgeY;
+        let total = 0;
+        schoolsArray.forEach(school => {
+            if (school && school.members) {
+                total += school.members.length;
             }
         });
-
-        // Schedule actual cleanup after fish have time to swim away (10 seconds)
-        this.scene.time.delayedCall(10000, () => {
-            this.scene.fishes.forEach(fish => {
-                if (fish) fish.destroy();
-            });
-            this.scene.fishes = [];
-            console.log('✅ Predators cleared! Area is safe for bait recovery.');
-        });
-    }
-
-    /**
-     * Spawn a wolfpack - burst spawn 10-15 predators at once
-     * Creates intense feeding frenzy right away
-     */
-    spawnWolfpack() {
-        const packSize = Math.floor(Math.random() * 6) + 10; // 10-15 fish
-        console.log(`🐺 WOLFPACK incoming! Spawning ${packSize} predators...`);
-
-        // Set flag to bypass spawn mode checks during wolfpack burst
-        this.isSpawningWolfpack = true;
-
-        let spawned = 0;
-        for (let i = 0; i < packSize; i++) {
-            const fish = this.trySpawnFish();
-            if (fish) {
-                spawned++;
-            }
-        }
-
-        // Clear flag
-        this.isSpawningWolfpack = false;
-
-        console.log(`🐺 WOLFPACK spawned ${spawned} predators!`);
+        return total;
     }
 
     /**
@@ -879,11 +827,6 @@ export class SpawningSystem {
      */
     reset() {
         this.emergencyFishSpawned = false;
-        this.spawnMode = null;
-        this.timeSinceBaitGone = 0;
-        this.timeObservingRecovery = 0;
-        this.lastBaitfishCount = 0;
-        this.hasDespawnedPredators = false;
     }
 
     /**

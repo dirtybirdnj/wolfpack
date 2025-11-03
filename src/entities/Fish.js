@@ -26,9 +26,20 @@ export class Fish {
         this.graphics = scene.add.graphics();
         this.graphics.setDepth(10);
 
+        // Start invisible for fade-in effect
+        this.graphics.setAlpha(0);
+
         // External artwork sprite (if available)
         this.sprite = null;
         this.tryLoadArtwork();
+
+        // Fade in using Phaser tween (1 second fade)
+        scene.tweens.add({
+            targets: this.graphics,
+            alpha: 1,
+            duration: 1000,
+            ease: 'Power2'
+        });
 
         // Sonar trail (visual only)
         this.sonarTrail = [];
@@ -72,7 +83,7 @@ export class Fish {
             separationWeight: 1.5,
             alignmentWeight: 1.0,
             cohesionWeight: 1.0,
-            fleeWeight: 3.0,
+            fleeWeight: 5.0, // Increased from 3.0 - stronger escape response
 
             // Velocity for schooling movement
             velocity: { x: 0, y: 0 },
@@ -265,6 +276,17 @@ export class Fish {
                 const baseScale = Math.max(0.3, this.model.weight / 20);
                 this.sprite.setScale(baseScale);
 
+                // Start invisible for fade-in effect
+                this.sprite.setAlpha(0);
+
+                // Fade in using Phaser tween (1 second fade)
+                this.scene.tweens.add({
+                    targets: this.sprite,
+                    alpha: 1,
+                    duration: 1000,
+                    ease: 'Power2'
+                });
+
                 console.log(`✓ Loaded artwork for ${this.model.species} (${sizeCategory}): ${key}`);
                 return;
             }
@@ -385,35 +407,73 @@ export class Fish {
         }
 
         // Detection cone visualization - shows fish vision range (only for predators)
-        if (this.model.ai && this.scene.debugMode) {
-            const detectionRange = GameConfig.BAITFISH_DETECTION_RANGE;
+        // Show when visionRangeDebug is enabled OR when this fish is selected
+        const showVisionCone = this.model.ai && (
+            this.scene.visionRangeDebug ||
+            (this.scene.selectedFishId && this.model.id === this.scene.selectedFishId)
+        );
+
+        if (showVisionCone) {
+            const detectionRange = GameConfig.BAITFISH_DETECTION_RANGE * 1.5; // 50% longer horizontally
             const verticalRange = GameConfig.BAITFISH_VERTICAL_PURSUIT_RANGE * (this.model.hunger * GameConfig.HUNGER_VERTICAL_SCALING);
 
-            // Draw detection cone as a triangle/wedge in front of fish
-            const direction = isMovingRight ? 1 : -1;
-            const coneWidth = verticalRange * 0.6; // Cone spreads vertically
+            // Calculate fish's swimming angle from velocity
+            let swimAngle = 0;
+            if (this.model.ai) {
+                const movement = this.model.ai.getMovementVector();
+                // Use Phaser's optimized distance calculation for speed magnitude
+                const speed = Phaser.Math.Distance.Between(0, 0, movement.x, movement.y);
+                if (speed > 0.1) {
+                    swimAngle = Math.atan2(movement.y, movement.x);
+                }
+            }
 
-            // Triangle points: fish position -> cone tip -> upper/lower spread
-            const tipX = this.model.x + (direction * detectionRange);
-            const tipY = this.model.y;
-            const upperY = this.model.y - coneWidth;
-            const lowerY = this.model.y + coneWidth;
+            // Draw detection cone as a triangle/wedge in front of fish, angled to match swimming direction
+            const direction = isMovingRight ? 1 : -1;
+            const coneWidth = verticalRange * 0.3; // Reduced from 0.6 - narrower vertical spread
+
+            // Calculate cone tip position based on swim angle
+            const tipX = this.model.x + Math.cos(swimAngle) * detectionRange;
+            const tipY = this.model.y + Math.sin(swimAngle) * detectionRange;
+
+            // Calculate perpendicular angle for cone spread (90 degrees from swim direction)
+            const perpAngle = swimAngle + Math.PI / 2;
+            const upperX = tipX + Math.cos(perpAngle) * coneWidth;
+            const upperY = tipY + Math.sin(perpAngle) * coneWidth;
+            const lowerX = tipX - Math.cos(perpAngle) * coneWidth;
+            const lowerY = tipY - Math.sin(perpAngle) * coneWidth;
+
+            // Color based on hunger level (red = hungry, yellow = moderate, green = well-fed)
+            const hungerColor = this.model.hunger > 0.7 ? 0xff0000 :
+                               this.model.hunger > 0.4 ? 0xffff00 : 0x00ff00;
+            const alpha = 0.12; // Slightly more visible than before
 
             // Draw semi-transparent cone
-            this.graphics.fillStyle(0x00ff00, 0.08); // Very subtle green
-            this.graphics.lineStyle(1, 0x00ff00, 0.3); // Faint green outline
+            this.graphics.fillStyle(hungerColor, alpha);
+            this.graphics.lineStyle(2, hungerColor, 0.4);
 
             this.graphics.beginPath();
             this.graphics.moveTo(this.model.x, this.model.y);
-            this.graphics.lineTo(tipX, upperY);
-            this.graphics.lineTo(tipX, lowerY);
+            this.graphics.lineTo(upperX, upperY);
+            this.graphics.lineTo(lowerX, lowerY);
             this.graphics.closePath();
             this.graphics.fillPath();
             this.graphics.strokePath();
 
-            // Add range indicator lines
-            this.graphics.lineStyle(1, 0x00ff00, 0.2);
+            // Add center line indicator
+            this.graphics.lineStyle(1, hungerColor, 0.3);
             this.graphics.lineBetween(this.model.x, this.model.y, tipX, tipY);
+
+            // Add distance markers along angled center line
+            const markerCount = 4;
+            for (let i = 1; i <= markerCount; i++) {
+                const t = i / markerCount;
+                const markerX = this.model.x + (tipX - this.model.x) * t;
+                const markerY = this.model.y + (tipY - this.model.y) * t;
+                const markerSize = 3;
+                this.graphics.fillStyle(hungerColor, 0.5);
+                this.graphics.fillCircle(markerX, markerY, markerSize);
+            }
         }
 
         // Selection circle - white circle around selected fish from status panel
@@ -444,10 +504,8 @@ export class Fish {
             // Skip already consumed or invisible zooplankton
             if (!zp || !zp.visible || zp.consumed) continue;
 
-            // Calculate distance to zooplankton
-            const dx = this.model.x - zp.x;
-            const dy = this.model.y - zp.y;
-            const distance = Math.sqrt(dx * dx + dy * dy);
+            // Calculate distance to zooplankton using Phaser's optimized method
+            const distance = Phaser.Math.Distance.Between(this.model.x, this.model.y, zp.x, zp.y);
 
             // If close enough, consume it (must be nearly touching)
             if (distance < detectionRange) {
@@ -572,9 +630,8 @@ export class Fish {
         const predators = this.scene.fishes || [];
         let closestPredatorDist = Infinity;
         predators.forEach(predator => {
-            const dx = this.model.worldX - predator.worldX;
-            const dy = this.model.y - predator.y;
-            const dist = Math.sqrt(dx * dx + dy * dy);
+            // Use Phaser's optimized distance calculation
+            const dist = Phaser.Math.Distance.Between(this.model.worldX, this.model.y, predator.worldX, predator.y);
             closestPredatorDist = Math.min(closestPredatorDist, dist);
         });
 
@@ -610,7 +667,8 @@ export class Fish {
 
             const dx = targetWorldX - this.model.worldX;
             const dy = targetY - this.model.y;
-            const dist = Math.sqrt(dx * dx + dy * dy);
+            // Use Phaser's optimized distance calculation
+            const dist = Phaser.Math.Distance.Between(this.model.worldX, this.model.y, targetWorldX, targetY);
 
             if (dist > 0) {
                 // Pull toward school center - stronger when scared for tighter clustering
@@ -621,39 +679,49 @@ export class Fish {
             }
         }
 
-        // Combine forces with weights (increase center weight when scared)
-        const centerWeight = 2.0 + (this.schooling.scaredLevel * 3.0); // 2.0-5.0 based on fear
+        // Combine forces with weights
+        // When fleeing, reduce cohesion/center attraction to let fish escape more freely
+        const fleeActive = flee.x !== 0 || flee.y !== 0;
+        const cohesionMod = fleeActive ? 0.3 : 1.0; // Reduce cohesion when fleeing
+        const centerWeight = fleeActive ? 0.5 : (2.0 + (this.schooling.scaredLevel * 3.0)); // Reduce center pull when fleeing
+
         const forceX =
             separation.x * this.schooling.separationWeight +
             alignment.x * this.schooling.alignmentWeight +
-            cohesion.x * this.schooling.cohesionWeight +
-            centerAttraction.x * centerWeight + // Stronger pull when scared
+            cohesion.x * this.schooling.cohesionWeight * cohesionMod + // Reduced when fleeing
+            centerAttraction.x * centerWeight + // Reduced when fleeing
             flee.x * this.schooling.fleeWeight;
 
         const forceY =
             separation.y * this.schooling.separationWeight +
             alignment.y * this.schooling.alignmentWeight +
-            cohesion.y * this.schooling.cohesionWeight +
-            centerAttraction.y * centerWeight + // Stronger pull when scared
+            cohesion.y * this.schooling.cohesionWeight * cohesionMod + // Reduced when fleeing
+            centerAttraction.y * centerWeight + // Reduced when fleeing
             flee.y * this.schooling.fleeWeight;
 
         // Apply forces to velocity
         this.schooling.velocity.x += forceX;
         this.schooling.velocity.y += forceY;
 
-        // Limit speed
-        const currentSpeed = this.schooling.isPanicking ?
+        // Limit speed - use panic speed when fleeing or scared
+        const usePanicSpeed = this.schooling.isPanicking || this.schooling.scaredLevel > 0.3 || fleeActive;
+        const currentSpeed = usePanicSpeed ?
             this.schooling.panicSpeed :
             this.schooling.maxSpeed;
 
-        const speed = Math.sqrt(
-            this.schooling.velocity.x ** 2 +
-            this.schooling.velocity.y ** 2
-        );
+        // Use Phaser's optimized distance calculation for velocity magnitude
+        const speed = Phaser.Math.Distance.Between(0, 0, this.schooling.velocity.x, this.schooling.velocity.y);
 
         if (speed > currentSpeed) {
             this.schooling.velocity.x = (this.schooling.velocity.x / speed) * currentSpeed;
             this.schooling.velocity.y = (this.schooling.velocity.y / speed) * currentSpeed;
+        }
+
+        // When actively fleeing, give an extra speed boost to help escape
+        if (fleeActive && speed < currentSpeed * 0.8) {
+            const boostFactor = 1.3;
+            this.schooling.velocity.x *= boostFactor;
+            this.schooling.velocity.y *= boostFactor;
         }
 
         // Apply velocity to position
@@ -704,9 +772,13 @@ export class Fish {
             this.schooling.lastPosition = { worldX: this.model.worldX, y: this.model.y };
             this.schooling.frozenFrames = 0;
         } else {
-            const dx = this.model.worldX - this.schooling.lastPosition.worldX;
-            const dy = this.model.y - this.schooling.lastPosition.y;
-            const distMoved = Math.sqrt(dx * dx + dy * dy);
+            // Use Phaser's optimized distance calculation to check if frozen
+            const distMoved = Phaser.Math.Distance.Between(
+                this.schooling.lastPosition.worldX,
+                this.schooling.lastPosition.y,
+                this.model.worldX,
+                this.model.y
+            );
 
             // If fish hasn't moved more than 1 pixel in 60 frames (1 second)
             if (distMoved < 1.0) {
@@ -743,8 +815,9 @@ export class Fish {
             // Skip self
             if (other === this) return;
 
-            // Only school with same species
-            if (other._speciesName !== this._speciesName) return;
+            // Allow mixed-species schooling - baitfish will school with any nearby baitfish
+            // Skip predators (they don't have schooling behavior)
+            if (!other.isBaitfish) return;
 
             // Check distance
             const dx = other.model.worldX - this.model.worldX;
@@ -752,9 +825,11 @@ export class Fish {
             const distSq = dx * dx + dy * dy;
 
             if (distSq < radius * radius) {
+                // Use Phaser's optimized distance calculation
+                const distance = Phaser.Math.Distance.Between(this.model.worldX, this.model.y, other.model.worldX, other.model.y);
                 neighbors.push({
                     fish: other,
-                    distance: Math.sqrt(distSq),
+                    distance,
                     dx,
                     dy
                 });
@@ -862,7 +937,8 @@ export class Fish {
 
             const dx = this.model.worldX - predator.worldX;
             const dy = this.model.y - predator.y;
-            const dist = Math.sqrt(dx * dx + dy * dy);
+            // Use Phaser's optimized distance calculation
+            const dist = Phaser.Math.Distance.Between(this.model.worldX, this.model.y, predator.worldX, predator.y);
 
             if (dist < fleeRadius && dist > 0) {
                 // Flee directly away from threat

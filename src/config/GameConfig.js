@@ -4,16 +4,15 @@ export const GameConfig = {
     FISHING_TYPE_ICE: 'ice',
     FISHING_TYPE_NATURE_SIMULATION: 'nature_simulation',
 
-    // Game modes (arcade, unlimited)
-    GAME_MODE_ARCADE: 'arcade',
-    GAME_MODE_UNLIMITED: 'unlimited',
-
-    ARCADE_TIME_LIMIT: 120, // 2 minutes in seconds
-    ARCADE_EMERGENCY_SPAWN_TIME: 30, // spawn emergency fish when < 30 seconds left
-
     // Canvas settings - expanded for maximum game area
     CANVAS_WIDTH: 1400,  // Widened from 1200 to expand into yellow areas
     CANVAS_HEIGHT: 650,
+
+    // Game area buffer zones (off-screen areas where fish can exist)
+    // Visible area: 0 to CANVAS_WIDTH
+    // Left buffer: -500 to 0
+    // Right buffer: CANVAS_WIDTH to CANVAS_WIDTH+500
+    BUFFER_ZONE_SIZE: 500, // Large enough for big bait clouds and smooth transitions
 
     // Sonar display settings
     SONAR_SCROLL_SPEED: 1.35, // pixels per frame (scaled for larger canvas)
