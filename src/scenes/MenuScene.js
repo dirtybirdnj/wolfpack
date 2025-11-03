@@ -91,7 +91,7 @@ export class MenuScene extends Phaser.Scene {
         });
 
         // Game mode selection (moved up 1/4 inch = 24 pixels from 352)
-        const gameModeText = this.add.text(width / 2, 328, 'SELECT GAME MODE', {
+        const gameModeText = this.add.text(width / 2, 328, 'SELECT DIFFICULTY', {
             fontSize: '18px',
             fontFamily: 'Courier New',
             color: '#00ffff',
@@ -119,32 +119,32 @@ export class MenuScene extends Phaser.Scene {
         const totalWidth = (buttonWidth * 3) + (buttonSpacing * 2);
         const startX = centerX - (totalWidth / 2) + (buttonWidth / 2);
 
-        // Create Arcade, Unlimited, and Nature Simulation buttons
-        const arcade = this.createModeButton(
+        // Create Perch (Easy), Bass (Medium), and Lake Trout (Expert) difficulty buttons
+        const perch = this.createModeButton(
             startX, buttonY,
-            'ARCADE',
-            'timed challenge',
-            { fishingType: GameConfig.FISHING_TYPE_ICE, gameMode: GameConfig.GAME_MODE_ARCADE },
+            'PERCH',
+            'Easy Mode',
+            { fishingType: GameConfig.FISHING_TYPE_ICE, gameMode: GameConfig.GAME_MODE_UNLIMITED, difficulty: 'easy', maxDepth: 20 },
             0
         );
 
-        const unlimited = this.createModeButton(
+        const bass = this.createModeButton(
             startX + (buttonWidth + buttonSpacing), buttonY,
-            'UNLIMITED',
-            'no time limit',
-            { fishingType: GameConfig.FISHING_TYPE_ICE, gameMode: GameConfig.GAME_MODE_UNLIMITED },
+            'BASS',
+            'More Difficult',
+            { fishingType: GameConfig.FISHING_TYPE_ICE, gameMode: GameConfig.GAME_MODE_UNLIMITED, difficulty: 'medium', maxDepth: 35 },
             1
         );
 
-        const simulation = this.createModeButton(
+        const trout = this.createModeButton(
             startX + (buttonWidth + buttonSpacing) * 2, buttonY,
-            'SIMULATION',
-            'observe behavior',
-            { fishingType: GameConfig.FISHING_TYPE_NATURE_SIMULATION, gameMode: null },
+            'LAKE TROUT',
+            'Expert Mode',
+            { fishingType: GameConfig.FISHING_TYPE_ICE, gameMode: GameConfig.GAME_MODE_UNLIMITED, difficulty: 'expert', maxDepth: 85 },
             2
         );
 
-        this.buttons = [arcade, unlimited, simulation];
+        this.buttons = [perch, bass, trout];
 
         // Highlight the selected button (Unlimited mode by default) - ALWAYS do this, not just for gamepad
         this.updateSelection();
@@ -447,9 +447,11 @@ export class MenuScene extends Phaser.Scene {
     }
 
     startGame(modeConfig) {
-        // Store fishing type and game mode in registry
+        // Store fishing type, game mode, and difficulty settings in registry
         this.registry.set('fishingType', modeConfig.fishingType);
         this.registry.set('gameMode', modeConfig.gameMode);
+        this.registry.set('difficulty', modeConfig.difficulty || 'expert');
+        this.registry.set('maxDepth', modeConfig.maxDepth || 85);
 
         // Determine which scene to start
         let startingScene;
@@ -458,10 +460,11 @@ export class MenuScene extends Phaser.Scene {
             startingScene = 'NatureSimulationScene';
         } else {
             // Ice fishing goes directly to GameScene (no navigation needed on ice)
-            // Clear previous navigation position data to use default deep water location
+            // Clear previous navigation position data to use default location
             this.registry.set('fishingWorldX', null);
             this.registry.set('fishingWorldY', 5000);
-            this.registry.set('currentDepth', 90); // Start ice fishing at 90ft depth
+            // Start at depth based on difficulty (Perch=20ft, Bass=35ft, Trout=85ft)
+            this.registry.set('currentDepth', modeConfig.maxDepth || 85);
             startingScene = 'GameScene';
         }
 
