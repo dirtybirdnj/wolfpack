@@ -707,23 +707,24 @@ export class SpawningSystem {
     getEcosystemState() {
         // Use NEW school system only
         const schoolsArray = this.scene.schools || [];
-        const visibleSchools = schoolsArray.filter(s => s && s.visible);
+
+        // Don't filter by 'visible' - schools don't have that property!
+        // Just count all schools that exist
+        const activeSchools = schoolsArray.filter(s => s && s.members);
 
         // Count total baitfish in all schools
         let totalBaitfish = 0;
-        visibleSchools.forEach(school => {
+        activeSchools.forEach(school => {
             const count = school.members?.length || 0;
             totalBaitfish += count;
-            console.log(`School: ${school.speciesType} has ${count} members, visible=${school.visible}`);
         });
 
-        console.log(`Total schools: ${schoolsArray.length}, Visible: ${visibleSchools.length}, Total baitfish: ${totalBaitfish}`);
+        console.log(`🐟 Ecosystem check: ${schoolsArray.length} schools, ${activeSchools.length} active, ${totalBaitfish} total baitfish`);
 
         // CALCULATED STATE: Based on what's actually on screen
         // RECOVERING: No bait or very little bait (< 10 fish)
         // FEEDING: Bait present (10+ fish)
         const state = totalBaitfish >= 10 ? 'FEEDING' : 'RECOVERING';
-        console.log(`Ecosystem state: ${state} (${totalBaitfish} fish)`);
         return state;
     }
 
@@ -733,13 +734,15 @@ export class SpawningSystem {
     updateEcosystemState() {
         // Use NEW school system only
         const schoolsArray = this.scene.schools || [];
-        const visibleSchools = schoolsArray.filter(s => s && s.visible);
+
+        // Don't filter by 'visible' - schools don't have that property!
+        const activeSchools = schoolsArray.filter(s => s && s.members);
 
         const predatorCount = this.scene.fishes.length;
 
         // Count total baitfish in all schools
         let totalBaitfish = 0;
-        visibleSchools.forEach(school => {
+        activeSchools.forEach(school => {
             totalBaitfish += school.members?.length || 0;
         });
 
