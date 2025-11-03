@@ -775,11 +775,15 @@ export class FishAI {
         let minDistance = Infinity;
 
         for (const cloud of baitfishClouds) {
-            if (!cloud.visible || cloud.baitfish.length === 0) {continue;}
+            // Check if cloud is valid and has baitfish (works for both systems)
+            const baitfishArray = cloud.baitfish || cloud.members || [];
+            const cloudVisible = cloud.visible !== false || cloud.members; // Schools don't have visible property
+            if (!cloudVisible || baitfishArray.length === 0) {continue;}
 
             const distance = Utils.calculateDistance(
                 this.fish.x, this.fish.y,
-                cloud.centerX, cloud.centerY
+                cloud.centerX || cloud.centerWorldX,
+                cloud.centerY
             );
 
             // Hunger affects how far vertically fish will pursue baitfish (0-100 scale)
@@ -859,10 +863,13 @@ export class FishAI {
     }
 
     huntingBaitfishBehavior(baitfishClouds, lure) {
-        // Verify target cloud still exists and has baitfish
-        if (!this.targetBaitfishCloud ||
-            !this.targetBaitfishCloud.visible ||
-            this.targetBaitfishCloud.baitfish.length === 0) {
+        // Verify target cloud still exists and has baitfish (works for both systems)
+        const baitfishArray = this.targetBaitfishCloud?.baitfish || this.targetBaitfishCloud?.members || [];
+        const cloudVisible = this.targetBaitfishCloud && (
+            this.targetBaitfishCloud.visible !== false || this.targetBaitfishCloud.members
+        );
+
+        if (!this.targetBaitfishCloud || !cloudVisible || baitfishArray.length === 0) {
             // Cloud depleted or gone, return to idle
             this.state = Constants.FISH_STATE.IDLE;
             this.targetBaitfishCloud = null;
@@ -892,8 +899,8 @@ export class FishAI {
                 return;
             }
         } else {
-            // No baitfish available, head to cloud center
-            this.targetX = this.targetBaitfishCloud.centerX;
+            // No baitfish available, head to cloud center (works for both systems)
+            this.targetX = this.targetBaitfishCloud.centerX || this.targetBaitfishCloud.centerWorldX;
             this.targetY = this.targetBaitfishCloud.centerY;
         }
 
@@ -923,10 +930,13 @@ export class FishAI {
         // Continue swimming through cloud while feeding
         // Check if we should continue hunting or turn back
 
+        // Get center position (works for both old and new systems)
+        const centerX = this.targetBaitfishCloud?.centerX || this.targetBaitfishCloud?.centerWorldX || this.fish.x;
+        const centerY = this.targetBaitfishCloud?.centerY || this.fish.y;
+
         const distanceToCloudCenter = Utils.calculateDistance(
             this.fish.x, this.fish.y,
-            this.targetBaitfishCloud?.centerX || this.fish.x,
-            this.targetBaitfishCloud?.centerY || this.fish.y
+            centerX, centerY
         );
 
         // If we've swum past the cloud center, consider turning around
@@ -935,8 +945,15 @@ export class FishAI {
             if (!this.lastTurnTime) this.lastTurnTime = 0;
             const timeSinceLastTurn = this.fish.frameAge - this.lastTurnTime;
 
-            if (this.targetBaitfishCloud && this.targetBaitfishCloud.visible && this.fish.hunger > 30 && timeSinceLastTurn > 120) {
-                this.targetX = this.targetBaitfishCloud.centerX;
+            // Check if cloud is still valid (works for both old and new systems)
+            const cloudValid = this.targetBaitfishCloud && (
+                this.targetBaitfishCloud.visible !== false || // Old system (BaitfishCloud)
+                this.targetBaitfishCloud.members  // New system (School) - no visible property
+            );
+
+            if (cloudValid && this.fish.hunger > 30 && timeSinceLastTurn > 120) {
+                // Get center position (works for both systems)
+                this.targetX = this.targetBaitfishCloud.centerX || this.targetBaitfishCloud.centerWorldX;
                 this.targetY = this.targetBaitfishCloud.centerY;
                 this.consecutiveCatches = 0;
                 this.lastTurnTime = this.fish.frameAge;
@@ -948,13 +965,22 @@ export class FishAI {
                 this.targetBaitfish = null;
                 this.consecutiveCatches = 0;
             }
-        } else if (this.targetBaitfishCloud &&
-                   this.targetBaitfishCloud.visible &&
-                   this.targetBaitfishCloud.baitfish.length > 0 &&
-                   this.fish.hunger > 30) {
-            // Still in cloud, still hungry - keep hunting
-            this.state = Constants.FISH_STATE.HUNTING_BAITFISH;
-            this.decisionCooldown = 20; // Very short for rapid feeding
+        } else if (this.targetBaitfishCloud && this.fish.hunger > 30) {
+            // Check if cloud still has baitfish (works for both systems)
+            const baitfishArray = this.targetBaitfishCloud.baitfish || this.targetBaitfishCloud.members || [];
+            const cloudVisible = this.targetBaitfishCloud.visible !== false || this.targetBaitfishCloud.members;
+
+            if (cloudVisible && baitfishArray.length > 0) {
+                // Still in cloud, still hungry - keep hunting
+                this.state = Constants.FISH_STATE.HUNTING_BAITFISH;
+                this.decisionCooldown = 20; // Very short for rapid feeding
+            } else {
+                // Cloud depleted, return to idle
+                this.state = Constants.FISH_STATE.IDLE;
+                this.targetBaitfishCloud = null;
+                this.targetBaitfish = null;
+                this.consecutiveCatches = 0;
+            }
         } else {
             // Satisfied or cloud depleted
             this.state = Constants.FISH_STATE.IDLE;
@@ -971,7 +997,9 @@ export class FishAI {
         }
 
         for (const cloud of baitfishClouds) {
-            if (cloud.visible && cloud.isPlayerLureInCloud(lure)) {
+            // Check if cloud is visible (works for both systems - schools don't have visible)
+            const cloudVisible = cloud.visible !== false || cloud.members;
+            if (cloudVisible && cloud.isPlayerLureInCloud && cloud.isPlayerLureInCloud(lure)) {
                 return true;
             }
         }

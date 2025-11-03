@@ -601,16 +601,29 @@ function updateFishStatus(gameScene) {
 
         // Check both schools (NatureSimulationScene) and baitfishClouds (GameScene) for cloud count
         let cloudCount = 0;
+        let baitfishCount = 0;
         if (gameScene.schools && Array.isArray(gameScene.schools)) {
             cloudCount = gameScene.schools.length;
+            // Count total baitfish in all schools
+            gameScene.schools.forEach(school => {
+                if (school && school.members) {
+                    baitfishCount += school.members.length;
+                }
+            });
         } else if (gameScene.baitfishClouds && Array.isArray(gameScene.baitfishClouds)) {
             cloudCount = gameScene.baitfishClouds.filter(c => c && c.visible).length;
+            // Count baitfish in old cloud system
+            gameScene.baitfishClouds.forEach(cloud => {
+                if (cloud && cloud.visible && cloud.baitfish) {
+                    baitfishCount += cloud.baitfish.length;
+                }
+            });
         }
 
         const crayfishCount = gameScene.crayfish ? gameScene.crayfish.filter(c => c && c.visible).length : 0;
         const zooplanktonCount = gameScene.zooplankton ? gameScene.zooplankton.filter(z => z && z.visible).length : 0;
 
-        entityCounts.innerHTML = `🐟 ${fishCount} ☁️ ${cloudCount} 🦞 ${crayfishCount} 🪳 ${zooplanktonCount}`;
+        entityCounts.innerHTML = `🐟 ${fishCount} 🍽️ ${baitfishCount} ☁️ ${cloudCount} 🦞 ${crayfishCount} 🪳 ${zooplanktonCount}`;
     }
 
     if (!gameScene || !gameScene.fishes || gameScene.fishes.length === 0) {
