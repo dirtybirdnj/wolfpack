@@ -52,9 +52,9 @@ export class SpawningSystem {
     }
 
     setupSpawnTimers() {
-        // Start spawning fish
+        // Start spawning fish (fast spawn rate to build population quickly)
         this.scene.time.addEvent({
-            delay: 1000,
+            delay: 500, // Reduced from 1000 - spawn every 0.5 seconds
             callback: () => this.trySpawnFish(),
             callbackScope: this,
             loop: true
@@ -705,17 +705,18 @@ export class SpawningSystem {
         switch (this.ecosystemState) {
             case 'ABUNDANT':
                 // Bait is plentiful, predators are spawning normally
-                if (baitCloudCount === 0 || totalBaitfish < 10) {
-                    // Bait has been decimated!
+                // Only transition to DEPLETED when bait is COMPLETELY gone
+                if (baitCloudCount === 0 && totalBaitfish === 0) {
+                    // Bait has been completely wiped out!
                     this.ecosystemState = 'DEPLETED';
                     this.timeSinceBaitDepleted = 0;
-                    console.log('🌊 Ecosystem: ABUNDANT → DEPLETED (bait wiped out!)');
+                    console.log('🌊 Ecosystem: ABUNDANT → DEPLETED (bait completely wiped out!)');
                 }
                 break;
 
             case 'DEPLETED':
                 // No bait left, predators should leave
-                this.timeSinceBaitDepleted += 2; // 2 seconds per check
+                this.timeSinceBaitDepleted += 2000; // 2000ms per check (runs every 2 seconds)
 
                 // After 10 seconds with no bait, start despawning predators
                 if (this.timeSinceBaitDepleted > 10000) {
@@ -732,7 +733,7 @@ export class SpawningSystem {
 
             case 'RECOVERING':
                 // Predators gone, bait can return safely
-                this.timeSincePredatorsDeparted += 2; // 2 seconds per check
+                this.timeSincePredatorsDeparted += 2000; // 2000ms per check (runs every 2 seconds)
 
                 // Bait starts returning after area is safe
                 // When enough bait has returned, transition back to ABUNDANT

@@ -886,24 +886,8 @@ export class FishAI {
                 this.targetBaitfishCloud.consumeBaitfish();
                 this.fish.feedOnBaitfish(preySpecies); // Pass species for nutrition calculation
 
-                // Track consecutive catches for swim-through behavior
-                if (!this.consecutiveCatches) this.consecutiveCatches = 0;
-                if (!this.lastTurnTime) this.lastTurnTime = 0;
-                this.consecutiveCatches++;
-
-                // Keep swimming through cloud! Don't stop.
-                // After 2-3 catches or leaving cloud, do a quick 180 turn to dart back
-                // Limit turns to once every 2 seconds (120 frames at 60fps)
-                const timeSinceLastTurn = this.fish.frameAge - this.lastTurnTime;
-                if (this.consecutiveCatches >= 2 && Math.random() < 0.6 && timeSinceLastTurn > 120) {
-                    // Quick 180 turn to dart back through cloud
-                    this.targetX = this.fish.x - (this.targetX - this.fish.x);
-                    this.targetY = this.fish.y - (this.targetY - this.fish.y);
-                    this.consecutiveCatches = 0;
-                    this.lastTurnTime = this.fish.frameAge;
-                }
-
-                // Stay in hunting state - no pause!
+                // Keep swimming through cloud - no turning back!
+                // Just keep hunting next baitfish in smooth swim-through pattern
                 this.decisionCooldown = 10; // Very short cooldown for rapid feeding
                 return;
             }
