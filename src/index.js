@@ -441,6 +441,58 @@ function setupDevTools(game) {
         });
     }
 
+    // Ecosystem State Control Buttons
+    const ecosystemStates = ['RECOVERING', 'WAITING', 'FEEDING'];
+    let currentStateIndex = 2; // Start at FEEDING
+
+    const ecosystemUpBtn = document.getElementById('ecosystem-up');
+    const ecosystemDownBtn = document.getElementById('ecosystem-down');
+
+    if (ecosystemUpBtn) {
+        ecosystemUpBtn.addEventListener('click', () => {
+            const gameScene = game.scene.getScene('GameScene');
+            if (gameScene && gameScene.scene.isActive() && gameScene.spawningSystem) {
+                currentStateIndex = (currentStateIndex + 1) % ecosystemStates.length;
+                const newState = ecosystemStates[currentStateIndex];
+
+                // Force the ecosystem state by manipulating spawning system flags
+                if (newState === 'RECOVERING') {
+                    // Low bait, predators present
+                    gameScene.spawningSystem.hasDespawnedPredators = false;
+                } else if (newState === 'WAITING') {
+                    // Predators despawned, waiting for bait buildup
+                    gameScene.spawningSystem.hasDespawnedPredators = true;
+                } else if (newState === 'FEEDING') {
+                    // Plenty of bait, feeding active
+                    gameScene.spawningSystem.hasDespawnedPredators = false;
+                }
+
+                console.log(`🔄 Ecosystem state changed to: ${newState}`);
+            }
+        });
+    }
+
+    if (ecosystemDownBtn) {
+        ecosystemDownBtn.addEventListener('click', () => {
+            const gameScene = game.scene.getScene('GameScene');
+            if (gameScene && gameScene.scene.isActive() && gameScene.spawningSystem) {
+                currentStateIndex = (currentStateIndex - 1 + ecosystemStates.length) % ecosystemStates.length;
+                const newState = ecosystemStates[currentStateIndex];
+
+                // Force the ecosystem state by manipulating spawning system flags
+                if (newState === 'RECOVERING') {
+                    gameScene.spawningSystem.hasDespawnedPredators = false;
+                } else if (newState === 'WAITING') {
+                    gameScene.spawningSystem.hasDespawnedPredators = true;
+                } else if (newState === 'FEEDING') {
+                    gameScene.spawningSystem.hasDespawnedPredators = false;
+                }
+
+                console.log(`🔄 Ecosystem state changed to: ${newState}`);
+            }
+        });
+    }
+
     // Lure Weight Buttons
     const lureWeights = [0.25, 0.5, 1, 2, 3, 4];
     lureWeights.forEach(weight => {
