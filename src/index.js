@@ -331,9 +331,25 @@ function setupDevTools(game) {
             const uiTime = document.getElementById('ui-time');
             if (uiTime) uiTime.textContent = timeStr;
 
-            // Water temp
-            const uiTemp = document.getElementById('ui-temp');
-            if (uiTemp) uiTemp.textContent = Math.floor(gameScene.waterTemp || 40);
+            // Ecosystem state display
+            const uiEcosystem = document.getElementById('ui-ecosystem');
+            if (uiEcosystem && gameScene.spawningSystem) {
+                const state = gameScene.spawningSystem.ecosystemState;
+                const mode = gameScene.spawningSystem.spawnMode;
+                const stateColors = {
+                    'ABUNDANT': '#00ff00',
+                    'DEPLETED': '#ff6600',
+                    'RECOVERING': '#ffff00'
+                };
+                const modeColors = {
+                    'TRICKLE': '#00ccff',
+                    'WOLFPACK': '#ff00ff'
+                };
+                // Show state in state color, mode in mode color
+                const stateText = `<span style="color: ${stateColors[state] || '#ffffff'}">${state}</span>`;
+                const modeText = `<span style="color: ${modeColors[mode] || '#888888'}">${mode}</span>`;
+                uiEcosystem.innerHTML = `${stateText}<br/>${modeText}`;
+            }
 
             // Update fish status panel
             updateFishStatus(gameScene);

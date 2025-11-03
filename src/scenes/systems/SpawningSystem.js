@@ -33,8 +33,10 @@ export class SpawningSystem {
         // Ecosystem state for ebb and flow dynamics
         // States: ABUNDANT, HUNTING, DEPLETED, RECOVERING
         this.ecosystemState = 'ABUNDANT';
+        this.spawnMode = 'TRICKLE'; // TRICKLE or WOLFPACK
         this.timeSinceBaitDepleted = 0;
         this.timeSincePredatorsDeparted = 0;
+        this.lastBaitCloudCount = 0; // Track bait cloud trend
 
         // Spawn initial crayfish population (3 on load)
         this.spawnInitialCrayfish();
@@ -90,18 +92,33 @@ export class SpawningSystem {
      * @returns {Fish|null} The spawned fish or null if spawn failed
      */
     trySpawnFish() {
-        // Ecosystem-aware spawning: Don't spawn predators when bait is depleted or recovering
-        if (this.ecosystemState === 'DEPLETED' || this.ecosystemState === 'RECOVERING') {
+        // Ecosystem-aware spawning
+        if (this.ecosystemState === 'DEPLETED') {
+            return null; // No spawning during depletion
+        }
+
+        if (this.ecosystemState === 'RECOVERING') {
             // During recovery, only allow 1-2 scout predators to spawn slowly
-            if (this.ecosystemState === 'RECOVERING' && this.scene.fishes.length < 2) {
+            if (this.scene.fishes.length < 2 && Math.random() < 0.10) {
                 // 10% chance to spawn a scout predator during recovery
-                if (Math.random() < 0.10) {
-                    // Continue to normal spawn logic
-                } else {
-                    return null;
-                }
+                // Continue to normal spawn logic
             } else {
-                return null; // No predator spawning during DEPLETED
+                return null;
+            }
+        }
+
+        if (this.ecosystemState === 'ABUNDANT') {
+            // TRICKLE MODE: Spawn normally until bait starts decreasing
+            if (this.spawnMode === 'TRICKLE') {
+                // Keep spawning in trickle mode (handled above)
+            }
+            // WOLFPACK MODE: Don't spawn more (wolfpack already spawned)
+            else if (this.spawnMode === 'WOLFPACK') {
+                return null; // Wolfpack already spawned, no more spawning
+            }
+            // NO MODE: Normal spawning (shouldn't happen but allow it)
+            else if (this.spawnMode === null) {
+                // Normal spawning continues
             }
         }
 
@@ -705,11 +722,23 @@ export class SpawningSystem {
         switch (this.ecosystemState) {
             case 'ABUNDANT':
                 // Bait is plentiful, predators are spawning normally
+
+                // TRICKLE MODE: Stop spawning when bait clouds start decreasing
+                if (this.spawnMode === 'TRICKLE') {
+                    if (baitCloudCount < this.lastBaitCloudCount) {
+                        // Bait is being consumed - stop trickle spawning
+                        console.log('💧 TRICKLE mode ended: Bait clouds decreasing');
+                        this.spawnMode = null; // Stop trickle
+                    }
+                    this.lastBaitCloudCount = baitCloudCount;
+                }
+
                 // Only transition to DEPLETED when bait is COMPLETELY gone
                 if (baitCloudCount === 0 && totalBaitfish === 0) {
                     // Bait has been completely wiped out!
                     this.ecosystemState = 'DEPLETED';
                     this.timeSinceBaitDepleted = 0;
+                    this.spawnMode = null; // Clear spawn mode
                     console.log('🌊 Ecosystem: ABUNDANT → DEPLETED (bait completely wiped out!)');
                 }
                 break;
@@ -740,7 +769,18 @@ export class SpawningSystem {
                 // Reduced threshold: 2+ clouds and 30+ baitfish (was 3 clouds, 50 fish)
                 if (baitCloudCount >= 2 && totalBaitfish >= 30) {
                     this.ecosystemState = 'ABUNDANT';
-                    console.log('🌊 Ecosystem: RECOVERING → ABUNDANT (bait has returned, predators will follow)');
+
+                    // Decide spawn mode: 50% chance of WOLFPACK, 50% TRICKLE
+                    if (Math.random() < 0.5) {
+                        this.spawnMode = 'WOLFPACK';
+                        this.spawnWolfpack();
+                        console.log('🐺 Ecosystem: RECOVERING → ABUNDANT (WOLFPACK arriving!)');
+                    } else {
+                        this.spawnMode = 'TRICKLE';
+                        console.log('💧 Ecosystem: RECOVERING → ABUNDANT (TRICKLE mode - gradual return)');
+                    }
+
+                    this.lastBaitCloudCount = baitCloudCount; // Track for trickle mode
                 }
                 break;
         }
@@ -775,13 +815,41 @@ export class SpawningSystem {
     }
 
     /**
+     * Spawn a wolfpack - burst spawn 10-15 predators at once
+     * Creates intense feeding frenzy right away
+     */
+    spawnWolfpack() {
+        const packSize = Math.floor(Math.random() * 6) + 10; // 10-15 fish
+        console.log(`🐺 WOLFPACK incoming! Spawning ${packSize} predators...`);
+
+        // Temporarily clear spawn mode to allow spawning
+        const savedMode = this.spawnMode;
+        this.spawnMode = null;
+
+        let spawned = 0;
+        for (let i = 0; i < packSize; i++) {
+            const fish = this.trySpawnFish();
+            if (fish) {
+                spawned++;
+            }
+        }
+
+        // Restore wolfpack mode
+        this.spawnMode = savedMode;
+
+        console.log(`🐺 WOLFPACK spawned ${spawned} predators!`);
+    }
+
+    /**
      * Reset the spawning system (for new game)
      */
     reset() {
         this.emergencyFishSpawned = false;
         this.ecosystemState = 'ABUNDANT';
+        this.spawnMode = 'TRICKLE';
         this.timeSinceBaitDepleted = 0;
         this.timeSincePredatorsDeparted = 0;
+        this.lastBaitCloudCount = 0;
     }
 
     /**
