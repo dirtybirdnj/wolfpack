@@ -31,12 +31,12 @@ export class SpawningSystem {
         this.emergencyFishSpawned = false;
 
         // Ecosystem state for ebb and flow dynamics
-        // States: ABUNDANT, HUNTING, DEPLETED, RECOVERING
-        this.ecosystemState = 'ABUNDANT';
-        this.spawnMode = 'TRICKLE'; // TRICKLE or WOLFPACK
-        this.timeSinceBaitDepleted = 0;
-        this.timeSincePredatorsDeparted = 0;
-        this.lastBaitCloudCount = 0; // Track bait cloud trend
+        // States: RECOVERING (no bait, predators gone) or FEEDING (bait present, predators feeding)
+        this.spawnMode = null; // TRICKLE or WOLFPACK
+        this.timeSinceBaitGone = 0; // Time since all bait was consumed
+        this.timeObservingRecovery = 0; // Time observing recovery with bait but no predators
+        this.lastBaitfishCount = 0; // Track baitfish population trend
+        this.hasDespawnedPredators = false; // Track if we've cleared predators
 
         // Spawn initial crayfish population (3 on load)
         this.spawnInitialCrayfish();
@@ -92,33 +92,31 @@ export class SpawningSystem {
      * @returns {Fish|null} The spawned fish or null if spawn failed
      */
     trySpawnFish() {
-        // Ecosystem-aware spawning
-        if (this.ecosystemState === 'DEPLETED') {
-            return null; // No spawning during depletion
-        }
+        const ecosystemState = this.getEcosystemState();
 
-        if (this.ecosystemState === 'RECOVERING') {
-            // During recovery, only allow 1-2 scout predators to spawn slowly
+        // RECOVERING STATE: Only allow 1-2 scout predators
+        if (ecosystemState === 'RECOVERING') {
             if (this.scene.fishes.length < 2 && Math.random() < 0.10) {
                 // 10% chance to spawn a scout predator during recovery
                 // Continue to normal spawn logic
             } else {
-                return null;
+                return null; // No spawning during recovery
             }
         }
 
-        if (this.ecosystemState === 'ABUNDANT') {
+        // FEEDING STATE: Spawn based on mode
+        if (ecosystemState === 'FEEDING') {
             // TRICKLE MODE: Spawn normally until bait starts decreasing
             if (this.spawnMode === 'TRICKLE') {
-                // Keep spawning in trickle mode (handled above)
+                // Keep spawning in trickle mode
             }
             // WOLFPACK MODE: Don't spawn more (wolfpack already spawned)
             else if (this.spawnMode === 'WOLFPACK') {
                 return null; // Wolfpack already spawned, no more spawning
             }
-            // NO MODE: Normal spawning (shouldn't happen but allow it)
+            // NO MODE: Don't spawn yet (waiting for spawn mode to be set)
             else if (this.spawnMode === null) {
-                // Normal spawning continues
+                return null;
             }
         }
 
@@ -703,8 +701,35 @@ export class SpawningSystem {
     }
 
     /**
-     * Update ecosystem state based on predator and prey populations
-     * Creates ebb and flow dynamics - bait depletes, predators leave, bait returns, predators return
+     * Calculate ecosystem state based on what's actually on screen
+     * Returns: 'RECOVERING' or 'FEEDING'
+     */
+    getEcosystemState() {
+        // Check both baitfishClouds (old system) and schools (new system)
+        const cloudsArray = this.scene.baitfishClouds || [];
+        const schoolsArray = this.scene.schools || [];
+
+        // Count visible clouds from both systems
+        const visibleClouds = cloudsArray.filter(c => c && c.visible);
+        const visibleSchools = schoolsArray.filter(s => s && s.visible);
+
+        // Count total baitfish across all clouds (both systems)
+        let totalBaitfish = 0;
+        visibleClouds.forEach(cloud => {
+            totalBaitfish += cloud.members?.length || 0;
+        });
+        visibleSchools.forEach(school => {
+            totalBaitfish += school.members?.length || 0;
+        });
+
+        // CALCULATED STATE: Based on what's actually on screen
+        // RECOVERING: No bait or very little bait (< 10 fish)
+        // FEEDING: Bait present (10+ fish)
+        return totalBaitfish >= 10 ? 'FEEDING' : 'RECOVERING';
+    }
+
+    /**
+     * Update ecosystem dynamics - manage predator spawning based on bait presence
      */
     updateEcosystemState() {
         // Check both baitfishClouds (old system) and schools (new system)
@@ -714,7 +739,6 @@ export class SpawningSystem {
         // Count visible clouds from both systems
         const visibleClouds = cloudsArray.filter(c => c && c.visible);
         const visibleSchools = schoolsArray.filter(s => s && s.visible);
-        const baitCloudCount = visibleClouds.length + visibleSchools.length;
 
         const predatorCount = this.scene.fishes.length;
 
@@ -727,102 +751,76 @@ export class SpawningSystem {
             totalBaitfish += school.members?.length || 0;
         });
 
-        const previousState = this.ecosystemState;
+        const ecosystemState = this.getEcosystemState();
 
-        // State machine for ecosystem dynamics
-        switch (this.ecosystemState) {
-            case 'ABUNDANT':
-                // Bait is plentiful, predators are spawning normally
+        // Track when bait is completely gone
+        if (totalBaitfish === 0) {
+            this.timeSinceBaitGone += 2000; // 2 seconds per check
 
-                // TRICKLE MODE: Stop spawning when bait clouds start decreasing
-                if (this.spawnMode === 'TRICKLE') {
-                    if (baitCloudCount < this.lastBaitCloudCount) {
-                        // Bait is being consumed - stop trickle spawning
-                        console.log('💧 TRICKLE mode ended: Bait clouds decreasing');
-                        this.spawnMode = null; // Stop trickle
-                    }
-                    this.lastBaitCloudCount = baitCloudCount;
-                }
+            // After 5 seconds with no bait, despawn all predators
+            if (this.timeSinceBaitGone > 5000 && !this.hasDespawnedPredators) {
+                console.log('💀 All bait gone! Clearing predators...');
+                this.despawnAllPredators();
+                this.hasDespawnedPredators = true;
+                this.spawnMode = null; // Clear spawn mode
+            }
+        } else {
+            // Reset timers when bait exists
+            this.timeSinceBaitGone = 0;
+            this.hasDespawnedPredators = false;
+        }
 
-                // Only transition to DEPLETED when bait is COMPLETELY gone
-                if (baitCloudCount === 0 && totalBaitfish === 0) {
-                    // Bait has been completely wiped out!
-                    this.ecosystemState = 'DEPLETED';
-                    this.timeSinceBaitDepleted = 0;
-                    this.spawnMode = null; // Clear spawn mode
-                    console.log('🌊 Ecosystem: ABUNDANT → DEPLETED (bait completely wiped out!)');
-                }
-                break;
+        // RECOVERING STATE: Observe recovery and decide when to introduce predators
+        if (ecosystemState === 'RECOVERING') {
+            // If we have bait but no/few predators, we're observing recovery
+            if (totalBaitfish >= 30 && predatorCount <= 2) {
+                this.timeObservingRecovery += 2000; // 2 seconds per check
 
-            case 'DEPLETED':
-                // No bait left, predators should leave
-                this.timeSinceBaitDepleted += 2000; // 2000ms per check (runs every 2 seconds)
-
-                // After 10 seconds with no bait, start despawning predators
-                if (this.timeSinceBaitDepleted > 10000) {
-                    this.despawnPredators();
-                }
-
-                // Once most predators are gone, transition to RECOVERING
-                if (predatorCount <= 2) {
-                    this.ecosystemState = 'RECOVERING';
-                    this.timeSincePredatorsDeparted = 0;
-                    console.log('🌊 Ecosystem: DEPLETED → RECOVERING (predators departed, area is safe)');
-                }
-                break;
-
-            case 'RECOVERING':
-                // Predators gone, bait can return safely
-                this.timeSincePredatorsDeparted += 2000; // 2000ms per check (runs every 2 seconds)
-
-                // Bait starts returning after area is safe
-                // When enough bait has returned, transition back to ABUNDANT
-                // Reduced threshold: 2+ clouds and 30+ baitfish (was 3 clouds, 50 fish)
-                if (baitCloudCount >= 2 && totalBaitfish >= 30) {
-                    this.ecosystemState = 'ABUNDANT';
-
-                    // Decide spawn mode: 50% chance of WOLFPACK, 50% TRICKLE
+                // After 5 seconds of observing recovery, trigger spawn mode
+                if (this.timeObservingRecovery > 5000 && this.spawnMode === null) {
+                    // 50% chance of TRICKLE or WOLFPACK
                     if (Math.random() < 0.5) {
                         this.spawnMode = 'WOLFPACK';
                         this.spawnWolfpack();
-                        console.log('🐺 Ecosystem: RECOVERING → ABUNDANT (WOLFPACK arriving!)');
+                        console.log('🐺 WOLFPACK arriving! (observed recovery for 5 seconds)');
                     } else {
                         this.spawnMode = 'TRICKLE';
-                        console.log('💧 Ecosystem: RECOVERING → ABUNDANT (TRICKLE mode - gradual return)');
+                        console.log('💧 TRICKLE mode starting (observed recovery for 5 seconds)');
                     }
-
-                    this.lastBaitCloudCount = baitCloudCount; // Track for trickle mode
                 }
-                break;
+            } else {
+                this.timeObservingRecovery = 0; // Reset if conditions not met
+            }
         }
 
-        // Log state changes
-        if (previousState !== this.ecosystemState) {
-            console.log(`🐟 Ecosystem state: ${this.ecosystemState} | Bait clouds: ${baitCloudCount} | Baitfish: ${totalBaitfish} | Predators: ${predatorCount}`);
+        // FEEDING STATE: Predators are actively feeding
+        if (ecosystemState === 'FEEDING') {
+            // TRICKLE MODE: Stop spawning when bait population starts decreasing
+            if (this.spawnMode === 'TRICKLE') {
+                if (totalBaitfish < this.lastBaitfishCount) {
+                    console.log('💧 TRICKLE ended: Bait population decreasing');
+                    this.spawnMode = null;
+                }
+                this.lastBaitfishCount = totalBaitfish;
+            }
         }
     }
 
     /**
-     * Despawn predators when ecosystem is depleted
-     * Makes fish "swim away" instead of just popping out
+     * Despawn ALL predators immediately when bait is gone
+     * Makes all fish "swim away" at once
      */
-    despawnPredators() {
-        // Despawn 1-2 predators per check (gradual exodus)
-        const predatorsToRemove = Math.min(2, this.scene.fishes.length);
+    despawnAllPredators() {
+        const count = this.scene.fishes.length;
+        console.log(`🏊 Clearing ${count} predators from game area...`);
 
-        for (let i = 0; i < predatorsToRemove; i++) {
-            if (this.scene.fishes.length > 0) {
-                // Pick a random fish to leave
-                const randomIndex = Math.floor(Math.random() * this.scene.fishes.length);
-                const fishToRemove = this.scene.fishes[randomIndex];
-
-                console.log(`🏊 ${fishToRemove.name} the ${fishToRemove.speciesData.name} swims away (no bait left)`);
-
-                // Remove from array and destroy entity
-                this.scene.fishes.splice(randomIndex, 1);
-                fishToRemove.destroy();
-            }
+        // Remove all predators
+        while (this.scene.fishes.length > 0) {
+            const fish = this.scene.fishes.pop();
+            fish.destroy();
         }
+
+        console.log('✅ All predators cleared! Area is safe for bait recovery.');
     }
 
     /**
@@ -856,11 +854,11 @@ export class SpawningSystem {
      */
     reset() {
         this.emergencyFishSpawned = false;
-        this.ecosystemState = 'ABUNDANT';
-        this.spawnMode = 'TRICKLE';
-        this.timeSinceBaitDepleted = 0;
-        this.timeSincePredatorsDeparted = 0;
-        this.lastBaitCloudCount = 0;
+        this.spawnMode = null;
+        this.timeSinceBaitGone = 0;
+        this.timeObservingRecovery = 0;
+        this.lastBaitfishCount = 0;
+        this.hasDespawnedPredators = false;
     }
 
     /**

@@ -334,20 +334,19 @@ function setupDevTools(game) {
             // Ecosystem state display
             const uiEcosystem = document.getElementById('ui-ecosystem');
             if (uiEcosystem && gameScene.spawningSystem) {
-                const state = gameScene.spawningSystem.ecosystemState;
+                const state = gameScene.spawningSystem.getEcosystemState();
                 const mode = gameScene.spawningSystem.spawnMode;
                 const stateColors = {
-                    'ABUNDANT': '#00ff00',
-                    'DEPLETED': '#ff6600',
+                    'FEEDING': '#00ff00',
                     'RECOVERING': '#ffff00'
                 };
                 const modeColors = {
                     'TRICKLE': '#00ccff',
                     'WOLFPACK': '#ff00ff'
                 };
-                // Show state in state color, mode in mode color (or "NORMAL" if null)
+                // Show state in state color, mode in mode color (or "WAITING" if null)
                 const stateText = `<span style="color: ${stateColors[state] || '#ffffff'}">${state}</span>`;
-                const modeDisplay = mode === null ? 'NORMAL' : mode;
+                const modeDisplay = mode === null ? 'WAITING' : mode;
                 const modeText = `<span style="color: ${modeColors[mode] || '#888888'}">${modeDisplay}</span>`;
                 uiEcosystem.innerHTML = `${stateText}<br/>${modeText}`;
             }
