@@ -276,11 +276,16 @@ export class Fish {
     /**
      * Update fish - delegates logic to model, handles rendering
      */
-    update(lure, allFish = [], baitfishClouds = []) {
+    update(lure, allFish = [], zooplanktonOrClouds = []) {
         // Baitfish use schooling behavior instead of AI
         if (this.isBaitfish) {
             // Store allFish array for schooling neighbor queries
             this.allFishInScene = allFish;
+
+            // Check for nearby zooplankton (food source for baitfish)
+            // zooplanktonOrClouds is zooplankton array for baitfish
+            this.checkForZooplankton(zooplanktonOrClouds);
+
             this.updateSchooling();
             this.updateSonarTrail();
             this.render();
@@ -288,7 +293,8 @@ export class Fish {
         }
 
         // Predator fish use AI and model logic
-        const result = this.model.update(lure, allFish, baitfishClouds);
+        // zooplanktonOrClouds is baitfishClouds array for predators
+        const result = this.model.update(lure, allFish, zooplanktonOrClouds);
 
         // Handle result from model
         if (result && result.caught) {
@@ -387,6 +393,33 @@ export class Fish {
             this.graphics.strokeCircle(this.model.x, this.model.y, selectionSize + pulseOffset);
             this.graphics.lineStyle(1, 0xffffff, 0.5);
             this.graphics.strokeCircle(this.model.x, this.model.y, selectionSize + pulseOffset + 4);
+        }
+    }
+
+    /**
+     * Check for nearby zooplankton and consume them
+     * Baitfish feed on zooplankton for nutrition
+     */
+    checkForZooplankton(zooplankton = []) {
+        if (!zooplankton || zooplankton.length === 0) return;
+
+        const detectionRange = 25; // Small detection range for individual baitfish
+
+        for (const zp of zooplankton) {
+            // Skip already consumed or invisible zooplankton
+            if (!zp || !zp.visible || zp.consumed) continue;
+
+            // Calculate distance to zooplankton
+            const dx = this.model.x - zp.x;
+            const dy = this.model.y - zp.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+
+            // If close enough, consume it
+            if (distance < detectionRange) {
+                zp.consume(); // Mark as consumed
+                // Baitfish gets small nutrition boost (not tracked currently)
+                break; // Only eat one per frame
+            }
         }
     }
 

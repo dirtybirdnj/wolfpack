@@ -771,8 +771,8 @@ export class FishAI {
             return null;
         }
 
-        let nearest = null;
-        let minDistance = Infinity;
+        let bestCloud = null;
+        let bestScore = -Infinity;
 
         for (const cloud of baitfishClouds) {
             // Check if cloud is valid and has baitfish (works for both systems)
@@ -790,15 +790,31 @@ export class FishAI {
             const verticalDistance = Math.abs(this.fish.y - cloud.centerY);
             const maxVerticalRange = GameConfig.BAITFISH_VERTICAL_PURSUIT_RANGE * (this.fish.hunger * GameConfig.HUNGER_VERTICAL_SCALING);
 
-            if (distance < minDistance &&
-                distance < GameConfig.BAITFISH_DETECTION_RANGE &&
-                verticalDistance < maxVerticalRange) {
-                minDistance = distance;
-                nearest = cloud;
+            // Check if cloud is within range
+            if (distance < GameConfig.BAITFISH_DETECTION_RANGE && verticalDistance < maxVerticalRange) {
+                // SCORE-BASED SELECTION to spread predators across clouds
+                // Prefer clouds with fewer hunters and more baitfish
+                const hunterCount = cloud.lakersChasing?.length || 0;
+                const baitfishCount = baitfishArray.length;
+
+                // Score formula:
+                // - Closer clouds score higher (inverted distance)
+                // - Clouds with fewer hunters score higher
+                // - Clouds with more baitfish score higher
+                const distanceScore = (GameConfig.BAITFISH_DETECTION_RANGE - distance) / GameConfig.BAITFISH_DETECTION_RANGE;
+                const hunterPenalty = hunterCount * 0.3; // Each hunter reduces score by 0.3
+                const baitfishBonus = baitfishCount * 0.01; // Each baitfish adds small bonus
+
+                const score = distanceScore - hunterPenalty + baitfishBonus;
+
+                if (score > bestScore) {
+                    bestScore = score;
+                    bestCloud = cloud;
+                }
             }
         }
 
-        return nearest ? { cloud: nearest, distance: minDistance } : null;
+        return bestCloud ? { cloud: bestCloud, distance: bestScore } : null;
     }
 
     shouldHuntBaitfish(cloudInfo) {

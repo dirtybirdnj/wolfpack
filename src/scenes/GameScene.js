@@ -1001,7 +1001,8 @@ export class GameScene extends Phaser.Scene {
                 } : null;
 
                 // Pass all baitfish schools so each fish can find neighbors for Boids
-                fish.update(this.lure, this.baitfishSchools, []);
+                // Also pass zooplankton so baitfish can feed on them
+                fish.update(this.lure, this.baitfishSchools, this.zooplankton || []);
                 return true;
             } else {
                 fish.destroy();
