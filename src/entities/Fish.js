@@ -406,6 +406,22 @@ export class Fish {
             this.graphics.fillCircle(this.model.x, dotY, 3);
         }
 
+        // DEBUG: Mouth position indicator - red dot at calculated mouth position
+        // Shows where the game thinks the fish's mouth is for eating calculations
+        if (this.model.ai) {
+            const mouthOffset = bodySize * 1.25; // Front of fish
+            const angleOffset = this.model.angle || 0;
+
+            const mouthX = isMovingRight ?
+                this.model.x + Math.cos(angleOffset) * mouthOffset :  // Mouth on RIGHT side when facing right
+                this.model.x - Math.cos(angleOffset) * mouthOffset;   // Mouth on LEFT side when facing left
+            const mouthY = this.model.y + Math.sin(angleOffset) * mouthOffset;
+
+            // Draw red dot at mouth position
+            this.graphics.fillStyle(0xff0000, 1.0);
+            this.graphics.fillCircle(mouthX, mouthY, 4);
+        }
+
         // Detection cone visualization - shows fish vision range (only for predators)
         // Show when visionRangeDebug is enabled OR when this fish is selected
         const showVisionCone = this.model.ai && (
@@ -679,9 +695,36 @@ export class Fish {
             }
         }
 
+        // BOUNDARY AVOIDANCE - Turn around before hitting screen edges
+        // This MUST override all other forces when near edges
+        let boundaryForce = { x: 0, y: 0 };
+        let nearBoundary = false;
+        const screenMargin = 250; // Start turning 250px before edge (increased from 200)
+        const boundaryStrength = 15.0; // VERY strong force (increased from 10.0)
+
+        // Player worldX is fixed at center of initial view in world coordinates
+        const playerWorldX = GameConfig.CANVAS_WIDTH / 2;
+
+        // Calculate world coordinate boundaries (visible area edges)
+        const leftBoundary = playerWorldX - GameConfig.CANVAS_WIDTH / 2 + screenMargin;
+        const rightBoundary = playerWorldX + GameConfig.CANVAS_WIDTH / 2 - screenMargin;
+
+        if (this.model.worldX < leftBoundary) {
+            // Too far left - push right HARD
+            const distFromEdge = leftBoundary - this.model.worldX;
+            boundaryForce.x = Math.min(distFromEdge / 20, 5.0) * boundaryStrength; // Steeper gradient
+            nearBoundary = true;
+        } else if (this.model.worldX > rightBoundary) {
+            // Too far right - push left HARD
+            const distFromEdge = this.model.worldX - rightBoundary;
+            boundaryForce.x = -Math.min(distFromEdge / 20, 5.0) * boundaryStrength; // Steeper gradient
+            nearBoundary = true;
+        }
+
         // Combine forces with weights
-        // When fleeing, reduce cohesion/center attraction to let fish escape more freely
+        // When near boundary, MASSIVELY reduce flee force so fish can escape
         const fleeActive = flee.x !== 0 || flee.y !== 0;
+        const fleeMod = nearBoundary ? 0.1 : 1.0; // Reduce flee to 10% near boundaries (was 20%)
         const cohesionMod = fleeActive ? 0.3 : 1.0; // Reduce cohesion when fleeing
         const centerWeight = fleeActive ? 0.5 : (2.0 + (this.schooling.scaredLevel * 3.0)); // Reduce center pull when fleeing
 
@@ -690,7 +733,8 @@ export class Fish {
             alignment.x * this.schooling.alignmentWeight +
             cohesion.x * this.schooling.cohesionWeight * cohesionMod + // Reduced when fleeing
             centerAttraction.x * centerWeight + // Reduced when fleeing
-            flee.x * this.schooling.fleeWeight;
+            flee.x * this.schooling.fleeWeight * fleeMod + // REDUCED near boundaries
+            boundaryForce.x; // Very strong boundary force
 
         const forceY =
             separation.y * this.schooling.separationWeight +
@@ -731,7 +775,6 @@ export class Fish {
         // Update screen X position from world X (like predator fish do)
         // Player is always at center of screen (adapt to actual canvas width)
         const actualCanvasWidth = this.scene.scale.width || GameConfig.CANVAS_WIDTH;
-        const playerWorldX = actualCanvasWidth / 2;
         const offsetFromPlayer = this.model.worldX - playerWorldX;
         this.model.x = (actualCanvasWidth / 2) + offsetFromPlayer;
 

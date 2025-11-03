@@ -811,25 +811,23 @@ export class GameScene extends Phaser.Scene {
      */
     getAdaptedSchoolsForAI() {
         return this.schools.map(school => {
-            // Convert school center worldX to screen X
-            const playerWorldX = this.getPlayerCenterX();
-            const offsetFromPlayer = school.centerWorldX - playerWorldX;
-            const centerX = this.getPlayerCenterX() + offsetFromPlayer;
-
             return {
                 // Cloud properties expected by FishAI
                 visible: school.members.length > 0,
-                baitfish: school.members,      // Array of Fish objects
-                centerX: centerX,              // Screen X position
-                centerY: school.centerY,       // Screen Y position
-                worldX: school.centerWorldX,   // World X position
-                speciesType: school.species,   // Species name (for diet preference)
-                lakersChasing: [],             // Predators currently chasing this school
+                members: school.members,          // Array of Fish objects (unified naming)
+                baitfish: school.members,         // Also provide as baitfish for legacy compatibility
+                centerWorldX: school.centerWorldX, // World X position (PRIMARY for distance checks)
+                centerY: school.centerY,          // Screen Y position
+                speciesType: school.species,      // Species name (for diet preference)
+                lakersChasing: [],                // Predators currently chasing this school
 
                 // Method: Check if lure is in cloud
                 isPlayerLureInCloud(lure) {
-                    // Use Phaser's optimized distance calculation
-                    const distance = Phaser.Math.Distance.Between(lure.x, lure.y, centerX, school.centerY);
+                    // Use Phaser's optimized distance calculation (use worldX)
+                    const distance = Phaser.Math.Distance.Between(
+                        lure.worldX || lure.x, lure.y,
+                        school.centerWorldX, school.centerY
+                    );
                     return distance < GameConfig.BAITFISH_CLOUD_RADIUS;
                 },
 
@@ -837,17 +835,18 @@ export class GameScene extends Phaser.Scene {
                 _lastClosestBaitfish: null,
 
                 // Method: Find best baitfish to target (prefers edge fish on predator's side)
+                // IMPORTANT: x parameter is in worldX coordinates from predator mouth
                 getClosestBaitfish(x, y) {
                     if (school.members.length === 0) {
                         return { baitfish: null, distance: Infinity };
                     }
 
-                    // Calculate actual school center from member positions
+                    // Calculate actual school center from member positions (use worldX)
                     let schoolCenterX = 0, schoolCenterY = 0;
                     let validCount = 0;
                     for (const fish of school.members) {
                         if (!fish.model.consumed) {
-                            schoolCenterX += fish.model.x;
+                            schoolCenterX += fish.model.worldX;
                             schoolCenterY += fish.model.y;
                             validCount++;
                         }
@@ -858,7 +857,7 @@ export class GameScene extends Phaser.Scene {
                     schoolCenterX /= validCount;
                     schoolCenterY /= validCount;
 
-                    // Calculate direction from school center to predator
+                    // Calculate direction from school center to predator (worldX)
                     const dirX = x - schoolCenterX;
                     const dirY = y - schoolCenterY;
                     // Use Phaser's optimized distance calculation
@@ -873,22 +872,19 @@ export class GameScene extends Phaser.Scene {
                     for (const fish of school.members) {
                         if (fish.model.consumed) continue;
 
-                        // Distance from predator to this fish
-                        // Use Phaser's optimized distance calculation
-                        const distToPredator = Phaser.Math.Distance.Between(x, y, fish.model.x, fish.model.y);
+                        // Distance from predator to this fish (use worldX)
+                        const distToPredator = Phaser.Math.Distance.Between(x, y, fish.model.worldX, fish.model.y);
 
-                        // Distance from school center to this fish (edge detection)
-                        // Use Phaser's optimized distance calculation
+                        // Distance from school center to this fish (edge detection, use worldX)
                         const distToCenter = Phaser.Math.Distance.Between(
-                            fish.model.x, fish.model.y,
+                            fish.model.worldX, fish.model.y,
                             schoolCenterX, schoolCenterY
                         );
 
-                        // Direction from school center to this fish
-                        const fishDirX = fish.model.x - schoolCenterX;
+                        // Direction from school center to this fish (use worldX)
+                        const fishDirX = fish.model.worldX - schoolCenterX;
                         const fishDirY = fish.model.y - schoolCenterY;
-                        // Use Phaser's optimized distance calculation
-                        const fishDirLength = Phaser.Math.Distance.Between(schoolCenterX, schoolCenterY, fish.model.x, fish.model.y);
+                        const fishDirLength = Phaser.Math.Distance.Between(schoolCenterX, schoolCenterY, fish.model.worldX, fish.model.y);
 
                         // Dot product: is this fish on the same side as predator?
                         const alignment = fishDirLength > 0
@@ -1156,26 +1152,8 @@ export class GameScene extends Phaser.Scene {
             const maxY = (bottomDepth - 5) * depthScale;
             school.centerY = Math.max(minY, Math.min(maxY, school.centerY));
 
-            // Despawn individual fish that wander way off screen
-            // Give them 300px margin beyond visible area before despawning
-            const despawnMargin = 300;
-            const gameAreaLeft = -despawnMargin;
-            const gameAreaRight = GameConfig.CANVAS_WIDTH + despawnMargin;
-
-            // Remove fish that are off-screen from this school
-            const initialCount = school.members.length;
-            school.members = school.members.filter(fish => {
-                if (fish.model.worldX < gameAreaLeft || fish.model.worldX > gameAreaRight) {
-                    fish.destroy();
-                    return false;
-                }
-                return true;
-            });
-
-            const despawnedCount = initialCount - school.members.length;
-            if (despawnedCount > 0) {
-                console.log(`🐟 ${despawnedCount} fish despawned off-screen from school ${school.id}`);
-            }
+            // Note: Fish now stay in bounds via boundary avoidance in Fish.js
+            // No need to despawn fish at edges anymore
         });
 
         // Render school fog and count labels BEFORE individual fish
@@ -1184,36 +1162,7 @@ export class GameScene extends Phaser.Scene {
         // Update baitfish schools (new unified Fish with Boids schooling)
         this.baitfishSchools = this.baitfishSchools.filter(fish => {
             if (fish.model.visible && !fish.model.consumed) {
-                // Check if this is a fleeing straggler
-                if (fish.fleeing) {
-                    // Fleeing behavior - swim toward nearest edge at panic speed
-                    if (!fish.fleeDirection) {
-                        // Pick direction to flee (toward nearest edge)
-                        const screenCenter = GameConfig.CANVAS_WIDTH / 2;
-                        fish.fleeDirection = fish.model.worldX > screenCenter ? 1 : -1;
-                    }
-
-                    // Apply strong horizontal velocity toward edge
-                    if (fish.schooling) {
-                        fish.schooling.velocity.x += fish.fleeDirection * 0.5;
-                        fish.schooling.velocity.y *= 0.95; // Reduce vertical movement
-                        fish.schooling.isPanicking = true; // Use panic speed
-                    }
-
-                    // Check if way off screen and despawn
-                    // Give them 300px margin beyond visible area before despawning
-                    const despawnMargin = 300;
-                    const gameAreaLeft = -despawnMargin;
-                    const gameAreaRight = GameConfig.CANVAS_WIDTH + despawnMargin;
-
-                    if (fish.model.worldX < gameAreaLeft || fish.model.worldX > gameAreaRight) {
-                        console.log(`🐟 Fleeing straggler despawned off screen`);
-                        fish.destroy();
-                        return false;
-                    }
-                }
-
-                // Find this fish's school center (null if fleeing or no school)
+                // Find this fish's school center
                 const school = this.schools.find(s => s.id === fish.schoolId);
                 fish.schoolCenter = school ? {
                     worldX: school.centerWorldX,
@@ -1270,12 +1219,12 @@ export class GameScene extends Phaser.Scene {
                     return true;
                 });
 
-                // Handle stragglers - make them seek nearest school or flee off-screen
+                // Handle stragglers - make them join nearest school
+                // No more fleeing off-screen, fish stay in bounds via boundary avoidance
                 stragglers.forEach(straggler => {
-                    // Find nearest school within reasonable distance
+                    // Find nearest school
                     let nearestSchool = null;
                     let nearestDist = Infinity;
-                    const SEEK_RANGE = 200; // Only seek schools within 200px
 
                     this.schools.forEach(otherSchool => {
                         if (otherSchool.members.length === 0) return;
@@ -1284,7 +1233,7 @@ export class GameScene extends Phaser.Scene {
                             straggler.model.worldX, straggler.model.y,
                             otherSchool.centerWorldX, otherSchool.centerY
                         );
-                        if (dist < nearestDist && dist < SEEK_RANGE) {
+                        if (dist < nearestDist) {
                             nearestDist = dist;
                             nearestSchool = otherSchool;
                         }
@@ -1296,10 +1245,8 @@ export class GameScene extends Phaser.Scene {
                         nearestSchool.members.push(straggler);
                         console.log(`🐟 Straggler joined nearby school (${nearestDist.toFixed(0)}px away)`);
                     } else {
-                        // No school nearby - flee off-screen
+                        // No other schools - keep fish as solo with boundary avoidance
                         straggler.schoolId = null;
-                        straggler.fleeing = true; // Mark for special behavior
-                        console.log(`🐟 Straggler fleeing off-screen (no schools within ${SEEK_RANGE}px)`);
                     }
                 });
             }
@@ -1365,19 +1312,7 @@ export class GameScene extends Phaser.Scene {
                 return false;
             }
 
-            // Check if fish is leaving and has gone off-screen
-            if (fish.ai && fish.ai.leavingArea) {
-                const despawnMargin = 300;
-                const gameAreaLeft = -despawnMargin;
-                const gameAreaRight = GameConfig.CANVAS_WIDTH + despawnMargin;
-
-                if (fish.model.worldX < gameAreaLeft || fish.model.worldX > gameAreaRight) {
-                    console.log(`🐟 ${fish.species} despawned (left area - no baitfish)`);
-                    fish.destroy();
-                    return false; // Remove from array
-                }
-            }
-
+            // Note: Removed despawn logic - fish stay in bounds via boundary avoidance
             return true; // Keep fish
         });
     }

@@ -31,9 +31,9 @@ export class SpawningSystem {
         this.emergencyFishSpawned = false;
 
         // Simple population targets
-        this.MAX_BAITFISH = 60;
+        this.MAX_BAITFISH = 100; // Increased - fish stay on screen now with boundary avoidance
         this.MAX_PREDATORS = 8;
-        this.MIN_BAIT_FOR_PREDATORS = 15;
+        this.MIN_BAIT_FOR_PREDATORS = 20; // Require more bait before spawning predators
 
         // Spawn initial crayfish population (3 on load)
         this.spawnInitialCrayfish();
@@ -57,9 +57,9 @@ export class SpawningSystem {
             loop: true
         });
 
-        // Spawn baitfish schools every 2 seconds
+        // Spawn baitfish schools every 3 seconds (more frequent than before)
         this.scene.time.addEvent({
-            delay: 2000,
+            delay: 3000,
             callback: () => this.trySpawnBaitfishSchool(),
             callbackScope: this,
             loop: true
@@ -101,8 +101,8 @@ export class SpawningSystem {
             return null;
         }
 
-        // Random spawn chance (15%)
-        if (Math.random() > 0.15) {
+        // Random spawn chance (25% - increased from 15%)
+        if (Math.random() > 0.25) {
             return null;
         }
 
@@ -213,16 +213,20 @@ export class SpawningSystem {
      */
     trySpawnBaitfishSchool() {
         const baitCount = this.countBaitfish();
+        const schoolCount = this.scene.schools ? this.scene.schools.length : 0;
 
         // Don't spawn if we're at max baitfish
         if (baitCount >= this.MAX_BAITFISH) {
+            console.log(`🚫 Baitfish spawn blocked: at max (${baitCount}/${this.MAX_BAITFISH})`);
             return false;
         }
 
-        // Random spawn chance (30%)
-        if (Math.random() > 0.3) {
+        // Random spawn chance (50% - increased to keep population healthy)
+        if (Math.random() > 0.5) {
             return false;
         }
+
+        console.log(`✅ Spawning baitfish school (current: ${baitCount}/${this.MAX_BAITFISH}, ${schoolCount} schools)`);
 
         // Select species based on weighted spawn rates (realistic Lake Champlain distribution)
         let speciesType = 'alewife';
@@ -409,7 +413,7 @@ export class SpawningSystem {
 
     /**
      * Spawn initial ecosystem when game starts
-     * Spawns 4-6 baitfish schools and 2-3 predators IMMEDIATELY
+     * Spawns 4-6 baitfish schools and 4-6 predators IMMEDIATELY
      */
     spawnInitialEcosystem() {
         // Spawn 4-6 baitfish schools from sides - synchronously (no delay!)
@@ -419,8 +423,8 @@ export class SpawningSystem {
             this.spawnSchoolFromSide();
         }
 
-        // Spawn 2-3 predators from sides - synchronously (no delay!)
-        const predatorCount = Math.floor(Utils.randomBetween(2, 3));
+        // Spawn 4-6 predators from sides - synchronously (increased from 2-3)
+        const predatorCount = Math.floor(Utils.randomBetween(4, 6));
 
         for (let i = 0; i < predatorCount; i++) {
             this.spawnPredatorFromSide();
@@ -781,14 +785,8 @@ export class SpawningSystem {
      * @param {number} delta - Time since last frame
      */
     update(time, delta) {
-        // Random chance spawns each frame
-        if (Math.random() < GameConfig.FISH_SPAWN_CHANCE) {
-            this.trySpawnFish();
-        }
-
-        if (Math.random() < GameConfig.BAITFISH_CLOUD_SPAWN_CHANCE) {
-            this.trySpawnBaitfishSchool();
-        }
+        // Note: Main spawning is handled by timers in setupSpawnTimers()
+        // No per-frame random spawning to avoid redundancy and unpredictability
 
         // Update emergency fish if any exist
         this.scene.fishes.forEach(fish => {

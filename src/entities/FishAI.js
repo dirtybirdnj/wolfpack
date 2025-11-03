@@ -191,17 +191,6 @@ export class FishAI {
     }
 
     update(lure, currentTime, allFish = [], baitfishClouds = [], crayfish = []) {
-        // Initialize baitfish sighting timer on first update
-        if (this.lastBaitfishSightingTime === null) {
-            this.lastBaitfishSightingTime = currentTime;
-        }
-
-        // Check if fish is already leaving - if so, just swim off-screen
-        if (this.leavingArea) {
-            this.swimOffScreen();
-            return;
-        }
-
         // Make decisions at intervals, not every frame
         if (currentTime - this.lastDecisionTime < this.decisionCooldown) {
             return;
@@ -213,21 +202,7 @@ export class FishAI {
         // Fish prioritize real food over lures, especially when hungry
         const nearbyBaitfishCloud = this.findNearestBaitfishCloud(baitfishClouds);
 
-        // Update baitfish sighting timer
-        if (nearbyBaitfishCloud) {
-            // Found baitfish - reset timer
-            this.lastBaitfishSightingTime = currentTime;
-        } else {
-            // No baitfish nearby - check if timeout exceeded
-            const timeSinceLastSighting = currentTime - this.lastBaitfishSightingTime;
-            if (timeSinceLastSighting > this.baitfishTimeout) {
-                // No baitfish for 10 seconds - leave area
-                console.log(`🐟 ${this.fish.species} leaving area - no baitfish for ${timeSinceLastSighting/1000}s`);
-                this.leavingArea = true;
-                this.state = Constants.FISH_STATE.IDLE;
-                return;
-            }
-        }
+        // Note: Removed timeout logic - fish stay in bounds and continue hunting
 
         // Check for crayfish (opportunistic bottom feeding for lake trout)
         const nearbyCrayfish = this.findNearestCrayfish(crayfish);
@@ -691,6 +666,10 @@ export class FishAI {
         if (this.state === Constants.FISH_STATE.IDLE || !this.targetX || !this.targetY) {
             // Northern Pike: ambush behavior - stay near ambush position
             if (this.isAmbushPredator) {
+                // Calculate direction to ambush position
+                const dx = this.ambushPosition.x - this.fish.worldX;
+                const dy = this.ambushPosition.y - this.fish.y;
+
                 // Use Phaser's optimized distance calculation
                 const distanceFromAmbush = Phaser.Math.Distance.Between(
                     this.fish.worldX, this.fish.y,
@@ -816,8 +795,9 @@ export class FishAI {
             const cloudVisible = cloud.visible !== false || cloud.members; // Schools don't have visible property
             if (!cloudVisible || baitfishArray.length === 0) {continue;}
 
+            // IMPORTANT: Use worldX for horizontal distance (schools use world coordinates)
             const distance = Utils.calculateDistance(
-                this.fish.x, this.fish.y,
+                this.fish.worldX, this.fish.y,
                 cloud.centerX || cloud.centerWorldX,
                 cloud.centerY
             );
@@ -940,13 +920,13 @@ export class FishAI {
         const isMovingRight = movement.x >= 0;
 
         // Calculate mouth position accounting for fish angle
-        // IMPORTANT: The fish sprite has mouth on the LEFT (negative X) when not flipped
-        // When facing right (not flipped), mouth is at NEGATIVE X offset
-        // When facing left (flipped), mouth is at POSITIVE X offset
+        // Fish facing right = mouth on the RIGHT (positive X)
+        // Fish facing left = mouth on the LEFT (negative X)
+        // IMPORTANT: Use worldX for horizontal position (baitfish use world coordinates)
         const angleOffset = this.fish.angle || 0;
         const mouthX = isMovingRight ?
-            this.fish.x - Math.cos(angleOffset) * mouthOffset :  // Mouth on left side when facing right
-            this.fish.x + Math.cos(angleOffset) * mouthOffset;   // Mouth on right side when facing left
+            this.fish.worldX + Math.cos(angleOffset) * mouthOffset :  // Mouth on RIGHT side when facing right
+            this.fish.worldX - Math.cos(angleOffset) * mouthOffset;   // Mouth on LEFT side when facing left
         const mouthY = this.fish.y + Math.sin(angleOffset) * mouthOffset;
 
         // Find closest baitfish to the MOUTH position (not fish center)
@@ -954,8 +934,9 @@ export class FishAI {
 
         if (result.baitfish) {
             this.targetBaitfish = result.baitfish;
-            this.targetX = result.baitfish.x;
-            this.targetY = result.baitfish.y;
+            // Use worldX for target position (baitfish use world coordinates)
+            this.targetX = result.baitfish.model ? result.baitfish.model.worldX : result.baitfish.worldX;
+            this.targetY = result.baitfish.model ? result.baitfish.model.y : result.baitfish.y;
 
             // Check if mouth is touching the baitfish
             if (result.distance < 8) { // Mouth must touch baitfish
@@ -1111,7 +1092,8 @@ export class FishAI {
      */
     huntCrayfish(crayfish) {
         // Move toward crayfish
-        this.targetX = crayfish.x;
+        // Use worldX for target position (crayfish use world coordinates)
+        this.targetX = crayfish.worldX;
         this.targetY = crayfish.y;
         this.state = Constants.FISH_STATE.HUNTING_BAITFISH; // Reuse hunting state
 
@@ -1125,19 +1107,19 @@ export class FishAI {
         const isMovingRight = movement.x >= 0;
 
         // Calculate mouth position accounting for fish angle
-        // IMPORTANT: The fish sprite has mouth on the LEFT (negative X) when not flipped
-        // When facing right (not flipped), mouth is at NEGATIVE X offset
-        // When facing left (flipped), mouth is at POSITIVE X offset
+        // Fish facing right = mouth on the RIGHT (positive X)
+        // Fish facing left = mouth on the LEFT (negative X)
+        // IMPORTANT: Use worldX for horizontal position
         const angleOffset = this.fish.angle || 0;
         const mouthX = isMovingRight ?
-            this.fish.x - Math.cos(angleOffset) * mouthOffset :  // Mouth on left side when facing right
-            this.fish.x + Math.cos(angleOffset) * mouthOffset;   // Mouth on right side when facing left
+            this.fish.worldX + Math.cos(angleOffset) * mouthOffset :  // Mouth on RIGHT side when facing right
+            this.fish.worldX - Math.cos(angleOffset) * mouthOffset;   // Mouth on LEFT side when facing left
         const mouthY = this.fish.y + Math.sin(angleOffset) * mouthOffset;
 
-        // Check if mouth is touching crayfish
+        // Check if mouth is touching crayfish (use worldX)
         const distance = Utils.calculateDistance(
             mouthX, mouthY,
-            crayfish.x, crayfish.y
+            crayfish.worldX, crayfish.y
         );
 
         if (distance < 8) { // Mouth must touch crayfish

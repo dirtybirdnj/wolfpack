@@ -394,8 +394,8 @@ export class Fish extends AquaticOrganism {
                 const atLeftEdge = this.x < screenMargin;
                 const atRightEdge = this.x > actualGameWidth - screenMargin;
 
-                if ((atLeftEdge || atRightEdge) && this.ai && this.ai.state === Constants.FISH_STATE.IDLE) {
-                    // Fish is too close to screen edge - adjust worldX to pull them back
+                if ((atLeftEdge || atRightEdge) && this.ai) {
+                    // Fish is too close to screen edge - adjust worldX to pull them back (works in all states)
                     if (atLeftEdge) {
                         // Too far left on screen - move worldX right
                         this.worldX = playerWorldX - (actualGameWidth / 2) + screenMargin + 50;
@@ -406,10 +406,12 @@ export class Fish extends AquaticOrganism {
                         console.log(`${this.species} (${this.name}) too close to right screen edge - pulling back`);
                     }
 
-                    // Flip direction and reset AI
-                    this.ai.idleDirection *= -1;
-                    this.ai.targetX = null;
-                    this.ai.targetY = null;
+                    // Flip direction if idle
+                    if (this.ai.state === Constants.FISH_STATE.IDLE) {
+                        this.ai.idleDirection *= -1;
+                        this.ai.targetX = null;
+                        this.ai.targetY = null;
+                    }
 
                     // Recalculate screen position with corrected worldX
                     const newOffsetFromPlayer = this.worldX - playerWorldX;
