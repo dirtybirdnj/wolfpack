@@ -761,15 +761,13 @@ export class SpawningSystem {
         for (let i = 0; i < predatorsToRemove; i++) {
             if (this.scene.fishes.length > 0) {
                 // Pick a random fish to leave
-                const fishToRemove = Utils.randomFromArray(this.scene.fishes);
+                const randomIndex = Math.floor(Math.random() * this.scene.fishes.length);
+                const fishToRemove = this.scene.fishes[randomIndex];
 
                 console.log(`🏊 ${fishToRemove.name} the ${fishToRemove.speciesData.name} swims away (no bait left)`);
 
                 // Remove from array and destroy entity
-                const index = this.scene.fishes.indexOf(fishToRemove);
-                if (index > -1) {
-                    this.scene.fishes.splice(index, 1);
-                }
+                this.scene.fishes.splice(randomIndex, 1);
                 fishToRemove.destroy();
             }
         }
