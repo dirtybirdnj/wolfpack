@@ -915,9 +915,13 @@ export class FishAI {
                 return;
             }
         } else {
-            // No baitfish available, head to cloud center (works for both systems)
-            this.targetX = this.targetBaitfishCloud.centerX || this.targetBaitfishCloud.centerWorldX;
-            this.targetY = this.targetBaitfishCloud.centerY;
+            // No baitfish available - cloud is depleted or all consumed
+            // Return to idle instead of getting stuck at cloud center
+            this.state = Constants.FISH_STATE.IDLE;
+            this.targetBaitfishCloud = null;
+            this.targetBaitfish = null;
+            this.decisionCooldown = 1000;
+            return;
         }
 
         // IMPORTANT: Check if lure is in the baitfish cloud
@@ -943,51 +947,16 @@ export class FishAI {
     }
 
     feedingBehavior(baitfishClouds, lure) {
-        // Continue swimming through cloud while feeding
-        // Check if we should continue hunting or turn back
+        // After eating, check if we should continue hunting or return to idle
+        // REMOVED: All cloud-center targeting logic - predators only chase individual fish
 
-        // Get center position (works for both old and new systems)
-        const centerX = this.targetBaitfishCloud?.centerX || this.targetBaitfishCloud?.centerWorldX || this.fish.x;
-        const centerY = this.targetBaitfishCloud?.centerY || this.fish.y;
-
-        const distanceToCloudCenter = Utils.calculateDistance(
-            this.fish.x, this.fish.y,
-            centerX, centerY
-        );
-
-        // If we've swum past the cloud center, consider turning around
-        if (distanceToCloudCenter > GameConfig.BAITFISH_CLOUD_RADIUS * 1.5) {
-            // Swam through cloud - do 180 turn to dart back (with cooldown)
-            if (!this.lastTurnTime) this.lastTurnTime = 0;
-            const timeSinceLastTurn = this.fish.frameAge - this.lastTurnTime;
-
-            // Check if cloud is still valid (works for both old and new systems)
-            const cloudValid = this.targetBaitfishCloud && (
-                this.targetBaitfishCloud.visible !== false || // Old system (BaitfishCloud)
-                this.targetBaitfishCloud.members  // New system (School) - no visible property
-            );
-
-            if (cloudValid && this.fish.hunger > 30 && timeSinceLastTurn > 120) {
-                // Get center position (works for both systems)
-                this.targetX = this.targetBaitfishCloud.centerX || this.targetBaitfishCloud.centerWorldX;
-                this.targetY = this.targetBaitfishCloud.centerY;
-                this.consecutiveCatches = 0;
-                this.lastTurnTime = this.fish.frameAge;
-                this.state = Constants.FISH_STATE.HUNTING_BAITFISH;
-            } else {
-                // Done feeding, return to idle
-                this.state = Constants.FISH_STATE.IDLE;
-                this.targetBaitfishCloud = null;
-                this.targetBaitfish = null;
-                this.consecutiveCatches = 0;
-            }
-        } else if (this.targetBaitfishCloud && this.fish.hunger > 30) {
-            // Check if cloud still has baitfish (works for both systems)
+        // Check if cloud still has baitfish to hunt
+        if (this.targetBaitfishCloud && this.fish.hunger > 30) {
             const baitfishArray = this.targetBaitfishCloud.baitfish || this.targetBaitfishCloud.members || [];
             const cloudVisible = this.targetBaitfishCloud.visible !== false || this.targetBaitfishCloud.members;
 
             if (cloudVisible && baitfishArray.length > 0) {
-                // Still in cloud, still hungry - keep hunting
+                // Still baitfish available and still hungry - keep hunting
                 this.state = Constants.FISH_STATE.HUNTING_BAITFISH;
                 this.decisionCooldown = 20; // Very short for rapid feeding
             } else {
@@ -998,7 +967,7 @@ export class FishAI {
                 this.consecutiveCatches = 0;
             }
         } else {
-            // Satisfied or cloud depleted
+            // Satisfied or no target cloud - return to idle
             this.state = Constants.FISH_STATE.IDLE;
             this.targetBaitfishCloud = null;
             this.targetBaitfish = null;
