@@ -92,37 +92,40 @@ export class SpawningSystem {
      * @returns {Fish|null} The spawned fish or null if spawn failed
      */
     trySpawnFish() {
-        const ecosystemState = this.getEcosystemState();
+        // BYPASS CHECKS during wolfpack burst spawning
+        if (!this.isSpawningWolfpack) {
+            const ecosystemState = this.getEcosystemState();
 
-        // RECOVERING STATE: Only allow 1-2 scout predators
-        if (ecosystemState === 'RECOVERING') {
-            if (this.scene.fishes.length < 2 && Math.random() < 0.10) {
-                // 10% chance to spawn a scout predator during recovery
-                // Continue to normal spawn logic
-            } else {
-                return null; // No spawning during recovery
+            // RECOVERING STATE: Only allow 1-2 scout predators
+            if (ecosystemState === 'RECOVERING') {
+                if (this.scene.fishes.length < 2 && Math.random() < 0.10) {
+                    // 10% chance to spawn a scout predator during recovery
+                    // Continue to normal spawn logic
+                } else {
+                    return null; // No spawning during recovery
+                }
             }
-        }
 
-        // FEEDING STATE: Spawn based on mode
-        if (ecosystemState === 'FEEDING') {
-            // TRICKLE MODE: Spawn normally until bait starts decreasing
-            if (this.spawnMode === 'TRICKLE') {
-                // Keep spawning in trickle mode
+            // FEEDING STATE: Spawn based on mode
+            if (ecosystemState === 'FEEDING') {
+                // TRICKLE MODE: Spawn normally until bait starts decreasing
+                if (this.spawnMode === 'TRICKLE') {
+                    // Keep spawning in trickle mode
+                }
+                // WOLFPACK MODE: Don't spawn more (wolfpack already spawned)
+                else if (this.spawnMode === 'WOLFPACK') {
+                    return null; // Wolfpack already spawned, no more spawning
+                }
+                // NO MODE: Don't spawn yet (waiting for spawn mode to be set)
+                else if (this.spawnMode === null) {
+                    return null;
+                }
             }
-            // WOLFPACK MODE: Don't spawn more (wolfpack already spawned)
-            else if (this.spawnMode === 'WOLFPACK') {
-                return null; // Wolfpack already spawned, no more spawning
-            }
-            // NO MODE: Don't spawn yet (waiting for spawn mode to be set)
-            else if (this.spawnMode === null) {
+
+            // Don't spawn too many fish at once
+            if (this.scene.fishes.length >= 20) {
                 return null;
             }
-        }
-
-        // Don't spawn too many fish at once
-        if (this.scene.fishes.length >= 20) {
-            return null;
         }
 
         // Get player position in world coordinates (depends on fishing type)
@@ -828,9 +831,8 @@ export class SpawningSystem {
         const packSize = Math.floor(Math.random() * 6) + 10; // 10-15 fish
         console.log(`🐺 WOLFPACK incoming! Spawning ${packSize} predators...`);
 
-        // Temporarily clear spawn mode to allow spawning
-        const savedMode = this.spawnMode;
-        this.spawnMode = null;
+        // Set flag to bypass spawn mode checks during wolfpack burst
+        this.isSpawningWolfpack = true;
 
         let spawned = 0;
         for (let i = 0; i < packSize; i++) {
@@ -840,8 +842,8 @@ export class SpawningSystem {
             }
         }
 
-        // Restore wolfpack mode
-        this.spawnMode = savedMode;
+        // Clear flag
+        this.isSpawningWolfpack = false;
 
         console.log(`🐺 WOLFPACK spawned ${spawned} predators!`);
     }
