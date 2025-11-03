@@ -345,9 +345,10 @@ function setupDevTools(game) {
                     'TRICKLE': '#00ccff',
                     'WOLFPACK': '#ff00ff'
                 };
-                // Show state in state color, mode in mode color
+                // Show state in state color, mode in mode color (or "NORMAL" if null)
                 const stateText = `<span style="color: ${stateColors[state] || '#ffffff'}">${state}</span>`;
-                const modeText = `<span style="color: ${modeColors[mode] || '#888888'}">${mode}</span>`;
+                const modeDisplay = mode === null ? 'NORMAL' : mode;
+                const modeText = `<span style="color: ${modeColors[mode] || '#888888'}">${modeDisplay}</span>`;
                 uiEcosystem.innerHTML = `${stateText}<br/>${modeText}`;
             }
 

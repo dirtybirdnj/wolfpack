@@ -707,13 +707,24 @@ export class SpawningSystem {
      * Creates ebb and flow dynamics - bait depletes, predators leave, bait returns, predators return
      */
     updateEcosystemState() {
-        const baitCloudCount = this.scene.baitfishClouds.length;
+        // Check both baitfishClouds (old system) and schools (new system)
+        const cloudsArray = this.scene.baitfishClouds || [];
+        const schoolsArray = this.scene.schools || [];
+
+        // Count visible clouds from both systems
+        const visibleClouds = cloudsArray.filter(c => c && c.visible);
+        const visibleSchools = schoolsArray.filter(s => s && s.visible);
+        const baitCloudCount = visibleClouds.length + visibleSchools.length;
+
         const predatorCount = this.scene.fishes.length;
 
-        // Count total baitfish across all clouds
+        // Count total baitfish across all clouds (both systems)
         let totalBaitfish = 0;
-        this.scene.baitfishClouds.forEach(cloud => {
-            totalBaitfish += cloud.members.length;
+        visibleClouds.forEach(cloud => {
+            totalBaitfish += cloud.members?.length || 0;
+        });
+        visibleSchools.forEach(school => {
+            totalBaitfish += school.members?.length || 0;
         });
 
         const previousState = this.ecosystemState;
