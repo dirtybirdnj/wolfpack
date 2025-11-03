@@ -818,29 +818,89 @@ export class GameScene extends Phaser.Scene {
                 // Track the last closest baitfish found (so we consume the RIGHT one)
                 _lastClosestBaitfish: null,
 
-                // Method: Find closest baitfish to predator
+                // Method: Find best baitfish to target (prefers edge fish on predator's side)
                 getClosestBaitfish(x, y) {
-                    let closest = null;
-                    let minDistance = Infinity;
+                    if (school.members.length === 0) {
+                        return { baitfish: null, distance: Infinity };
+                    }
+
+                    // Calculate actual school center from member positions
+                    let schoolCenterX = 0, schoolCenterY = 0;
+                    let validCount = 0;
+                    for (const fish of school.members) {
+                        if (!fish.model.consumed) {
+                            schoolCenterX += fish.model.x;
+                            schoolCenterY += fish.model.y;
+                            validCount++;
+                        }
+                    }
+                    if (validCount === 0) {
+                        return { baitfish: null, distance: Infinity };
+                    }
+                    schoolCenterX /= validCount;
+                    schoolCenterY /= validCount;
+
+                    // Calculate direction from school center to predator
+                    const dirX = x - schoolCenterX;
+                    const dirY = y - schoolCenterY;
+                    const dirLength = Math.sqrt(dirX * dirX + dirY * dirY);
+                    const normalizedDirX = dirLength > 0 ? dirX / dirLength : 0;
+                    const normalizedDirY = dirLength > 0 ? dirY / dirLength : 0;
+
+                    // Score each baitfish: prefer fish on the edge facing the predator
+                    let bestFish = null;
+                    let bestScore = -Infinity;
 
                     for (const fish of school.members) {
                         if (fish.model.consumed) continue;
 
-                        const distance = Math.sqrt(
+                        // Distance from predator to this fish
+                        const distToPredator = Math.sqrt(
                             Math.pow(x - fish.model.x, 2) +
                             Math.pow(y - fish.model.y, 2)
                         );
 
-                        if (distance < minDistance) {
-                            minDistance = distance;
-                            closest = fish;
+                        // Distance from school center to this fish (edge detection)
+                        const distToCenter = Math.sqrt(
+                            Math.pow(fish.model.x - schoolCenterX, 2) +
+                            Math.pow(fish.model.y - schoolCenterY, 2)
+                        );
+
+                        // Direction from school center to this fish
+                        const fishDirX = fish.model.x - schoolCenterX;
+                        const fishDirY = fish.model.y - schoolCenterY;
+                        const fishDirLength = Math.sqrt(fishDirX * fishDirX + fishDirY * fishDirY);
+
+                        // Dot product: is this fish on the same side as predator?
+                        const alignment = fishDirLength > 0
+                            ? (fishDirX * normalizedDirX + fishDirY * normalizedDirY) / fishDirLength
+                            : 0;
+
+                        // SCORING:
+                        // - Prefer fish aligned with predator direction (edge fish on predator's side)
+                        // - Prefer fish farther from center (on the edge)
+                        // - Slightly prefer closer fish
+                        const alignmentScore = alignment * 100;  // -100 to +100
+                        const edgeScore = distToCenter;          // Farther from center = better
+                        const proximityScore = -distToPredator * 0.1; // Closer = slightly better
+
+                        const totalScore = alignmentScore + edgeScore + proximityScore;
+
+                        if (totalScore > bestScore) {
+                            bestScore = totalScore;
+                            bestFish = fish;
                         }
                     }
 
-                    // Store the closest fish so consumeBaitfish() eats the RIGHT one
-                    this._lastClosestBaitfish = closest;
+                    // Store the best fish so consumeBaitfish() eats the RIGHT one
+                    this._lastClosestBaitfish = bestFish;
 
-                    return { baitfish: closest, distance: minDistance };
+                    const finalDistance = bestFish ? Math.sqrt(
+                        Math.pow(x - bestFish.model.x, 2) +
+                        Math.pow(y - bestFish.model.y, 2)
+                    ) : Infinity;
+
+                    return { baitfish: bestFish, distance: finalDistance };
                 },
 
                 // Method: Consume the SPECIFIC baitfish that was targeted (not random!)
