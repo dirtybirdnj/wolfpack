@@ -719,8 +719,6 @@ export class SpawningSystem {
             totalBaitfish += count;
         });
 
-        console.log(`🐟 Ecosystem check: ${schoolsArray.length} schools, ${activeSchools.length} active, ${totalBaitfish} total baitfish`);
-
         // CALCULATED STATE: Based on what's actually on screen
         // RECOVERING: No bait or very little bait (< 10 fish)
         // FEEDING: Bait present (10+ fish)
@@ -787,10 +785,18 @@ export class SpawningSystem {
             this.timeObservingRecovery = 0; // Reset if conditions not met
         }
 
-        // TRICKLE MODE: Stop spawning when bait population starts decreasing
+        // TRICKLE MODE: Use predator:baitfish ratio to determine if spawn mode should end
+        // Goal ratio: 1 predator per 10 baitfish (roughly)
+        // End TRICKLE when we have enough predators OR bait is being consumed
         if (this.spawnMode === 'TRICKLE') {
-            if (totalBaitfish < this.lastBaitfishCount) {
-                console.log(`💧 TRICKLE ended: Bait decreasing (${totalBaitfish} < ${this.lastBaitfishCount})`);
+            const targetRatio = 10; // 1 predator per 10 baitfish
+            const currentRatio = totalBaitfish > 0 ? totalBaitfish / predatorCount : 0;
+
+            // End trickle if:
+            // 1. We have a good predator ratio (close to 1:10)
+            // 2. OR baitfish count is dropping (being consumed)
+            if (currentRatio <= targetRatio || totalBaitfish < this.lastBaitfishCount) {
+                console.log(`💧 TRICKLE ended: Ratio ${currentRatio.toFixed(1)}:1 (${predatorCount} predators, ${totalBaitfish} baitfish)`);
                 this.spawnMode = null;
             }
             this.lastBaitfishCount = totalBaitfish;

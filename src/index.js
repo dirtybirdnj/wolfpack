@@ -332,23 +332,29 @@ function setupDevTools(game) {
             if (uiTime) uiTime.textContent = timeStr;
 
             // Ecosystem state display
-            const uiEcosystem = document.getElementById('ui-ecosystem');
-            if (uiEcosystem && gameScene.spawningSystem) {
+            const uiEcosystemState = document.getElementById('ui-ecosystem-state');
+            const uiSpawnMode = document.getElementById('ui-spawn-mode');
+
+            if (uiEcosystemState && uiSpawnMode && gameScene.spawningSystem) {
                 const state = gameScene.spawningSystem.getEcosystemState();
                 const mode = gameScene.spawningSystem.spawnMode;
+
+                // Color code ecosystem state (green=FEEDING, yellow=RECOVERING)
                 const stateColors = {
                     'FEEDING': '#00ff00',
                     'RECOVERING': '#ffff00'
                 };
+                uiEcosystemState.style.color = stateColors[state] || '#ffffff';
+                uiEcosystemState.textContent = state;
+
+                // Color code spawn mode (active modes in color, WAITING in grey)
                 const modeColors = {
                     'TRICKLE': '#00ccff',
                     'WOLFPACK': '#ff00ff'
                 };
-                // Show state in state color, mode in mode color (or "WAITING" if null)
-                const stateText = `<span style="color: ${stateColors[state] || '#ffffff'}">${state}</span>`;
                 const modeDisplay = mode === null ? 'WAITING' : mode;
-                const modeText = `<span style="color: ${modeColors[mode] || '#888888'}">${modeDisplay}</span>`;
-                uiEcosystem.innerHTML = `${stateText}<br/>${modeText}`;
+                uiSpawnMode.style.color = mode === null ? '#888888' : (modeColors[mode] || '#ffffff');
+                uiSpawnMode.textContent = modeDisplay;
             }
 
             // Update fish status panel
