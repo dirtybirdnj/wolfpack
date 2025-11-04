@@ -169,14 +169,16 @@ export class NotificationSystem {
      * Important notification when controller dies during gameplay
      */
     showGamepadDisconnected() {
-        // Create persistent overlay that stays until dismissed
+        // Create persistent overlay that stays until dismissed - reduced opacity
+        // Use dynamic scale dimensions instead of hardcoded GameConfig values
         const overlay = this.scene.add.graphics();
-        overlay.fillStyle(0x000000, 0.85);
-        overlay.fillRect(0, 0, GameConfig.CANVAS_WIDTH, GameConfig.CANVAS_HEIGHT);
+        overlay.fillStyle(0x000000, 0.4);
+        overlay.fillRect(0, 0, this.scene.scale.width, this.scene.scale.height);
         overlay.setDepth(3000);
 
-        // Warning title
-        const title = this.scene.add.text(GameConfig.CANVAS_WIDTH / 2, 130, '⚠️ CONTROLLER DISCONNECTED', {
+        // Warning title - use dynamic scale for centering
+        const centerX = this.scene.scale.width / 2;
+        const title = this.scene.add.text(centerX, 130, '⚠️ CONTROLLER DISCONNECTED', {
             fontSize: '32px',
             fontFamily: 'Courier New',
             color: '#ff6600',
@@ -188,7 +190,7 @@ export class NotificationSystem {
         title.setDepth(3001);
 
         // Warning message
-        const message = this.scene.add.text(GameConfig.CANVAS_WIDTH / 2, 210,
+        const message = this.scene.add.text(centerX, 210,
             'Your controller has been disconnected.\n\n' +
             'Check battery or connection, then press\n' +
             'any button on the controller to reconnect.\n\n' +
@@ -207,7 +209,7 @@ export class NotificationSystem {
         message.setDepth(3001);
 
         // Continue hint
-        const hint = this.scene.add.text(GameConfig.CANVAS_WIDTH / 2, 330,
+        const hint = this.scene.add.text(centerX, 330,
             'Press SPACEBAR or ESC to dismiss',
             {
                 fontSize: '14px',
@@ -323,14 +325,16 @@ export class NotificationSystem {
     createPauseOverlay() {
         if (this.pauseOverlay) return; // Already exists
 
-        // Semi-transparent black overlay
+        // Semi-transparent black overlay - reduced opacity to see game
+        // Use dynamic scale dimensions instead of hardcoded GameConfig values
         const overlay = this.scene.add.graphics();
-        overlay.fillStyle(0x000000, 0.85);
-        overlay.fillRect(0, 0, GameConfig.CANVAS_WIDTH, GameConfig.CANVAS_HEIGHT);
+        overlay.fillStyle(0x000000, 0.4);
+        overlay.fillRect(0, 0, this.scene.scale.width, this.scene.scale.height);
         overlay.setDepth(2000);
 
-        // PAUSED text
-        const pausedText = this.scene.add.text(GameConfig.CANVAS_WIDTH / 2, 180, 'PAUSED', {
+        // PAUSED text - use dynamic scale for centering
+        const centerX = this.scene.scale.width / 2;
+        const pausedText = this.scene.add.text(centerX, 180, 'PAUSED', {
             fontSize: '42px',
             fontFamily: 'Courier New',
             color: '#00ff00',
@@ -345,12 +349,12 @@ export class NotificationSystem {
         this.selectedButtonIndex = 0;
         this.buttons = [];
 
-        // Create menu buttons
-        const centerY = GameConfig.CANVAS_HEIGHT / 2 + 10;
+        // Create menu buttons - use dynamic scale for positioning
+        const centerY = this.scene.scale.height / 2 + 10;
         const buttonSpacing = 65;
 
         const resumeButton = this.createPauseMenuButton(
-            GameConfig.CANVAS_WIDTH / 2,
+            centerX,
             centerY,
             'RESUME',
             () => this.togglePause()
@@ -358,7 +362,7 @@ export class NotificationSystem {
         this.buttons.push(resumeButton);
 
         const tackleBoxButton = this.createPauseMenuButton(
-            GameConfig.CANVAS_WIDTH / 2,
+            centerX,
             centerY + buttonSpacing,
             'TACKLE BOX',
             () => this.openTackleBox()
@@ -366,7 +370,7 @@ export class NotificationSystem {
         this.buttons.push(tackleBoxButton);
 
         const controlsButton = this.createPauseMenuButton(
-            GameConfig.CANVAS_WIDTH / 2,
+            centerX,
             centerY + buttonSpacing * 2,
             'CONTROLS',
             () => this.showControlsDialog()
@@ -374,15 +378,15 @@ export class NotificationSystem {
         this.buttons.push(controlsButton);
 
         const mainMenuButton = this.createPauseMenuButton(
-            GameConfig.CANVAS_WIDTH / 2,
+            centerX,
             centerY + buttonSpacing * 3,
             'MAIN MENU',
             () => this.goToMainMenu()
         );
         this.buttons.push(mainMenuButton);
 
-        // Controls hint
-        const hintText = this.scene.add.text(GameConfig.CANVAS_WIDTH / 2, GameConfig.CANVAS_HEIGHT - 60,
+        // Controls hint - use dynamic scale for positioning
+        const hintText = this.scene.add.text(centerX, this.scene.scale.height - 60,
             'D-Pad/Arrows: Navigate | X: Select | SELECT: Tackle Box | CIRCLE: Resume', {
             fontSize: '11px',
             fontFamily: 'Courier New',
@@ -645,14 +649,16 @@ export class NotificationSystem {
 
         this.controlsDialogOpen = true;
 
-        // Create controls dialog overlay
+        // Create controls dialog overlay - reduced opacity to see game
+        // Use dynamic scale dimensions instead of hardcoded GameConfig values
         const dialogBg = this.scene.add.graphics();
-        dialogBg.fillStyle(0x000000, 0.95);
-        dialogBg.fillRect(0, 0, GameConfig.CANVAS_WIDTH, GameConfig.CANVAS_HEIGHT);
+        dialogBg.fillStyle(0x000000, 0.4);
+        dialogBg.fillRect(0, 0, this.scene.scale.width, this.scene.scale.height);
         dialogBg.setDepth(2100);
 
-        // Title
-        const title = this.scene.add.text(GameConfig.CANVAS_WIDTH / 2, 30, 'CONTROLS', {
+        // Title - use dynamic scale for centering
+        const centerX = this.scene.scale.width / 2;
+        const title = this.scene.add.text(centerX, 30, 'CONTROLS', {
             fontSize: '32px',
             fontFamily: 'Courier New',
             color: '#00ff00',
@@ -774,8 +780,8 @@ export class NotificationSystem {
 
         // Movement controls removed - simplified gameplay
 
-        // Close button hint
-        const closeHint = this.scene.add.text(GameConfig.CANVAS_WIDTH / 2, GameConfig.CANVAS_HEIGHT - 30,
+        // Close button hint - use dynamic scale for centering
+        const closeHint = this.scene.add.text(centerX, this.scene.scale.height - 30,
             'Press X, ENTER, or CIRCLE to close', {
             fontSize: '12px',
             fontFamily: 'Courier New',

@@ -20,7 +20,7 @@ export const BAITFISH_SPECIES = {
         schoolingDensity: 'high', // tight schools
 
         // Movement
-        speed: { base: 3.0, panic: 6.0 }, // Very fast - hard to catch
+        speed: { base: 2.2, panic: 4.5 }, // Fast but catchable by predators
         verticalMigration: true, // deeper during day, shallower at night
 
         // Visual properties
@@ -72,7 +72,7 @@ export const BAITFISH_SPECIES = {
         schoolingDensity: 'very_high', // extremely tight schools
 
         // Movement
-        speed: { base: 3.5, panic: 7.0 }, // Very fast - hard to catch
+        speed: { base: 2.5, panic: 5.0 }, // Fast but catchable by predators
         verticalMigration: false, // stable depth preference
 
         // Visual properties

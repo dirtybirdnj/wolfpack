@@ -218,13 +218,14 @@ export class Fish extends AquaticOrganism {
                 const verticalSpeed = Math.abs(movement.y);
 
                 // Body tilt based on vertical movement component
+                // Angle represents UP/DOWN tilt only (sprite flip handles left/right)
                 if (horizontalSpeed > 0.1) {
                     this.targetAngle = Math.atan2(movement.y, horizontalSpeed);
                 }
 
-                // Smoothly interpolate to target angle (slower = more realistic)
+                // Smoothly interpolate to target angle (responsive but not instant)
                 const angleDiff = this.targetAngle - this.angle;
-                this.angle += angleDiff * 0.08; // Reduced from 0.15 for smoother turning
+                this.angle += angleDiff * 0.15; // Faster turning for more natural movement
 
                 // Allow steeper angles for vertical chasing (up to 60 degrees)
                 const isVerticalChase = verticalSpeed > horizontalSpeed * 0.8;
@@ -388,35 +389,9 @@ export class Fish extends AquaticOrganism {
                 const offsetFromPlayer = this.worldX - playerWorldX;
                 this.x = (actualGameWidth / 2) + offsetFromPlayer;
 
-                // SCREEN BOUNDARY DETECTION: Check if fish is stuck at screen edges
-                // Only apply when IDLE to avoid warping during hunting
-                const screenMargin = 100; // Reduced from 150 - only extreme edges
-                const atLeftEdge = this.x < screenMargin;
-                const atRightEdge = this.x > actualGameWidth - screenMargin;
-
-                // Only enforce boundaries when IDLE or INTERESTED (not when actively hunting)
-                const canEnforceBoundary = this.ai && (
-                    this.ai.state === Constants.FISH_STATE.IDLE ||
-                    this.ai.state === Constants.FISH_STATE.INTERESTED
-                );
-
-                if ((atLeftEdge || atRightEdge) && canEnforceBoundary) {
-                    // Gentle boundary nudge - don't teleport, just redirect
-                    if (atLeftEdge) {
-                        // Too far left - set target to swim right
-                        this.ai.targetX = playerWorldX + 200; // 200px right of center
-                        this.ai.targetY = this.y;
-                        console.log(`${this.species} (${this.name}) at left edge - turning around`);
-                    } else {
-                        // Too far right - set target to swim left
-                        this.ai.targetX = playerWorldX - 200; // 200px left of center
-                        this.ai.targetY = this.y;
-                        console.log(`${this.species} (${this.name}) at right edge - turning around`);
-                    }
-
-                    // Flip idle direction
-                    this.ai.idleDirection *= -1;
-                }
+                // REMOVED: Screen boundary detection system
+                // The worldX boundary system (lines 322-340) already handles boundaries properly
+                // Having two boundary systems caused conflicts where fish got stuck
             }
 
             // FROZEN DETECTION: Check if predator fish is stuck (not moving for extended period)

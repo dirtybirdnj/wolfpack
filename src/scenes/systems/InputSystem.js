@@ -276,11 +276,11 @@ export class InputSystem {
     }
 
     /**
-     * Handle fish fight input (spacebar or R2 rapid tapping, plus drag adjustment)
-     * @returns {boolean} True if reel input was pressed this frame
+     * Handle fish fight input (R2 analog trigger for continuous reeling, plus drag adjustment)
+     * @returns {number} Analog reel input 0-1 from R2 trigger pressure
      */
     handleFishFightInput() {
-        const spacePressed = Phaser.Input.Keyboard.JustDown(this.spaceKey);
+        let reelInput = 0; // Default no reeling
 
         // Handle drag adjustment with Q/E keys during fight
         if (this.scene.reelModel) {
@@ -297,19 +297,14 @@ export class InputSystem {
             }
         }
 
-        // Check R2 trigger for gamepad (rapid tapping) using native API
-        let r2Pressed = false;
+        // Get R2 trigger analog value for continuous reeling
         if (window.gamepadManager && window.gamepadManager.isConnected()) {
             const r2Button = window.gamepadManager.getButton('R2');
             const l1Button = window.gamepadManager.getButton('L1');
             const r1Button = window.gamepadManager.getButton('R1');
-            const currentTime = this.scene.time.now;
 
-            // Trigger pressed (value > 0.5 threshold) and enough time has passed
-            if (r2Button.value > 0.5 && currentTime - this.gamepadState.lastR2Press >= this.gamepadState.r2MinInterval) {
-                r2Pressed = true;
-                this.gamepadState.lastR2Press = currentTime;
-            }
+            // R2 trigger provides analog input (0-1) for reel speed
+            reelInput = r2Button.value || 0;
 
             // Handle drag adjustment with L1/R1 bumpers during fight
             if (this.scene.reelModel) {
@@ -329,7 +324,7 @@ export class InputSystem {
             }
         }
 
-        return spacePressed || r2Pressed;
+        return reelInput; // Return analog value (0-1) instead of boolean
     }
 
     /**

@@ -50,10 +50,11 @@ export class AquaticOrganism {
      * Player is always at center of screen
      */
     updateScreenPosition() {
-        // Player position is center of screen
-        const playerWorldX = GameConfig.CANVAS_WIDTH / 2;
+        // Use CURRENT canvas width from scene (handles window resize)
+        const canvasWidth = this.scene.scale.width;
+        const playerWorldX = canvasWidth / 2;
         const offsetFromPlayer = this.worldX - playerWorldX;
-        this.x = (GameConfig.CANVAS_WIDTH / 2) + offsetFromPlayer;
+        this.x = (canvasWidth / 2) + offsetFromPlayer;
     }
 
     /**
@@ -69,8 +70,9 @@ export class AquaticOrganism {
      * Check if organism is too far from player (for culling)
      */
     isTooFarFromPlayer(maxDistance = 600) {
-        // Player is at center of screen
-        const playerWorldX = GameConfig.CANVAS_WIDTH / 2;
+        // Use CURRENT canvas width from scene (handles window resize)
+        const canvasWidth = this.scene.scale.width;
+        const playerWorldX = canvasWidth / 2;
         const distanceFromPlayer = Math.abs(this.worldX - playerWorldX);
         return distanceFromPlayer > maxDistance;
     }

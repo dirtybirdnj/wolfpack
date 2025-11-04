@@ -90,9 +90,17 @@ export class Baitfish extends AquaticOrganism {
         const maxY = bottomDepth * depthScale; // Can reach actual bottom (matches fish max depth)
         this.y = Math.max(minY, Math.min(maxY, this.y));
 
-        // Update screen position and check if too far from player
+        // Update screen position
+        // Individual baitfish visibility is now managed by their cloud
+        // Only hide if actually off the visible screen
         this.updateScreenPosition();
-        if (this.isTooFarFromPlayer(600)) {
+
+        // Check actual screen position, not worldX distance
+        const actualGameWidth = this.scene.scale.width || GameConfig.CANVAS_WIDTH;
+        const buffer = 200; // More generous buffer for individual fish
+        const isOffScreen = this.x < -buffer || this.x > actualGameWidth + buffer;
+
+        if (isOffScreen) {
             this.visible = false;
         }
     }

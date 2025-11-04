@@ -695,29 +695,32 @@ export class Fish {
             }
         }
 
-        // BOUNDARY AVOIDANCE - Turn around before hitting screen edges
-        // This MUST override all other forces when near edges
+        // BOUNDARY AVOIDANCE - Use screen-based visibility instead of hardcoded worldX boundaries
+        // This matches the pattern used by BaitfishCloud and individual baitfish
         let boundaryForce = { x: 0, y: 0 };
         let nearBoundary = false;
-        const screenMargin = 250; // Start turning 250px before edge (increased from 200)
-        const boundaryStrength = 15.0; // VERY strong force (increased from 10.0)
+        const buffer = 200; // Start turning 200px before screen edge
+        const boundaryStrength = 15.0; // VERY strong force
 
-        // Player worldX is fixed at center of initial view in world coordinates
-        const playerWorldX = GameConfig.CANVAS_WIDTH / 2;
+        // Use actual game width and check screen position (not worldX)
+        const actualGameWidth = this.scene.scale.width || GameConfig.CANVAS_WIDTH;
+        const screenX = this.model.x; // Fish's screen position (already calculated)
 
-        // Calculate world coordinate boundaries (visible area edges)
-        const leftBoundary = playerWorldX - GameConfig.CANVAS_WIDTH / 2 + screenMargin;
-        const rightBoundary = playerWorldX + GameConfig.CANVAS_WIDTH / 2 - screenMargin;
+        // Check proximity to actual screen edges
+        const nearLeftEdge = screenX < buffer;
+        const nearRightEdge = screenX > actualGameWidth - buffer;
 
-        if (this.model.worldX < leftBoundary) {
-            // Too far left - push right HARD
-            const distFromEdge = leftBoundary - this.model.worldX;
-            boundaryForce.x = Math.min(distFromEdge / 20, 5.0) * boundaryStrength; // Steeper gradient
+        if (nearLeftEdge) {
+            // Near left edge - push right with gradient force
+            const distFromEdge = buffer - screenX;
+            const forceMagnitude = Math.min(distFromEdge / buffer, 1.0); // 0 to 1
+            boundaryForce.x = forceMagnitude * boundaryStrength;
             nearBoundary = true;
-        } else if (this.model.worldX > rightBoundary) {
-            // Too far right - push left HARD
-            const distFromEdge = this.model.worldX - rightBoundary;
-            boundaryForce.x = -Math.min(distFromEdge / 20, 5.0) * boundaryStrength; // Steeper gradient
+        } else if (nearRightEdge) {
+            // Near right edge - push left with gradient force
+            const distFromEdge = screenX - (actualGameWidth - buffer);
+            const forceMagnitude = Math.min(distFromEdge / buffer, 1.0); // 0 to 1
+            boundaryForce.x = -forceMagnitude * boundaryStrength;
             nearBoundary = true;
         }
 
@@ -775,6 +778,7 @@ export class Fish {
         // Update screen X position from world X (like predator fish do)
         // Player is always at center of screen (adapt to actual canvas width)
         const actualCanvasWidth = this.scene.scale.width || GameConfig.CANVAS_WIDTH;
+        const playerWorldX = actualCanvasWidth / 2; // Dynamic player world position
         const offsetFromPlayer = this.model.worldX - playerWorldX;
         this.model.x = (actualCanvasWidth / 2) + offsetFromPlayer;
 
