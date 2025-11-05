@@ -29,9 +29,9 @@ export class FishAI {
         this.targetBaitfish = null;
         this.isFrenzying = false;
 
-        // Baitfish detection timer - if no baitfish seen for 10 seconds, leave area
+        // Baitfish detection timer - if no baitfish seen for 3 seconds, leave area
         this.lastBaitfishSightingTime = null; // Will be set when fish spawns
-        this.baitfishTimeout = 10000; // 10 seconds in milliseconds
+        this.baitfishTimeout = 3000; // 3 seconds - more active hunting behavior
         this.leavingArea = false; // Flag to indicate fish is swimming off-screen
 
         // Hunting commitment - prevents oscillation when fish starts hunting

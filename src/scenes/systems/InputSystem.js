@@ -46,12 +46,43 @@ export class InputSystem {
         this.eKey = this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.E); // Increase drag
         this.vKey = this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.V); // Toggle vision range visualization
 
-        // Mouse/touch controls (optional enhancement)
+        // Mouse controls for quick developer testing
+        // Left click = drop lure, Right click = reel up
+
+        // Disable right-click context menu on the game canvas
+        this.scene.input.mouse.disableContextMenu();
+
         this.scene.input.on('pointerdown', (pointer) => {
-            if (pointer.y > 100) {
+            // Right click (button 2) - reel up
+            if (pointer.rightButtonDown()) {
+                this.mouseReeling = true;
+            }
+            // Left click (button 0) - drop lure
+            else if (pointer.leftButtonDown() && pointer.y > 100) {
                 this.scene.lure.drop();
             }
         });
+
+        // Stop reeling when right mouse button is released
+        this.scene.input.on('pointerup', (pointer) => {
+            if (pointer.button === 2) { // Right button released
+                this.mouseReeling = false;
+            }
+        });
+
+        // Mouse wheel to adjust reel intensity (0.0 to 1.0)
+        this.scene.input.on('wheel', (pointer, gameObjects, deltaX, deltaY, deltaZ) => {
+            // Scroll up = increase intensity, scroll down = decrease intensity
+            const scrollDirection = Math.sign(deltaY); // 1 for down, -1 for up
+            this.mouseReelIntensity -= scrollDirection * 0.1; // Reverse: scroll up increases
+            this.mouseReelIntensity = Phaser.Math.Clamp(this.mouseReelIntensity, 0.1, 1.0);
+
+            console.log(`🖱️ Mouse reel intensity: ${(this.mouseReelIntensity * 100).toFixed(0)}%`);
+        });
+
+        // Track mouse reeling state and intensity
+        this.mouseReeling = false;
+        this.mouseReelIntensity = 1.0; // Default to full speed
 
         // Gamepad support setup
         this.setupGamepad();
@@ -128,9 +159,12 @@ export class InputSystem {
             this.scene.lure.drop();
         }
 
-        // Retrieve lure with up arrow
+        // Retrieve lure with up arrow OR right mouse button held
         if (this.cursors.up.isDown) {
             this.scene.lure.retrieve();
+        } else if (this.mouseReeling) {
+            // Use variable speed retrieve with mouse wheel intensity
+            this.scene.lure.retrieveWithTrigger(this.mouseReelIntensity);
         } else {
             this.scene.lure.stopRetrieve();
         }
@@ -220,8 +254,8 @@ export class InputSystem {
             if (dpadUpBtn.pressed) {
                 this.scene.lure.retrieve();
             } else {
-                // Only stop retrieve if keyboard also isn't retrieving
-                if (!this.cursors.up.isDown) {
+                // Only stop retrieve if keyboard/mouse also isn't retrieving
+                if (!this.cursors.up.isDown && !this.mouseReeling) {
                     this.scene.lure.stopRetrieve();
                 }
             }
@@ -277,7 +311,7 @@ export class InputSystem {
 
     /**
      * Handle fish fight input (R2 analog trigger for continuous reeling, plus drag adjustment)
-     * @returns {number} Analog reel input 0-1 from R2 trigger pressure
+     * @returns {number} Analog reel input 0-1 from R2 trigger pressure or mouse
      */
     handleFishFightInput() {
         let reelInput = 0; // Default no reeling
@@ -297,14 +331,22 @@ export class InputSystem {
             }
         }
 
-        // Get R2 trigger analog value for continuous reeling
+        // Check for mouse reeling (right-click held during fish fight)
+        // Use mouse wheel adjustable intensity (scroll wheel to adjust 10%-100%)
+        if (this.mouseReeling) {
+            reelInput = this.mouseReelIntensity;
+        }
+
+        // Get R2 trigger analog value for continuous reeling (overrides mouse if present)
         if (window.gamepadManager && window.gamepadManager.isConnected()) {
             const r2Button = window.gamepadManager.getButton('R2');
             const l1Button = window.gamepadManager.getButton('L1');
             const r1Button = window.gamepadManager.getButton('R1');
 
             // R2 trigger provides analog input (0-1) for reel speed
-            reelInput = r2Button.value || 0;
+            if (r2Button.value > 0) {
+                reelInput = r2Button.value;
+            }
 
             // Handle drag adjustment with L1/R1 bumpers during fight
             if (this.scene.reelModel) {

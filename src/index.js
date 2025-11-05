@@ -9,7 +9,7 @@ import GameOverScene from './scenes/GameOverScene.js';
 import UIScene from './scenes/UIScene.js';
 import WaterColumn from './scenes/WaterColumn.js';
 import InfoBar from './scenes/InfoBar.js';
-import FishStatus from './scenes/FishStatus.js';
+// REMOVED: FishStatus scene - replaced by GameHUD
 import GameHUD from './scenes/GameHUD.js';
 import gamepadManager from './utils/GamepadManager.js';
 
@@ -43,9 +43,9 @@ const config = {
     // 1. WaterColumn - base layer (water, fish, baitfish)
     // 2. GameScene - orchestrator (launches other scenes)
     // 3. GameHUD - in-game UI (replaces HTML elements)
-    // 4. InfoBar, FishStatus - overlays (deprecated, can remove)
+    // 4. InfoBar - overlay (deprecated, can remove)
     // 5. MenuScene, GameOverScene, UIScene - modals
-    scene: [BootScene, WaterColumn, GameScene, GameHUD, InfoBar, FishStatus, MenuScene, GameOverScene, UIScene],
+    scene: [BootScene, WaterColumn, GameScene, GameHUD, InfoBar, MenuScene, GameOverScene, UIScene],
     render: {
         pixelArt: false,
         antialias: true,
@@ -191,8 +191,8 @@ function setupDevTools(game) {
             const uiTime = document.getElementById('ui-time');
             if (uiTime) uiTime.textContent = timeStr;
 
-            // Update fish status panel
-            updateFishStatus(natureScene);
+            // Update fish status panel (now handled by GameHUD scene)
+            // updateFishStatus(natureScene);
 
             // Handle gamepad input for spawn mode
             handleSpawnModeGamepad(natureScene);
@@ -355,8 +355,8 @@ function setupDevTools(game) {
             if (uiTime) uiTime.textContent = timeStr;
 
 
-            // Update fish status panel
-            updateFishStatus(gameScene);
+            // Update fish status panel (now handled by GameHUD scene)
+            // updateFishStatus(gameScene);
         }
     }, 100);
 
@@ -588,317 +588,6 @@ function setupDevTools(game) {
 
     // Note: Test Controller Button is handled in index.html
     // to avoid duplicate event listeners that could interfere with game state
-}
-
-// Throttle fish list re-ordering to reduce visual jarring
-let lastSortTime = 0;
-let cachedFishOrder = null;
-const SORT_THROTTLE_MS = 1500; // Re-sort every 1.5 seconds
-
-function updateFishStatus(gameScene) {
-    const container = document.getElementById('fish-status-container');
-    const entityCounts = document.getElementById('entity-counts');
-
-    // Update entity counts
-    if (gameScene && entityCounts) {
-        const fishCount = gameScene.fishes ? gameScene.fishes.length : 0;
-
-        // Check both schools (NatureSimulationScene) and baitfishClouds (GameScene) for cloud count
-        let cloudCount = 0;
-        let baitfishCount = 0;
-        if (gameScene.schools && Array.isArray(gameScene.schools)) {
-            // Count schools that have visible members
-            cloudCount = gameScene.schools.filter(school => {
-                return school && school.members && school.members.some(f => f.visible && f.active);
-            }).length;
-
-            // Count only VISIBLE and ACTIVE baitfish in all schools
-            gameScene.schools.forEach(school => {
-                if (school && school.members) {
-                    const visibleFish = school.members.filter(f => f.visible && f.active && !f.consumed);
-                    baitfishCount += visibleFish.length;
-                }
-            });
-        } else if (gameScene.baitfishClouds && Array.isArray(gameScene.baitfishClouds)) {
-            cloudCount = gameScene.baitfishClouds.filter(c => c && c.visible).length;
-            // Count baitfish in old cloud system
-            gameScene.baitfishClouds.forEach(cloud => {
-                if (cloud && cloud.visible && cloud.baitfish) {
-                    baitfishCount += cloud.baitfish.length;
-                }
-            });
-        }
-
-        const crayfishCount = gameScene.crayfish ? gameScene.crayfish.filter(c => c && c.visible).length : 0;
-        const zooplanktonCount = gameScene.zooplankton ? gameScene.zooplankton.filter(z => z && z.visible).length : 0;
-
-        entityCounts.innerHTML = `🐟 ${fishCount} 🍽️ ${baitfishCount} ☁️ ${cloudCount} 🦞 ${crayfishCount} 🪳 ${zooplanktonCount}`;
-    }
-
-    if (!gameScene || !gameScene.fishes || gameScene.fishes.length === 0) {
-        container.innerHTML = '<div style="color: #888; font-style: italic;">No fish spawned</div>';
-        return;
-    }
-
-    // Collect all valid fish
-    const allFish = [];
-    gameScene.fishes.forEach((fish, index) => {
-        // Defensive check: Only Fish objects have AI, hunger, health, etc.
-        if (!fish || !fish.ai || typeof fish.hunger !== 'number' || !fish.depthZone) {
-            return; // Not a fish, skip
-        }
-
-        // Defensive check for depthZone
-        if (!fish.depthZone.name) {
-            console.warn('Fish with invalid depthZone encountered:', fish);
-            return;
-        }
-
-        allFish.push({ fish, index });
-    });
-
-    // Throttled sorting - only re-sort every SORT_THROTTLE_MS to reduce visual jarring
-    const currentTime = Date.now();
-    const shouldResort = (currentTime - lastSortTime) >= SORT_THROTTLE_MS || !cachedFishOrder;
-
-    if (shouldResort) {
-        // Sort fish by depth (shallowest to deepest)
-        allFish.sort((a, b) => a.fish.depth - b.fish.depth);
-        // Cache the sorted order by fish IDs
-        cachedFishOrder = allFish.map(f => f.fish.id);
-        lastSortTime = currentTime;
-    } else {
-        // Use cached order - rebuild allFish array in previous sort order
-        const fishById = new Map(allFish.map(f => [f.fish.id, f]));
-        const reorderedFish = [];
-        cachedFishOrder.forEach(id => {
-            const fishData = fishById.get(id);
-            if (fishData) {
-                reorderedFish.push(fishData);
-            }
-        });
-        // Add any new fish not in cached order to the end
-        allFish.forEach(f => {
-            if (!cachedFishOrder.includes(f.fish.id)) {
-                reorderedFish.push(f);
-            }
-        });
-        allFish.length = 0;
-        allFish.push(...reorderedFish);
-    }
-
-    // Auto-select hooked fish (highest priority) or first fish if none selected
-    if (gameScene.currentFight && gameScene.currentFight.fish) {
-        // Always select the hooked fish to show its details
-        gameScene.selectedFish = gameScene.currentFight.fish;
-    } else if (!gameScene.selectedFish && allFish.length > 0) {
-        // Auto-select first fish if none selected and no fight
-        gameScene.selectedFish = allFish[0].fish;
-    }
-
-    // Helper function to render fish row (single line)
-    const renderFish = ({ fish, index }) => {
-        const info = fish.getInfo();
-
-        // Border color based on depth zone (yellow=surface, green=mid, grey=deep)
-        const zoneColor = fish.depthZone.name === 'Surface' ? '#ffff00' :
-                         fish.depthZone.name === 'Mid-Column' ? '#00ff00' : '#888888';
-
-        const hungerColor = fish.hunger > 70 ? '#ff6666' :
-                           fish.hunger > 40 ? '#ffaa00' : '#00ff00';
-        const healthColor = fish.health < 30 ? '#ff6666' :
-                           fish.health < 60 ? '#ffaa00' : '#00ff00';
-        const genderIcon = info.gender === 'male' ? '♂' : '♀';
-        const genderColor = info.gender === 'male' ? '#66ccff' : '#ff99cc';
-
-        // Frenzy indicator - red circle if in frenzy
-        const frenzyIndicator = fish.inFrenzy ? '🔴' : '';
-
-        // Count baitfish consumed (from stomach contents)
-        const baitfishConsumed = fish.stomachContents ? fish.stomachContents.length : 0;
-
-        // Check if this fish is selected or hooked
-        const isSelected = gameScene.selectedFish === fish;
-        const isHooked = gameScene.currentFight && gameScene.currentFight.fish === fish;
-        const selectedClass = (isSelected || isHooked) ? 'fish-selected' : '';
-        const selectedStyle = isHooked ? 'background: #ff660020; border-left: 3px solid #ff6600 !important;' :
-                             isSelected ? 'background: #ffffff20;' : `background: ${zoneColor}08;`;
-
-        return `
-            <div class="fish-status-row ${selectedClass}" data-fish-id="${fish.id}" style="border-left: 3px solid ${zoneColor}; ${selectedStyle} padding: 3px 5px; margin: 2px 0; cursor: pointer; font-size: 9px; display: flex; justify-content: space-between; align-items: center; white-space: nowrap; overflow: hidden;">
-                <span style="color: ${zoneColor}; min-width: 45px; max-width: 45px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${info.name}"><span style="color: ${genderColor};">${genderIcon}</span> ${info.name}</span>
-                <span style="min-width: 15px; max-width: 15px; text-align: center;">${frenzyIndicator}</span>
-                <span style="color: #fff; min-width: 28px; max-width: 28px; text-align: right;">${fish.weight.toFixed(1)}</span>
-                <span style="color: #00ffff; min-width: 42px; max-width: 42px; text-align: center;">${fish.ai.state.substring(0, 5)}</span>
-                <span style="min-width: 38px; max-width: 38px; text-align: center;"><span style="color: ${hungerColor};">${fish.hunger.toFixed(0)}</span>/<span style="color: ${healthColor};">${fish.health.toFixed(0)}</span></span>
-                <span style="color: ${zoneColor}; min-width: 28px; max-width: 28px; text-align: right;">${Math.floor(fish.depth)}ft</span>
-                <span style="color: #ff9900; min-width: 15px; max-width: 15px; text-align: right;">${baitfishConsumed}</span>
-            </div>
-        `;
-    };
-
-    // Build HTML with header key
-    let html = `
-        <div style="background: #1a1a1a; border-bottom: 2px solid #00ff00; padding: 3px 5px; margin-bottom: 4px; font-size: 8px; color: #888; display: flex; justify-content: space-between; font-weight: bold; white-space: nowrap; overflow: hidden;">
-            <span style="min-width: 45px; max-width: 45px;">NAME</span>
-            <span style="min-width: 15px; max-width: 15px; text-align: center;">F</span>
-            <span style="min-width: 28px; max-width: 28px; text-align: right;">WT</span>
-            <span style="min-width: 42px; max-width: 42px; text-align: center;">STATE</span>
-            <span style="min-width: 38px; max-width: 38px; text-align: center;">H/H</span>
-            <span style="min-width: 28px; max-width: 28px; text-align: right;">DEPTH</span>
-            <span style="min-width: 15px; max-width: 15px; text-align: right;">ATE</span>
-        </div>
-    `;
-
-    html += allFish.map(renderFish).join('');
-    container.innerHTML = html;
-
-    // Add click handlers to fish rows
-    container.querySelectorAll('.fish-status-row').forEach(row => {
-        row.addEventListener('click', function(e) {
-            e.stopPropagation(); // Prevent event bubbling
-            const fishId = this.getAttribute('data-fish-id');
-            const selectedFish = gameScene.fishes.find(f => f.id === fishId);
-
-            // Toggle selection - if clicking already selected fish, deselect
-            if (gameScene.selectedFish === selectedFish) {
-                gameScene.selectFish(null);
-            } else {
-                gameScene.selectFish(selectedFish);
-            }
-        });
-    });
-
-    // Update detailed info panel
-    updateFishDetailPanel(gameScene);
-
-    // Setup keyboard navigation (only once)
-    if (!window.fishListKeyboardSetup) {
-        window.fishListKeyboardSetup = true;
-        window.addEventListener('keydown', (e) => {
-            const gameScene = game.scene.getScene('GameScene');
-            const natureScene = game.scene.getScene('NatureSimulationScene');
-            const scene = natureScene && natureScene.scene.isActive() ? natureScene : gameScene;
-
-            if (!scene) return;
-
-            // Spawn mode navigation removed - spawn buttons are always visible in debug panel
-            // No keyboard toggle needed
-            if (false && scene.spawnMode) {
-                if (e.key === 'ArrowLeft' || e.key === 'Left') {
-                    e.preventDefault();
-                    scene.selectedSpawnButton = Math.max(0, scene.selectedSpawnButton - 1);
-                } else if (e.key === 'ArrowRight' || e.key === 'Right') {
-                    e.preventDefault();
-                    scene.selectedSpawnButton = Math.min(3, scene.selectedSpawnButton + 1);
-                } else if (e.key === 'Enter') {
-                    e.preventDefault();
-                    const types = ['fish', 'cloud', 'crayfish', 'zooplankton'];
-                    spawnEntity(scene, types[scene.selectedSpawnButton]);
-                }
-                return;
-            }
-
-            // Handle fish list navigation (info mode)
-            // Only allow fish selection when in OBSERVING mode (lure not in water) and no UI overlays open
-            const isObserving = !scene.lure || !scene.lure.inWater;
-            const isUIOpen = scene.tackleBoxOpen || (scene.notificationSystem && scene.notificationSystem.isPausedState());
-
-            // Skip fish navigation when fishing or UI is open, but DON'T prevent default
-            // This allows Phaser to handle keyboard input for tackle box and other game UI
-            if (!isObserving || isUIOpen) return;
-            if (!scene.fishes || scene.fishes.length === 0) return;
-
-            // Get sorted fish list
-            const sortedFish = scene.fishes
-                .filter(f => f && f.ai && typeof f.hunger === 'number' && f.depthZone)
-                .sort((a, b) => a.depth - b.depth);
-
-            if (sortedFish.length === 0) return;
-
-            const currentIndex = sortedFish.indexOf(scene.selectedFish);
-
-            // Only prevent default when we actually handle the fish navigation
-            if (e.key === 'ArrowUp' || e.key === 'Up') {
-                e.preventDefault();
-                const newIndex = Math.max(0, currentIndex - 1);
-                scene.selectFish(sortedFish[newIndex]);
-                console.log('Selected fish (up):', sortedFish[newIndex].getInfo().name);
-            } else if (e.key === 'ArrowDown' || e.key === 'Down') {
-                e.preventDefault();
-                const newIndex = Math.min(sortedFish.length - 1, currentIndex + 1);
-                scene.selectFish(sortedFish[newIndex]);
-                console.log('Selected fish (down):', sortedFish[newIndex].getInfo().name);
-            }
-        });
-
-        // Setup gamepad state tracker for spawn mode controls
-        window.spawnModeGamepadState = {
-            lastB: false,
-            lastX: false,
-            lastDpadLeft: false,
-            lastDpadRight: false,
-            lastA: false,
-            lastDpadUp: false,
-            lastDpadDown: false
-        };
-    }
-}
-
-
-/**
- * Update the detailed fish info panel at the bottom of the fish status
- */
-function updateFishDetailPanel(gameScene) {
-    const detailPanel = document.getElementById('fish-detail-panel');
-    if (!detailPanel) return;
-
-    // Spawn buttons removed for cleaner UI
-
-    // Always show fish info in detail panel (if a fish is selected)
-    if (!gameScene.selectedFish) {
-        detailPanel.innerHTML = '<div style="color: #888; font-style: italic; padding: 10px; text-align: center;">Select a fish to view details</div>';
-        return;
-    }
-
-    const fish = gameScene.selectedFish;
-
-    // Defensive checks for fish properties
-    if (!fish || !fish.getInfo) {
-        detailPanel.innerHTML = '<div style="color: #ff6666; font-style: italic; padding: 10px; text-align: center;">Error: Invalid fish data</div>';
-        return;
-    }
-
-    const info = fish.getInfo();
-    const weight = (fish.weight !== undefined) ? fish.weight.toFixed(1) : 'N/A';
-    const length = (fish.length !== undefined) ? fish.length.toFixed(1) : 'N/A';
-    const depth = (fish.depth !== undefined) ? Math.floor(fish.depth) : 'N/A';
-    const zone = fish.depthZone?.name || 'N/A';
-    const hunger = (fish.hunger !== undefined) ? fish.hunger.toFixed(0) : 'N/A';
-    const health = (fish.health !== undefined) ? fish.health.toFixed(0) : 'N/A';
-    const state = fish.ai?.state || 'N/A';
-    const speed = fish.speed ? fish.speed.toFixed(1) : (fish.model?.speed?.toFixed(1) || 'N/A');
-    const baitfishEaten = fish.stomachContents ? fish.stomachContents.length : 0;
-
-    detailPanel.innerHTML = `
-        <div style="padding: 10px; font-size: 11px;">
-            <div style="color: #00ff00; font-weight: bold; font-size: 13px; margin-bottom: 8px;">${info.name || 'Unknown'} (${info.species || 'Unknown'})</div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px;">
-                <div><span style="color: #888;">Weight:</span> <span style="color: #fff;">${weight} lbs</span></div>
-                <div><span style="color: #888;">Length:</span> <span style="color: #fff;">${length} in</span></div>
-                <div><span style="color: #888;">Gender:</span> <span style="color: ${info.gender === 'male' ? '#66ccff' : '#ff99cc'};">${info.gender === 'male' ? '♂ Male' : '♀ Female'}</span></div>
-                <div><span style="color: #888;">Age:</span> <span style="color: #fff;">${info.age || 'N/A'}</span></div>
-                <div><span style="color: #888;">Depth:</span> <span style="color: #00ffff;">${depth}ft</span></div>
-                <div><span style="color: #888;">Zone:</span> <span style="color: #ffff00;">${zone}</span></div>
-                <div><span style="color: #888;">Hunger:</span> <span style="color: ${fish.hunger > 70 ? '#ff6666' : fish.hunger > 40 ? '#ffaa00' : '#00ff00'};">${hunger}</span></div>
-                <div><span style="color: #888;">Health:</span> <span style="color: ${fish.health < 30 ? '#ff6666' : fish.health < 60 ? '#ffaa00' : '#00ff00'};">${health}</span></div>
-                <div><span style="color: #888;">State:</span> <span style="color: #00ffff;">${state}</span></div>
-                <div><span style="color: #888;">Frenzy:</span> <span style="color: ${fish.inFrenzy ? '#ff0000' : '#00ff00'};">${fish.inFrenzy ? 'YES' : 'NO'}</span></div>
-                <div><span style="color: #888;">Baitfish Eaten:</span> <span style="color: #ff9900;">${baitfishEaten}</span></div>
-                <div><span style="color: #888;">Speed:</span> <span style="color: #fff;">${speed}</span></div>
-            </div>
-        </div>
-    `;
 }
 
 /**

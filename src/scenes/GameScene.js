@@ -577,41 +577,81 @@ export class GameScene extends Phaser.Scene {
     updateFishStatusDisplay() {
         // Count entities
         const fishCount = this.fishes.filter(f => f.active && f.visible).length;
+
+        // Count bait clouds and individual baitfish
+        const baitCloudCount = this.schools ? this.schools.filter(school => {
+            const members = school.members || [];
+            return members.some(b => b.active && b.visible);
+        }).length : 0;
+
         const baitfishCount = this.schools ? this.schools.reduce((total, school) => {
             return total + (school.members ? school.members.filter(b => b.active && b.visible).length : 0);
         }, 0) : 0;
+
+        const crayfishCount = this.crayfish ? this.crayfish.filter(c => c.active && c.visible).length : 0;
         const zooplanktonCount = this.zooplankton ? this.zooplankton.filter(z => z.visible).length : 0;
 
-        const entityCounts = `F:${fishCount} B:${baitfishCount} Z:${zooplanktonCount}`;
+        const entityCounts = `🐟 ${fishCount} ☁️ ${baitCloudCount} 🦞 ${crayfishCount} 🪳 ${zooplanktonCount}`;
         this.registry.set('entityCounts', entityCounts);
 
-        // Build fish list (simple for now)
+        // Build fish list data - send as array of objects for proper styling
         if (fishCount > 0) {
-            const fishList = this.fishes
+            const fishListData = this.fishes
                 .filter(f => f.active && f.visible)
-                .slice(0, 10) // Limit to 10 fish
-                .map((f, i) => {
-                    const species = f.species || 'unknown';
-                    const weight = f.weight ? f.weight.toFixed(1) : '?';
-                    const depth = f.depth ? Math.floor(f.depth) : '?';
-                    return `${i + 1}. ${species} (${weight}lb @ ${depth}ft)`;
-                })
-                .join('\n');
-            this.registry.set('fishList', fishList);
+                .map((f, i) => ({
+                    id: f.id,
+                    name: f.name || 'Fish-' + i,
+                    gender: f.gender,
+                    weight: f.weight,
+                    state: (f.ai && f.ai.currentState) ? f.ai.currentState : 'idle',
+                    hunger: f.hunger || 0,
+                    health: f.health || 100,
+                    depth: f.y ? Math.floor(f.y / (this.sonarDisplay ? this.sonarDisplay.getDepthScale() : 10)) : 0,
+                    baitfishEaten: f.stomachContents ? f.stomachContents.length : 0,
+                    isSelected: this.selectedFish === f
+                }));
+            this.registry.set('fishList', fishListData);
         } else {
-            this.registry.set('fishList', 'No fish spawned');
+            this.registry.set('fishList', null);
         }
 
-        // Fish detail (show first fish for now, or selected fish later)
-        if (fishCount > 0 && this.fishes[0]) {
-            const fish = this.fishes[0];
-            const detail = `Species: ${fish.species || 'unknown'}\n` +
-                          `Weight: ${fish.weight ? fish.weight.toFixed(1) : '?'} lbs\n` +
-                          `Depth: ${fish.depth ? Math.floor(fish.depth) : '?'} ft\n` +
-                          `State: ${fish.ai ? fish.ai.currentState : 'unknown'}`;
-            this.registry.set('fishDetail', detail);
+        // Fish detail - show selected fish or first fish
+        const detailFish = this.selectedFish || (fishCount > 0 ? this.fishes.find(f => f.active && f.visible) : null);
+        if (detailFish) {
+            const species = detailFish.species || 'Unknown';
+            const name = detailFish.name || 'Unknown';
+            const weight = detailFish.weight ? detailFish.weight.toFixed(1) : '?';
+            const length = detailFish.length ? detailFish.length.toFixed(1) : '?';
+            const gender = detailFish.gender === 'male' ? '♂ Male' : '♀ Female';
+            const age = detailFish.age || '?';
+            const depth = detailFish.y ? Math.floor(detailFish.y / (this.sonarDisplay ? this.sonarDisplay.getDepthScale() : 10)) : '?';
+            const zone = detailFish.zone || 'Unknown';
+            const hunger = detailFish.hunger || 0;
+            const health = detailFish.health || 100;
+            const state = detailFish.ai ? detailFish.ai.currentState : 'unknown';
+            const isFrenzying = detailFish.ai ? detailFish.ai.isFrenzying : false;
+            const baitfishEaten = detailFish.stomachContents ? detailFish.stomachContents.length : 0;
+            const speed = detailFish.baseSpeed || 1.0;
+
+            // Create detail object for structured rendering
+            const detailData = {
+                name: `${name} (${species})`,
+                weight: `${weight} lbs`,
+                length: `${length} in`,
+                gender: gender,
+                age: `${age} years`,
+                depth: `${depth}ft`,
+                zone: zone,
+                hunger: hunger,
+                health: health,
+                state: state,
+                frenzy: isFrenzying ? 'YES' : 'NO',
+                baitfishEaten: baitfishEaten,
+                speed: speed.toFixed(1)
+            };
+            this.registry.set('fishDetail', detailData);
         } else {
-            this.registry.set('fishDetail', 'Select a fish to view details');
+            this.registry.set('fishDetail', 'No fish to display');
         }
     }
 
@@ -1236,8 +1276,20 @@ export class GameScene extends Phaser.Scene {
 
         // IMPORTANT: Clean up consumed/inactive fish from school.members arrays FIRST
         this.schools.forEach(school => {
+            const beforeCount = school.members.length;
+
             // Filter out consumed/invisible/inactive fish (BaitfishSprite IS the model)
-            school.members = school.members.filter(fish => fish.visible && fish.active && !fish.consumed);
+            school.members = school.members.filter(fish => {
+                const keep = fish.visible && fish.active && !fish.consumed;
+                if (!keep && beforeCount > 0) {
+                    console.log(`🗑️ Removing fish from school ${school.id}: visible=${fish.visible}, active=${fish.active}, consumed=${fish.consumed}`);
+                }
+                return keep;
+            });
+
+            if (beforeCount > 0 && school.members.length === 0) {
+                console.log(`⚠️ School ${school.id} lost all ${beforeCount} fish! This shouldn't happen on spawn.`);
+            }
 
             // Then remove duplicates using Set (ensures each fish only appears once)
             const uniqueFish = new Set(school.members);
@@ -1514,7 +1566,7 @@ export class GameScene extends Phaser.Scene {
                 this.rumbleGamepad(100, 0.8, 0.4);
             } else if (tension > 0.7 && time % 800 < 50) {
                 this.rumbleGamepad(80, 0.5, 0.3);
-            } else if (reelPressed) {
+            } else if (reelInput > 0) {
                 this.rumbleGamepad(50, 0.2, 0.1);
             }
         }

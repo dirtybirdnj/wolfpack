@@ -31,8 +31,16 @@ export default class GameHUD extends Phaser.Scene {
         this.canvasWidth = this.scale.width;
         this.canvasHeight = this.scale.height;
 
+        // Create main containers for each HUD section
+        this.topBarContainer = this.add.container(0, 0);
+        this.topBarContainer.setDepth(1000);
+
+        this.fishStatusContainer = this.add.container(0, 0);
+        this.fishStatusContainer.setDepth(1000);
+
         // Create all UI elements
         this.createTopBar();
+        this.createIcons(); // Icons are part of top bar
         this.createRightSidebar();
 
         // Listen for data updates from GameScene
@@ -83,17 +91,19 @@ export default class GameHUD extends Phaser.Scene {
      * Create top bar with all meters
      */
     createTopBar() {
-        const barHeight = 44;
-        const padding = 10;
+        const barHeight = 50;
+        const horizontalPadding = 15;
+        const verticalPadding = 8;
         const meterWidth = 100;
         const meterHeight = 12;
-        const gap = 12;
+        const gap = 15;
+        const dropReelGap = 10; // Smaller gap between DROP and REEL
 
         // Semi-transparent background panel
         this.topBarBg = this.add.graphics();
         this.topBarBg.fillStyle(0x000000, 0.75);
         this.topBarBg.fillRect(0, 0, this.canvasWidth, barHeight);
-        this.topBarBg.setDepth(1000);
+        this.topBarContainer.add(this.topBarBg);
 
         // Text style for labels and values
         const labelStyle = {
@@ -109,39 +119,39 @@ export default class GameHUD extends Phaser.Scene {
             fontStyle: 'bold'
         };
 
-        let xPos = padding;
+        let xPos = horizontalPadding;
 
         // LINE STRAIN METER
-        this.lineStrainMeter = this.createMeter(xPos, 8, meterWidth, meterHeight, 'LINE 15lb', labelStyle, valueStyle);
+        this.lineStrainMeter = this.createMeter(xPos, verticalPadding, meterWidth, meterHeight, 'LINE 15lb', labelStyle, valueStyle);
         xPos += meterWidth + gap;
 
         // DEPTH
-        xPos = this.createValueDisplay(xPos, 8, 'DEPTH', '--ft', labelStyle, valueStyle, 'depth');
+        xPos = this.createValueDisplay(xPos, verticalPadding, 'DEPTH', '--ft', labelStyle, valueStyle, 'depth');
         xPos += gap;
 
         // MODE
-        xPos = this.createValueDisplay(xPos, 8, 'MODE', 'OBSERVING', labelStyle, valueStyle, 'mode');
+        xPos = this.createValueDisplay(xPos, verticalPadding, 'MODE', 'OBSERVING', labelStyle, valueStyle, 'mode');
         xPos += gap;
 
         // TENSION METER
-        this.tensionMeter = this.createMeter(xPos, 8, meterWidth, meterHeight, 'TENSION', labelStyle, valueStyle);
+        this.tensionMeter = this.createMeter(xPos, verticalPadding, meterWidth, meterHeight, 'TENSION', labelStyle, valueStyle);
         xPos += meterWidth + gap;
 
         // DROP METER
-        this.dropMeter = this.createMeter(xPos, 8, meterWidth, meterHeight, 'DROP', labelStyle, valueStyle, true); // reversed gradient
-        xPos += meterWidth + gap;
+        this.dropMeter = this.createMeter(xPos, verticalPadding, meterWidth, meterHeight, 'DROP', labelStyle, valueStyle, true); // reversed gradient
+        xPos += meterWidth + dropReelGap; // Smaller gap between DROP and REEL
 
         // REEL METER
-        this.reelMeter = this.createMeter(xPos, 8, meterWidth, meterHeight, 'REEL', labelStyle, valueStyle);
+        this.reelMeter = this.createMeter(xPos, verticalPadding, meterWidth, meterHeight, 'REEL', labelStyle, valueStyle);
         xPos += meterWidth + gap;
 
         // DRAG METER
-        this.dragMeter = this.createMeter(xPos, 8, meterWidth, meterHeight, 'DRAG', labelStyle, valueStyle);
+        this.dragMeter = this.createMeter(xPos, verticalPadding, meterWidth, meterHeight, 'DRAG', labelStyle, valueStyle);
         xPos += meterWidth + gap;
 
         // TIME (right side)
         const timeX = this.canvasWidth - 180;
-        this.createValueDisplay(timeX, 8, 'TIME', '0:00', labelStyle, valueStyle, 'time');
+        this.createValueDisplay(timeX, verticalPadding, 'TIME', '0:00', labelStyle, valueStyle, 'time');
 
         // Icons (far right)
         this.createIcons();
@@ -153,42 +163,45 @@ export default class GameHUD extends Phaser.Scene {
     createMeter(x, y, width, height, label, labelStyle, valueStyle, reversed = false) {
         // Label text
         const labelText = this.add.text(x, y, label, labelStyle);
-        labelText.setDepth(1001);
+        this.topBarContainer.add(labelText);
 
-        // Meter background
+        // Meter background - full width
         const meterBg = this.add.graphics();
         meterBg.fillStyle(0x000000, 0.6);
         meterBg.lineStyle(1, 0x666666, 0.8);
-        meterBg.fillRect(x, y + 12, width - 30, height);
-        meterBg.strokeRect(x, y + 12, width - 30, height);
-        meterBg.setDepth(1001);
+        meterBg.fillRect(x, y + 12, width, height);
+        meterBg.strokeRect(x, y + 12, width, height);
+        this.topBarContainer.add(meterBg);
 
         // Create gradient texture for fill
-        const gradientTexture = this.createGradientTexture(width - 30, height, reversed);
+        const gradientTexture = this.createGradientTexture(width, height, reversed);
 
         // Meter fill (starts at 0 width)
-        const meterFill = this.add.image(x, y + 12, gradientTexture);
-        meterFill.setOrigin(0, 0);
+        // For reversed meters, anchor on the right side
+        const meterFill = this.add.image(reversed ? x + width : x, y + 12, gradientTexture);
+        meterFill.setOrigin(reversed ? 1 : 0, 0);
         meterFill.setDisplaySize(0, height);
-        meterFill.setDepth(1002);
+        this.topBarContainer.add(meterFill);
 
-        // Percentage text
-        const percentText = this.add.text(x + width - 28, y + 13, '0%', {
+        // Percentage text - OUTSIDE meter, below it
+        const percentText = this.add.text(x + width / 2, y + 26, '0%', {
             fontSize: '10px',
             fontFamily: 'Courier New',
             color: '#00ff00',
             fontStyle: 'bold'
         });
-        percentText.setDepth(1003);
+        percentText.setOrigin(0.5, 0); // Center align
+        this.topBarContainer.add(percentText);
 
         return {
             label: labelText,
             bg: meterBg,
             fill: meterFill,
             percent: percentText,
-            maxWidth: width - 30,
+            maxWidth: width,
             x: x,
-            y: y + 12
+            y: y + 12,
+            reversed: reversed
         };
     }
 
@@ -241,11 +254,11 @@ export default class GameHUD extends Phaser.Scene {
     createValueDisplay(x, y, label, defaultValue, labelStyle, valueStyle, key) {
         // Label
         const labelText = this.add.text(x, y, label, labelStyle);
-        labelText.setDepth(1001);
+        this.topBarContainer.add(labelText);
 
         // Value
         const valueText = this.add.text(x, y + 12, defaultValue, valueStyle);
-        valueText.setDepth(1001);
+        this.topBarContainer.add(valueText);
 
         // Store reference
         if (!this.valueDisplays) this.valueDisplays = {};
@@ -266,38 +279,41 @@ export default class GameHUD extends Phaser.Scene {
         // Gamepad icon (right side)
         const gamepadX = this.canvasWidth - 80;
         this.gamepadIcon = this.add.text(gamepadX, 10, '🎮', iconStyle);
-        this.gamepadIcon.setDepth(1001);
         this.gamepadIcon.setInteractive({ useHandCursor: true });
         this.gamepadIcon.on('pointerdown', () => {
             console.log('🎮 Gamepad icon clicked - Controller test would open here');
             // TODO: Open controller test overlay
         });
+        this.topBarContainer.add(this.gamepadIcon);
 
         // Book icon (species guide)
         const bookX = this.canvasWidth - 50;
         this.bookIcon = this.add.text(bookX, 10, '📖', iconStyle);
-        this.bookIcon.setDepth(1001);
         this.bookIcon.setInteractive({ useHandCursor: true });
         this.bookIcon.on('pointerdown', () => {
             console.log('📖 Book icon clicked - Species guide would open here');
             // TODO: Open species guide overlay
         });
+        this.topBarContainer.add(this.bookIcon);
     }
 
     /**
      * Create right sidebar for fish status
      */
     createRightSidebar() {
+        const gap = 10;
         const sidebarWidth = 300;
-        const sidebarX = this.canvasWidth - sidebarWidth;
+        const sidebarX = this.canvasWidth - sidebarWidth - gap;
+        const sidebarY = 50 + gap; // Top bar height (50) + gap
+        const sidebarHeight = this.canvasHeight - sidebarY - gap;
 
-        // Semi-transparent background
+        // Semi-transparent background (65% opaque = 0.65 alpha)
         this.sidebarBg = this.add.graphics();
-        this.sidebarBg.fillStyle(0x000000, 0.75);
-        this.sidebarBg.fillRect(sidebarX, 50, sidebarWidth, this.canvasHeight - 50);
+        this.sidebarBg.fillStyle(0x000000, 0.65);
+        this.sidebarBg.fillRect(sidebarX, sidebarY, sidebarWidth, sidebarHeight);
         this.sidebarBg.lineStyle(2, 0xffaa00, 1.0);
-        this.sidebarBg.strokeRect(sidebarX, 50, sidebarWidth, this.canvasHeight - 50);
-        this.sidebarBg.setDepth(1000);
+        this.sidebarBg.strokeRect(sidebarX, sidebarY, sidebarWidth, sidebarHeight);
+        this.fishStatusContainer.add(this.sidebarBg);
 
         // Header
         const headerStyle = {
@@ -307,54 +323,46 @@ export default class GameHUD extends Phaser.Scene {
             fontStyle: 'bold'
         };
 
-        this.sidebarHeader = this.add.text(sidebarX + 10, 58, '🐟 FISH STATUS', headerStyle);
-        this.sidebarHeader.setDepth(1001);
+        // Header with counts on same line
+        const headerStyle2 = {
+            fontSize: '13px',
+            fontFamily: 'Courier New',
+            color: '#ffaa00',
+            fontStyle: 'bold'
+        };
 
-        // Entity counts
+        this.sidebarHeader = this.add.text(sidebarX + 10, sidebarY + 8, 'FISH STATUS:', headerStyle2);
+        this.fishStatusContainer.add(this.sidebarHeader);
+
+        // Entity counts (same line as header)
         const countStyle = {
-            fontSize: '10px',
+            fontSize: '13px',
             fontFamily: 'Courier New',
             color: '#88ff88'
         };
 
-        this.entityCountText = this.add.text(sidebarX + 200, 60, '', countStyle);
-        this.entityCountText.setDepth(1001);
+        this.entityCountText = this.add.text(sidebarX + 140, sidebarY + 8, '', countStyle);
+        this.fishStatusContainer.add(this.entityCountText);
 
-        // Fish list container
-        const listStyle = {
-            fontSize: '10px',
-            fontFamily: 'Courier New',
-            color: '#00ff00',
-            lineSpacing: 2
-        };
-
-        this.fishListText = this.add.text(sidebarX + 10, 85, 'No fish spawned', {
-            ...listStyle,
-            color: '#666666',
-            fontStyle: 'italic'
-        });
-        this.fishListText.setDepth(1001);
-        this.fishListText.setWordWrapWidth(sidebarWidth - 20);
+        // Fish list container (will be populated with individual row objects)
+        this.fishListContainer = this.add.container(sidebarX, sidebarY + 35);
+        this.fishStatusContainer.add(this.fishListContainer);
+        this.fishRows = []; // Store fish row objects for updates
 
         // Fish detail panel (bottom section)
-        const detailPanelY = this.canvasHeight - 200;
+        const detailPanelY = this.canvasHeight - 200 - gap;
 
         this.detailPanelBg = this.add.graphics();
-        this.detailPanelBg.fillStyle(0x0a0a0a, 1.0);
+        this.detailPanelBg.fillStyle(0x0a0a0a, 0.65);
         this.detailPanelBg.lineStyle(2, 0x00ff00, 1.0);
         this.detailPanelBg.fillRect(sidebarX, detailPanelY, sidebarWidth, 200);
-        this.detailPanelBg.strokeRect(sidebarX, detailPanelY, 2);
-        this.detailPanelBg.setDepth(1000);
+        this.detailPanelBg.strokeRect(sidebarX, detailPanelY, sidebarWidth, 200);
+        this.fishStatusContainer.add(this.detailPanelBg);
 
-        this.fishDetailText = this.add.text(sidebarX + 10, detailPanelY + 10, 'Select a fish to view details', {
-            fontSize: '10px',
-            fontFamily: 'Courier New',
-            color: '#666666',
-            fontStyle: 'italic',
-            lineSpacing: 3
-        });
-        this.fishDetailText.setDepth(1001);
-        this.fishDetailText.setWordWrapWidth(sidebarWidth - 20);
+        // Fish detail container (will hold multiple text objects with colors)
+        this.fishDetailContainer = this.add.container(sidebarX + 10, detailPanelY + 10);
+        this.fishStatusContainer.add(this.fishDetailContainer);
+        this.fishDetailElements = []; // Track detail text elements
 
         // Initially hide sidebar (can be toggled)
         this.sidebarVisible = true;
@@ -373,9 +381,12 @@ export default class GameHUD extends Phaser.Scene {
         meter.percent.setText(Math.floor(clampedPercent * 100) + '%');
 
         // Color percent text based on value
-        if (clampedPercent < 0.5) {
+        // For reversed meters (like DROP), invert the color logic
+        const effectivePercent = meter.reversed ? (1 - clampedPercent) : clampedPercent;
+
+        if (effectivePercent < 0.5) {
             meter.percent.setColor('#00ff00');
-        } else if (clampedPercent < 0.8) {
+        } else if (effectivePercent < 0.8) {
             meter.percent.setColor('#ffff00');
         } else {
             meter.percent.setColor('#ff0000');
@@ -425,16 +436,251 @@ export default class GameHUD extends Phaser.Scene {
                 }
                 break;
             case 'fishList':
-                if (this.fishListText) {
-                    this.fishListText.setText(value || 'No fish spawned');
-                }
+                this.updateFishList(value);
                 break;
             case 'fishDetail':
-                if (this.fishDetailText) {
-                    this.fishDetailText.setText(value || 'Select a fish to view details');
-                }
+                this.updateFishDetail(value);
                 break;
         }
+    }
+
+    /**
+     * Update fish list with styled rows matching the example design
+     */
+    updateFishList(fishListData) {
+        // Clear existing rows (destroy all objects in container)
+        this.fishListContainer.removeAll(true); // true = destroy children
+        this.fishRows = [];
+
+        if (!fishListData || !Array.isArray(fishListData) || fishListData.length === 0) {
+            const emptyText = this.add.text(10, 0, 'No fish spawned', {
+                fontSize: '10px',
+                fontFamily: 'Courier New',
+                color: '#666666',
+                fontStyle: 'italic'
+            });
+            this.fishListContainer.add(emptyText);
+            this.fishRows.push(emptyText);
+            return;
+        }
+
+        let yOffset = 0;
+
+        // Render header (adjusted for narrower name column)
+        const headerText = this.add.text(10, yOffset, 'NAME     F    WT   STATE      H/H     DEPTH  ATE', {
+            fontSize: '9px',
+            fontFamily: 'Courier New',
+            color: '#888888'
+        });
+        this.fishListContainer.add(headerText);
+        this.fishRows.push(headerText);
+        yOffset += 15;
+
+        // Render each fish row with proper colors
+        fishListData.forEach((fish, index) => {
+            // Create background for selected fish
+            if (fish.isSelected) {
+                const bg = this.add.rectangle(10, yOffset + 6, 280, 12, 0x00ff00, 0.3);
+                bg.setOrigin(0, 0.5);
+                this.fishListContainer.add(bg);
+            }
+
+            // Format row data
+            const name = fish.name.substring(0, 8).padEnd(8, ' '); // Narrower name column
+            const gender = fish.gender === 'male' ? '♂' : '♀';
+            const weight = fish.weight ? fish.weight.toFixed(1).padStart(4, ' ') : '  ?';
+            const state = fish.state.substring(0, 10).padEnd(10, ' ');
+            const hunger = Math.floor(fish.hunger).toString().padStart(2, ' ');
+            const health = Math.floor(fish.health).toString().padStart(2, ' ');
+            const depth = Math.floor(fish.depth).toString().padStart(4, ' ') + 'ft'; // Integer depth
+            const ate = fish.baitfishEaten.toString().padStart(3, ' ');
+
+            // Determine colors based on values
+            const nameColor = fish.isSelected ? '#ffffff' : '#aaaaaa';
+            const stateColor = '#00ffff'; // Cyan for state
+            const hungerColor = fish.hunger > 70 ? '#ff4444' : fish.hunger > 40 ? '#ffaa00' : '#00ff00';
+            const healthColor = fish.health < 40 ? '#ff4444' : fish.health < 70 ? '#ffaa00' : '#00ff00';
+            const depthColor = '#00ff00';
+            const ateColor = '#ffaa00';
+
+            // Build row text with color codes - all positioned directly in fishListContainer
+            let xPos = 10;
+
+            // Name (narrower)
+            const nameText = this.add.text(xPos, yOffset, name, {
+                fontSize: '10px',
+                fontFamily: 'Courier New',
+                color: nameColor
+            });
+            this.fishListContainer.add(nameText);
+            xPos += 55; // Reduced from 90
+
+            // Gender
+            const genderText = this.add.text(xPos, yOffset, gender, {
+                fontSize: '10px',
+                fontFamily: 'Courier New',
+                color: nameColor
+            });
+            this.fishListContainer.add(genderText);
+            xPos += 15;
+
+            // Weight
+            const weightText = this.add.text(xPos, yOffset, weight, {
+                fontSize: '10px',
+                fontFamily: 'Courier New',
+                color: '#ffffff'
+            });
+            this.fishListContainer.add(weightText);
+            xPos += 35;
+
+            // State
+            const stateText = this.add.text(xPos, yOffset, state, {
+                fontSize: '10px',
+                fontFamily: 'Courier New',
+                color: stateColor
+            });
+            this.fishListContainer.add(stateText);
+            xPos += 68;
+
+            // Hunger/Health
+            const hhText = this.add.text(xPos, yOffset, `${hunger}/${health}`, {
+                fontSize: '10px',
+                fontFamily: 'Courier New',
+                color: hungerColor
+            });
+            this.fishListContainer.add(hhText);
+            xPos += 40;
+
+            // Depth
+            const depthText = this.add.text(xPos, yOffset, depth, {
+                fontSize: '10px',
+                fontFamily: 'Courier New',
+                color: depthColor
+            });
+            this.fishListContainer.add(depthText);
+            xPos += 45;
+
+            // Ate
+            const ateText = this.add.text(xPos, yOffset, ate, {
+                fontSize: '10px',
+                fontFamily: 'Courier New',
+                color: ateColor
+            });
+            this.fishListContainer.add(ateText);
+
+            yOffset += 12;
+        });
+    }
+
+    /**
+     * Update fish detail section with colors matching example
+     */
+    updateFishDetail(detailData) {
+        // Clear existing detail elements
+        this.fishDetailContainer.removeAll(true);
+        this.fishDetailElements = [];
+
+        if (!detailData || typeof detailData === 'string') {
+            const emptyText = this.add.text(0, 0, detailData || 'No fish to display', {
+                fontSize: '10px',
+                fontFamily: 'Courier New',
+                color: '#666666',
+                fontStyle: 'italic'
+            });
+            this.fishDetailContainer.add(emptyText);
+            this.fishDetailElements.push(emptyText);
+            return;
+        }
+
+        let yOffset = 0;
+
+        // Title: "Name (Species)" in bright green
+        const titleText = this.add.text(0, yOffset, detailData.name, {
+            fontSize: '12px',
+            fontFamily: 'Courier New',
+            color: '#00ff00',
+            fontStyle: 'bold'
+        });
+        this.fishDetailContainer.add(titleText);
+        this.fishDetailElements.push(titleText);
+        yOffset += 20;
+
+        // Row 1: Weight and Length
+        const row1 = this.add.text(0, yOffset,
+            `Weight: ${detailData.weight}       Length: ${detailData.length}`, {
+            fontSize: '10px',
+            fontFamily: 'Courier New',
+            color: '#aaaaaa'
+        });
+        this.fishDetailContainer.add(row1);
+        this.fishDetailElements.push(row1);
+        yOffset += 14;
+
+        // Row 2: Gender and Age (Gender in cyan)
+        const row2 = this.add.text(0, yOffset,
+            `Gender: ${detailData.gender}        Age: ${detailData.age}`, {
+            fontSize: '10px',
+            fontFamily: 'Courier New',
+            color: '#aaaaaa'
+        });
+        this.fishDetailContainer.add(row2);
+        this.fishDetailElements.push(row2);
+        yOffset += 14;
+
+        // Row 3: Depth and Zone (Zone in yellow)
+        const row3 = this.add.text(0, yOffset,
+            `Depth: ${detailData.depth}           Zone: ${detailData.zone}`, {
+            fontSize: '10px',
+            fontFamily: 'Courier New',
+            color: '#aaaaaa'
+        });
+        this.fishDetailContainer.add(row3);
+        this.fishDetailElements.push(row3);
+        yOffset += 14;
+
+        // Row 4: Hunger and Health (color-coded)
+        const hungerColor = detailData.hunger > 70 ? '#ff4444' : detailData.hunger > 40 ? '#ffaa00' : '#00ff00';
+        const healthColor = detailData.health < 40 ? '#ff4444' : detailData.health < 70 ? '#ffaa00' : '#00ff00';
+        const row4 = this.add.text(0, yOffset,
+            `Hunger: ${detailData.hunger}            Health: ${detailData.health}`, {
+            fontSize: '10px',
+            fontFamily: 'Courier New',
+            color: '#aaaaaa'
+        });
+        this.fishDetailContainer.add(row4);
+        this.fishDetailElements.push(row4);
+        yOffset += 14;
+
+        // Row 5: State label and Frenzy
+        const row5 = this.add.text(0, yOffset,
+            `State:                  Frenzy: ${detailData.frenzy}`, {
+            fontSize: '10px',
+            fontFamily: 'Courier New',
+            color: '#aaaaaa'
+        });
+        this.fishDetailContainer.add(row5);
+        this.fishDetailElements.push(row5);
+        yOffset += 14;
+
+        // Row 6: State value (cyan)
+        const row6 = this.add.text(0, yOffset, detailData.state, {
+            fontSize: '10px',
+            fontFamily: 'Courier New',
+            color: '#00ffff'
+        });
+        this.fishDetailContainer.add(row6);
+        this.fishDetailElements.push(row6);
+        yOffset += 14;
+
+        // Row 7: Baitfish Eaten and Speed
+        const row7 = this.add.text(0, yOffset,
+            `Baitfish Eaten: ${detailData.baitfishEaten}    Speed: ${detailData.speed}`, {
+            fontSize: '10px',
+            fontFamily: 'Courier New',
+            color: '#aaaaaa'
+        });
+        this.fishDetailContainer.add(row7);
+        this.fishDetailElements.push(row7);
     }
 
     /**
@@ -442,54 +688,7 @@ export default class GameHUD extends Phaser.Scene {
      */
     toggleTopBar() {
         this.topBarVisible = !this.topBarVisible;
-        const alpha = this.topBarVisible ? 1 : 0;
-
-        // Hide/show all top bar elements
-        this.topBarBg.setAlpha(alpha);
-
-        // Toggle all meter elements
-        if (this.lineStrainMeter) {
-            this.lineStrainMeter.label.setAlpha(alpha);
-            this.lineStrainMeter.bg.setAlpha(alpha);
-            this.lineStrainMeter.fill.setAlpha(alpha);
-            this.lineStrainMeter.percent.setAlpha(alpha);
-        }
-        if (this.tensionMeter) {
-            this.tensionMeter.label.setAlpha(alpha);
-            this.tensionMeter.bg.setAlpha(alpha);
-            this.tensionMeter.fill.setAlpha(alpha);
-            this.tensionMeter.percent.setAlpha(alpha);
-        }
-        if (this.dropMeter) {
-            this.dropMeter.label.setAlpha(alpha);
-            this.dropMeter.bg.setAlpha(alpha);
-            this.dropMeter.fill.setAlpha(alpha);
-            this.dropMeter.percent.setAlpha(alpha);
-        }
-        if (this.reelMeter) {
-            this.reelMeter.label.setAlpha(alpha);
-            this.reelMeter.bg.setAlpha(alpha);
-            this.reelMeter.fill.setAlpha(alpha);
-            this.reelMeter.percent.setAlpha(alpha);
-        }
-        if (this.dragMeter) {
-            this.dragMeter.label.setAlpha(alpha);
-            this.dragMeter.bg.setAlpha(alpha);
-            this.dragMeter.fill.setAlpha(alpha);
-            this.dragMeter.percent.setAlpha(alpha);
-        }
-
-        // Toggle value displays
-        if (this.valueDisplays) {
-            Object.values(this.valueDisplays).forEach(text => {
-                if (text && text.setAlpha) text.setAlpha(alpha);
-            });
-        }
-
-        // Toggle icons
-        if (this.gamepadIcon) this.gamepadIcon.setAlpha(alpha);
-        if (this.bookIcon) this.bookIcon.setAlpha(alpha);
-
+        this.topBarContainer.setVisible(this.topBarVisible);
         console.log(this.topBarVisible ? '📊 Top bar visible' : '🎬 Top bar hidden');
     }
 
@@ -498,15 +697,7 @@ export default class GameHUD extends Phaser.Scene {
      */
     toggleSidebar() {
         this.sidebarVisible = !this.sidebarVisible;
-        const alpha = this.sidebarVisible ? 1 : 0;
-
-        this.sidebarBg.setAlpha(alpha);
-        this.sidebarHeader.setAlpha(alpha);
-        this.entityCountText.setAlpha(alpha);
-        this.fishListText.setAlpha(alpha);
-        this.detailPanelBg.setAlpha(alpha);
-        this.fishDetailText.setAlpha(alpha);
-
+        this.fishStatusContainer.setVisible(this.sidebarVisible);
         console.log(this.sidebarVisible ? '📊 Sidebar visible' : '🎬 Sidebar hidden');
     }
 
@@ -520,30 +711,33 @@ export default class GameHUD extends Phaser.Scene {
         // Redraw top bar
         this.topBarBg.clear();
         this.topBarBg.fillStyle(0x000000, 0.75);
-        this.topBarBg.fillRect(0, 0, this.canvasWidth, 44);
+        this.topBarBg.fillRect(0, 0, this.canvasWidth, 50);
 
-        // Reposition/redraw sidebar
+        // Reposition/redraw sidebar with gaps
+        const gap = 10;
         const sidebarWidth = 300;
-        const sidebarX = this.canvasWidth - sidebarWidth;
+        const sidebarX = this.canvasWidth - sidebarWidth - gap;
+        const sidebarY = 50 + gap; // Top bar is now 50px
+        const sidebarHeight = this.canvasHeight - sidebarY - gap;
 
         this.sidebarBg.clear();
-        this.sidebarBg.fillStyle(0x000000, 0.75);
-        this.sidebarBg.fillRect(sidebarX, 50, sidebarWidth, this.canvasHeight - 50);
+        this.sidebarBg.fillStyle(0x000000, 0.65);
+        this.sidebarBg.fillRect(sidebarX, sidebarY, sidebarWidth, sidebarHeight);
         this.sidebarBg.lineStyle(2, 0xffaa00, 1.0);
-        this.sidebarBg.strokeRect(sidebarX, 50, sidebarWidth, this.canvasHeight - 50);
+        this.sidebarBg.strokeRect(sidebarX, sidebarY, sidebarWidth, sidebarHeight);
 
-        this.sidebarHeader.setPosition(sidebarX + 10, 58);
-        this.entityCountText.setPosition(sidebarX + 200, 60);
-        this.fishListText.setPosition(sidebarX + 10, 85);
+        this.sidebarHeader.setPosition(sidebarX + 10, sidebarY + 8);
+        this.entityCountText.setPosition(sidebarX + 140, sidebarY + 8);
+        this.fishListContainer.setPosition(sidebarX, sidebarY + 35);
 
-        const detailPanelY = this.canvasHeight - 200;
+        const detailPanelY = this.canvasHeight - 200 - gap;
         this.detailPanelBg.clear();
-        this.detailPanelBg.fillStyle(0x0a0a0a, 1.0);
+        this.detailPanelBg.fillStyle(0x0a0a0a, 0.65);
         this.detailPanelBg.lineStyle(2, 0x00ff00, 1.0);
         this.detailPanelBg.fillRect(sidebarX, detailPanelY, sidebarWidth, 200);
-        this.detailPanelBg.strokeRect(sidebarX, detailPanelY, sidebarWidth, 2);
+        this.detailPanelBg.strokeRect(sidebarX, detailPanelY, sidebarWidth, 200);
 
-        this.fishDetailText.setPosition(sidebarX + 10, detailPanelY + 10);
+        this.fishDetailContainer.setPosition(sidebarX + 10, detailPanelY + 10);
 
         // Reposition time display (right-aligned)
         if (this.valueDisplays.time) {

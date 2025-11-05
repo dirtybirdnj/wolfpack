@@ -27,12 +27,12 @@ export class BaitfishSprite extends Phaser.GameObjects.Sprite {
         // Initialize baitfish properties
         this.initBaitfishProperties(scene, species);
 
-        // Make visible
+        // Update screen position FIRST
+        this.updateScreenPosition();
+
+        // THEN make visible and active (must be after updateScreenPosition)
         this.setVisible(true);
         this.setActive(true);
-
-        // Update screen position
-        this.updateScreenPosition();
     }
 
     /**

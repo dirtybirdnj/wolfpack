@@ -630,8 +630,8 @@ export class SpawningSystem {
             worldX = playerWorldX + offsetX;
         }
 
-        // Spawn on the actual bottom depth (use maxDepth from scene)
-        const depth = this.scene.maxDepth || GameConfig.MAX_DEPTH;
+        // Spawn on the actual bottom depth (use MAX_DEPTH which is the lake's bottom)
+        const depth = GameConfig.MAX_DEPTH;
 
         // Use dynamic depth scale from scene
         const depthScale = this.scene.depthConverter.depthScale;
