@@ -4,7 +4,7 @@ import DepthConverter from '../utils/DepthConverter.js';
 import { SpriteGenerator } from '../utils/SpriteGenerator.js';
 import Lure from '../entities/Lure.js';
 import Fish from '../entities/Fish.js';
-import { FishSprite } from '../models/FishSprite.js';
+import { FishSprite as LegacyFishSprite } from '../models/FishSprite.js';
 import { BaitfishSprite } from '../models/BaitfishSprite.js';
 import Crayfish from '../entities/Crayfish.js';
 import FishFight from '../entities/FishFight.js';
@@ -12,12 +12,19 @@ import FishingLine from '../entities/FishingLine.js';
 import { FishingLineModel } from '../models/FishingLineModel.js';
 import { ReelModel } from '../models/ReelModel.js';
 
+// Import new sprite classes for Groups
+import { FishSprite } from '../sprites/FishSprite.js';
+import { CrayfishSprite } from '../sprites/CrayfishSprite.js';
+import { ZooplanktonSprite } from '../sprites/ZooplanktonSprite.js';
+
 // Import all systems
 import SpawningSystem from './systems/SpawningSystem.js';
 import InputSystem from './systems/InputSystem.js';
 import CollisionSystem from './systems/CollisionSystem.js';
 import DebugSystem from './systems/DebugSystem.js';
 import NotificationSystem from './systems/NotificationSystem.js';
+import SchoolManager from '../systems/SchoolManager.js';
+import FoodChainSystem from '../systems/FoodChainSystem.js';
 
 /**
  * GameScene - Main game logic orchestrator
@@ -96,6 +103,8 @@ export class GameScene extends Phaser.Scene {
         this.inputSystem = null;
         this.collisionSystem = null;
         this.debugSystem = null;
+        this.schoolManager = null;
+        this.foodChainSystem = null;
         this.notificationSystem = null;
 
         // Tackle box state
@@ -310,15 +319,31 @@ export class GameScene extends Phaser.Scene {
     initializeCreatureGroups() {
         console.log('🌊 Initializing creature groups with pooling...');
 
-        // Phaser Group for predator fish with object pooling
+        // Phaser Group for ALL fish (bait + predators) with object pooling
         this.fishGroup = this.add.group({
-            classType: Phaser.GameObjects.Sprite, // Will be FishSprite when fully migrated
-            maxSize: 20,
+            classType: FishSprite,
+            maxSize: 150, // Increased for baitfish + predators
             runChildUpdate: true // Automatically calls preUpdate on all active fish
         });
 
-        // Legacy array for compatibility during migration
-        this.fishes = [];
+        // Phaser Group for crayfish with object pooling
+        this.crayfishGroup = this.add.group({
+            classType: CrayfishSprite,
+            maxSize: 50,
+            runChildUpdate: true
+        });
+
+        // Phaser Group for zooplankton with object pooling
+        this.zooplanktonGroup = this.add.group({
+            classType: ZooplanktonSprite,
+            maxSize: 500, // Large pool for abundant zooplankton
+            runChildUpdate: true
+        });
+
+        // Legacy arrays for compatibility during migration (will gradually phase out)
+        this.fishes = []; // Will be replaced by fishGroup.getChildren()
+        this.crayfish = []; // Will be replaced by crayfishGroup.getChildren()
+        this.zooplankton = []; // Will be replaced by zooplanktonGroup.getChildren()
 
         // Array for schooling baitfish (using new unified Fish class with Boids)
         this.baitfishSchools = [];
@@ -326,7 +351,7 @@ export class GameScene extends Phaser.Scene {
         // Array of school metadata (tracks center position and velocity for each school)
         this.schools = [];
 
-        console.log('✅ Creature groups initialized with pooling');
+        console.log('✅ Creature groups initialized with pooling (fish, crayfish, zooplankton)');
     }
 
     /**
@@ -361,8 +386,10 @@ export class GameScene extends Phaser.Scene {
         this.collisionSystem = new CollisionSystem(this);
         this.debugSystem = new DebugSystem(this);
         this.notificationSystem = new NotificationSystem(this);
+        this.schoolManager = new SchoolManager(this);
+        this.foodChainSystem = new FoodChainSystem(this);
 
-        console.log('All game systems initialized');
+        console.log('All game systems initialized (including SchoolManager and FoodChainSystem)');
     }
 
     /**
@@ -563,6 +590,10 @@ export class GameScene extends Phaser.Scene {
         this.spawningSystem.update(time, delta);
         this.collisionSystem.update(time, delta);
         this.debugSystem.update(time, delta);
+
+        // Update new ecosystem systems
+        this.schoolManager.update(this.fishes);
+        this.foodChainSystem.update();
 
         // Check for emergency fish spawn (arcade mode)
         this.spawningSystem.checkEmergencySpawn();

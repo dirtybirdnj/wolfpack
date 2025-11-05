@@ -1,9 +1,10 @@
 import GameConfig from '../../config/GameConfig.js';
 import { Constants, Utils } from '../../utils/Constants.js';
-import Fish from '../../entities/Fish.js';
-import { FishSprite } from '../../models/FishSprite.js';
-import Zooplankton from '../../entities/Zooplankton.js';
-import Crayfish from '../../entities/Crayfish.js';
+import { FishSprite } from '../../sprites/FishSprite.js';
+import { CrayfishSprite } from '../../sprites/CrayfishSprite.js';
+import { ZooplanktonSprite } from '../../sprites/ZooplanktonSprite.js';
+import { getOrganismData } from '../../config/OrganismData.js';
+// Legacy imports for compatibility during transition
 import { getBaitfishSpecies, selectRandomSpecies, getPredatorSpecies } from '../../config/SpeciesData.js';
 
 /**
@@ -410,8 +411,8 @@ export class SpawningSystem {
                 y = waterFloorY;
             }
 
-            // Create zooplankton
-            const zp = new Zooplankton(this.scene, worldX, y);
+            // Create zooplankton using new sprite class
+            const zp = new ZooplanktonSprite(this.scene, worldX, y);
             this.scene.zooplankton.push(zp);
         }
 
@@ -648,8 +649,8 @@ export class SpawningSystem {
             y = waterFloorY;
         }
 
-        // Create crayfish
-        const crayfish = new Crayfish(this.scene, worldX, y);
+        // Create crayfish using new sprite class
+        const crayfish = new CrayfishSprite(this.scene, worldX, y);
         this.scene.crayfish.push(crayfish);
 
         return crayfish;
