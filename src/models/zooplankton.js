@@ -65,10 +65,8 @@ export class Zooplankton extends AquaticOrganism {
         // Get actual lake bottom depth (using parent class helper)
         const bottomDepth = this.getBottomDepthAtPosition();
 
-        // Use dynamic depth scale from sonar display (not static GameConfig.DEPTH_SCALE)
-        const depthScale = this.scene.sonarDisplay ?
-            this.scene.sonarDisplay.getDepthScale() :
-            GameConfig.DEPTH_SCALE;
+        // Use dynamic depth scale from depth converter
+        const depthScale = this.scene.depthConverter.depthScale;
 
         // Vertical migration with bottom concentration
         // Allow zooplankton to migrate up to 60 feet from bottom, but most stay near bottom

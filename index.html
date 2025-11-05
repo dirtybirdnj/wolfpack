@@ -47,26 +47,24 @@
 
         body {
             margin: 0;
-            padding: 10px;
+            padding: 0;
             height: 100vh;
             background: linear-gradient(135deg, var(--bg-gradient-1) 0%, var(--bg-gradient-2) 100%);
             font-family: 'Courier New', monospace;
             color: var(--text-primary);
             overflow: hidden;
             display: flex;
-            flex-direction: column;
+            align-items: center;
+            justify-content: center;
         }
 
 
         #main-layout {
-            display: grid;
-            grid-template-columns: 1fr 320px;
-            grid-template-rows: auto 1fr;
-            gap: 10px;
             width: 100%;
             height: 100%;
-            margin: 0 auto;
-            align-items: start;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         #right-panel {
@@ -112,14 +110,8 @@
             border: 2px solid var(--border-primary);
             box-shadow: 0 0 20px var(--shadow-color);
             position: relative;
-            margin: 0 auto;
-            grid-column: 1;
-            grid-row: 2;
             width: 100%;
             height: 100%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
             overflow: hidden;
         }
 
@@ -229,14 +221,7 @@
             background: var(--border-warning);
         }
 
-        #fish-status-container {
-            flex: 1;
-            overflow-y: auto;
-            overflow-x: hidden;
-            font-size: 10px;
-            line-height: 1.4;
-            min-height: 0;
-        }
+        /* REMOVED: #fish-status-container - now using GameHUD scene */
 
         .status-value {
             font-weight: bold;
@@ -287,54 +272,6 @@
             max-height: 0;
         }
 
-        /* Top Bar Toggle Button */
-        #topbar-toggle {
-            font-size: 16px;
-            line-height: 1;
-            cursor: pointer;
-            user-select: none;
-            transition: transform 0.2s;
-        }
-
-        #topbar-toggle:hover {
-            transform: scale(1.1);
-        }
-
-        /* Sidebar Toggle Button */
-        #sidebar-toggle {
-            font-size: 24px;
-            line-height: 1;
-            cursor: pointer;
-            user-select: none;
-            transition: transform 0.2s;
-        }
-
-        #sidebar-toggle:hover {
-            transform: scale(1.1);
-        }
-
-        /* Top bar collapsed state */
-        body.topbar-collapsed #top-bar-container {
-            display: none;
-        }
-
-        body.topbar-collapsed #main-layout {
-            grid-template-rows: 0px 1fr !important;
-        }
-
-        /* Sidebar collapsed state */
-        body.sidebar-collapsed #main-layout {
-            grid-template-columns: 1fr 0px !important;
-        }
-
-        body.sidebar-collapsed #right-panel {
-            opacity: 0;
-            pointer-events: none;
-            overflow: hidden;
-            width: 0;
-            min-width: 0;
-        }
-
         /* Responsive */
         @media (max-width: 1600px) {
             #main-layout {
@@ -357,203 +294,12 @@
             }
         }
 
-        /* Scrollbar styling for dark theme */
-        :root[data-theme="dark"] #fish-status-container::-webkit-scrollbar,
-        :root[data-theme="dark"] #fish-status-container div::-webkit-scrollbar {
-            width: 6px;
-        }
-
-        :root[data-theme="dark"] #fish-status-container::-webkit-scrollbar-track,
-        :root[data-theme="dark"] #fish-status-container div::-webkit-scrollbar-track {
-            background: rgba(0, 0, 0, 0.3);
-        }
-
-        :root[data-theme="dark"] #fish-status-container::-webkit-scrollbar-thumb,
-        :root[data-theme="dark"] #fish-status-container div::-webkit-scrollbar-thumb {
-            background: var(--border-primary);
-            border-radius: 3px;
-        }
-
-        /* Scrollbar styling for light theme */
-        :root[data-theme="light"] #fish-status-container::-webkit-scrollbar,
-        :root[data-theme="light"] #fish-status-container div::-webkit-scrollbar {
-            width: 6px;
-        }
-
-        :root[data-theme="light"] #fish-status-container::-webkit-scrollbar-track,
-        :root[data-theme="light"] #fish-status-container div::-webkit-scrollbar-track {
-            background: rgba(0, 0, 0, 0.1);
-        }
-
-        :root[data-theme="light"] #fish-status-container::-webkit-scrollbar-thumb,
-        :root[data-theme="light"] #fish-status-container div::-webkit-scrollbar-thumb {
-            background: var(--border-primary);
-            border-radius: 3px;
-        }
+        /* REMOVED: Scrollbar styles for #fish-status-container - now using GameHUD scene */
     </style>
 </head>
 <body>
-    <div id="main-layout">
-        <!-- Top Bar Container (Game Info Panel with integrated icons) -->
-        <div id="top-bar-container">
-            <!-- Game Info Panel -->
-            <div id="game-info-panel" class="panel">
-                <div style="display: grid; grid-template-columns: repeat(10, 1fr) auto auto auto; gap: 8px; font-size: 10px; align-items: center;">
-                    <div>
-                        <div style="color: var(--text-muted); font-size: 8px;">LINE <span id="ui-line-test" style="color: var(--text-primary);">15lb</span></div>
-                        <div style="display: flex; align-items: center; gap: 3px;">
-                            <div style="flex: 1; height: 10px; background: rgba(0, 0, 0, 0.5); border: 1px solid var(--text-muted); border-radius: 2px; position: relative; overflow: hidden; min-width: 40px;">
-                                <div id="line-strain-fill" style="position: absolute; left: 0; top: 0; bottom: 0; width: 0%; background: linear-gradient(90deg, #00ff00 0%, #ffff00 50%, #ff9900 75%, #ff0000 100%); transition: width 0.1s linear;"></div>
-                            </div>
-                            <div style="color: var(--text-primary); font-size: 9px; font-weight: bold; min-width: 22px;">
-                                <span id="line-strain-percent">0</span>%
-                            </div>
-                        </div>
-                    </div>
-                    <div id="depth-display">
-                        <div style="color: var(--text-muted); font-size: 8px;">DEPTH</div>
-                        <div style="font-weight: bold; color: var(--border-secondary); font-size: 11px; display: flex; align-items: center; gap: 4px;">
-                            <span id="ui-depth">0</span>ft
-                            <span id="nature-depth-selector" style="display: none; cursor: pointer; font-size: 14px; user-select: none;" title="Change depth settings">⬍</span>
-                        </div>
-                    </div>
-                    <div>
-                        <div style="color: var(--text-muted); font-size: 8px;">MODE</div>
-                        <div style="font-weight: bold; font-size: 11px;">
-                            <span id="ui-mode" style="color: #00ff00;">FISHING</span>
-                        </div>
-                    </div>
-                    <div>
-                        <div style="color: var(--text-muted); font-size: 8px;">TENSION</div>
-                        <div style="display: flex; align-items: center; gap: 3px;">
-                            <div style="flex: 1; height: 10px; background: rgba(0, 0, 0, 0.5); border: 1px solid var(--text-muted); border-radius: 2px; position: relative; overflow: hidden; min-width: 40px;">
-                                <div id="tension-fill" style="position: absolute; left: 0; top: 0; bottom: 0; width: 0%; background: linear-gradient(90deg, #00ff00 0%, #ffff00 50%, #ff6600 70%, #ff0000 100%); transition: width 0.1s linear;"></div>
-                            </div>
-                            <div style="color: var(--text-primary); font-size: 9px; font-weight: bold; min-width: 22px;">
-                                <span id="tension-percent">0</span>%
-                            </div>
-                        </div>
-                    </div>
-                    <div>
-                        <div style="color: var(--text-muted); font-size: 8px;">DROP</div>
-                        <div style="display: flex; align-items: center; gap: 3px;">
-                            <div style="flex: 1; height: 10px; background: rgba(0, 0, 0, 0.5); border: 1px solid var(--text-muted); border-radius: 2px; position: relative; overflow: hidden; min-width: 40px;">
-                                <div id="drop-speed-fill" style="position: absolute; right: 0; top: 0; bottom: 0; width: 0%; background: linear-gradient(90deg, #ff6600 0%, #ffff00 50%, #00ff00 100%); transition: width 0.05s linear;"></div>
-                            </div>
-                            <div style="color: var(--text-primary); font-size: 9px; font-weight: bold; min-width: 22px;">
-                                <span id="drop-speed-percent">0</span>%
-                            </div>
-                        </div>
-                    </div>
-                    <div>
-                        <div style="color: var(--text-muted); font-size: 8px;">REEL</div>
-                        <div style="display: flex; align-items: center; gap: 3px;">
-                            <div style="flex: 1; height: 10px; background: rgba(0, 0, 0, 0.5); border: 1px solid var(--text-muted); border-radius: 2px; position: relative; overflow: hidden; min-width: 40px;">
-                                <div id="reel-speed-fill" style="position: absolute; left: 0; top: 0; bottom: 0; width: 0%; background: linear-gradient(90deg, #00ff00 0%, #ffff00 50%, #ff6600 100%); transition: width 0.05s linear;"></div>
-                            </div>
-                            <div style="color: var(--text-primary); font-size: 9px; font-weight: bold; min-width: 22px;">
-                                <span id="reel-speed-percent">0</span>%
-                            </div>
-                        </div>
-                    </div>
-                    <div>
-                        <div style="color: var(--text-muted); font-size: 8px;">DRAG</div>
-                        <div style="display: flex; align-items: center; gap: 3px;">
-                            <div style="flex: 1; height: 10px; background: rgba(0, 0, 0, 0.5); border: 1px solid var(--text-muted); border-radius: 2px; position: relative; overflow: hidden; min-width: 40px;">
-                                <div id="drag-setting-fill" style="position: absolute; left: 0; top: 0; bottom: 0; width: 50%; background: linear-gradient(90deg, #00ff00 0%, #ffff00 50%, #ff6600 100%); transition: width 0.05s linear;"></div>
-                            </div>
-                            <div style="color: var(--text-primary); font-size: 9px; font-weight: bold; min-width: 22px;">
-                                <span id="drag-setting-percent">50</span>%
-                            </div>
-                        </div>
-                    </div>
-                    <div>
-                        <div style="color: var(--text-muted); font-size: 8px;">TIME</div>
-                        <div style="font-weight: bold; color: var(--text-primary); font-size: 11px;"><span id="ui-time">0:00</span></div>
-                    </div>
-                    <!-- Kayak Tiredness (shown when in kayak mode) -->
-                    <div id="ui-kayak-status" style="display: none;">
-                        <div style="color: var(--text-muted); font-size: 8px;">STAMINA</div>
-                        <div style="font-weight: bold; color: var(--text-primary); font-size: 11px;"><span id="ui-kayak-stamina">100</span>%</div>
-                    </div>
-                    <!-- Motorboat Gas (shown when in motorboat mode) -->
-                    <div id="ui-boat-status" style="display: none;">
-                        <div style="color: var(--text-muted); font-size: 8px;">FUEL</div>
-                        <div style="font-weight: bold; color: var(--text-primary); font-size: 11px;"><span id="ui-boat-fuel">100</span>%</div>
-                    </div>
-                    <!-- Icon Group (condensed into one cell) -->
-                    <div id="icon-group-container" style="display: flex; gap: 6px; align-items: center;">
-                        <!-- Gamepad Icon -->
-                        <div id="gamepad-icon-container" style="position: relative;">
-                            <div id="gamepad-icon" style="font-size: 24px; line-height: 1; cursor: pointer;">🎮</div>
-                            <div id="gamepad-connection-indicator" style="position: absolute; bottom: 0; right: 0; width: 8px; height: 8px; background: #00ff00; border-radius: 50%; border: 2px solid var(--bg-gradient-1); display: none; box-shadow: 0 0 8px rgba(0, 255, 0, 0.8);"></div>
-                        </div>
-                        <!-- Book Icon -->
-                        <div id="book-icon-container" style="position: relative;">
-                            <div id="book-icon" style="font-size: 24px; line-height: 1; cursor: pointer;">📖</div>
-                        </div>
-                        <!-- Camera Icon -->
-                        <div id="camera-icon-container" style="position: relative;">
-                            <div id="camera-icon" style="font-size: 24px; line-height: 1; cursor: pointer;" title="Take screenshot">📷</div>
-                        </div>
-                    </div>
-                    <!-- Top Bar Toggle (integrated into info bar) -->
-                    <div id="topbar-toggle-container" style="position: relative;" title="Toggle top bar">
-                        <div id="topbar-toggle">▲</div>
-                    </div>
-                    <!-- Sidebar Toggle (integrated into info bar) -->
-                    <div id="sidebar-toggle-container" style="position: relative;" title="Toggle sidebar">
-                        <div id="sidebar-toggle">☰</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Center Panel (Game) -->
-        <div id="game-container"></div>
-
-        <!-- Version Display (overlays bottom-right of game) -->
-        <div id="version-display" style="
-            position: absolute;
-            bottom: 5px;
-            left: 50%;
-            transform: translateX(-50%);
-            font-family: 'Courier New', monospace;
-            font-size: 9px;
-            color: #888888;
-            cursor: pointer;
-            user-select: none;
-            z-index: 100;
-            padding: 3px 8px;
-            background: rgba(0, 0, 0, 0.5);
-            border-radius: 3px;
-            border: 1px solid #444444;
-            transition: all 0.2s;
-        " title="Click to view commit history">
-            <span id="version-hash">loading...</span>
-        </div>
-
-        <!-- Right Panel -->
-        <div id="right-panel">
-            <!-- Fish Status -->
-            <div class="panel warning" style="display: flex; flex-direction: column; height: 100%;">
-                <h3 style="display: flex; justify-content: space-between; align-items: center;">
-                    <span>🐟 FISH STATUS</span>
-                    <span id="entity-counts" style="font-size: 11px; font-weight: normal; color: var(--text-secondary);"></span>
-                </h3>
-                <!-- Spawn buttons moved to top for better accessibility -->
-                <div id="spawn-buttons-container" style="border-bottom: 2px solid #00ff00; background: #0a0a0a; display: none;">
-                    <!-- Spawn buttons will be inserted here dynamically -->
-                </div>
-                <div id="fish-status-container" style="flex: 1; overflow-y: auto; overflow-x: hidden; min-height: 0;">
-                    <div style="color: var(--text-muted); font-style: italic;">No fish spawned</div>
-                </div>
-                <div id="fish-detail-panel" style="min-height: 180px; max-height: 180px; background: #0a0a0a; border-top: 2px solid #00ff00; overflow-y: auto;">
-                    <div style="color: #888; font-style: italic; padding: 10px; text-align: center;">Select a fish to view details</div>
-                </div>
-            </div>
-        </div>
-    </div>
+    <!-- Game container only - all UI now rendered in-game via GameHUD scene -->
+    <div id="game-container"></div>
 
     <!-- Load Phaser from CDN -->
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js"></script>
@@ -582,107 +328,7 @@
         }
     </script>
 
-    <!-- Sidebar Toggle Controls -->
-    <script>
-        // Load sidebar preference from localStorage
-        const sidebarCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
-        if (sidebarCollapsed) {
-            document.body.classList.add('sidebar-collapsed');
-        }
-
-        // Add click handler for sidebar toggle
-        document.addEventListener('DOMContentLoaded', () => {
-            const sidebarToggle = document.getElementById('sidebar-toggle');
-
-            sidebarToggle.addEventListener('click', () => {
-                const isCollapsed = document.body.classList.toggle('sidebar-collapsed');
-
-                // Save preference
-                localStorage.setItem('sidebarCollapsed', isCollapsed);
-
-                // Keep hamburger icon consistent (don't change to X)
-                sidebarToggle.textContent = '☰';
-
-                console.log(isCollapsed ? '📱 Sidebar collapsed - Full screen mode' : '📊 Sidebar expanded');
-            });
-
-            // Set initial icon (always hamburger)
-            sidebarToggle.textContent = '☰';
-        });
-    </script>
-
-    <!-- Top Bar Toggle Controls -->
-    <script>
-        // Load top bar preference from localStorage
-        const topbarCollapsed = localStorage.getItem('topbarCollapsed') === 'true';
-        if (topbarCollapsed) {
-            document.body.classList.add('topbar-collapsed');
-        }
-
-        // Add click handler for top bar toggle
-        document.addEventListener('DOMContentLoaded', () => {
-            const topbarToggle = document.getElementById('topbar-toggle');
-
-            topbarToggle.addEventListener('click', () => {
-                const isCollapsed = document.body.classList.toggle('topbar-collapsed');
-
-                // Save preference
-                localStorage.setItem('topbarCollapsed', isCollapsed);
-
-                // Keep up arrow consistent (don't change to down)
-                topbarToggle.textContent = '▲';
-
-                console.log(isCollapsed ? '🎬 Top bar hidden - Cinema mode' : '📊 Top bar visible');
-            });
-
-            // Set initial icon (always up arrow)
-            topbarToggle.textContent = '▲';
-        });
-    </script>
-
-    <!-- Keyboard Shortcuts -->
-    <script>
-        document.addEventListener('keydown', (event) => {
-            // Don't trigger if user is typing in an input field
-            if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') {
-                return;
-            }
-
-            // 'm' key to toggle top bar (same as down arrow)
-            if (event.key === 'm' || event.key === 'M') {
-                const topbarToggle = document.getElementById('topbar-toggle');
-                if (topbarToggle) {
-                    topbarToggle.click();
-                }
-            }
-
-            // 's' key to toggle fish status sidebar (same as hamburger menu)
-            if (event.key === 's' || event.key === 'S') {
-                const sidebarToggle = document.getElementById('sidebar-toggle');
-                if (sidebarToggle) {
-                    sidebarToggle.click();
-                }
-            }
-
-            // 'f' key for cinema mode - hide both topbar and sidebar for maximum screen space
-            if (event.key === 'f' || event.key === 'F') {
-                const topbarCollapsed = document.body.classList.contains('topbar-collapsed');
-                const sidebarCollapsed = document.body.classList.contains('sidebar-collapsed');
-
-                // If both are already hidden, show both
-                if (topbarCollapsed && sidebarCollapsed) {
-                    if (topbarCollapsed) document.getElementById('topbar-toggle').click();
-                    if (sidebarCollapsed) document.getElementById('sidebar-toggle').click();
-                    console.log('📊 Normal mode - panels visible');
-                } else {
-                    // Hide both for cinema mode
-                    if (!topbarCollapsed) document.getElementById('topbar-toggle').click();
-                    if (!sidebarCollapsed) document.getElementById('sidebar-toggle').click();
-                    console.log('🎬 Cinema mode - maximum screen space');
-                }
-            }
-        });
-    </script>
+    <!-- HUD toggle keyboard shortcuts (M, S, F) now handled by GameHUD scene -->
 
     <!-- Initialize Gamepad Manager and Test Button -->
     <script type="module">
@@ -690,36 +336,6 @@
 
         // Make gamepad manager globally available for Phaser scenes
         window.gamepadManager = gamepadManager;
-
-        // Track keyboard usage
-        let keyboardUsed = false;
-        const gamepadIcon = document.getElementById('gamepad-icon');
-        const gamepadConnectionIndicator = document.getElementById('gamepad-connection-indicator');
-
-        // Detect keyboard input
-        window.addEventListener('keydown', () => {
-            if (!gamepadManager.isConnected()) {
-                keyboardUsed = true;
-                gamepadIcon.classList.add('keyboard-mode');
-            }
-        });
-
-        // Update gamepad connection indicator
-        function updateGamepadUI() {
-            if (gamepadManager.isConnected()) {
-                keyboardUsed = false;
-                gamepadIcon.classList.remove('keyboard-mode');
-                gamepadConnectionIndicator.classList.add('connected');
-            } else {
-                gamepadConnectionIndicator.classList.remove('connected');
-                if (keyboardUsed) {
-                    gamepadIcon.classList.add('keyboard-mode');
-                }
-            }
-        }
-
-        // Poll for gamepad connection status
-        setInterval(updateGamepadUI, 500);
 
         // Function to show test controller overlay
         function showTestController() {
@@ -1028,10 +644,15 @@
         }
 
         // Setup gamepad icon click handler
-        document.getElementById('gamepad-icon-container').addEventListener('click', showTestController);
+        const gamepadIconContainer = document.getElementById('gamepad-icon-container');
+        if (gamepadIconContainer) {
+            gamepadIconContainer.addEventListener('click', showTestController);
+        }
 
         // Setup book icon click handler (Species Guide)
-        document.getElementById('book-icon-container').addEventListener('click', () => {
+        const bookIconContainer = document.getElementById('book-icon-container');
+        if (bookIconContainer) {
+            bookIconContainer.addEventListener('click', () => {
             // Create species guide overlay
             const overlay = document.createElement('div');
             overlay.id = 'species-guide-overlay';
@@ -1136,10 +757,13 @@
                     overlay.remove();
                 }
             });
-        });
+            });
+        }
 
         // Setup camera icon click handler (Screenshot Feature)
-        document.getElementById('camera-icon-container').addEventListener('click', async () => {
+        const cameraIconContainer = document.getElementById('camera-icon-container');
+        if (cameraIconContainer) {
+            cameraIconContainer.addEventListener('click', async () => {
             try {
                 // Capture screenshot FIRST (before showing any UI)
                 const canvas = await html2canvas(document.body, {
@@ -1353,150 +977,9 @@ ${description || 'No description provided'}
                 console.error('Screenshot capture failed:', error);
                 alert('Failed to capture screenshot. Please try again.');
             }
-        });
-
-    </script>
-
-    <!-- Commit Log Modal -->
-    <div id="commit-log-modal" style="
-        display: none;
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.8);
-        z-index: 10000;
-        overflow-y: auto;
-    ">
-        <div style="
-            max-width: 900px;
-            margin: 40px auto;
-            background: var(--bg-primary);
-            border: 2px solid var(--border-primary);
-            border-radius: 8px;
-            padding: 20px;
-        ">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                <h2 style="color: var(--text-primary); margin: 0; font-family: 'Courier New', monospace;">
-                    📜 Git Commit History
-                </h2>
-                <button id="close-commit-log" style="
-                    background: var(--bg-danger);
-                    color: white;
-                    border: none;
-                    padding: 8px 16px;
-                    border-radius: 4px;
-                    cursor: pointer;
-                    font-family: 'Courier New', monospace;
-                    font-size: 14px;
-                ">Close</button>
-            </div>
-            <div id="commit-log-content" style="
-                font-family: 'Courier New', monospace;
-                font-size: 11px;
-                color: var(--text-muted);
-                white-space: pre-wrap;
-                max-height: 70vh;
-                overflow-y: auto;
-                background: rgba(0, 0, 0, 0.3);
-                padding: 15px;
-                border-radius: 4px;
-                border: 1px solid var(--border-secondary);
-                line-height: 1.6;
-            ">
-                Loading commit history...
-            </div>
-        </div>
-    </div>
-
-    <!-- Version Display and Commit Log Script -->
-    <script type="module">
-        // Fetch version info from a generated version.json file
-        async function loadVersionInfo() {
-            try {
-                const response = await fetch('/version.json');
-                const data = await response.json();
-
-                const versionEl = document.getElementById('version-hash');
-                if (versionEl) {
-                    versionEl.textContent = `v${data.version} (${data.commit})`;
-                }
-            } catch (error) {
-                console.warn('Could not load version info:', error);
-                const versionEl = document.getElementById('version-hash');
-                if (versionEl) {
-                    versionEl.textContent = 'dev';
-                }
-            }
-        }
-
-        // Fetch commit log
-        async function loadCommitLog() {
-            try {
-                const response = await fetch('/commits.txt');
-                const data = await response.text();
-
-                const contentEl = document.getElementById('commit-log-content');
-                if (contentEl && data) {
-                    contentEl.textContent = data;
-                } else {
-                    contentEl.textContent = 'Could not load commit history.';
-                }
-            } catch (error) {
-                console.error('Could not load commit log:', error);
-                const contentEl = document.getElementById('commit-log-content');
-                if (contentEl) {
-                    contentEl.textContent = 'Error loading commit history.\n\nThis feature requires the commits.txt file to be generated during deployment.';
-                }
-            }
-        }
-
-        // Setup version display click handler
-        const versionDisplay = document.getElementById('version-display');
-        const commitLogModal = document.getElementById('commit-log-modal');
-        const closeButton = document.getElementById('close-commit-log');
-
-        if (versionDisplay) {
-            // Hover effect
-            versionDisplay.addEventListener('mouseenter', () => {
-                versionDisplay.style.color = '#00ff00';
-                versionDisplay.style.borderColor = '#00ff00';
-            });
-            versionDisplay.addEventListener('mouseleave', () => {
-                versionDisplay.style.color = '#888888';
-                versionDisplay.style.borderColor = '#444444';
-            });
-
-            // Click to show commit log
-            versionDisplay.addEventListener('click', () => {
-                commitLogModal.style.display = 'block';
-                loadCommitLog();
             });
         }
 
-        if (closeButton) {
-            closeButton.addEventListener('click', () => {
-                commitLogModal.style.display = 'none';
-            });
-        }
-
-        // Close modal on escape key
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && commitLogModal.style.display === 'block') {
-                commitLogModal.style.display = 'none';
-            }
-        });
-
-        // Close modal on background click
-        commitLogModal.addEventListener('click', (e) => {
-            if (e.target === commitLogModal) {
-                commitLogModal.style.display = 'none';
-            }
-        });
-
-        // Load version on page load
-        loadVersionInfo();
     </script>
 </body>
 </html>

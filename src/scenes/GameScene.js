@@ -1,6 +1,6 @@
 import GameConfig from '../config/GameConfig.js';
 import { Constants, Utils } from '../utils/Constants.js';
-import SonarDisplay from '../utils/SonarDisplay.js';
+import DepthConverter from '../utils/DepthConverter.js';
 import { SpriteGenerator } from '../utils/SpriteGenerator.js';
 import Lure from '../entities/Lure.js';
 import Fish from '../entities/Fish.js';
@@ -177,8 +177,25 @@ export class GameScene extends Phaser.Scene {
                 loop: true
             });
 
-            // Set up the sonar display
-            this.sonarDisplay = new SonarDisplay(this);
+            // Create depth converter (shared coordinate system)
+            this.depthConverter = new DepthConverter(this.scale.height, this.maxDepth);
+
+            // Launch WaterColumn scene (base rendering layer)
+            this.scene.launch('WaterColumn', {
+                depthConverter: this.depthConverter,
+                maxDepth: this.maxDepth
+            });
+
+            // Launch overlay scenes
+            this.scene.launch('GameHUD'); // Main in-game HUD (replaces HTML UI)
+            //this.scene.launch('InfoBar');  // Deprecated - replaced by GameHUD
+            //this.scene.launch('FishStatus'); // Deprecated - replaced by GameHUD
+
+            // Set initial registry data for overlays
+            this.registry.set('currentDepth', this.maxDepth);
+            this.registry.set('waterTemp', this.waterTemp);
+            this.registry.set('elapsedTime', 0);
+            this.registry.set('gameMode', 'Ice Fishing');
 
             // Create the player's lure - start ABOVE water in observing mode
             // Use actual game width to center on any screen size
@@ -491,8 +508,32 @@ export class GameScene extends Phaser.Scene {
             // Don't return - let entities continue to update during fight
         }
 
-        // Update sonar display
-        this.sonarDisplay.update();
+        // Update registry data for overlay scenes (GameHUD)
+        this.registry.set('elapsedTime', this.gameTime);
+        this.registry.set('depth', this.lure.depth);
+        this.registry.set('mode', this.lure.y < 0 ? 'OBSERVING' : 'FISHING');
+
+        // Update meter values
+        if (this.currentFight && this.currentFight.active) {
+            // During fight - show tension and drag
+            const tension = this.currentFight.lineTension / 100;
+            this.registry.set('lineTension', tension);
+            this.registry.set('lineStrain', this.fishingLineModel.getStrain());
+        } else {
+            // Not fighting - show drop/reel speed
+            this.registry.set('lineTension', 0);
+            this.registry.set('lineStrain', 0);
+        }
+
+        // Drop and reel speed (based on lure velocity)
+        const dropSpeed = Math.max(0, this.lure.velocity / 10); // Normalize to 0-1
+        const reelSpeed = Math.max(0, -this.lure.velocity / 10); // Normalize to 0-1
+        this.registry.set('dropSpeed', Math.min(1, dropSpeed));
+        this.registry.set('reelSpeed', Math.min(1, reelSpeed));
+
+        // Drag setting
+        const dragSetting = this.fishingLineModel ? (this.fishingLineModel.dragSetting || 0.5) : 0.5;
+        this.registry.set('dragSetting', dragSetting);
 
         // Handle input (only if not fighting)
         if (!this.currentFight || !this.currentFight.active) {
@@ -525,6 +566,93 @@ export class GameScene extends Phaser.Scene {
 
         // Check for emergency fish spawn (arcade mode)
         this.spawningSystem.checkEmergencySpawn();
+
+        // Update fish status sidebar
+        this.updateFishStatusDisplay();
+    }
+
+    /**
+     * Update fish status display in GameHUD
+     */
+    updateFishStatusDisplay() {
+        // Count entities
+        const fishCount = this.fishes.filter(f => f.active && f.visible).length;
+
+        // Count bait clouds and individual baitfish
+        const baitCloudCount = this.schools ? this.schools.filter(school => {
+            const members = school.members || [];
+            return members.some(b => b.active && b.visible);
+        }).length : 0;
+
+        const baitfishCount = this.schools ? this.schools.reduce((total, school) => {
+            return total + (school.members ? school.members.filter(b => b.active && b.visible).length : 0);
+        }, 0) : 0;
+
+        const crayfishCount = this.crayfish ? this.crayfish.filter(c => c.active && c.visible).length : 0;
+        const zooplanktonCount = this.zooplankton ? this.zooplankton.filter(z => z.visible).length : 0;
+
+        const entityCounts = `🐟 ${fishCount} ☁️ ${baitCloudCount} 🦞 ${crayfishCount} 🪳 ${zooplanktonCount}`;
+        this.registry.set('entityCounts', entityCounts);
+
+        // Build fish list data - send as array of objects for proper styling
+        if (fishCount > 0) {
+            const fishListData = this.fishes
+                .filter(f => f.active && f.visible)
+                .map((f, i) => ({
+                    id: f.id,
+                    name: f.name || 'Fish-' + i,
+                    gender: f.gender,
+                    weight: f.weight,
+                    state: (f.ai && f.ai.currentState) ? f.ai.currentState : 'idle',
+                    hunger: f.hunger || 0,
+                    health: f.health || 100,
+                    depth: f.y ? Math.floor(f.y / (this.sonarDisplay ? this.sonarDisplay.getDepthScale() : 10)) : 0,
+                    baitfishEaten: f.stomachContents ? f.stomachContents.length : 0,
+                    isSelected: this.selectedFish === f
+                }));
+            this.registry.set('fishList', fishListData);
+        } else {
+            this.registry.set('fishList', null);
+        }
+
+        // Fish detail - show selected fish or first fish
+        const detailFish = this.selectedFish || (fishCount > 0 ? this.fishes.find(f => f.active && f.visible) : null);
+        if (detailFish) {
+            const species = detailFish.species || 'Unknown';
+            const name = detailFish.name || 'Unknown';
+            const weight = detailFish.weight ? detailFish.weight.toFixed(1) : '?';
+            const length = detailFish.length ? detailFish.length.toFixed(1) : '?';
+            const gender = detailFish.gender === 'male' ? '♂ Male' : '♀ Female';
+            const age = detailFish.age || '?';
+            const depth = detailFish.y ? Math.floor(detailFish.y / (this.sonarDisplay ? this.sonarDisplay.getDepthScale() : 10)) : '?';
+            const zone = detailFish.zone || 'Unknown';
+            const hunger = detailFish.hunger || 0;
+            const health = detailFish.health || 100;
+            const state = detailFish.ai ? detailFish.ai.currentState : 'unknown';
+            const isFrenzying = detailFish.ai ? detailFish.ai.isFrenzying : false;
+            const baitfishEaten = detailFish.stomachContents ? detailFish.stomachContents.length : 0;
+            const speed = detailFish.baseSpeed || 1.0;
+
+            // Create detail object for structured rendering
+            const detailData = {
+                name: `${name} (${species})`,
+                weight: `${weight} lbs`,
+                length: `${length} in`,
+                gender: gender,
+                age: `${age} years`,
+                depth: `${depth}ft`,
+                zone: zone,
+                hunger: hunger,
+                health: health,
+                state: state,
+                frenzy: isFrenzying ? 'YES' : 'NO',
+                baitfishEaten: baitfishEaten,
+                speed: speed.toFixed(1)
+            };
+            this.registry.set('fishDetail', detailData);
+        } else {
+            this.registry.set('fishDetail', 'No fish to display');
+        }
     }
 
 
@@ -785,7 +913,7 @@ export class GameScene extends Phaser.Scene {
                 depth = Utils.randomBetween(50, 90); // Deep
             }
 
-            const y = depth * GameConfig.DEPTH_SCALE;
+            const y = this.depthConverter.depthToY(depth);
 
             // All TROPHY size - using FishSprite
             const fish = new FishSprite(this, worldX, y, 'TROPHY', speciesName);
@@ -805,7 +933,7 @@ export class GameScene extends Phaser.Scene {
 
             // Random depth between 20-70 feet
             const depth = Utils.randomBetween(20, 70);
-            const y = depth * GameConfig.DEPTH_SCALE;
+            const y = this.depthConverter.depthToY(depth);
 
             // Large school size (80-120 fish)
             const schoolSize = Math.floor(Utils.randomBetween(80, 120));
@@ -1148,8 +1276,20 @@ export class GameScene extends Phaser.Scene {
 
         // IMPORTANT: Clean up consumed/inactive fish from school.members arrays FIRST
         this.schools.forEach(school => {
+            const beforeCount = school.members.length;
+
             // Filter out consumed/invisible/inactive fish (BaitfishSprite IS the model)
-            school.members = school.members.filter(fish => fish.visible && fish.active && !fish.consumed);
+            school.members = school.members.filter(fish => {
+                const keep = fish.visible && fish.active && !fish.consumed;
+                if (!keep && beforeCount > 0) {
+                    console.log(`🗑️ Removing fish from school ${school.id}: visible=${fish.visible}, active=${fish.active}, consumed=${fish.consumed}`);
+                }
+                return keep;
+            });
+
+            if (beforeCount > 0 && school.members.length === 0) {
+                console.log(`⚠️ School ${school.id} lost all ${beforeCount} fish! This shouldn't happen on spawn.`);
+            }
 
             // Then remove duplicates using Set (ensures each fish only appears once)
             const uniqueFish = new Set(school.members);
@@ -1426,7 +1566,7 @@ export class GameScene extends Phaser.Scene {
                 this.rumbleGamepad(100, 0.8, 0.4);
             } else if (tension > 0.7 && time % 800 < 50) {
                 this.rumbleGamepad(80, 0.5, 0.3);
-            } else if (reelPressed) {
+            } else if (reelInput > 0) {
                 this.rumbleGamepad(50, 0.2, 0.1);
             }
         }
@@ -2202,7 +2342,11 @@ export class GameScene extends Phaser.Scene {
         // Clean up core components
         this.lure.destroy();
         this.fishingLine.destroy();
-        this.sonarDisplay.destroy();
+
+        // Stop overlay scenes
+        this.scene.stop('WaterColumn');
+        this.scene.stop('InfoBar');
+        this.scene.stop('FishStatus');
 
         // Clean up systems
         if (this.spawningSystem) {
