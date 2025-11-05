@@ -508,8 +508,32 @@ export class GameScene extends Phaser.Scene {
             // Don't return - let entities continue to update during fight
         }
 
-        // Update registry data for overlay scenes
+        // Update registry data for overlay scenes (GameHUD)
         this.registry.set('elapsedTime', this.gameTime);
+        this.registry.set('depth', this.lure.depth);
+        this.registry.set('mode', this.lure.y < 0 ? 'OBSERVING' : 'FISHING');
+
+        // Update meter values
+        if (this.currentFight && this.currentFight.active) {
+            // During fight - show tension and drag
+            const tension = this.currentFight.lineTension / 100;
+            this.registry.set('lineTension', tension);
+            this.registry.set('lineStrain', this.fishingLineModel.getStrain());
+        } else {
+            // Not fighting - show drop/reel speed
+            this.registry.set('lineTension', 0);
+            this.registry.set('lineStrain', 0);
+        }
+
+        // Drop and reel speed (based on lure velocity)
+        const dropSpeed = Math.max(0, this.lure.velocity / 10); // Normalize to 0-1
+        const reelSpeed = Math.max(0, -this.lure.velocity / 10); // Normalize to 0-1
+        this.registry.set('dropSpeed', Math.min(1, dropSpeed));
+        this.registry.set('reelSpeed', Math.min(1, reelSpeed));
+
+        // Drag setting
+        const dragSetting = this.fishingLineModel ? (this.fishingLineModel.dragSetting || 0.5) : 0.5;
+        this.registry.set('dragSetting', dragSetting);
 
         // Handle input (only if not fighting)
         if (!this.currentFight || !this.currentFight.active) {
@@ -542,6 +566,53 @@ export class GameScene extends Phaser.Scene {
 
         // Check for emergency fish spawn (arcade mode)
         this.spawningSystem.checkEmergencySpawn();
+
+        // Update fish status sidebar
+        this.updateFishStatusDisplay();
+    }
+
+    /**
+     * Update fish status display in GameHUD
+     */
+    updateFishStatusDisplay() {
+        // Count entities
+        const fishCount = this.fishes.filter(f => f.active && f.visible).length;
+        const baitfishCount = this.schools ? this.schools.reduce((total, school) => {
+            return total + (school.members ? school.members.filter(b => b.active && b.visible).length : 0);
+        }, 0) : 0;
+        const zooplanktonCount = this.zooplankton ? this.zooplankton.filter(z => z.visible).length : 0;
+
+        const entityCounts = `F:${fishCount} B:${baitfishCount} Z:${zooplanktonCount}`;
+        this.registry.set('entityCounts', entityCounts);
+
+        // Build fish list (simple for now)
+        if (fishCount > 0) {
+            const fishList = this.fishes
+                .filter(f => f.active && f.visible)
+                .slice(0, 10) // Limit to 10 fish
+                .map((f, i) => {
+                    const species = f.species || 'unknown';
+                    const weight = f.weight ? f.weight.toFixed(1) : '?';
+                    const depth = f.depth ? Math.floor(f.depth) : '?';
+                    return `${i + 1}. ${species} (${weight}lb @ ${depth}ft)`;
+                })
+                .join('\n');
+            this.registry.set('fishList', fishList);
+        } else {
+            this.registry.set('fishList', 'No fish spawned');
+        }
+
+        // Fish detail (show first fish for now, or selected fish later)
+        if (fishCount > 0 && this.fishes[0]) {
+            const fish = this.fishes[0];
+            const detail = `Species: ${fish.species || 'unknown'}\n` +
+                          `Weight: ${fish.weight ? fish.weight.toFixed(1) : '?'} lbs\n` +
+                          `Depth: ${fish.depth ? Math.floor(fish.depth) : '?'} ft\n` +
+                          `State: ${fish.ai ? fish.ai.currentState : 'unknown'}`;
+            this.registry.set('fishDetail', detail);
+        } else {
+            this.registry.set('fishDetail', 'Select a fish to view details');
+        }
     }
 
 
