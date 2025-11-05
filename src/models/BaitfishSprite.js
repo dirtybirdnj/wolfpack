@@ -61,6 +61,10 @@ export class BaitfishSprite extends Phaser.GameObjects.Sprite {
         this.frameAge = 0;
         this.consumed = false;
 
+        // Feeding cooldown - prevent individual fish from hogging food
+        this.lastFeedTime = 0; // Timestamp of last zooplankton consumption
+        this.feedCooldown = 1000; // 1 second between feedings
+
         // Schooling behavior (Boids)
         this.schoolId = null;
         this.schooling = {
@@ -153,7 +157,7 @@ export class BaitfishSprite extends Phaser.GameObjects.Sprite {
         this.y += this.velocity.y;
 
         // ENFORCE HARD WATER BOUNDARIES - fish physically cannot go through surface or floor
-        const canvasHeight = this.scene.game.canvas.height;
+        const canvasHeight = this.scene.scale.height;
         const waterFloorY = GameConfig.getWaterFloorY(canvasHeight);
 
         if (this.y < GameConfig.WATER_SURFACE_Y) {

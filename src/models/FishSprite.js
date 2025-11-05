@@ -299,7 +299,7 @@ export class FishSprite extends Phaser.GameObjects.Sprite {
             this.y += movement.y;
 
             // Enforce water boundaries - fish cannot swim above surface or below floor
-            const canvasHeight = this.scene.game.canvas.height;
+            const canvasHeight = this.scene.scale.height;
             const waterFloorY = GameConfig.getWaterFloorY(canvasHeight);
 
             if (this.y < GameConfig.WATER_SURFACE_Y) {

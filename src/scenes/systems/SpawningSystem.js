@@ -66,9 +66,9 @@ export class SpawningSystem {
             loop: true
         });
 
-        // Spawn zooplankton every 1.5 seconds
+        // Spawn zooplankton every 0.75 seconds (doubled rate from 1.5s)
         this.scene.time.addEvent({
-            delay: 1500,
+            delay: 750,
             callback: () => this.trySpawnZooplankton(),
             callbackScope: this,
             loop: true
@@ -197,7 +197,7 @@ export class SpawningSystem {
         let y = depth * depthScale;
 
         // Validate Y is within canvas bounds (safety check)
-        const canvasHeight = this.scene.game.canvas.height;
+        const canvasHeight = this.scene.scale.height;
         const waterFloorY = GameConfig.getWaterFloorY(canvasHeight);
         if (y > waterFloorY) {
             console.warn(`⚠️ Spawn Y (${y.toFixed(1)}) exceeds water floor (${waterFloorY.toFixed(1)}) for depth ${depth}ft - clamping to floor`);
@@ -234,6 +234,10 @@ export class SpawningSystem {
 
         // Random spawn chance (50% - increased to keep population healthy)
         if (Math.random() > 0.5) {
+            // DEBUG: Log failed spawn attempts when population is low
+            if (baitCount < 10) {
+                console.log(`🎲 Baitfish spawn chance failed (${baitCount}/${this.MAX_BAITFISH})`);
+            }
             return false;
         }
 
@@ -330,7 +334,7 @@ export class SpawningSystem {
         let y = depth * depthScale;
 
         // Validate Y is within canvas bounds (safety check)
-        const canvasHeight = this.scene.game.canvas.height;
+        const canvasHeight = this.scene.scale.height;
         const waterFloorY = GameConfig.getWaterFloorY(canvasHeight);
         if (y > waterFloorY) {
             console.warn(`⚠️ Baitfish spawn Y (${y.toFixed(1)}) exceeds water floor (${waterFloorY.toFixed(1)}) for depth ${depth}ft - clamping to floor`);
@@ -380,7 +384,8 @@ export class SpawningSystem {
                 const screenRight = canvasWidth + 200;
                 worldX = Utils.randomBetween(screenLeft, screenRight);
             } else {
-                const offsetX = Utils.randomBetween(-300, 300);
+                // Doubled spawn range from -300/+300 to -600/+600
+                const offsetX = Utils.randomBetween(-600, 600);
                 worldX = playerWorldX + offsetX;
             }
 
@@ -402,10 +407,10 @@ export class SpawningSystem {
             let y = depth * depthScale;
 
             // Validate Y is within canvas bounds (safety check)
-            const canvasHeight = this.scene.game.canvas.height;
+            const canvasHeight = this.scene.scale.height;
             const waterFloorY = GameConfig.getWaterFloorY(canvasHeight);
             if (y > waterFloorY) {
-                console.warn(`⚠️ Zooplankton spawn Y (${y.toFixed(1)}) exceeds water floor (${waterFloorY.toFixed(1)}) for depth ${depth}ft - clamping to floor`);
+                // Silently clamp to floor (warning was polluting logs)
                 y = waterFloorY;
             }
 
@@ -883,7 +888,9 @@ export class SpawningSystem {
         let total = 0;
         schoolsArray.forEach(school => {
             if (school && school.members) {
-                total += school.members.length;
+                // Only count ACTIVE and VISIBLE baitfish
+                const activeFish = school.members.filter(fish => fish.active && fish.visible);
+                total += activeFish.length;
             }
         });
         return total;

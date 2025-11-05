@@ -70,18 +70,26 @@ export class Zooplankton extends AquaticOrganism {
             this.scene.sonarDisplay.getDepthScale() :
             GameConfig.DEPTH_SCALE;
 
-        // Stay near the bottom (within 5-30 feet of actual bottom - wider spread)
-        const canvasHeight = this.scene.game.canvas.height;
+        // Vertical migration with bottom concentration
+        // Allow zooplankton to migrate up to 60 feet from bottom, but most stay near bottom
+        const canvasHeight = this.scene.scale.height;
         const waterFloorY = GameConfig.getWaterFloorY(canvasHeight);
         const bottomY = bottomDepth * depthScale;
-        const minY = bottomY - (30 * depthScale); // 30 feet from bottom (wider range)
+
+        // Wide vertical range (5-60 feet from bottom) but with gentle push toward bottom
+        const minY = bottomY - (60 * depthScale); // 60 feet from bottom (migration range)
         const maxY = Math.min(bottomY - (5 * depthScale), waterFloorY); // 5 feet from bottom or floor
 
-        // Gently push back towards bottom zone
+        // Add vertical drift - occasional upward migration (5% chance per frame)
+        if (Math.random() < 0.05) {
+            this.y -= 0.2; // Drift up slowly
+        }
+
+        // Very gentle push back towards bottom zone (weaker than before)
         if (this.y < minY) {
-            this.y += 0.1; // Gentler push (was 0.2)
+            this.y += 0.15; // Gentle push down
         } else if (this.y > maxY) {
-            this.y -= 0.1; // Gentler push (was 0.2)
+            this.y -= 0.05; // Very weak push - allows them to stay high longer
         }
 
         this.depth = this.y / depthScale;

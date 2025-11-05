@@ -206,7 +206,9 @@ export class FishAI {
         const validBaitfishClouds = (baitfishClouds || []).filter(cloud => {
             const baitfishArray = cloud.baitfish || cloud.members || [];
             const cloudVisible = cloud.visible !== false || cloud.members;
-            return cloudVisible && baitfishArray.length > 0;
+            // Count only ACTIVE and VISIBLE baitfish
+            const activeBaitfish = baitfishArray.filter(b => b && b.active && b.visible && !b.consumed);
+            return cloudVisible && activeBaitfish.length > 0;
         });
 
         if (validBaitfishClouds.length > 0) {
@@ -949,11 +951,12 @@ export class FishAI {
         const pickyFactor = this.fish.hunger > 70 ? 0.3 : 1.0;
         const dietBonus = dietPreference * pickyFactor * 0.4; // Can add up to 0.22 for preferred prey
 
-        // SIZE/TROPHY BONUS - Larger fish are more aggressive hunters
-        // Trophy fish (>30 lbs) and large fish (>15 lbs) need more food and hunt more aggressively
+        // SIZE BONUS - All fish get bonuses, but larger fish hunt more aggressively
+        // Small fish (< 5 lbs) need to hunt frequently to survive
         const sizeBonus = this.fish.weight > 30 ? 0.35 :  // Trophy: +35% hunt score
                          this.fish.weight > 15 ? 0.20 :  // Large: +20% hunt score
-                         this.fish.weight > 5 ? 0.10 : 0; // Medium: +10% hunt score
+                         this.fish.weight > 5 ? 0.10 :   // Medium: +10% hunt score
+                         0.15; // Small: +15% hunt score (AGGRESSIVE - need food to grow!)
 
         // Base hunt score (hunger + distance + frenzy)
         // INCREASED weights to make fish more aggressive

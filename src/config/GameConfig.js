@@ -42,8 +42,8 @@ export const GameConfig = {
     FISH_SPAWN_CHANCE: 0.008, // per frame
     MIN_FISH_DEPTH: 20,
     MAX_FISH_DEPTH: 148, // Increased from 140 to allow bottom feeding (lake is 150ft)
-    FISH_SPEED_MIN: 0.4,  // Increased from 0.3 - slightly faster base speed
-    FISH_SPEED_MAX: 1.4,  // Increased from 1.2 - slightly faster top speed
+    FISH_SPEED_MIN: 1.2,  // Increased from 0.4 - lake trout need to catch baitfish (2.2-4.0)
+    FISH_SPEED_MAX: 2.0,  // Increased from 1.4 - allows faster fish to catch prey
 
     // Fish AI - Improved detection ranges for 900px canvas
     DETECTION_RANGE: 150, // pixels (horizontal) - increased from 80 for better gameplay

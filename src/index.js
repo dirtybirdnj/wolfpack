@@ -7,7 +7,6 @@ import MenuScene from './scenes/MenuScene.js';
 import GameScene from './scenes/GameScene.js';
 import GameOverScene from './scenes/GameOverScene.js';
 import UIScene from './scenes/UIScene.js';
-import NatureSimulationScene from './scenes/NatureSimulationScene.js';
 import gamepadManager from './utils/GamepadManager.js';
 
 const actualWidth = document.getElementById('game-container').clientWidth;
@@ -21,6 +20,14 @@ const config = {
     parent: 'game-container',
     backgroundColor: 0x000000, // Black background to match boot screen
     banner: false, // Disable Phaser boot banner
+    // min: {
+    //     width: 480,
+    //     height: 720,
+    // },
+    // max: {
+    //     width: 1024,
+    //     height: 1280,
+    // },
     physics: {
         default: 'arcade',
         arcade: {
@@ -829,63 +836,6 @@ function updateFishStatus(gameScene) {
     }
 }
 
-/**
- * Update the spawn buttons container
- */
-function updateSpawnButtons(gameScene) {
-    const spawnContainer = document.getElementById('spawn-buttons-container');
-    if (!spawnContainer) return;
-
-    // Always show spawn buttons (no longer toggled by spawn mode)
-    spawnContainer.style.display = 'block';
-
-    const fishCount = gameScene.fishes ? gameScene.fishes.length : 0;
-
-    // Check both schools (NatureSimulationScene) and baitfishClouds (GameScene) for cloud count
-    let cloudCount = 0;
-    if (gameScene.schools && Array.isArray(gameScene.schools)) {
-        cloudCount = gameScene.schools.length;
-    } else if (gameScene.baitfishClouds && Array.isArray(gameScene.baitfishClouds)) {
-        cloudCount = gameScene.baitfishClouds.filter(c => c && c.visible).length;
-    }
-
-    const crayfishCount = gameScene.crayfish ? gameScene.crayfish.filter(c => c && c.visible).length : 0;
-    const zooplanktonCount = gameScene.zooplankton ? gameScene.zooplankton.filter(z => z && z.visible).length : 0;
-
-    const selected = gameScene.selectedSpawnButton;
-
-    spawnContainer.innerHTML = `
-        <div style="padding: 8px;">
-            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;">
-                <button class="spawn-btn" data-spawn="fish" style="background: ${selected === 0 ? '#00ff0040' : '#1a1a1a'}; border: 2px solid ${selected === 0 ? '#00ff00' : '#00ff0080'}; color: #00ff00; padding: 12px 5px; cursor: pointer; font-size: 18px; display: flex; flex-direction: column; align-items: center; gap: 3px;">
-                    <span>🐟</span>
-                    <span style="font-size: 9px;">${fishCount}</span>
-                </button>
-                <button class="spawn-btn" data-spawn="cloud" style="background: ${selected === 1 ? '#00ff0040' : '#1a1a1a'}; border: 2px solid ${selected === 1 ? '#00ff00' : '#00ff0080'}; color: #00ff00; padding: 12px 5px; cursor: pointer; font-size: 18px; display: flex; flex-direction: column; align-items: center; gap: 3px;">
-                    <span>☁️</span>
-                    <span style="font-size: 9px;">${cloudCount}</span>
-                </button>
-                <button class="spawn-btn" data-spawn="crayfish" style="background: ${selected === 2 ? '#00ff0040' : '#1a1a1a'}; border: 2px solid ${selected === 2 ? '#00ff00' : '#00ff0080'}; color: #00ff00; padding: 12px 5px; cursor: pointer; font-size: 18px; display: flex; flex-direction: column; align-items: center; gap: 3px;">
-                    <span>🦞</span>
-                    <span style="font-size: 9px;">${crayfishCount}</span>
-                </button>
-                <button class="spawn-btn" data-spawn="zooplankton" style="background: ${selected === 3 ? '#00ff0040' : '#1a1a1a'}; border: 2px solid ${selected === 3 ? '#00ff00' : '#00ff0080'}; color: #00ff00; padding: 12px 5px; cursor: pointer; font-size: 18px; display: flex; flex-direction: column; align-items: center; gap: 3px;">
-                    <span>🪳</span>
-                    <span style="font-size: 9px;">${zooplanktonCount}</span>
-                </button>
-            </div>
-        </div>
-    `;
-
-    // Add click handlers for spawn buttons
-    spawnContainer.querySelectorAll('.spawn-btn').forEach((btn, index) => {
-        btn.addEventListener('click', () => {
-            gameScene.selectedSpawnButton = index;
-            const spawnType = btn.getAttribute('data-spawn');
-            spawnEntity(gameScene, spawnType);
-        });
-    });
-}
 
 /**
  * Update the detailed fish info panel at the bottom of the fish status

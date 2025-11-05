@@ -6,10 +6,10 @@ export class SonarDisplay {
         this.scene = scene;
 
         // Cache current dimensions for responsive rendering
-        // IMPORTANT: Use actual canvas dimensions, not scale config values
-        // The game uses RESIZE mode, so canvas dimensions reflect the actual container size
-        const actualWidth = this.scene.game.canvas.width;
-        const actualHeight = this.scene.game.canvas.height;
+        // Use scale dimensions which represent the game world coordinates
+
+        const actualWidth = this.scene.scale.width;
+        const actualHeight = this.scene.scale.height;
 
         this.canvasWidth = actualWidth;
         this.canvasHeight = actualHeight;
@@ -20,6 +20,7 @@ export class SonarDisplay {
 
         // RenderTexture for static background elements (rendered once, reused every frame)
         this.backgroundRT = scene.add.renderTexture(0, 0, actualWidth, actualHeight);
+        this.backgroundRT.setOrigin(0, 0); // CRITICAL: Set origin to top-left so (0,0) position works correctly
         this.backgroundRT.setDepth(0); // Bottom layer
 
         // Graphics for dynamic elements (thermoclines, surface line)
@@ -160,7 +161,7 @@ export class SonarDisplay {
         const tempGraphics = this.scene.add.graphics();
 
         // Draw all static elements
-        //this.drawBackgroundGradient(tempGraphics);
+        this.drawBackgroundGradient(tempGraphics);
         //this.drawDepthGrid(tempGraphics);
         this.drawBottomProfile(tempGraphics);
 
@@ -231,7 +232,7 @@ export class SonarDisplay {
 
             const color = (r << 16) | (g << 8) | b;
             graphics.fillStyle(color, 1.0);
-            graphics.fillRect(0, y, actualWidth, 10);
+            graphics.fillRect(0, y, actualWidth + 500, 50);
         }
     }
 

@@ -1146,7 +1146,18 @@ export class GameScene extends Phaser.Scene {
             }
         });
 
-        // Clean up empty schools (all fish have been consumed or despawned)
+        // IMPORTANT: Clean up consumed/inactive fish from school.members arrays FIRST
+        this.schools.forEach(school => {
+            // Filter out consumed/invisible/inactive fish (BaitfishSprite IS the model)
+            school.members = school.members.filter(fish => fish.visible && fish.active && !fish.consumed);
+
+            // Then remove duplicates using Set (ensures each fish only appears once)
+            const uniqueFish = new Set(school.members);
+            school.members = Array.from(uniqueFish);
+        });
+
+        // THEN clean up empty schools (all fish have been consumed or despawned)
+        const schoolCountBefore = this.schools.length;
         this.schools = this.schools.filter(school => {
             if (school.members.length === 0) {
                 console.log(`🌊 School ${school.id} disbanded (no fish remaining)`);
@@ -1154,18 +1165,20 @@ export class GameScene extends Phaser.Scene {
             }
             return true; // Keep school
         });
+        const schoolCountAfter = this.schools.length;
 
-        // Clean up consumed fish from school.members arrays AND remove duplicates
+        // DEBUG: Log when schools are removed
+        if (schoolCountBefore > schoolCountAfter) {
+            console.log(`🗑️ Removed ${schoolCountBefore - schoolCountAfter} empty schools (${schoolCountAfter} remaining)`);
+        }
+
+        // Update Boids behavior for each remaining school
         this.schools.forEach(school => {
-            // First filter out consumed/invisible/inactive fish (BaitfishSprite IS the model)
-            school.members = school.members.filter(fish => fish.visible && fish.active && !fish.consumed);
+            // Check for nearby predators with gradual panic/calm system
+            const predatorDetectionRadius = 150; // Reduced from 200 - how far baitfish can sense predators
+            const dangerThreshold = 75; // Close predators trigger stronger panic
 
-            // Then remove duplicates using Set (ensures each fish only appears once)
-            const uniqueFish = new Set(school.members);
-            school.members = Array.from(uniqueFish);
-
-            // Check for nearby predators to trigger panic mode
-            const predatorDetectionRadius = 200; // How far baitfish can sense predators
+            let nearestPredatorDist = Infinity;
             const nearbyPredators = this.fishes.filter(predator => {
                 if (!predator.visible || !predator.active) return false;
                 const dist = Phaser.Math.Distance.Between(
@@ -1174,15 +1187,31 @@ export class GameScene extends Phaser.Scene {
                     predator.worldX,
                     predator.y
                 );
+                if (dist < nearestPredatorDist) nearestPredatorDist = dist;
                 return dist < predatorDetectionRadius;
             });
 
-            const isPanicking = nearbyPredators.length > 0;
+            // Gradual panic/calm system using scaredLevel
+            // scaredLevel: 0 (calm) to 100 (max panic)
+            if (!school.scaredLevel) school.scaredLevel = 0;
+
+            if (nearbyPredators.length > 0) {
+                // Predator nearby - increase scared level
+                const dangerIntensity = nearestPredatorDist < dangerThreshold ? 3.0 : 1.5;
+                school.scaredLevel = Math.min(100, school.scaredLevel + dangerIntensity);
+            } else {
+                // No predators - calm down QUICKLY (4x faster than panic buildup)
+                school.scaredLevel = Math.max(0, school.scaredLevel - 6.0);
+            }
+
+            // Only panic when scared level is HIGH (> 30)
+            const isPanicking = school.scaredLevel > 30;
 
             // Apply Boids schooling behavior to each fish
             school.members.forEach(fish => {
-                // Update individual fish panic state
+                // Update individual fish panic state and scared level
                 fish.schooling.isPanicking = isPanicking;
+                fish.schooling.scaredLevel = school.scaredLevel;
 
                 // Calculate Boids forces
                 let separationX = 0, separationY = 0;
@@ -1197,9 +1226,12 @@ export class GameScene extends Phaser.Scene {
                 const separationRadius = isPanicking ? 8 : 25; // Tighter when panicking, spread when relaxed
                 const neighborRadius = isPanicking ? 40 : 80; // Closer awareness when panicking
 
-                // FOOD-SEEKING BEHAVIOR: Find nearby zooplankton (only when NOT panicking)
-                if (!isPanicking && this.zooplankton && this.zooplankton.length > 0) {
-                    const foodSearchRadius = 100; // How far baitfish can sense food
+                // FOOD-SEEKING BEHAVIOR: Find nearby zooplankton
+                // Only disable food seeking when in EXTREME panic (scared > 70)
+                const canSeekFood = school.scaredLevel < 70;
+
+                if (canSeekFood && this.zooplankton && this.zooplankton.length > 0) {
+                    const foodSearchRadius = 120; // Increased from 100 - how far baitfish can sense food
                     let closestFood = null;
                     let closestDist = Infinity;
 
@@ -1218,20 +1250,28 @@ export class GameScene extends Phaser.Scene {
                         }
                     });
 
-                    // If food found, add strong attraction force
+                    // If food found, add DOMINANT attraction force
                     if (closestFood) {
                         const dx = closestFood.worldX - fish.worldX;
                         const dy = closestFood.y - fish.y;
                         const dist = Math.sqrt(dx * dx + dy * dy);
 
                         if (dist > 0) {
-                            // VERY strong food attraction (0.5 = extremely aggressive food seeking)
-                            foodAttractionX = (dx / dist) * 0.5;
-                            foodAttractionY = (dy / dist) * 0.5;
+                            // EXTREMELY strong food attraction - dominates other forces
+                            // Scale based on how calm they are (0.6 when calm, 0.3 when mildly scared)
+                            const foodStrength = 0.6 - (school.scaredLevel / 100) * 0.3;
+                            foodAttractionX = (dx / dist) * foodStrength;
+                            foodAttractionY = (dy / dist) * foodStrength;
 
-                            // Check if close enough to consume (within 5 pixels)
-                            if (dist < 5 && !closestFood.consumed) {
+                            // Check if close enough to consume (increased to 12 pixels for easier consumption)
+                            // Add cooldown check - fish can only eat once per second
+                            const currentTime = Date.now();
+                            const timeSinceLastFeed = currentTime - fish.lastFeedTime;
+                            const canFeed = timeSinceLastFeed >= fish.feedCooldown;
+
+                            if (dist < 12 && !closestFood.consumed && canFeed) {
                                 closestFood.consume();
+                                fish.lastFeedTime = currentTime; // Record feeding time
                                 // Baitfish "ate" the zooplankton - could track nutrition here later
                             }
                         }
