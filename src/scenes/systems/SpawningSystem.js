@@ -191,9 +191,7 @@ export class SpawningSystem {
         const fromLeft = Math.random() < 0.5;
 
         // Use dynamic depth scale from scene
-        const depthScale = this.scene.sonarDisplay ?
-            this.scene.sonarDisplay.getDepthScale() :
-            GameConfig.DEPTH_SCALE;
+        const depthScale = this.scene.depthConverter.depthScale;
         let y = depth * depthScale;
 
         // Validate Y is within canvas bounds (safety check)
@@ -328,9 +326,7 @@ export class SpawningSystem {
             (playerWorldX + canvasWidth / 2 + spawnDistance);
 
         // Convert depth to screen Y
-        const depthScale = this.scene.sonarDisplay ?
-            this.scene.sonarDisplay.getDepthScale() :
-            GameConfig.DEPTH_SCALE;
+        const depthScale = this.scene.depthConverter.depthScale;
         let y = depth * depthScale;
 
         // Validate Y is within canvas bounds (safety check)
@@ -506,9 +502,7 @@ export class SpawningSystem {
         const worldX = Utils.randomBetween(100, canvasWidth - 100);
 
         // Convert depth to screen Y
-        const depthScale = this.scene.sonarDisplay ?
-            this.scene.sonarDisplay.getDepthScale() :
-            GameConfig.DEPTH_SCALE;
+        const depthScale = this.scene.depthConverter.depthScale;
         let y = depth * depthScale;
 
         // Validate Y is within canvas bounds (safety check)
@@ -570,9 +564,7 @@ export class SpawningSystem {
         const worldX = Utils.randomBetween(100, canvasWidth - 100);
 
         // Convert depth to screen Y
-        const depthScale = this.scene.sonarDisplay ?
-            this.scene.sonarDisplay.getDepthScale() :
-            GameConfig.DEPTH_SCALE;
+        const depthScale = this.scene.depthConverter.depthScale;
         let y = depth * depthScale;
 
         // Validate Y is within canvas bounds (safety check)
@@ -642,9 +634,7 @@ export class SpawningSystem {
         const depth = this.scene.maxDepth || GameConfig.MAX_DEPTH;
 
         // Use dynamic depth scale from scene
-        const depthScale = this.scene.sonarDisplay ?
-            this.scene.sonarDisplay.getDepthScale() :
-            GameConfig.DEPTH_SCALE;
+        const depthScale = this.scene.depthConverter.depthScale;
 
         // Place crayfish on bottom with same offset as lure uses to appear grounded
         const BOTTOM_OFFSET_PX = 12;
@@ -688,9 +678,7 @@ export class SpawningSystem {
         const worldX = playerWorldX + (fromLeft ? -spawnDistance : spawnDistance);
 
         // Use dynamic depth scale from scene
-        const depthScale = this.scene.sonarDisplay ?
-            this.scene.sonarDisplay.getDepthScale() :
-            GameConfig.DEPTH_SCALE;
+        const depthScale = this.scene.depthConverter.depthScale;
 
         // Spawn at mid-column depth (preferred lake trout zone)
         let y = Utils.randomBetween(

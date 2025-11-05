@@ -1,6 +1,6 @@
 import GameConfig from '../config/GameConfig.js';
 import { Constants, Utils } from '../utils/Constants.js';
-import SonarDisplay from '../utils/SonarDisplay.js';
+import DepthConverter from '../utils/DepthConverter.js';
 import { SpriteGenerator } from '../utils/SpriteGenerator.js';
 import Lure from '../entities/Lure.js';
 import Fish from '../entities/Fish.js';
@@ -177,8 +177,25 @@ export class GameScene extends Phaser.Scene {
                 loop: true
             });
 
-            // Set up the sonar display
-            this.sonarDisplay = new SonarDisplay(this);
+            // Create depth converter (shared coordinate system)
+            this.depthConverter = new DepthConverter(this.scale.height, this.maxDepth);
+
+            // Launch WaterColumn scene (base rendering layer)
+            this.scene.launch('WaterColumn', {
+                depthConverter: this.depthConverter,
+                maxDepth: this.maxDepth
+            });
+
+            // Launch overlay scenes
+            this.scene.launch('GameHUD'); // Main in-game HUD (replaces HTML UI)
+            //this.scene.launch('InfoBar');  // Deprecated - replaced by GameHUD
+            //this.scene.launch('FishStatus'); // Deprecated - replaced by GameHUD
+
+            // Set initial registry data for overlays
+            this.registry.set('currentDepth', this.maxDepth);
+            this.registry.set('waterTemp', this.waterTemp);
+            this.registry.set('elapsedTime', 0);
+            this.registry.set('gameMode', 'Ice Fishing');
 
             // Create the player's lure - start ABOVE water in observing mode
             // Use actual game width to center on any screen size
@@ -491,8 +508,8 @@ export class GameScene extends Phaser.Scene {
             // Don't return - let entities continue to update during fight
         }
 
-        // Update sonar display
-        this.sonarDisplay.update();
+        // Update registry data for overlay scenes
+        this.registry.set('elapsedTime', this.gameTime);
 
         // Handle input (only if not fighting)
         if (!this.currentFight || !this.currentFight.active) {
@@ -785,7 +802,7 @@ export class GameScene extends Phaser.Scene {
                 depth = Utils.randomBetween(50, 90); // Deep
             }
 
-            const y = depth * GameConfig.DEPTH_SCALE;
+            const y = this.depthConverter.depthToY(depth);
 
             // All TROPHY size - using FishSprite
             const fish = new FishSprite(this, worldX, y, 'TROPHY', speciesName);
@@ -805,7 +822,7 @@ export class GameScene extends Phaser.Scene {
 
             // Random depth between 20-70 feet
             const depth = Utils.randomBetween(20, 70);
-            const y = depth * GameConfig.DEPTH_SCALE;
+            const y = this.depthConverter.depthToY(depth);
 
             // Large school size (80-120 fish)
             const schoolSize = Math.floor(Utils.randomBetween(80, 120));
@@ -2202,7 +2219,11 @@ export class GameScene extends Phaser.Scene {
         // Clean up core components
         this.lure.destroy();
         this.fishingLine.destroy();
-        this.sonarDisplay.destroy();
+
+        // Stop overlay scenes
+        this.scene.stop('WaterColumn');
+        this.scene.stop('InfoBar');
+        this.scene.stop('FishStatus');
 
         // Clean up systems
         if (this.spawningSystem) {

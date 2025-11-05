@@ -7,6 +7,10 @@ import MenuScene from './scenes/MenuScene.js';
 import GameScene from './scenes/GameScene.js';
 import GameOverScene from './scenes/GameOverScene.js';
 import UIScene from './scenes/UIScene.js';
+import WaterColumn from './scenes/WaterColumn.js';
+import InfoBar from './scenes/InfoBar.js';
+import FishStatus from './scenes/FishStatus.js';
+import GameHUD from './scenes/GameHUD.js';
 import gamepadManager from './utils/GamepadManager.js';
 
 const actualWidth = document.getElementById('game-container').clientWidth;
@@ -35,8 +39,13 @@ const config = {
             debug: false
         }
     },
-    // TODO: Remove NatureSimulationScene - game refactored to single mode (GameScene)
-    scene: [BootScene, MenuScene, GameScene, GameOverScene, UIScene],
+    // Scene rendering order (bottom to top):
+    // 1. WaterColumn - base layer (water, fish, baitfish)
+    // 2. GameScene - orchestrator (launches other scenes)
+    // 3. GameHUD - in-game UI (replaces HTML elements)
+    // 4. InfoBar, FishStatus - overlays (deprecated, can remove)
+    // 5. MenuScene, GameOverScene, UIScene - modals
+    scene: [BootScene, WaterColumn, GameScene, GameHUD, InfoBar, FishStatus, MenuScene, GameOverScene, UIScene],
     render: {
         pixelArt: false,
         antialias: true,

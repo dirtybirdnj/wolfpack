@@ -126,8 +126,8 @@ export class Lure {
             this.y = this.baseY + this.jigOffset;
         }
 
-        // Get dynamic depth scale from sonar display (adapts to window size)
-        const depthScale = this.scene.sonarDisplay ? this.scene.sonarDisplay.getDepthScale() : GameConfig.DEPTH_SCALE;
+        // Get dynamic depth scale from depth converter (adapts to window size)
+        const depthScale = this.scene.depthConverter.depthScale;
         this.depth = this.y / depthScale;
 
         // Surface boundary - allow reeling above water (negative Y)
