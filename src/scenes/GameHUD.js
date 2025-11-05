@@ -140,8 +140,11 @@ export default class GameHUD extends Phaser.Scene {
         xPos += meterWidth + gap;
 
         // TIME (right side)
-        const timeX = this.canvasWidth - 80;
+        const timeX = this.canvasWidth - 180;
         this.createValueDisplay(timeX, 8, 'TIME', '0:00', labelStyle, valueStyle, 'time');
+
+        // Icons (far right)
+        this.createIcons();
     }
 
     /**
@@ -249,6 +252,36 @@ export default class GameHUD extends Phaser.Scene {
         this.valueDisplays[key] = valueText;
 
         return x + Math.max(labelText.width, valueText.width) + 8;
+    }
+
+    /**
+     * Create gamepad and book icons
+     */
+    createIcons() {
+        const iconStyle = {
+            fontSize: '24px',
+            fontFamily: 'Arial'
+        };
+
+        // Gamepad icon (right side)
+        const gamepadX = this.canvasWidth - 80;
+        this.gamepadIcon = this.add.text(gamepadX, 10, '🎮', iconStyle);
+        this.gamepadIcon.setDepth(1001);
+        this.gamepadIcon.setInteractive({ useHandCursor: true });
+        this.gamepadIcon.on('pointerdown', () => {
+            console.log('🎮 Gamepad icon clicked - Controller test would open here');
+            // TODO: Open controller test overlay
+        });
+
+        // Book icon (species guide)
+        const bookX = this.canvasWidth - 50;
+        this.bookIcon = this.add.text(bookX, 10, '📖', iconStyle);
+        this.bookIcon.setDepth(1001);
+        this.bookIcon.setInteractive({ useHandCursor: true });
+        this.bookIcon.on('pointerdown', () => {
+            console.log('📖 Book icon clicked - Species guide would open here');
+            // TODO: Open species guide overlay
+        });
     }
 
     /**
@@ -453,6 +486,10 @@ export default class GameHUD extends Phaser.Scene {
             });
         }
 
+        // Toggle icons
+        if (this.gamepadIcon) this.gamepadIcon.setAlpha(alpha);
+        if (this.bookIcon) this.bookIcon.setAlpha(alpha);
+
         console.log(this.topBarVisible ? '📊 Top bar visible' : '🎬 Top bar hidden');
     }
 
@@ -510,8 +547,16 @@ export default class GameHUD extends Phaser.Scene {
 
         // Reposition time display (right-aligned)
         if (this.valueDisplays.time) {
-            const timeX = this.canvasWidth - 80;
+            const timeX = this.canvasWidth - 180;
             this.valueDisplays.time.setX(timeX);
+        }
+
+        // Reposition icons
+        if (this.gamepadIcon) {
+            this.gamepadIcon.setX(this.canvasWidth - 80);
+        }
+        if (this.bookIcon) {
+            this.bookIcon.setX(this.canvasWidth - 50);
         }
     }
 
