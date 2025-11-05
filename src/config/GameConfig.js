@@ -8,8 +8,8 @@ export const GameConfig = {
     // NOTE: These are only used for Phaser initialization
     // The game uses Phaser.Scale.RESIZE mode and dynamically fills the container
     // ALWAYS use scene.scale.width or scene.game.canvas.width at runtime, NEVER these constants!
-    CANVAS_WIDTH: 1400,  // Initial width (game will resize to container)
-    CANVAS_HEIGHT: 650,  // Initial height (game will resize to container)
+    CANVAS_WIDTH: 1562,  // Initial width (game will resize to container)
+    CANVAS_HEIGHT: 874,  // Initial height (game will resize to container)
 
     // Water boundaries (fish cannot swim outside these)
     WATER_SURFACE_Y: 0,  // Top of water (always 0)

@@ -177,9 +177,6 @@ export class GameScene extends Phaser.Scene {
                 loop: true
             });
 
-            // Hide unnecessary UI panels
-            this.hideUnusedPanels();
-
             // Set up the sonar display
             this.sonarDisplay = new SonarDisplay(this);
 
@@ -280,19 +277,6 @@ export class GameScene extends Phaser.Scene {
         }
     }
 
-    /**
-     * Hide unused UI panels
-     */
-    hideUnusedPanels() {
-        // Hide all movement-related UI panels
-        const iceDrillPanel = document.getElementById('ice-drill-panel');
-        const kayakPanel = document.getElementById('kayak-tiredness-panel');
-        const boatPanel = document.getElementById('motorboat-gas-panel');
-
-        if (iceDrillPanel) {iceDrillPanel.style.display = 'none';}
-        if (kayakPanel) {kayakPanel.style.display = 'none';}
-        if (boatPanel) {boatPanel.style.display = 'none';}
-    }
 
     /**
      * Set water temperature (ice fishing only)

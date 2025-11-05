@@ -10,11 +10,14 @@ import UIScene from './scenes/UIScene.js';
 import NatureSimulationScene from './scenes/NatureSimulationScene.js';
 import gamepadManager from './utils/GamepadManager.js';
 
+const actualWidth = document.getElementById('game-container').clientWidth;
+const actualHeight = document.getElementById('game-container').clientHeight;
+
 // Phaser game configuration
 const config = {
     type: Phaser.AUTO,
-    width: GameConfig.CANVAS_WIDTH,
-    height: GameConfig.CANVAS_HEIGHT,
+    width: actualWidth,
+    height: actualHeight,
     parent: 'game-container',
     backgroundColor: 0x000000, // Black background to match boot screen
     banner: false, // Disable Phaser boot banner
@@ -33,10 +36,10 @@ const config = {
         transparent: false
     },
     scale: {
-        mode: Phaser.Scale.RESIZE,
-        autoCenter: Phaser.Scale.NO_CENTER,
-        width: GameConfig.CANVAS_WIDTH,
-        height: GameConfig.CANVAS_HEIGHT,
+        mode: Phaser.Scale.EXPAND,
+        autoCenter: Phaser.Scale.CENTER_BOTH,
+        width: actualWidth,
+        height: actualHeight,
         parent: 'game-container'
     },
     input: {
@@ -78,70 +81,70 @@ window.addEventListener('load', () => {
     }
 
     // Setup responsive resize handling
-    setupResizeHandler(game);
+    //setupResizeHandler(game);
 
     // Dev Tools Integration
     setupDevTools(game);
 });
 
-function setupResizeHandler(game) {
-    // Calculate and update game size based on available container space
-    function resizeGame() {
-        const gameContainer = document.getElementById('game-container');
-        if (!gameContainer) return;
+// function setupResizeHandler(game) {
+//     // Calculate and update game size based on available container space
+//     function resizeGame() {
+//         const gameContainer = document.getElementById('game-container');
+//         if (!gameContainer) return;
 
-        // Get the container dimensions
-        const containerWidth = gameContainer.clientWidth - 4; // Account for border
-        const containerHeight = gameContainer.clientHeight - 4;
+//         // Get the container dimensions
+//         const containerWidth = gameContainer.clientWidth - 4; // Account for border
+//         const containerHeight = gameContainer.clientHeight - 4;
 
-        // Fill the container completely - no aspect ratio preservation
-        const newWidth = containerWidth;
-        const newHeight = containerHeight;
+//         // Fill the container completely - no aspect ratio preservation
+//         const newWidth = containerWidth;
+//         const newHeight = containerHeight;
 
-        // Update the game scale
-        if (game.scale) {
-            game.scale.resize(newWidth, newHeight);
-        }
+//         // Update the game scale
+//         if (game.scale) {
+//             game.scale.resize(newWidth, newHeight);
+//         }
 
-        console.log(`🎮 Game resized to fill container: ${Math.round(newWidth)}x${Math.round(newHeight)}`);
-    }
+//         console.log(`🎮 Game resized to fill container: ${Math.round(newWidth)}x${Math.round(newHeight)}`);
+//     }
 
-    // Initial resize - do it immediately AND after delay to catch both early and late cases
-    resizeGame();
-    setTimeout(resizeGame, 100);
+//     // Initial resize - do it immediately AND after delay to catch both early and late cases
+//     resizeGame();
+//     setTimeout(resizeGame, 100);
 
-    // Force MenuScene to recreate itself after resize to fix layout issues
-    setTimeout(() => {
-        resizeGame();
-        const menuScene = game.scene.getScene('MenuScene');
-        if (menuScene && menuScene.scene.isActive()) {
-            menuScene.scene.restart();
-        }
-    }, 200);
+//     // Force MenuScene to recreate itself after resize to fix layout issues
+//     setTimeout(() => {
+//         resizeGame();
+//         const menuScene = game.scene.getScene('MenuScene');
+//         if (menuScene && menuScene.scene.isActive()) {
+//             menuScene.scene.restart();
+//         }
+//     }, 200);
 
-    // Debounced resize handler to avoid excessive calls
-    let resizeTimeout;
-    window.addEventListener('resize', () => {
-        clearTimeout(resizeTimeout);
-        resizeTimeout = setTimeout(resizeGame, 150);
-    });
+//     // Debounced resize handler to avoid excessive calls
+//     let resizeTimeout;
+//     window.addEventListener('resize', () => {
+//         clearTimeout(resizeTimeout);
+//         resizeTimeout = setTimeout(resizeGame, 150);
+//     });
 
-    // Also resize when sidebar or topbar are toggled
-    const sidebarToggle = document.getElementById('sidebar-toggle');
-    const topbarToggle = document.getElementById('topbar-toggle');
+//     // Also resize when sidebar or topbar are toggled
+//     const sidebarToggle = document.getElementById('sidebar-toggle');
+//     const topbarToggle = document.getElementById('topbar-toggle');
 
-    if (sidebarToggle) {
-        sidebarToggle.addEventListener('click', () => {
-            setTimeout(resizeGame, 350); // Wait for CSS transition
-        });
-    }
+//     if (sidebarToggle) {
+//         sidebarToggle.addEventListener('click', () => {
+//             setTimeout(resizeGame, 350); // Wait for CSS transition
+//         });
+//     }
 
-    if (topbarToggle) {
-        topbarToggle.addEventListener('click', () => {
-            setTimeout(resizeGame, 350); // Wait for CSS transition
-        });
-    }
-}
+//     if (topbarToggle) {
+//         topbarToggle.addEventListener('click', () => {
+//             setTimeout(resizeGame, 350); // Wait for CSS transition
+//         });
+//     }
+// }
 
 function setupDevTools(game) {
     // Update UI stats every 100ms

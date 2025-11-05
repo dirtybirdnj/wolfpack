@@ -260,7 +260,8 @@ export class FishAI {
             if (nearbyBaitfishCloud && this.shouldHuntBaitfish(nearbyBaitfishCloud)) {
                 this.startHuntingBaitfish(nearbyBaitfishCloud);
             } else if (nearbyCrayfish && this.shouldHuntCrayfish(nearbyCrayfish)) {
-                this.huntCrayfish(nearbyCrayfish);
+                //temp bugfix
+                //this.huntCrayfish(nearbyCrayfish);
             } else if (this.state === Constants.FISH_STATE.HUNTING_BAITFISH) {
                 this.huntingBaitfishBehavior(baitfishClouds, null);
             } else if (this.state === Constants.FISH_STATE.FEEDING) {
@@ -1200,7 +1201,7 @@ export class FishAI {
     /**
      * Hunt crayfish (lake trout and smallmouth bass bottom feeding)
      */
-    huntCrayfish(crayfish) {
+    huntCrayfish(crayfish) {x``
         // Move toward crayfish
         // Use worldX for target position (crayfish use world coordinates)
         this.targetX = crayfish.worldX;
