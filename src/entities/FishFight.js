@@ -159,7 +159,7 @@ export class FishFight {
         }
     }
 
-    update(currentTime, spacePressed) {
+    update(currentTime, reelInput) {
         if (!this.active) {return;}
 
         this.fightTime++;
@@ -171,10 +171,13 @@ export class FishFight {
         // Track if player is actively reeling this frame
         this.isReeling = false;
 
-        // Handle spacebar reeling
-        if (spacePressed && currentTime - this.lastReelTime > GameConfig.MIN_REEL_INTERVAL) {
-            this.reel(currentTime);
-            this.isReeling = true; // Player is actively reeling
+        // Handle gamepad reeling (reelInput is analog value 0-1 from right trigger)
+        // Continuous reeling based on trigger pressure
+        if (reelInput > 0.1) { // Deadzone threshold
+            // Reel speed based on trigger pressure
+            const reelSpeed = reelInput; // 0.1 to 1.0
+            this.reelContinuous(currentTime, reelSpeed);
+            this.isReeling = true;
         }
 
         // Fish pulls on line and tries to swim down based on state
@@ -385,43 +388,43 @@ export class FishFight {
         this.endFight();
     }
 
-    reel(currentTime) {
-        this.lastReelTime = currentTime;
-        this.reelCount++;
-
-        // Calculate tension from reeling - affected by line stretch
-        // More stretch = less immediate tension increase
+    /**
+     * Continuous reeling based on analog trigger input (gamepad)
+     * @param {number} currentTime - Current timestamp
+     * @param {number} reelSpeed - Analog input 0-1 from trigger pressure
+     */
+    reelContinuous(currentTime, reelSpeed) {
+        // Calculate tension from reeling - affected by line stretch and reel speed
         const stretchFactor = this.fishingLine ? this.fishingLine.getStretchFactor() : 0.7;
-        const tensionIncrease = GameConfig.TENSION_PER_REEL * (2.0 - stretchFactor);
-        // Monofilament (stretch=0.9): 1.1x multiplier = 16.5 tension
-        // Braid (stretch=0.5): 1.5x multiplier = 22.5 tension
+        const tensionIncrease = (GameConfig.TENSION_PER_REEL * 0.3) * reelSpeed * (2.0 - stretchFactor);
+        // Reduced base tension (0.3x) since this happens every frame, not per tap
 
         this.lineTension += tensionIncrease;
         this.lineTension = Math.min(GameConfig.MAX_LINE_TENSION, this.lineTension);
 
         // Only reel in if tension is manageable
         if (this.lineTension < GameConfig.TENSION_BREAK_THRESHOLD - 10) {
-            // Calculate reel distance based on gear ratio
+            // Calculate reel distance based on gear ratio and trigger pressure
             const gearRatio = this.reelModel ? this.reelModel.getGearRatio() : 6.0;
-            const reelDistance = GameConfig.REEL_DISTANCE_PER_TAP * (gearRatio / 6.0);
+            const baseReelSpeed = (GameConfig.REEL_DISTANCE_PER_TAP * 0.5); // Base continuous speed (per frame)
+            const reelDistance = baseReelSpeed * reelSpeed * (gearRatio / 6.0);
 
             this.fishDistance -= reelDistance;
             this.fishDistance = Math.max(0, this.fishDistance);
 
             // Track line being retrieved
             if (this.reelModel) {
-                this.reelModel.retrieveLine(reelDistance / GameConfig.DEPTH_SCALE); // Convert pixels to feet
+                this.reelModel.retrieveLine(reelDistance / GameConfig.DEPTH_SCALE);
             }
 
             // REWARD ACTIVE FIGHTING: Reeling reduces tension
-            // This encourages the player to actively fight the fish
-            this.lineTension *= 0.93; // 7% tension reduction per reel
+            this.lineTension *= 0.99; // Small tension reduction per frame when reeling
         }
 
-        // Drain fish energy based on drag setting
+        // Drain fish energy based on drag setting and reel speed
         const dragMultiplier = this.reelModel ? (this.reelModel.dragSetting / 100) : 0.5;
-        const energyDrain = GameConfig.FISH_TIRE_RATE * (0.5 + dragMultiplier);
-        // Higher drag = fish tires faster
+        const energyDrain = (GameConfig.FISH_TIRE_RATE * 0.02) * reelSpeed * (0.5 + dragMultiplier);
+        // Reduced to 2% per frame since this happens continuously
         this.fishEnergy -= energyDrain;
         this.fishEnergy = Math.max(0, this.fishEnergy);
     }
@@ -581,7 +584,8 @@ export class FishFight {
         let targetY = this.initialDepth - (this.initialDepth * reelProgress);
 
         // Apply downward swimming force - fish tries to swim down
-        const swimDownEffect = this.swimDownForce * 0.4; // Increased from 0.3 - stronger swim down
+        // Reduced multiplier so player can make progress reeling
+        const swimDownEffect = this.swimDownForce * 0.2; // Reduced from 0.4 - player can win
         targetY += swimDownEffect;
 
         // Clamp to prevent fish from swimming too deep or going above starting point

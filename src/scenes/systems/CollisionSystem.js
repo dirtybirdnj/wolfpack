@@ -31,9 +31,11 @@ export class CollisionSystem {
 
     /**
      * Check if lure is passing through baitfish clouds and split them
-     * NOTE: Splitting disabled for new school system (schools use Boids)
+     * DISABLED: Old BaitfishCloud system removed - schools use Boids behavior
      */
     checkCloudSplitting() {
+        return; // Disabled - using school-based Boids system now
+
         // Only check when lure is dropping
         if (this.scene.lure.state !== Constants.LURE_STATE.DROPPING) {
             return;
@@ -73,8 +75,11 @@ export class CollisionSystem {
 
     /**
      * Check if baitfish clouds are close enough to merge
+     * DISABLED: Old BaitfishCloud system removed - schools use Boids behavior
      */
     checkCloudMerging() {
+        return; // Disabled - using school-based Boids system now
+
         if (this.scene.baitfishClouds.length <= 1) {
             return; // Need at least 2 clouds to merge
         }
@@ -115,8 +120,11 @@ export class CollisionSystem {
 
     /**
      * Reset split flags for next frame
+     * DISABLED: Old BaitfishCloud system removed - schools use Boids behavior
      */
     resetSplitFlags() {
+        return; // Disabled - using school-based Boids system now
+
         this.scene.baitfishClouds.forEach(cloud => {
             cloud.splitThisFrame = false;
         });

@@ -22,9 +22,9 @@ export class Zooplankton extends AquaticOrganism {
         this.length = this.size; // Length same as size for zooplankton
         this.speed = Utils.randomBetween(0.1, 0.3); // Very slow drift
 
-        // Movement behavior - mostly drift with slight random movement
+        // Movement behavior - mostly drift with slight random movement (reduced to stay near spawn)
         this.driftDirection = Math.random() * Math.PI * 2; // Random initial direction
-        this.driftSpeed = Utils.randomBetween(0.05, 0.15);
+        this.driftSpeed = Utils.randomBetween(0.01, 0.05); // Very minimal drift (was 0.05-0.15)
 
         // State
         this.consumed = false;
@@ -70,16 +70,26 @@ export class Zooplankton extends AquaticOrganism {
             this.scene.sonarDisplay.getDepthScale() :
             GameConfig.DEPTH_SCALE;
 
-        // Stay near the bottom (within 2-10 feet of actual bottom)
+        // Vertical migration with bottom concentration
+        // Allow zooplankton to migrate up to 60 feet from bottom, but most stay near bottom
+        const canvasHeight = this.scene.scale.height;
+        const waterFloorY = GameConfig.getWaterFloorY(canvasHeight);
         const bottomY = bottomDepth * depthScale;
-        const minY = bottomY - (10 * depthScale); // 10 feet from bottom
-        const maxY = bottomY - (2 * depthScale); // 2 feet from bottom (don't go below!)
 
-        // Gently push back towards bottom zone
+        // Wide vertical range (5-60 feet from bottom) but with gentle push toward bottom
+        const minY = bottomY - (60 * depthScale); // 60 feet from bottom (migration range)
+        const maxY = Math.min(bottomY - (5 * depthScale), waterFloorY); // 5 feet from bottom or floor
+
+        // Add vertical drift - occasional upward migration (5% chance per frame)
+        if (Math.random() < 0.05) {
+            this.y -= 0.2; // Drift up slowly
+        }
+
+        // Very gentle push back towards bottom zone (weaker than before)
         if (this.y < minY) {
-            this.y += 0.2;
+            this.y += 0.15; // Gentle push down
         } else if (this.y > maxY) {
-            this.y -= 0.2;
+            this.y -= 0.05; // Very weak push - allows them to stay high longer
         }
 
         this.depth = this.y / depthScale;
@@ -87,9 +97,13 @@ export class Zooplankton extends AquaticOrganism {
         // Convert world position to screen position (using parent class helper)
         this.updateScreenPosition();
 
-        // Check if too far from player and cull if needed
-        if (this.isTooFarFromPlayer(600)) {
-            this.visible = false;
+        // Check if off-screen (not based on world distance, based on screen position)
+        const canvasWidth = this.scene.scale.width;
+        const margin = 100;
+        const isOffScreen = this.x < -margin || this.x > canvasWidth + margin;
+
+        if (isOffScreen) {
+            this.visible = false; // Will be cleaned up by GameScene filter
         }
     }
 
@@ -112,9 +126,8 @@ export class Zooplankton extends AquaticOrganism {
      * Check if within range of a position
      */
     isWithinRange(x, y, range) {
-        const dx = this.x - x;
-        const dy = this.y - y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
+        // Use Phaser's optimized distance calculation
+        const distance = Phaser.Math.Distance.Between(this.x, this.y, x, y);
         return distance < range;
     }
 
@@ -130,16 +143,14 @@ export class Zooplankton extends AquaticOrganism {
         const screenX = this.x;
         const screenY = this.y;
 
-        // Tiny green speck - barely visible, like real zooplankton
-        // Use a muted greenish color with low opacity
-        graphics.fillStyle(0x66aa44, 0.5); // Dim olive-green
-        graphics.fillCircle(screenX, screenY, 1.5); // Very small - almost single pixel
+        // Tiny green speck - subtle but visible
+        // Main body - slightly larger and more opaque
+        graphics.fillStyle(0x77bb55, 0.75); // Brighter olive-green, more opaque
+        graphics.fillCircle(screenX, screenY, 2); // Slightly larger
 
-        // Optional: tiny subtle highlight (50% chance to add variety)
-        if (Math.random() < 0.5) {
-            graphics.fillStyle(0x88cc66, 0.3); // Slightly brighter green
-            graphics.fillCircle(screenX, screenY, 1);
-        }
+        // Subtle highlight for definition (always visible)
+        graphics.fillStyle(0x99dd77, 0.5); // Brighter center
+        graphics.fillCircle(screenX, screenY, 1.2);
     }
 
     /**

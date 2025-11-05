@@ -418,6 +418,12 @@
                         </div>
                     </div>
                     <div>
+                        <div style="color: var(--text-muted); font-size: 8px;">MODE</div>
+                        <div style="font-weight: bold; font-size: 11px;">
+                            <span id="ui-mode" style="color: #00ff00;">FISHING</span>
+                        </div>
+                    </div>
+                    <div>
                         <div style="color: var(--text-muted); font-size: 8px;">TENSION</div>
                         <div style="display: flex; align-items: center; gap: 3px;">
                             <div style="flex: 1; height: 10px; background: rgba(0, 0, 0, 0.5); border: 1px solid var(--text-muted); border-radius: 2px; position: relative; overflow: hidden; min-width: 40px;">
@@ -459,18 +465,6 @@
                             <div style="color: var(--text-primary); font-size: 9px; font-weight: bold; min-width: 22px;">
                                 <span id="drag-setting-percent">50</span>%
                             </div>
-                        </div>
-                    </div>
-                    <div>
-                        <div style="color: var(--text-muted); font-size: 8px;">ECOSYSTEM</div>
-                        <div style="font-weight: bold; font-size: 9px;">
-                            <span id="ui-ecosystem-state">FEEDING</span>
-                        </div>
-                    </div>
-                    <div>
-                        <div style="color: var(--text-muted); font-size: 8px;">SPAWN</div>
-                        <div style="font-weight: bold; font-size: 9px;">
-                            <span id="ui-spawn-mode">WAITING</span>
                         </div>
                     </div>
                     <div>
@@ -547,14 +541,15 @@
                     <span>🐟 FISH STATUS</span>
                     <span id="entity-counts" style="font-size: 11px; font-weight: normal; color: var(--text-secondary);"></span>
                 </h3>
+                <!-- Spawn buttons moved to top for better accessibility -->
+                <div id="spawn-buttons-container" style="border-bottom: 2px solid #00ff00; background: #0a0a0a; display: none;">
+                    <!-- Spawn buttons will be inserted here dynamically -->
+                </div>
                 <div id="fish-status-container" style="flex: 1; overflow-y: auto; overflow-x: hidden; min-height: 0;">
                     <div style="color: var(--text-muted); font-style: italic;">No fish spawned</div>
                 </div>
-                <div id="spawn-buttons-container" style="border-top: 2px solid #00ff00; border-bottom: 2px solid #00ff00; background: #0a0a0a; display: none;">
-                    <!-- Spawn buttons will be inserted here dynamically -->
-                </div>
-                <div id="fish-detail-panel" style="min-height: 180px; max-height: 180px; background: #0a0a0a; overflow-y: auto;">
-                    <div style="color: #888; font-style: italic; padding: 10px; text-align: center;">Press X for spawn mode</div>
+                <div id="fish-detail-panel" style="min-height: 180px; max-height: 180px; background: #0a0a0a; border-top: 2px solid #00ff00; overflow-y: auto;">
+                    <div style="color: #888; font-style: italic; padding: 10px; text-align: center;">Select a fish to view details</div>
                 </div>
             </div>
         </div>

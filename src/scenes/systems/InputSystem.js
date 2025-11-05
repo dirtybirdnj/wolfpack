@@ -44,6 +44,7 @@ export class InputSystem {
         this.pKey = this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.P);
         this.qKey = this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.Q); // Decrease drag
         this.eKey = this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.E); // Increase drag
+        this.vKey = this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.V); // Toggle vision range visualization
 
         // Mouse/touch controls (optional enhancement)
         this.scene.input.on('pointerdown', (pointer) => {
@@ -66,17 +67,11 @@ export class InputSystem {
             return;
         }
 
-        // Check if already connected
-        if (window.gamepadManager.isConnected()) {
-            const gamepad = window.gamepadManager.getGamepad();
-            console.log('Gamepad already connected in game:', gamepad.id);
-            this.showGamepadConnectedNotification(gamepad.id);
-        }
-
-        // Listen for new connections during gameplay
+        // Listen for new connections during gameplay (don't show notification on startup)
         window.gamepadManager.on('connected', (gamepad) => {
             console.log('Gamepad connected in game:', gamepad.id);
-            this.showGamepadConnectedNotification(gamepad.id);
+            // Only show notification if connecting AFTER game has started
+            // Skip showing on initial game load
         });
 
         // Gamepad state tracking
@@ -168,6 +163,13 @@ export class InputSystem {
                 this.scene.reelModel.adjustDrag(+10);
                 console.log(`Drag increased to ${this.scene.reelModel.dragSetting}% (${this.scene.reelModel.getCurrentDragForce().toFixed(1)} lbs)`);
             }
+        }
+
+        // V key - toggle vision range visualization for predators
+        if (Phaser.Input.Keyboard.JustDown(this.vKey)) {
+            this.scene.visionRangeDebug = !this.scene.visionRangeDebug;
+            const status = this.scene.visionRangeDebug ? 'ON' : 'OFF';
+            console.log(`Vision Range Debug: ${status}`);
         }
     }
 
@@ -274,11 +276,11 @@ export class InputSystem {
     }
 
     /**
-     * Handle fish fight input (spacebar or R2 rapid tapping, plus drag adjustment)
-     * @returns {boolean} True if reel input was pressed this frame
+     * Handle fish fight input (R2 analog trigger for continuous reeling, plus drag adjustment)
+     * @returns {number} Analog reel input 0-1 from R2 trigger pressure
      */
     handleFishFightInput() {
-        const spacePressed = Phaser.Input.Keyboard.JustDown(this.spaceKey);
+        let reelInput = 0; // Default no reeling
 
         // Handle drag adjustment with Q/E keys during fight
         if (this.scene.reelModel) {
@@ -295,19 +297,14 @@ export class InputSystem {
             }
         }
 
-        // Check R2 trigger for gamepad (rapid tapping) using native API
-        let r2Pressed = false;
+        // Get R2 trigger analog value for continuous reeling
         if (window.gamepadManager && window.gamepadManager.isConnected()) {
             const r2Button = window.gamepadManager.getButton('R2');
             const l1Button = window.gamepadManager.getButton('L1');
             const r1Button = window.gamepadManager.getButton('R1');
-            const currentTime = this.scene.time.now;
 
-            // Trigger pressed (value > 0.5 threshold) and enough time has passed
-            if (r2Button.value > 0.5 && currentTime - this.gamepadState.lastR2Press >= this.gamepadState.r2MinInterval) {
-                r2Pressed = true;
-                this.gamepadState.lastR2Press = currentTime;
-            }
+            // R2 trigger provides analog input (0-1) for reel speed
+            reelInput = r2Button.value || 0;
 
             // Handle drag adjustment with L1/R1 bumpers during fight
             if (this.scene.reelModel) {
@@ -327,7 +324,7 @@ export class InputSystem {
             }
         }
 
-        return spacePressed || r2Pressed;
+        return reelInput; // Return analog value (0-1) instead of boolean
     }
 
     /**

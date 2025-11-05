@@ -49,17 +49,17 @@ export class BaitfishCloud {
     spawnBaitfish(count) {
         // Adjust spawn pattern based on species behavior
         const schoolingDensity = this.speciesData.schoolingDensity;
-        let spreadX = 60;
-        let spreadY = 40;
+        let spreadX = 40; // Reduced from 60
+        let spreadY = 25; // Reduced from 40
 
         if (schoolingDensity === 'very_high') {
             // Tighter schools (smelt)
-            spreadX = 40;
-            spreadY = 25;
+            spreadX = 30; // Reduced from 40
+            spreadY = 20; // Reduced from 25
         } else if (schoolingDensity === 'none') {
-            // Very spread out (sculpin)
-            spreadX = 100;
-            spreadY = 60;
+            // Very spread out (sculpin) - still reduced
+            spreadX = 60; // Reduced from 100
+            spreadY = 40; // Reduced from 60
         }
 
         for (let i = 0; i < count; i++) {
@@ -109,55 +109,62 @@ export class BaitfishCloud {
                 const nearestLaker = this.lakersChasing[0];
                 const dx = this.worldX - nearestLaker.worldX;
                 const dy = this.centerY - nearestLaker.y;
-                const dist = Math.sqrt(dx * dx + dy * dy);
+                // Use Phaser's optimized distance calculation
+                const dist = Phaser.Math.Distance.Between(this.worldX, this.centerY, nearestLaker.worldX, nearestLaker.y);
 
                 if (dist > 0) {
-                    const fleeSpeed = 1.2;
+                    const fleeSpeed = 0.9; // Reduced from 1.2 - baitfish tire easily
 
                     // SMART FLEE: Detect if trapped at surface
                     const surfaceLimit = 50; // Within 50px (~14 feet) of surface
                     const trappedAtSurface = this.centerY <= surfaceLimit;
 
                     if (trappedAtSurface && nearestLaker.y > this.centerY) {
-                        // Lakers are below us and we're at surface - DIVE THROUGH or flee horizontally
-                        const shouldDive = Math.random() < 0.3; // 30% chance to dive through
+                        // Track how long we've been trapped at surface
+                        this.framesAtSurface++;
+
+                        // Increase dive chance based on entrapment duration
+                        // Start at 30%, increase to 90% over 5 seconds (300 frames at 60fps)
+                        const diveChance = Math.min(0.3 + (this.framesAtSurface / 300), 0.9);
+                        const shouldDive = Math.random() < diveChance;
 
                         if (shouldDive) {
                             // Bold escape: dive down and sideways to break through
                             this.velocity.x = (dx / dist) * fleeSpeed * 1.5; // Fast horizontal
                             this.velocity.y = 1.5; // Force downward dive
-                            console.log('Baitfish cloud diving through lakers to escape surface trap!');
+                            console.log(`Baitfish cloud diving (${Math.round(diveChance * 100)}% chance, trapped for ${this.framesAtSurface} frames)`);
                         } else {
                             // Flee horizontally only (no upward component)
                             this.velocity.x = (dx / dist) * fleeSpeed * 1.5;
                             this.velocity.y = Math.max(0, this.velocity.y * 0.5); // Allow down, prevent up
                         }
                     } else {
-                        // Normal flee behavior
+                        // Normal flee behavior - not trapped at surface
+                        this.framesAtSurface = 0; // Reset trap counter
                         this.velocity.x = (dx / dist) * fleeSpeed;
                         this.velocity.y = (dy / dist) * fleeSpeed * 0.7; // Slower vertical
                     }
                 }
             } else {
                 // No specific laker, add erratic movement but keep it moderate
+                this.framesAtSurface = 0; // Reset trap counter when not fleeing
                 this.velocity.x += Utils.randomBetween(-0.4, 0.4);
                 this.velocity.y += Utils.randomBetween(-0.2, 0.2);
             }
 
-            // Keep velocity reasonable - slower than before to prevent line formation
-            this.velocity.x = Math.max(-1.5, Math.min(1.5, this.velocity.x));
-            this.velocity.y = Math.max(-1.0, Math.min(1.0, this.velocity.y));
+            // Keep velocity reasonable - reduced max speeds so predators can catch them
+            this.velocity.x = Math.max(-1.2, Math.min(1.2, this.velocity.x)); // Reduced from ±1.5
+            this.velocity.y = Math.max(-0.8, Math.min(0.8, this.velocity.y)); // Reduced from ±1.0
 
-            // Condense the school when scared BUT maintain larger minimum size
-            // Changed from 0.4-0.7 to 0.8-1.0 to keep clouds looser when frenzying
-            // This prevents fish from bunching into a tight ball
-            this.spreadMultiplier = Math.max(0.8, 1.0 - (this.scaredLevel * 0.2));
+            // Condense the school when scared - tighter formation
+            // Reduced spread to keep schools more compact
+            this.spreadMultiplier = Math.max(0.6, 0.9 - (this.scaredLevel * 0.3));
         } else {
             // Calm down slowly when no lakers nearby
             this.scaredLevel = Math.max(0, this.scaredLevel - 0.02);
 
-            // Spread out when safe (1.5 to 2.0 multiplier)
-            this.spreadMultiplier = Math.min(2.0, 1.5 + (1 - this.scaredLevel) * 0.5);
+            // Spread out when safe - but keep it tighter (1.0 to 1.3 multiplier)
+            this.spreadMultiplier = Math.min(1.3, 1.0 + (1 - this.scaredLevel) * 0.3);
 
             // Normal active wandering - much more mobile now
             // Increased from 1% to 5% chance per frame for more frequent direction changes
@@ -171,9 +178,9 @@ export class BaitfishCloud {
             this.velocity.x *= 0.98;
             this.velocity.y *= 0.98;
 
-            // Keep velocity reasonable - increased max speeds for more wandering
-            this.velocity.x = Math.max(-1.5, Math.min(1.5, this.velocity.x));
-            this.velocity.y = Math.max(-0.8, Math.min(0.8, this.velocity.y));
+            // Keep velocity reasonable - reduced for predator catchability
+            this.velocity.x = Math.max(-1.0, Math.min(1.0, this.velocity.x)); // Reduced from ±1.5
+            this.velocity.y = Math.max(-0.6, Math.min(0.6, this.velocity.y)); // Reduced from ±0.8
         }
 
         // Update center position (cloud drifts or flees) - use world coordinates
@@ -229,9 +236,8 @@ export class BaitfishCloud {
                 // Check if baitfish has strayed too far from cloud center
                 // Allow 2x the normal cloud radius for stragglers
                 const maxStrayDistance = GameConfig.BAITFISH_CLOUD_RADIUS * 2;
-                const dx = baitfish.x - this.centerX;
-                const dy = baitfish.y - this.centerY;
-                const distance = Math.sqrt(dx * dx + dy * dy);
+                // Use Phaser's optimized distance calculation
+                const distance = Phaser.Math.Distance.Between(baitfish.x, baitfish.y, this.centerX, this.centerY);
 
                 if (distance > maxStrayDistance) {
                     // Baitfish strayed too far - remove from THIS cloud (but don't destroy)
@@ -362,10 +368,19 @@ export class BaitfishCloud {
     }
 
     isOffScreen() {
-        // Check if cloud is too far from player in world coordinates
+        // Check if cloud is actually off the visible screen
+        // Convert worldX to screen position to check visibility
         const playerWorldX = GameConfig.CANVAS_WIDTH / 2;
-        const distanceFromPlayer = Math.abs(this.worldX - playerWorldX);
-        return distanceFromPlayer > 600;
+        const offsetFromPlayer = this.worldX - playerWorldX;
+        const actualGameWidth = this.scene.scale.width || GameConfig.CANVAS_WIDTH;
+        const screenX = (actualGameWidth / 2) + offsetFromPlayer;
+
+        // Cloud is off-screen if completely outside visible area (with buffer)
+        const buffer = 150; // Allow 150px off-screen before despawning
+        const isOffLeft = screenX < -buffer;
+        const isOffRight = screenX > actualGameWidth + buffer;
+
+        return isOffLeft || isOffRight;
     }
 
     getInfo() {
@@ -379,6 +394,12 @@ export class BaitfishCloud {
     }
 
     split() {
+        // Sculpin are solitary and should never split or be in clouds
+        if (this.speciesType === 'sculpin') {
+            console.warn('⚠️ Attempted to split sculpin cloud - sculpin are solitary!');
+            return null;
+        }
+
         // Split this cloud in half, return the new cloud
         if (this.baitfish.length < 4) {
             // Too small to split
@@ -425,6 +446,12 @@ export class BaitfishCloud {
         const thisFishCount = this.baitfish.length;
         const otherFishCount = otherCloud.baitfish.length;
         const totalFish = thisFishCount + otherFishCount;
+
+        // Prevent merging if combined cloud would exceed max size of 100
+        if (totalFish > 100) {
+            console.log(`⚠️ Merge blocked: would create cloud of ${totalFish} (max 100)`);
+            return;
+        }
 
         if (totalFish > 0) {
             this.centerX = (this.centerX * thisFishCount + otherCloud.centerX * otherFishCount) / totalFish;

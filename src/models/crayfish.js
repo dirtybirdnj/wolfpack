@@ -189,9 +189,10 @@ export class Crayfish extends AquaticOrganism {
         if (this.currentTarget && this.currentTarget.visible && !this.currentTarget.consumed) {
             this.targetLockTime++;
 
-            const currentDist = Math.sqrt(
-                Math.pow(this.x - this.currentTarget.x, 2) +
-                Math.pow(this.y - this.currentTarget.y, 2)
+            // Use Phaser's optimized distance calculation
+            const currentDist = Phaser.Math.Distance.Between(
+                this.x, this.y,
+                this.currentTarget.x, this.currentTarget.y
             );
 
             // Keep current target if within range
@@ -204,8 +205,10 @@ export class Crayfish extends AquaticOrganism {
                     nearbyZooplankton.forEach(zp => {
                         if (!zp.visible || zp.consumed || zp === this.currentTarget) {return;}
 
-                        const distance = Math.sqrt(
-                            Math.pow(this.x - zp.x, 2) + Math.pow(this.y - zp.y, 2)
+                        // Use Phaser's optimized distance calculation
+                        const distance = Phaser.Math.Distance.Between(
+                            this.x, this.y,
+                            zp.x, zp.y
                         );
 
                         // Only switch if significantly better (40% improvement)
@@ -236,8 +239,10 @@ export class Crayfish extends AquaticOrganism {
             nearbyZooplankton.forEach(zp => {
                 if (!zp.visible || zp.consumed) {return;}
 
-                const distance = Math.sqrt(
-                    Math.pow(this.x - zp.x, 2) + Math.pow(this.y - zp.y, 2)
+                // Use Phaser's optimized distance calculation
+                const distance = Phaser.Math.Distance.Between(
+                    this.x, this.y,
+                    zp.x, zp.y
                 );
 
                 if (distance < bestDistance) {
@@ -254,7 +259,11 @@ export class Crayfish extends AquaticOrganism {
         if (this.currentTarget) {
             const dx = this.currentTarget.worldX - this.worldX;
             const dy = this.currentTarget.y - this.y;
-            const distance = Math.sqrt(dx * dx + dy * dy);
+            // Use Phaser's optimized distance calculation
+            const distance = Phaser.Math.Distance.Between(
+                this.worldX, this.y,
+                this.currentTarget.worldX, this.currentTarget.y
+            );
 
             // If close enough, consume the zooplankton
             if (distance < 8) {
@@ -321,9 +330,8 @@ export class Crayfish extends AquaticOrganism {
      * Check if within range of a position
      */
     isWithinRange(x, y, range) {
-        const dx = this.x - x;
-        const dy = this.y - y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
+        // Use Phaser's optimized distance calculation
+        const distance = Phaser.Math.Distance.Between(this.x, this.y, x, y);
         return distance < range;
     }
 

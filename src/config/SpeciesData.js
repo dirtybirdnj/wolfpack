@@ -20,7 +20,7 @@ export const BAITFISH_SPECIES = {
         schoolingDensity: 'high', // tight schools
 
         // Movement
-        speed: { base: 1.2, panic: 2.5 },
+        speed: { base: 2.2, panic: 4.5 }, // Fast but catchable by predators
         verticalMigration: true, // deeper during day, shallower at night
 
         // Visual properties
@@ -72,7 +72,7 @@ export const BAITFISH_SPECIES = {
         schoolingDensity: 'very_high', // extremely tight schools
 
         // Movement
-        speed: { base: 1.5, panic: 3.0 },
+        speed: { base: 2.5, panic: 5.0 }, // Fast but catchable by predators
         verticalMigration: false, // stable depth preference
 
         // Visual properties
@@ -138,7 +138,7 @@ export const BAITFISH_SPECIES = {
         schoolingDensity: 'none', // non-schooling
 
         // Movement
-        speed: { base: 0.5, panic: 1.5 }, // slow with short bursts
+        speed: { base: 1.5, panic: 4.0 }, // Faster bottom dweller
         verticalMigration: false, // stays on bottom
 
         // Visual properties
@@ -192,7 +192,7 @@ export const BAITFISH_SPECIES = {
         schoolingDensity: 'medium', // moderate schooling
 
         // Movement
-        speed: { base: 1.0, panic: 2.0 },
+        speed: { base: 2.8, panic: 5.5 }, // Very fast schooling fish
         verticalMigration: false,
 
         // Visual properties
@@ -247,7 +247,7 @@ export const BAITFISH_SPECIES = {
         schoolingDensity: 'high',
 
         // Movement
-        speed: { base: 1.8, panic: 3.5 }, // fast swimmers
+        speed: { base: 4.0, panic: 8.0 }, // Extremely fast - cisco are elite swimmers!
         verticalMigration: false,
 
         // Visual properties

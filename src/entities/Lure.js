@@ -47,6 +47,14 @@ export class Lure {
         // Drop cooldown - prevents auto-drop after catching fish
         this.lastResetTime = 0;
         this.dropCooldownMs = 500; // 500ms cooldown after reset
+
+        // Water state tracking - determines if lure affects fish AI
+        this.inWater = y > 0; // True when lure is below surface (y=0)
+
+        // Lure dimensions (for calculating visibility above surface)
+        this.LURE_RADIUS = 4; // Core circle radius
+        this.GLOW_RADIUS = 6; // Glow ring radius
+        this.PULSE_RADIUS = 8; // Outermost pulse ring radius (determines full visibility)
     }
     
     update() {
@@ -121,13 +129,26 @@ export class Lure {
         // Get dynamic depth scale from sonar display (adapts to window size)
         const depthScale = this.scene.sonarDisplay ? this.scene.sonarDisplay.getDepthScale() : GameConfig.DEPTH_SCALE;
         this.depth = this.y / depthScale;
-        
-        // Boundary checks
-        if (this.y <= 0) {
-            this.y = 0;
-            this.depth = 0;
+
+        // Surface boundary - allow reeling above water (negative Y)
+        // Minimum Y = double the pulse radius to make lure completely invisible
+        const minReelY = -(this.PULSE_RADIUS * 2);
+        if (this.y <= minReelY) {
+            this.y = minReelY;
             this.velocity = 0;
+        }
+
+        // Update water state
+        this.inWater = this.y > 0; // Lure is in water when below surface (y > 0)
+
+        // Update lure state based on position
+        if (this.y <= 0 && this.state === Constants.LURE_STATE.RETRIEVING) {
+            // Reached surface while reeling
             this.state = Constants.LURE_STATE.SURFACE;
+            this.depth = 0;
+        } else if (this.y > 0 && this.state === Constants.LURE_STATE.SURFACE) {
+            // Dropped back into water
+            this.state = Constants.LURE_STATE.DROPPING;
         }
 
         // Get actual bottom depth (use maxDepth from scene)

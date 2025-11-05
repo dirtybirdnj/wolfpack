@@ -1,8 +1,11 @@
 import GameConfig from '../config/GameConfig.js';
 import { Constants, Utils } from '../utils/Constants.js';
 import SonarDisplay from '../utils/SonarDisplay.js';
+import { SpriteGenerator } from '../utils/SpriteGenerator.js';
 import Lure from '../entities/Lure.js';
 import Fish from '../entities/Fish.js';
+import { FishSprite } from '../models/FishSprite.js';
+import { BaitfishSprite } from '../models/BaitfishSprite.js';
 import Crayfish from '../entities/Crayfish.js';
 import FishFight from '../entities/FishFight.js';
 import FishingLine from '../entities/FishingLine.js';
@@ -40,7 +43,6 @@ export class GameScene extends Phaser.Scene {
 
         // Entity arrays
         this.fishes = [];
-        this.baitfishClouds = [];
         this.zooplankton = [];
         this.crayfish = [];
 
@@ -60,6 +62,7 @@ export class GameScene extends Phaser.Scene {
         this.gameTime = 0;
         this.waterTemp = 40;
         this.debugMode = false;
+        this.visionRangeDebug = false; // Toggle with V key to show predator vision cones
         this.currentFight = null;
         this.controllerTestMode = false;
         this.controllerTestUI = null;
@@ -85,8 +88,7 @@ export class GameScene extends Phaser.Scene {
         };
 
         // Game mode specific
-        this.gameMode = null; // 'arcade' or 'unlimited'
-        this.timeRemaining = 0;
+        // gameMode removed - only one mode now
         this.caughtFishData = [];
 
         // Systems (initialized in create())
@@ -149,34 +151,39 @@ export class GameScene extends Phaser.Scene {
      */
     create() {
         try {
-            // Get fishing type and game mode from registry (set by MenuScene)
+            // Generate sprite textures for all entities (done once)
+            if (!this.registry.get('texturesGenerated')) {
+                SpriteGenerator.generateAllTextures(this);
+                this.registry.set('texturesGenerated', true);
+            }
+
+            // Get fishing type from registry (set by MenuScene)
             this.fishingType = this.registry.get('fishingType') || GameConfig.FISHING_TYPE_ICE;
-            this.gameMode = this.registry.get('gameMode') || GameConfig.GAME_MODE_UNLIMITED;
 
             // Get actual depth from bathymetric data (set by NavigationScene)
             this.maxDepth = this.registry.get('currentDepth') || GameConfig.MAX_DEPTH;
-            console.log(`Starting game: ${this.fishingType} fishing in ${this.gameMode} mode`);
+            console.log(`Starting game: ${this.fishingType} fishing`);
             console.log(`Water depth at location: ${this.maxDepth.toFixed(1)}ft`);
 
-            // Initialize timer based on game mode
-            if (this.gameMode === GameConfig.GAME_MODE_ARCADE) {
-                this.timeRemaining = GameConfig.ARCADE_TIME_LIMIT;
-                this.gameTime = 0;
-            } else {
-                this.timeRemaining = 0;
-                this.gameTime = 0;
-            }
+            // Initialize game timer (always counts up from zero for diagnostics)
+            this.gameTime = 0;
 
-            // Hide unnecessary UI panels
-            this.hideUnusedPanels();
+            // Set up game timer (updates every second)
+            this.time.addEvent({
+                delay: 1000,
+                callback: () => {
+                    this.gameTime++;
+                },
+                loop: true
+            });
 
             // Set up the sonar display
             this.sonarDisplay = new SonarDisplay(this);
 
-            // Create the player's lure - start at surface (0 feet)
-            // Use actual game width (not hardcoded CANVAS_WIDTH) to center on any screen size
-            const actualGameWidth = this.scale.width || GameConfig.CANVAS_WIDTH;
-            this.lure = new Lure(this, actualGameWidth / 2, 0);
+            // Create the player's lure - start ABOVE water in observing mode
+            // Use actual game width to center on any screen size
+            const actualGameWidth = this.scale.width;
+            this.lure = new Lure(this, actualGameWidth / 2, -20); // Start 20px above surface
 
             // Apply lure weight from tackle box selection
             const lureWeight = this.registry.get('lureWeight');
@@ -257,9 +264,6 @@ export class GameScene extends Phaser.Scene {
             // Fade in
             this.cameras.main.fadeIn(500);
 
-            // Show game mode notification
-            this.notificationSystem.showGameModeNotification();
-
             // Check for fish whistle activation from NavigationScene
             if (this.registry.get('fishWhistleActive')) {
                 this.spawnFishWhistleFish();
@@ -273,19 +277,6 @@ export class GameScene extends Phaser.Scene {
         }
     }
 
-    /**
-     * Hide unused UI panels
-     */
-    hideUnusedPanels() {
-        // Hide all movement-related UI panels
-        const iceDrillPanel = document.getElementById('ice-drill-panel');
-        const kayakPanel = document.getElementById('kayak-tiredness-panel');
-        const boatPanel = document.getElementById('motorboat-gas-panel');
-
-        if (iceDrillPanel) {iceDrillPanel.style.display = 'none';}
-        if (kayakPanel) {kayakPanel.style.display = 'none';}
-        if (boatPanel) {boatPanel.style.display = 'none';}
-    }
 
     /**
      * Set water temperature (ice fishing only)
@@ -296,12 +287,21 @@ export class GameScene extends Phaser.Scene {
     }
 
     /**
-     * Initialize creature arrays (ecological organization)
-     * Note: Using arrays instead of Phaser Groups because Fish entities aren't GameObjects
-     * Future: Refactor Fish to extend Phaser.GameObjects.Container to use Groups
+     * Initialize creature groups with Phaser pooling
+     * Now using Phaser Groups for automatic rendering and object pooling
      */
     initializeCreatureGroups() {
-        console.log('🌊 Initializing creature arrays...');
+        console.log('🌊 Initializing creature groups with pooling...');
+
+        // Phaser Group for predator fish with object pooling
+        this.fishGroup = this.add.group({
+            classType: Phaser.GameObjects.Sprite, // Will be FishSprite when fully migrated
+            maxSize: 20,
+            runChildUpdate: true // Automatically calls preUpdate on all active fish
+        });
+
+        // Legacy array for compatibility during migration
+        this.fishes = [];
 
         // Array for schooling baitfish (using new unified Fish class with Boids)
         this.baitfishSchools = [];
@@ -309,7 +309,30 @@ export class GameScene extends Phaser.Scene {
         // Array of school metadata (tracks center position and velocity for each school)
         this.schools = [];
 
-        console.log('✅ Creature arrays initialized');
+        console.log('✅ Creature groups initialized with pooling');
+    }
+
+    /**
+     * Spawn a fish from the object pool
+     * @param {number} worldX - World X position
+     * @param {number} y - Y position
+     * @param {string} size - Fish size category
+     * @param {string} species - Fish species
+     * @returns {FishSprite} The spawned fish
+     */
+    spawnPooledFish(worldX, y, size, species) {
+        // Try to get inactive fish from pool
+        const fish = this.fishGroup.getFirstDead(false);
+
+        if (fish) {
+            // Reuse existing fish
+            fish.reset(worldX, y, size, species);
+            return fish;
+        }
+
+        // Pool is full or no dead fish available
+        // For now, still create using old system (will migrate SpawningSystem next)
+        return null;
     }
 
     /**
@@ -539,17 +562,31 @@ export class GameScene extends Phaser.Scene {
             age: 0
         };
 
-        for (let i = 0; i < count; i++) {
-            // Spread fish in a cluster
-            const offsetX = Phaser.Math.Between(-40, 40);
-            const offsetY = Phaser.Math.Between(-25, 25);
+        // Pre-calculate all fish positions in a schooling formation to prevent "bloom" effect
+        // Use a more natural circular/elliptical distribution
+        const positions = [];
+        const radius = 50; // School radius
+        const angleStep = (Math.PI * 2) / count;
 
-            // Create baitfish using unified Fish class (will detect species and enable schooling)
-            const fish = new Fish(
+        for (let i = 0; i < count; i++) {
+            // Use golden angle spiral for natural-looking distribution
+            const angle = i * angleStep + Math.random() * 0.5;
+            const distance = Math.sqrt(Math.random()) * radius; // Sqrt gives more uniform density
+            const offsetX = Math.cos(angle) * distance;
+            const offsetY = Math.sin(angle) * distance * 0.6; // Flatten vertically
+
+            positions.push({ offsetX, offsetY });
+        }
+
+        // Now spawn all fish at their pre-calculated positions
+        for (let i = 0; i < count; i++) {
+            const { offsetX, offsetY } = positions[i];
+
+            // Create baitfish using BaitfishSprite
+            const fish = new BaitfishSprite(
                 this,
                 worldX + offsetX,
                 y + offsetY,
-                'TINY',
                 species
             );
 
@@ -559,6 +596,11 @@ export class GameScene extends Phaser.Scene {
                 x: offsetX,
                 y: offsetY
             };
+
+            // Set initial velocity to match school (prevents immediate scatter)
+            // BaitfishSprite has velocity directly, not nested in schooling
+            fish.velocity.x = school.velocity.x;
+            fish.velocity.y = school.velocity.y;
 
             // Add to arrays
             school.members.push(fish);
@@ -592,7 +634,7 @@ export class GameScene extends Phaser.Scene {
      * This adapts to any screen size/resolution
      */
     getPlayerCenterX() {
-        return (this.scale.width || GameConfig.CANVAS_WIDTH) / 2;
+        return this.scale.width / 2;
     }
 
     /**
@@ -620,7 +662,7 @@ export class GameScene extends Phaser.Scene {
             if (school.members.length === 0) return;
 
             // Filter to only visible, non-consumed fish
-            const visibleFish = school.members.filter(f => !f.model.consumed && f.model.visible);
+            const visibleFish = school.members.filter(f => !f.consumed && f.visible);
             if (visibleFish.length === 0) return; // Skip if no visible fish
 
             // Calculate school bounds (find extents of all visible fish)
@@ -628,10 +670,10 @@ export class GameScene extends Phaser.Scene {
             let minY = Infinity, maxY = -Infinity;
 
             visibleFish.forEach(fish => {
-                minX = Math.min(minX, fish.model.x);
-                maxX = Math.max(maxX, fish.model.x);
-                minY = Math.min(minY, fish.model.y);
-                maxY = Math.max(maxY, fish.model.y);
+                minX = Math.min(minX, fish.x);
+                maxX = Math.max(maxX, fish.x);
+                minY = Math.min(minY, fish.y);
+                maxY = Math.max(maxY, fish.y);
             });
 
             // Skip if no valid fish (shouldn't happen but safety check)
@@ -677,12 +719,12 @@ export class GameScene extends Phaser.Scene {
             if (school.members.length === 0) return;
 
             // Filter to only visible, non-consumed fish
-            const visibleFish = school.members.filter(f => !f.model.consumed && f.model.visible);
+            const visibleFish = school.members.filter(f => !f.consumed && f.visible);
             if (visibleFish.length === 0) return; // Skip if no visible fish
 
             // Find school bounds for text positioning
-            const fishX = visibleFish.map(f => f.model.x);
-            const fishY = visibleFish.map(f => f.model.y);
+            const fishX = visibleFish.map(f => f.x);
+            const fishY = visibleFish.map(f => f.y);
             const minX = Math.min(...fishX);
             const maxX = Math.max(...fishX);
             const maxY = Math.max(...fishY);
@@ -745,8 +787,8 @@ export class GameScene extends Phaser.Scene {
 
             const y = depth * GameConfig.DEPTH_SCALE;
 
-            // All TROPHY size
-            const fish = new Fish(this, worldX, y, 'TROPHY', speciesName);
+            // All TROPHY size - using FishSprite
+            const fish = new FishSprite(this, worldX, y, 'TROPHY', speciesName);
 
             // Set movement direction
             fish.ai.idleDirection = Math.random() < 0.5 ? -1 : 1;
@@ -791,26 +833,22 @@ export class GameScene extends Phaser.Scene {
      */
     getAdaptedSchoolsForAI() {
         return this.schools.map(school => {
-            // Convert school center worldX to screen X
-            const playerWorldX = this.getPlayerCenterX();
-            const offsetFromPlayer = school.centerWorldX - playerWorldX;
-            const centerX = this.getPlayerCenterX() + offsetFromPlayer;
-
             return {
                 // Cloud properties expected by FishAI
                 visible: school.members.length > 0,
-                baitfish: school.members,      // Array of Fish objects
-                centerX: centerX,              // Screen X position
-                centerY: school.centerY,       // Screen Y position
-                worldX: school.centerWorldX,   // World X position
-                speciesType: school.species,   // Species name (for diet preference)
-                lakersChasing: [],             // Predators currently chasing this school
+                members: school.members,          // Array of Fish objects (unified naming)
+                baitfish: school.members,         // Also provide as baitfish for legacy compatibility
+                centerWorldX: school.centerWorldX, // World X position (PRIMARY for distance checks)
+                centerY: school.centerY,          // Screen Y position
+                speciesType: school.species,      // Species name (for diet preference)
+                lakersChasing: [],                // Predators currently chasing this school
 
                 // Method: Check if lure is in cloud
                 isPlayerLureInCloud(lure) {
-                    const distance = Math.sqrt(
-                        Math.pow(lure.x - centerX, 2) +
-                        Math.pow(lure.y - school.centerY, 2)
+                    // Use Phaser's optimized distance calculation (use worldX)
+                    const distance = Phaser.Math.Distance.Between(
+                        lure.worldX || lure.x, lure.y,
+                        school.centerWorldX, school.centerY
                     );
                     return distance < GameConfig.BAITFISH_CLOUD_RADIUS;
                 },
@@ -819,18 +857,19 @@ export class GameScene extends Phaser.Scene {
                 _lastClosestBaitfish: null,
 
                 // Method: Find best baitfish to target (prefers edge fish on predator's side)
+                // IMPORTANT: x parameter is in worldX coordinates from predator mouth
                 getClosestBaitfish(x, y) {
                     if (school.members.length === 0) {
                         return { baitfish: null, distance: Infinity };
                     }
 
-                    // Calculate actual school center from member positions
+                    // Calculate actual school center from member positions (use worldX)
                     let schoolCenterX = 0, schoolCenterY = 0;
                     let validCount = 0;
                     for (const fish of school.members) {
-                        if (!fish.model.consumed) {
-                            schoolCenterX += fish.model.x;
-                            schoolCenterY += fish.model.y;
+                        if (!fish.consumed) {
+                            schoolCenterX += fish.worldX;
+                            schoolCenterY += fish.y;
                             validCount++;
                         }
                     }
@@ -840,10 +879,11 @@ export class GameScene extends Phaser.Scene {
                     schoolCenterX /= validCount;
                     schoolCenterY /= validCount;
 
-                    // Calculate direction from school center to predator
+                    // Calculate direction from school center to predator (worldX)
                     const dirX = x - schoolCenterX;
                     const dirY = y - schoolCenterY;
-                    const dirLength = Math.sqrt(dirX * dirX + dirY * dirY);
+                    // Use Phaser's optimized distance calculation
+                    const dirLength = Phaser.Math.Distance.Between(schoolCenterX, schoolCenterY, x, y);
                     const normalizedDirX = dirLength > 0 ? dirX / dirLength : 0;
                     const normalizedDirY = dirLength > 0 ? dirY / dirLength : 0;
 
@@ -852,24 +892,21 @@ export class GameScene extends Phaser.Scene {
                     let bestScore = -Infinity;
 
                     for (const fish of school.members) {
-                        if (fish.model.consumed) continue;
+                        if (fish.consumed) continue;
 
-                        // Distance from predator to this fish
-                        const distToPredator = Math.sqrt(
-                            Math.pow(x - fish.model.x, 2) +
-                            Math.pow(y - fish.model.y, 2)
+                        // Distance from predator to this fish (use worldX)
+                        const distToPredator = Phaser.Math.Distance.Between(x, y, fish.worldX, fish.y);
+
+                        // Distance from school center to this fish (edge detection, use worldX)
+                        const distToCenter = Phaser.Math.Distance.Between(
+                            fish.worldX, fish.y,
+                            schoolCenterX, schoolCenterY
                         );
 
-                        // Distance from school center to this fish (edge detection)
-                        const distToCenter = Math.sqrt(
-                            Math.pow(fish.model.x - schoolCenterX, 2) +
-                            Math.pow(fish.model.y - schoolCenterY, 2)
-                        );
-
-                        // Direction from school center to this fish
-                        const fishDirX = fish.model.x - schoolCenterX;
-                        const fishDirY = fish.model.y - schoolCenterY;
-                        const fishDirLength = Math.sqrt(fishDirX * fishDirX + fishDirY * fishDirY);
+                        // Direction from school center to this fish (use worldX)
+                        const fishDirX = fish.worldX - schoolCenterX;
+                        const fishDirY = fish.y - schoolCenterY;
+                        const fishDirLength = Phaser.Math.Distance.Between(schoolCenterX, schoolCenterY, fish.worldX, fish.y);
 
                         // Dot product: is this fish on the same side as predator?
                         const alignment = fishDirLength > 0
@@ -895,10 +932,10 @@ export class GameScene extends Phaser.Scene {
                     // Store the best fish so consumeBaitfish() eats the RIGHT one
                     this._lastClosestBaitfish = bestFish;
 
-                    const finalDistance = bestFish ? Math.sqrt(
-                        Math.pow(x - bestFish.model.x, 2) +
-                        Math.pow(y - bestFish.model.y, 2)
-                    ) : Infinity;
+                    // Use Phaser's optimized distance calculation (x is in worldX coordinates)
+                    const finalDistance = bestFish ?
+                        Phaser.Math.Distance.Between(x, y, bestFish.worldX, bestFish.y) :
+                        Infinity;
 
                     return { baitfish: bestFish, distance: finalDistance };
                 },
@@ -906,20 +943,18 @@ export class GameScene extends Phaser.Scene {
                 // Method: Consume the SPECIFIC baitfish that was targeted (not random!)
                 consumeBaitfish() {
                     // Consume the specific fish that was found by getClosestBaitfish()
-                    if (this._lastClosestBaitfish && !this._lastClosestBaitfish.model.consumed) {
+                    if (this._lastClosestBaitfish && !this._lastClosestBaitfish.consumed) {
                         const target = this._lastClosestBaitfish;
-                        target.model.consumed = true;
-                        target.model.visible = false; // Hide immediately
+                        target.markConsumed(); // BaitfishSprite handles visibility
                         this._lastClosestBaitfish = null; // Clear reference
                         return target;
                     }
 
                     // Fallback: consume random available fish (shouldn't happen now)
-                    const available = school.members.filter(f => !f.model.consumed);
+                    const available = school.members.filter(f => !f.consumed);
                     if (available.length > 0) {
                         const target = available[Math.floor(Math.random() * available.length)];
-                        target.model.consumed = true;
-                        target.model.visible = false;
+                        target.markConsumed();
                         return target;
                     }
                     return null;
@@ -929,13 +964,20 @@ export class GameScene extends Phaser.Scene {
     }
 
     updateEntities() {
+        // Create/clear zooplankton graphics layer (lazy initialization)
+        if (!this.zooplanktonGraphics) {
+            this.zooplanktonGraphics = this.add.graphics();
+            this.zooplanktonGraphics.setDepth(10); // Well above background, below fish (50)
+        }
+        this.zooplanktonGraphics.clear();
+
         // Update zooplankton
         this.zooplankton = this.zooplankton.filter(zp => {
             if (zp.visible && !zp.consumed) {
                 zp.update();
-                zp.render();
+                zp.render(this.zooplanktonGraphics); // Pass graphics object
                 return true;
-            } else {
+            } else{
                 zp.destroy();
                 return false;
             }
@@ -946,17 +988,15 @@ export class GameScene extends Phaser.Scene {
             if (cf.visible && !cf.consumed) {
                 // Find nearby zooplankton for hunting
                 const nearbyZooplankton = this.zooplankton.filter(zp => {
-                    const dx = cf.x - zp.x;
-                    const dy = cf.y - zp.y;
-                    return Math.sqrt(dx * dx + dy * dy) < 150;
+                    // Use Phaser's optimized distance calculation
+                    return Phaser.Math.Distance.Between(cf.x, cf.y, zp.x, zp.y) < 150;
                 });
 
                 // Check if smallmouth bass nearby (predators)
                 const predatorsNearby = this.fishes.some(f => {
                     if (f.species !== 'smallmouth_bass') {return false;}
-                    const dx = cf.x - f.x;
-                    const dy = cf.y - f.y;
-                    return Math.sqrt(dx * dx + dy * dy) < 200;
+                    // Use Phaser's optimized distance calculation
+                    return Phaser.Math.Distance.Between(cf.x, cf.y, f.x, f.y) < 200;
                 });
 
                 cf.update(nearbyZooplankton, predatorsNearby);
@@ -967,92 +1007,130 @@ export class GameScene extends Phaser.Scene {
             }
         });
 
-        // Update baitfish clouds (old system)
-        const newCloudsFromSplits = [];
-        this.baitfishClouds = this.baitfishClouds.filter(cloud => {
-            if (cloud.visible) {
-                const newCloud = cloud.update(this.fishes, this.zooplankton);
-                // If cloud split, add the new cloud to our collection
-                if (newCloud) {
-                    newCloudsFromSplits.push(newCloud);
-                }
-                return true;
-            } else {
-                cloud.destroy();
-                return false;
-            }
-        });
-        // Add any new clouds created by splitting
-        this.baitfishClouds.push(...newCloudsFromSplits);
-
-        // Merge overlapping clouds of the same species
-        for (let i = 0; i < this.baitfishClouds.length; i++) {
-            const cloudA = this.baitfishClouds[i];
-            if (!cloudA.visible) continue;
-
-            for (let j = i + 1; j < this.baitfishClouds.length; j++) {
-                const cloudB = this.baitfishClouds[j];
-                if (!cloudB.visible) continue;
-
-                // Allow cross-species schooling (except sculpin - they're solitary)
-                // Sculpin won't merge with anything, and nothing merges with sculpin
-                if (cloudA.speciesType === 'sculpin' || cloudB.speciesType === 'sculpin') continue;
-
-                // Check if clouds are overlapping (within 1.5x cloud radius)
-                // Use worldX for proper distance calculation across scrolling world
-                const dx = cloudA.worldX - cloudB.worldX;
-                const dy = cloudA.centerY - cloudB.centerY;
-                const distance = Math.sqrt(dx * dx + dy * dy);
-                const mergeDistance = GameConfig.BAITFISH_CLOUD_RADIUS * 1.5;
-
-                if (distance < mergeDistance) {
-                    // Merge cloudB into cloudA
-                    cloudA.mergeWith(cloudB);
-                    // cloudB is now invisible and will be removed next frame
-                }
-            }
-        }
+        // OLD BAITFISH CLOUD SYSTEM COMPLETELY REMOVED (was lines 983-1072)
+        // Now using unified Fish-based schools with Boids behavior
 
         // Update school centers first (they drift/wander like BaitfishCloud)
         this.schools.forEach(school => {
             school.age++;
 
-            // More active wandering - increased frequency and magnitude
-            if (Math.random() < 0.08) { // 8% chance per frame (more frequent)
-                school.velocity.x += Utils.randomBetween(-0.6, 0.6); // Larger changes
-                school.velocity.y += Utils.randomBetween(-0.3, 0.3);
+            // Track zooplankton in vicinity of school (MUCH larger radius to detect food at bottom)
+            const zooplanktonSearchRadius = 300; // Pixels - can detect food from surface to bottom
+            const nearbyZooplankton = (this.zooplankton || []).filter(zp => {
+                if (!zp.visible || zp.consumed) return false;
+                // Use Phaser's optimized distance calculation
+                const dist = Phaser.Math.Distance.Between(zp.x, zp.y, school.centerWorldX, school.centerY);
+                return dist < zooplanktonSearchRadius;
+            });
+
+            // Initialize food tracking if not present
+            if (school.nearbyFoodCount === undefined) {
+                school.nearbyFoodCount = nearbyZooplankton.length;
+                school.lowFoodTimer = 0;
             }
 
-            // Add constant gentle drift to prevent stagnation
-            school.velocity.x += Utils.randomBetween(-0.05, 0.05);
-            school.velocity.y += Utils.randomBetween(-0.02, 0.02);
+            // Update food count
+            school.nearbyFoodCount = nearbyZooplankton.length;
 
-            // Reduced velocity decay (keeps momentum longer)
-            school.velocity.x *= 0.99; // Was 0.98
-            school.velocity.y *= 0.99;
+            // If food is depleted, start migration behavior
+            const FOOD_DEPLETED_THRESHOLD = 5; // Less than 5 zooplankton = depleted
+            const MIGRATION_TRIGGER_TIME = 600; // 10 seconds of low food triggers migration (was 3 seconds)
 
-            // Clamp velocity (allow faster horizontal movement)
-            school.velocity.x = Math.max(-2.0, Math.min(2.0, school.velocity.x)); // Was -1.5 to 1.5
-            school.velocity.y = Math.max(-1.0, Math.min(1.0, school.velocity.y)); // Was -0.8 to 0.8
+            if (school.nearbyFoodCount < FOOD_DEPLETED_THRESHOLD) {
+                school.lowFoodTimer++;
+
+                // After prolonged low food, trigger migration away from screen
+                if (school.lowFoodTimer > MIGRATION_TRIGGER_TIME && !school.migrating) {
+                    school.migrating = true;
+                    // Pick direction to migrate (away from center toward edge)
+                    // Use CURRENT canvas width (handles window resize)
+                    const screenCenter = this.scale.width / 2;
+                    school.migrationDirection = school.centerWorldX > screenCenter ? 1 : -1;
+                    console.log(`🌊 School ${school.id} food depleted - migrating ${school.migrationDirection > 0 ? 'right' : 'left'}`);
+                }
+            } else {
+                // Food available, reset migration
+                school.lowFoodTimer = Math.max(0, school.lowFoodTimer - 1);
+                if (school.migrating && school.nearbyFoodCount > FOOD_DEPLETED_THRESHOLD * 2) {
+                    school.migrating = false;
+                    console.log(`🌊 School ${school.id} found food - stopping migration`);
+                }
+            }
+
+            // FOOD-SEEKING BEHAVIOR: Pull school center toward zooplankton clusters
+            if (!school.migrating && nearbyZooplankton.length > 0) {
+                // Find center of mass of nearby zooplankton
+                let avgZooplanktonX = 0;
+                let avgZooplanktonY = 0;
+                nearbyZooplankton.forEach(zp => {
+                    avgZooplanktonX += zp.worldX;
+                    avgZooplanktonY += zp.y;
+                });
+                avgZooplanktonX /= nearbyZooplankton.length;
+                avgZooplanktonY /= nearbyZooplankton.length;
+
+                // Pull school center toward food (STRONG attraction)
+                const dx = avgZooplanktonX - school.centerWorldX;
+                const dy = avgZooplanktonY - school.centerY;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                if (dist > 0) {
+                    // Strong food attraction for school center (0.4 = very motivated to reach food)
+                    school.velocity.x += (dx / dist) * 0.4;
+                    school.velocity.y += (dy / dist) * 0.4;
+                }
+            }
+
+            // Migration behavior - steady movement toward edge
+            if (school.migrating) {
+                school.velocity.x += school.migrationDirection * 0.15; // Steady push toward edge
+                // Still allow vertical movement when migrating (for navigating obstacles)
+                if (Math.random() < 0.05) {
+                    school.velocity.y += Utils.randomBetween(-0.2, 0.2);
+                }
+            } else {
+                // Normal wandering behavior (reduced when food-seeking is active)
+                // More active wandering - increased frequency and magnitude
+                if (Math.random() < 0.08) { // 8% chance per frame (more frequent)
+                    school.velocity.x += Utils.randomBetween(-0.3, 0.3); // Reduced from 0.6 so food-seeking dominates
+                    school.velocity.y += Utils.randomBetween(-0.15, 0.15); // Reduced from 0.3
+                }
+
+                // Add constant gentle drift to prevent stagnation
+                school.velocity.x += Utils.randomBetween(-0.05, 0.05);
+                school.velocity.y += Utils.randomBetween(-0.02, 0.02);
+            }
+
+            // Minimal velocity decay when seeking food (maintains diving momentum)
+            const hasFood = !school.migrating && nearbyZooplankton.length > 0;
+            const velocityDecay = hasFood ? 0.98 : 0.99; // Less decay when actively seeking food
+            school.velocity.x *= velocityDecay;
+            school.velocity.y *= velocityDecay;
+
+            // Clamp velocity (MUCH faster vertical movement when seeking food)
+            const maxVelX = school.migrating ? 3.0 : 2.0;
+            // Allow VERY fast vertical movement when seeking food (not migrating)
+            const maxVelY = school.migrating ? 1.0 : 5.0; // Can dive FAST to reach zooplankton (was 2.0)
+            school.velocity.x = Math.max(-maxVelX, Math.min(maxVelX, school.velocity.x));
+            school.velocity.y = Math.max(-maxVelY, Math.min(maxVelY, school.velocity.y));
 
             // Update center position
             school.centerWorldX += school.velocity.x;
             school.centerY += school.velocity.y;
 
-            // Keep school center in bounds
-            const depthScale = this.sonarDisplay ? this.sonarDisplay.getDepthScale() : GameConfig.DEPTH_SCALE;
-            const bottomDepth = this.maxDepth || GameConfig.MAX_DEPTH;
-            const minY = 20; // Min 20px from surface for school center
-            const maxY = (bottomDepth - 5) * depthScale;
-            school.centerY = Math.max(minY, Math.min(maxY, school.centerY));
+            // NOTE: School center is NOT constrained - individual baitfish enforce their own boundaries
+            // This allows the school center to move freely while fish physically stay in water
+            // If the center tries to go above surface, fish will cluster below it naturally
         });
 
         // Render school fog and count labels BEFORE individual fish
         this.renderSchoolEffects();
 
-        // Update baitfish schools (new unified Fish with Boids schooling)
+        // Update baitfish schools (BaitfishSprite with Boids schooling)
+        // BaitfishSprite.preUpdate() is called automatically by Phaser
         this.baitfishSchools = this.baitfishSchools.filter(fish => {
-            if (fish.model.visible && !fish.model.consumed) {
+            // BaitfishSprite IS the model (no .model wrapper needed)
+            if (fish.visible && !fish.consumed) {
                 // Find this fish's school center
                 const school = this.schools.find(s => s.id === fish.schoolId);
                 fish.schoolCenter = school ? {
@@ -1060,9 +1138,7 @@ export class GameScene extends Phaser.Scene {
                     y: school.centerY
                 } : null;
 
-                // Pass all baitfish schools so each fish can find neighbors for Boids
-                // Also pass zooplankton so baitfish can feed on them
-                fish.update(this.lure, this.baitfishSchools, this.zooplankton || []);
+                // Boids behavior happens in school update below
                 return true;
             } else {
                 fish.destroy();
@@ -1070,53 +1146,260 @@ export class GameScene extends Phaser.Scene {
             }
         });
 
-        // Clean up consumed fish from school.members arrays
+        // IMPORTANT: Clean up consumed/inactive fish from school.members arrays FIRST
         this.schools.forEach(school => {
-            school.members = school.members.filter(fish => fish.model.visible && !fish.model.consumed);
+            // Filter out consumed/invisible/inactive fish (BaitfishSprite IS the model)
+            school.members = school.members.filter(fish => fish.visible && fish.active && !fish.consumed);
 
-            // Check for stragglers - fish that have strayed too far from school center
-            // Calculate actual school center from member positions
-            if (school.members.length > 0) {
-                let centerX = 0, centerY = 0;
-                school.members.forEach(fish => {
-                    centerX += fish.model.x;
-                    centerY += fish.model.y;
-                });
-                centerX /= school.members.length;
-                centerY /= school.members.length;
-
-                // Remove stragglers (allow 2x cloud radius for flexibility)
-                const maxStrayDistance = GameConfig.BAITFISH_CLOUD_RADIUS * 2;
-                school.members = school.members.filter(fish => {
-                    const dx = fish.model.x - centerX;
-                    const dy = fish.model.y - centerY;
-                    const distance = Math.sqrt(dx * dx + dy * dy);
-
-                    if (distance > maxStrayDistance) {
-                        // Fish strayed too far - remove from school
-                        fish.schoolId = null;
-                        console.log(`🐟 Straggler removed from school (${distance.toFixed(0)}px from center)`);
-                        return false;
-                    }
-                    return true;
-                });
-            }
+            // Then remove duplicates using Set (ensures each fish only appears once)
+            const uniqueFish = new Set(school.members);
+            school.members = Array.from(uniqueFish);
         });
 
-        // Update fish (predators)
-        // Create adapted schools that look like clouds to FishAI
-        const adaptedSchools = this.getAdaptedSchoolsForAI();
-        // Combine old clouds (if any remain) with new adapted schools
-        const allBaitfishTargets = [...this.baitfishClouds, ...adaptedSchools];
-
-        this.fishes.forEach((fish, index) => {
-            fish.update(this.lure, this.fishes, allBaitfishTargets);
-
-            // Remove fish that are no longer visible or caught
-            if (!fish.visible) {
-                fish.destroy();
-                this.fishes.splice(index, 1);
+        // THEN clean up empty schools (all fish have been consumed or despawned)
+        const schoolCountBefore = this.schools.length;
+        this.schools = this.schools.filter(school => {
+            if (school.members.length === 0) {
+                console.log(`🌊 School ${school.id} disbanded (no fish remaining)`);
+                return false; // Remove empty school
             }
+            return true; // Keep school
+        });
+        const schoolCountAfter = this.schools.length;
+
+        // DEBUG: Log when schools are removed
+        if (schoolCountBefore > schoolCountAfter) {
+            console.log(`🗑️ Removed ${schoolCountBefore - schoolCountAfter} empty schools (${schoolCountAfter} remaining)`);
+        }
+
+        // Update Boids behavior for each remaining school
+        this.schools.forEach(school => {
+            // Check for nearby predators with gradual panic/calm system
+            const predatorDetectionRadius = 150; // Reduced from 200 - how far baitfish can sense predators
+            const dangerThreshold = 75; // Close predators trigger stronger panic
+
+            let nearestPredatorDist = Infinity;
+            const nearbyPredators = this.fishes.filter(predator => {
+                if (!predator.visible || !predator.active) return false;
+                const dist = Phaser.Math.Distance.Between(
+                    school.centerWorldX,
+                    school.centerY,
+                    predator.worldX,
+                    predator.y
+                );
+                if (dist < nearestPredatorDist) nearestPredatorDist = dist;
+                return dist < predatorDetectionRadius;
+            });
+
+            // Gradual panic/calm system using scaredLevel
+            // scaredLevel: 0 (calm) to 100 (max panic)
+            if (!school.scaredLevel) school.scaredLevel = 0;
+
+            if (nearbyPredators.length > 0) {
+                // Predator nearby - increase scared level
+                const dangerIntensity = nearestPredatorDist < dangerThreshold ? 3.0 : 1.5;
+                school.scaredLevel = Math.min(100, school.scaredLevel + dangerIntensity);
+            } else {
+                // No predators - calm down QUICKLY (4x faster than panic buildup)
+                school.scaredLevel = Math.max(0, school.scaredLevel - 6.0);
+            }
+
+            // Only panic when scared level is HIGH (> 30)
+            const isPanicking = school.scaredLevel > 30;
+
+            // Apply Boids schooling behavior to each fish
+            school.members.forEach(fish => {
+                // Update individual fish panic state and scared level
+                fish.schooling.isPanicking = isPanicking;
+                fish.schooling.scaredLevel = school.scaredLevel;
+
+                // Calculate Boids forces
+                let separationX = 0, separationY = 0;
+                let cohesionX = 0, cohesionY = 0;
+                let alignmentX = 0, alignmentY = 0;
+                let foodAttractionX = 0, foodAttractionY = 0;
+                let neighborCount = 0;
+
+                // Adjust parameters based on panic state
+                // Relaxed: spread out, loose cohesion
+                // Panicking: tight ball, strong cohesion
+                const separationRadius = isPanicking ? 8 : 25; // Tighter when panicking, spread when relaxed
+                const neighborRadius = isPanicking ? 40 : 80; // Closer awareness when panicking
+
+                // FOOD-SEEKING BEHAVIOR: Find nearby zooplankton
+                // Only disable food seeking when in EXTREME panic (scared > 70)
+                const canSeekFood = school.scaredLevel < 70;
+
+                if (canSeekFood && this.zooplankton && this.zooplankton.length > 0) {
+                    const foodSearchRadius = 120; // Increased from 100 - how far baitfish can sense food
+                    let closestFood = null;
+                    let closestDist = Infinity;
+
+                    // Find closest zooplankton
+                    this.zooplankton.forEach(zp => {
+                        if (!zp.visible || zp.consumed) return;
+
+                        const dist = Phaser.Math.Distance.Between(
+                            fish.worldX, fish.y,
+                            zp.worldX, zp.y
+                        );
+
+                        if (dist < foodSearchRadius && dist < closestDist) {
+                            closestFood = zp;
+                            closestDist = dist;
+                        }
+                    });
+
+                    // If food found, add DOMINANT attraction force
+                    if (closestFood) {
+                        const dx = closestFood.worldX - fish.worldX;
+                        const dy = closestFood.y - fish.y;
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+
+                        if (dist > 0) {
+                            // EXTREMELY strong food attraction - dominates other forces
+                            // Scale based on how calm they are (0.6 when calm, 0.3 when mildly scared)
+                            const foodStrength = 0.6 - (school.scaredLevel / 100) * 0.3;
+                            foodAttractionX = (dx / dist) * foodStrength;
+                            foodAttractionY = (dy / dist) * foodStrength;
+
+                            // Check if close enough to consume (increased to 12 pixels for easier consumption)
+                            // Add cooldown check - fish can only eat once per second
+                            const currentTime = Date.now();
+                            const timeSinceLastFeed = currentTime - fish.lastFeedTime;
+                            const canFeed = timeSinceLastFeed >= fish.feedCooldown;
+
+                            if (dist < 12 && !closestFood.consumed && canFeed) {
+                                closestFood.consume();
+                                fish.lastFeedTime = currentTime; // Record feeding time
+                                // Baitfish "ate" the zooplankton - could track nutrition here later
+                            }
+                        }
+                    }
+                }
+
+                // Check all other fish in the same school
+                school.members.forEach(other => {
+                    if (other === fish) return;
+
+                    const dx = other.worldX - fish.worldX;
+                    const dy = other.y - fish.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+
+                    // Separation: avoid crowding neighbors
+                    if (distance < separationRadius && distance > 0) {
+                        const strength = (separationRadius - distance) / separationRadius;
+                        separationX -= (dx / distance) * strength * 0.5;
+                        separationY -= (dy / distance) * strength * 0.5;
+                    }
+
+                    // Cohesion & Alignment: stay with neighbors
+                    if (distance < neighborRadius && distance > 0) {
+                        cohesionX += other.worldX;
+                        cohesionY += other.y;
+                        alignmentX += other.velocity.x;
+                        alignmentY += other.velocity.y;
+                        neighborCount++;
+                    }
+                });
+
+                // Apply cohesion (move toward average position of neighbors)
+                if (neighborCount > 0) {
+                    const avgNeighborX = cohesionX / neighborCount;
+                    const avgNeighborY = cohesionY / neighborCount;
+
+                    // Adjust cohesion strength based on panic state
+                    // Panicking: strong cohesion (0.02) = tight ball
+                    // Relaxed: weak cohesion (0.005) = loose spread
+                    const cohesionStrength = isPanicking ? 0.02 : 0.005;
+                    cohesionX = (avgNeighborX - fish.worldX) * cohesionStrength;
+                    cohesionY = (avgNeighborY - fish.y) * cohesionStrength;
+
+                    // Alignment (match velocity with neighbors)
+                    const avgVelX = alignmentX / neighborCount;
+                    const avgVelY = alignmentY / neighborCount;
+                    const alignmentStrength = isPanicking ? 0.08 : 0.03;
+                    alignmentX = (avgVelX - fish.velocity.x) * alignmentStrength;
+                    alignmentY = (avgVelY - fish.velocity.y) * alignmentStrength;
+                } else {
+                    cohesionX = 0;
+                    cohesionY = 0;
+                    alignmentX = 0;
+                    alignmentY = 0;
+                }
+
+                // Apply Boids forces to fish (including food attraction)
+                fish.applyBoidsMovement(
+                    { x: separationX, y: separationY },
+                    { x: cohesionX, y: cohesionY },
+                    { x: alignmentX, y: alignmentY },
+                    { x: foodAttractionX, y: foodAttractionY }
+                );
+            });
+        });
+
+        // Merge overlapping schools (only check every 180 frames / ~3 seconds to reduce overhead)
+        // Check each pair of schools to see if they overlap
+        const shouldCheckMerge = this.gameTime % 180 === 0;
+        const mergeRadius = GameConfig.BAITFISH_CLOUD_RADIUS * 1.5; // Merge if centers within 1.5x cloud radius
+        const schoolsToRemove = new Set();
+
+        if (shouldCheckMerge) {
+            for (let i = 0; i < this.schools.length; i++) {
+            if (schoolsToRemove.has(i)) continue;
+
+            const schoolA = this.schools[i];
+            if (schoolA.members.length === 0) continue;
+
+            for (let j = i + 1; j < this.schools.length; j++) {
+                if (schoolsToRemove.has(j)) continue;
+
+                const schoolB = this.schools[j];
+                if (schoolB.members.length === 0) continue;
+
+                // Calculate distance between school centers
+                // Use Phaser's optimized distance calculation
+                const distance = Phaser.Math.Distance.Between(
+                    schoolA.centerWorldX, schoolA.centerY,
+                    schoolB.centerWorldX, schoolB.centerY
+                );
+
+                if (distance < mergeRadius) {
+                    // Merge schoolB into schoolA (prevent duplicates)
+                    let movedCount = 0;
+                    schoolB.members.forEach(fish => {
+                        // Only add if not already in schoolA
+                        if (!schoolA.members.includes(fish)) {
+                            fish.schoolId = schoolA.id;
+                            schoolA.members.push(fish);
+                            movedCount++;
+                        }
+                    });
+
+                    console.log(`🌊 Schools merged: ${movedCount} fish from school ${schoolB.id} joined school ${schoolA.id} (distance: ${distance.toFixed(0)}px)`);
+
+                    // Mark schoolB for removal
+                    schoolsToRemove.add(j);
+                }
+            }
+            }
+
+            // Remove merged schools
+            if (schoolsToRemove.size > 0) {
+                this.schools = this.schools.filter((school, index) => !schoolsToRemove.has(index));
+            }
+        }
+
+        // Update fish (predators)
+        // FishSprite.preUpdate() is called automatically by Phaser Group (runChildUpdate: true)
+        // We just need to clean up inactive fish from the legacy array
+        this.fishes = this.fishes.filter(fish => {
+            // Remove fish that are no longer active or visible
+            if (!fish.active || !fish.visible) {
+                // Fish is already destroyed or deactivated
+                return false;
+            }
+            return true; // Keep fish
         });
     }
 
@@ -1125,10 +1408,10 @@ export class GameScene extends Phaser.Scene {
      * @param {number} time - Current game time
      */
     updateFishFight(time) {
-        const reelPressed = this.inputSystem.handleFishFightInput();
+        const reelInput = this.inputSystem.handleFishFightInput(); // Analog 0-1 from R2 trigger
 
         // Update the fight
-        this.currentFight.update(time, reelPressed);
+        this.currentFight.update(time, reelInput);
 
         // Check if fight is still active
         if (!this.currentFight || !this.currentFight.active) {
@@ -1272,47 +1555,6 @@ export class GameScene extends Phaser.Scene {
             console.log(`Pike rush scared ${scaredCount} other fish away!`);
         }
 
-        // PUSH BAITFISH CLOUDS AWAY - Apply repulsion force
-        this.baitfishClouds.forEach(cloud => {
-            if (!cloud.visible) {return;}
-
-            // Find closest pike to this cloud
-            let closestPike = null;
-            let minDistance = Infinity;
-
-            pike.forEach(rushingPike => {
-                const dx = cloud.centerX - rushingPike.x;
-                const dy = cloud.centerY - rushingPike.y;
-                const dist = Math.sqrt(dx * dx + dy * dy);
-
-                if (dist < minDistance) {
-                    minDistance = dist;
-                    closestPike = rushingPike;
-                }
-            });
-
-            // Apply repulsion if pike is close enough (within 200 pixels)
-            if (closestPike && minDistance < 200) {
-                const dx = cloud.centerX - closestPike.x;
-                const dy = cloud.centerY - closestPike.y;
-                const dist = Math.sqrt(dx * dx + dy * dy);
-
-                if (dist > 0) {
-                    // Push away from pike - stronger when closer
-                    const repulsionStrength = 1.5 * (1 - minDistance / 200);
-                    cloud.velocity.x += (dx / dist) * repulsionStrength;
-                    cloud.velocity.y += (dy / dist) * repulsionStrength;
-
-                    // Cap velocity to prevent fleeing off screen
-                    const maxVelocity = 2.0;
-                    const currentSpeed = Math.sqrt(cloud.velocity.x ** 2 + cloud.velocity.y ** 2);
-                    if (currentSpeed > maxVelocity) {
-                        cloud.velocity.x = (cloud.velocity.x / currentSpeed) * maxVelocity;
-                        cloud.velocity.y = (cloud.velocity.y / currentSpeed) * maxVelocity;
-                    }
-                }
-            }
-        });
 
         // Make each pike attack once
         pike.forEach(fish => {
@@ -1380,10 +1622,11 @@ export class GameScene extends Phaser.Scene {
 
         this.controllerTestMode = true;
 
-        // Create dark overlay
+        // Create dark overlay - reduced opacity to see game
+        // Use dynamic scale dimensions instead of hardcoded GameConfig values
         const overlay = this.add.graphics();
-        overlay.fillStyle(0x000000, 0.85);
-        overlay.fillRect(0, 0, GameConfig.CANVAS_WIDTH, GameConfig.CANVAS_HEIGHT);
+        overlay.fillStyle(0x000000, 0.4);
+        overlay.fillRect(0, 0, this.scale.width, this.scale.height);
         overlay.setDepth(2000);
 
         // Create test window
@@ -1395,7 +1638,7 @@ export class GameScene extends Phaser.Scene {
         windowBg.setDepth(2001);
 
         // Title
-        const title = this.add.text(GameConfig.CANVAS_WIDTH / 2, 64, 'CONTROLLER TEST', {
+        const title = this.add.text(this.scale.width / 2, 64, 'CONTROLLER TEST', {
             fontSize: '19px',
             fontFamily: 'Courier New',
             color: '#00aaff',
@@ -1405,7 +1648,7 @@ export class GameScene extends Phaser.Scene {
         title.setDepth(2002);
 
         // Instructions
-        const instructions = this.add.text(GameConfig.CANVAS_WIDTH / 2, 96, 'Press buttons on your controller to test', {
+        const instructions = this.add.text(this.scale.width / 2, 96, 'Press buttons on your controller to test', {
             fontSize: '11px',
             fontFamily: 'Courier New',
             color: '#888888'
@@ -1438,7 +1681,7 @@ export class GameScene extends Phaser.Scene {
         okButton.setDepth(2002);
         okButton.setInteractive(new Phaser.Geom.Rectangle(240, 376, 160, 40), Phaser.Geom.Rectangle.Contains);
 
-        const okText = this.add.text(GameConfig.CANVAS_WIDTH / 2, 396, 'OK', {
+        const okText = this.add.text(this.scale.width / 2, 396, 'OK', {
             fontSize: '16px',
             fontFamily: 'Courier New',
             color: '#ffffff',
@@ -1649,21 +1892,21 @@ export class GameScene extends Phaser.Scene {
             this.tackleBoxButtonStates.x = xButton.pressed;
         }
 
-        // Tab switching (except in reel tab where L/R switches sections)
-        if (this.tackleBoxTab !== 2) {
-            if (leftPressed) {
-                this.tackleBoxTab--;
-                if (this.tackleBoxTab < 0) {this.tackleBoxTab = 2;}
-            }
-            if (rightPressed) {
-                this.tackleBoxTab++;
-                if (this.tackleBoxTab > 2) {this.tackleBoxTab = 0;}
-            }
+        // NEW 4-COLUMN NAVIGATION
+        // Column switching with left/right
+        // 0=Lure, 1=LineType, 2=LineTest, 3=Reel
+        if (leftPressed) {
+            this.tackleBoxTab--;
+            if (this.tackleBoxTab < 0) {this.tackleBoxTab = 3;}
+        }
+        if (rightPressed) {
+            this.tackleBoxTab++;
+            if (this.tackleBoxTab > 3) {this.tackleBoxTab = 0;}
         }
 
-        // Navigate within tab
+        // Navigate within column with up/down
         if (this.tackleBoxTab === 0) {
-            // LURE tab
+            // COLUMN 1: LURE WEIGHT
             const maxIndex = this.tackleBoxGear.lureWeights.length - 1;
             if (upPressed) {
                 this.tackleBoxSelected.lure--;
@@ -1679,51 +1922,40 @@ export class GameScene extends Phaser.Scene {
                 console.log(`🎣 Lure weight changed to ${selected.label}`);
             }
         } else if (this.tackleBoxTab === 1) {
-            // LINE tab - has two sections: line type and line test strength
-            // Use left/right to switch between sections (overrides tab switching in this tab)
-            if (leftPressed) {
-                this.lineTabFocus = 0; // Focus on line type
+            // COLUMN 2: LINE TYPE
+            const maxIndex = this.tackleBoxGear.lineTypes.length - 1;
+            if (upPressed) {
+                this.tackleBoxSelected.line--;
+                if (this.tackleBoxSelected.line < 0) {this.tackleBoxSelected.line = maxIndex;}
             }
-            if (rightPressed) {
-                this.lineTabFocus = 1; // Focus on line test strength
+            if (downPressed) {
+                this.tackleBoxSelected.line++;
+                if (this.tackleBoxSelected.line > maxIndex) {this.tackleBoxSelected.line = 0;}
             }
-
-            if (this.lineTabFocus === 0) {
-                // Navigating line type
-                const maxIndex = this.tackleBoxGear.lineTypes.length - 1;
-                if (upPressed) {
-                    this.tackleBoxSelected.line--;
-                    if (this.tackleBoxSelected.line < 0) {this.tackleBoxSelected.line = maxIndex;}
-                }
-                if (downPressed) {
-                    this.tackleBoxSelected.line++;
-                    if (this.tackleBoxSelected.line > maxIndex) {this.tackleBoxSelected.line = 0;}
-                }
-                if (confirmPressed) {
-                    const selected = this.tackleBoxGear.lineTypes[this.tackleBoxSelected.line];
-                    this.fishingLine.setLineType(selected.value, 'neon-green');
-                    this.fishingLineModel.setLineType(selected.value);
-                    console.log(`🧵 Line type changed to ${selected.label}`);
-                }
-            } else if (this.lineTabFocus === 1) {
-                // Navigating line test strength
-                const maxIndex = this.tackleBoxGear.lineTestStrengths.length - 1;
-                if (upPressed) {
-                    this.tackleBoxSelected.lineTest--;
-                    if (this.tackleBoxSelected.lineTest < 0) {this.tackleBoxSelected.lineTest = maxIndex;}
-                }
-                if (downPressed) {
-                    this.tackleBoxSelected.lineTest++;
-                    if (this.tackleBoxSelected.lineTest > maxIndex) {this.tackleBoxSelected.lineTest = 0;}
-                }
-                if (confirmPressed) {
-                    const selected = this.tackleBoxGear.lineTestStrengths[this.tackleBoxSelected.lineTest];
-                    this.reelModel.setLineTestStrength(selected.value);
-                    console.log(`🧵 Line test changed to ${selected.label}`);
-                }
+            if (confirmPressed) {
+                const selected = this.tackleBoxGear.lineTypes[this.tackleBoxSelected.line];
+                this.fishingLine.setLineType(selected.value, 'neon-green');
+                this.fishingLineModel.setLineType(selected.value);
+                console.log(`🧵 Line type changed to ${selected.label}`);
             }
         } else if (this.tackleBoxTab === 2) {
-            // REEL tab - just reel type selection
+            // COLUMN 3: LINE TEST STRENGTH
+            const maxIndex = this.tackleBoxGear.lineTestStrengths.length - 1;
+            if (upPressed) {
+                this.tackleBoxSelected.lineTest--;
+                if (this.tackleBoxSelected.lineTest < 0) {this.tackleBoxSelected.lineTest = maxIndex;}
+            }
+            if (downPressed) {
+                this.tackleBoxSelected.lineTest++;
+                if (this.tackleBoxSelected.lineTest > maxIndex) {this.tackleBoxSelected.lineTest = 0;}
+            }
+            if (confirmPressed) {
+                const selected = this.tackleBoxGear.lineTestStrengths[this.tackleBoxSelected.lineTest];
+                this.reelModel.setLineTestStrength(selected.value);
+                console.log(`🧵 Line test changed to ${selected.label}`);
+            }
+        } else if (this.tackleBoxTab === 3) {
+            // COLUMN 4: REEL TYPE
             const maxIndex = this.tackleBoxGear.reelTypes.length - 1;
             if (upPressed) {
                 this.tackleBoxSelected.reel--;
@@ -1752,15 +1984,16 @@ export class GameScene extends Phaser.Scene {
 
         this.tackleBoxGraphics.clear();
 
-        // Semi-transparent overlay
-        this.tackleBoxGraphics.fillStyle(0x000000, 0.9);
-        this.tackleBoxGraphics.fillRect(0, 0, GameConfig.CANVAS_WIDTH, GameConfig.CANVAS_HEIGHT);
+        // Semi-transparent overlay - reduced opacity to see game area
+        // Use dynamic scale dimensions instead of hardcoded GameConfig values
+        this.tackleBoxGraphics.fillStyle(0x000000, 0.4);
+        this.tackleBoxGraphics.fillRect(0, 0, this.scale.width, this.scale.height);
 
-        // Panel
-        const panelWidth = 600;
-        const panelHeight = 400;
-        const panelX = (GameConfig.CANVAS_WIDTH - panelWidth) / 2;
-        const panelY = (GameConfig.CANVAS_HEIGHT - panelHeight) / 2;
+        // Panel - larger size to fit all content, center based on actual canvas size
+        const panelWidth = 900;
+        const panelHeight = 520;
+        const panelX = (this.scale.width - panelWidth) / 2;
+        const panelY = (this.scale.height - panelHeight) / 2;
 
         // Panel background
         this.tackleBoxGraphics.fillStyle(0x1a2a1a, 1.0);
@@ -1781,231 +2014,148 @@ export class GameScene extends Phaser.Scene {
         titleText.setDepth(2001);
         this.time.delayedCall(16, () => titleText.destroy());
 
-        // Tab headers
-        const tabs = ['LURE', 'LINE', 'REEL'];
-        const tabWidth = 180;
-        const tabY = panelY + 60;
+        // Four column layout - no tabs needed
+        const col1X = panelX + 30;
+        const col2X = panelX + 240;
+        const col3X = panelX + 450;
+        const col4X = panelX + 660;
+        const contentY = panelY + 65;
 
-        tabs.forEach((tab, index) => {
-            const tabX = panelX + 50 + index * (tabWidth + 20);
-            const isActive = index === this.tackleBoxTab;
+        // COLUMN 1: LURE WEIGHT
+        const lureHeaderText = this.add.text(col1X, contentY, 'LURE WEIGHT', {
+            fontSize: '14px',
+            fontFamily: 'Courier New',
+            color: this.tackleBoxTab === 0 ? '#00ffff' : '#ffaa00',
+            fontStyle: 'bold'
+        });
+        lureHeaderText.setDepth(2001);
+        this.time.delayedCall(16, () => lureHeaderText.destroy());
 
-            if (isActive) {
-                this.tackleBoxGraphics.fillStyle(0x3a5a3a, 1.0);
-                this.tackleBoxGraphics.fillRoundedRect(tabX, tabY, tabWidth, 40, 6);
-                this.tackleBoxGraphics.lineStyle(2, 0x00ffff, 1.0);
-                this.tackleBoxGraphics.strokeRoundedRect(tabX, tabY, tabWidth, 40, 6);
-            }
+        this.tackleBoxGear.lureWeights.forEach((lure, index) => {
+            const itemY = contentY + 30 + index * 30;
+            const isSelected = this.tackleBoxTab === 0 && index === this.tackleBoxSelected.lure;
+            const isCurrent = this.lure.weight === lure.value;
 
-            const tabText = this.add.text(tabX + tabWidth / 2, tabY + 20, tab, {
-                fontSize: isActive ? '16px' : '14px',
+            const labelText = this.add.text(col1X, itemY, lure.label, {
+                fontSize: isSelected ? '14px' : '12px',
                 fontFamily: 'Courier New',
-                color: isActive ? '#00ffff' : '#88aa88',
-                fontStyle: isActive ? 'bold' : 'normal'
+                color: isSelected ? '#00ffff' : (isCurrent ? '#ffff00' : '#00ff00'),
+                fontStyle: isSelected ? 'bold' : 'normal'
             });
-            tabText.setOrigin(0.5, 0.5);
-            tabText.setDepth(2001);
-            this.time.delayedCall(16, () => tabText.destroy());
+            labelText.setDepth(2001);
+            this.time.delayedCall(16, () => labelText.destroy());
+
+            const descText = this.add.text(col1X, itemY + 13, lure.desc, {
+                fontSize: '9px',
+                fontFamily: 'Courier New',
+                color: '#888888'
+            });
+            descText.setDepth(2001);
+            this.time.delayedCall(16, () => descText.destroy());
         });
 
-        // Content area
-        const contentY = panelY + 130;
-        const contentX = panelX + 60;
+        // COLUMN 2: LINE TYPE
+        const lineTypeHeaderText = this.add.text(col2X, contentY, 'LINE TYPE', {
+            fontSize: '14px',
+            fontFamily: 'Courier New',
+            color: this.tackleBoxTab === 1 ? '#00ffff' : '#ffaa00',
+            fontStyle: 'bold'
+        });
+        lineTypeHeaderText.setDepth(2001);
+        this.time.delayedCall(16, () => lineTypeHeaderText.destroy());
 
-        if (this.tackleBoxTab === 0) {
-            // LURE tab
-            const titleText = this.add.text(panelX + panelWidth / 2, contentY - 20, 'SELECT LURE WEIGHT', {
-                fontSize: '14px',
+        this.tackleBoxGear.lineTypes.forEach((line, index) => {
+            const itemY = contentY + 30 + index * 28;
+            const isSelected = this.tackleBoxTab === 1 && index === this.tackleBoxSelected.line;
+            const isCurrent = this.fishingLine.lineType === line.value;
+
+            const labelText = this.add.text(col2X, itemY, line.label, {
+                fontSize: isSelected ? '13px' : '11px',
                 fontFamily: 'Courier New',
-                color: '#cccccc'
+                color: isSelected ? '#00ffff' : (isCurrent ? '#ffff00' : '#00ff00'),
+                fontStyle: isSelected ? 'bold' : 'normal'
             });
-            titleText.setOrigin(0.5, 0.5);
-            titleText.setDepth(2001);
-            this.time.delayedCall(16, () => titleText.destroy());
+            labelText.setDepth(2001);
+            this.time.delayedCall(16, () => labelText.destroy());
 
-            this.tackleBoxGear.lureWeights.forEach((lure, index) => {
-                const itemY = contentY + index * 35;
-                const isSelected = index === this.tackleBoxSelected.lure;
-                const isCurrent = this.lure.weight === lure.value;
-
-                const labelText = this.add.text(contentX, itemY, lure.label, {
-                    fontSize: isSelected ? '16px' : '14px',
-                    fontFamily: 'Courier New',
-                    color: isSelected ? '#00ffff' : '#00ff00',
-                    fontStyle: isSelected ? 'bold' : 'normal'
-                });
-                labelText.setDepth(2001);
-                this.time.delayedCall(16, () => labelText.destroy());
-
-                const descText = this.add.text(contentX + 150, itemY, lure.desc, {
-                    fontSize: '12px',
-                    fontFamily: 'Courier New',
-                    color: isSelected ? '#cccccc' : '#888888'
-                });
-                descText.setDepth(2001);
-                this.time.delayedCall(16, () => descText.destroy());
-
-                if (isCurrent) {
-                    const currentText = this.add.text(contentX + 400, itemY, '← CURRENT', {
-                        fontSize: '12px',
-                        fontFamily: 'Courier New',
-                        color: '#ffff00'
-                    });
-                    currentText.setDepth(2001);
-                    this.time.delayedCall(16, () => currentText.destroy());
-                }
-            });
-        } else if (this.tackleBoxTab === 1) {
-            // LINE tab - shows line type and line test strength
-            const titleText = this.add.text(panelX + panelWidth / 2, contentY - 20, 'SELECT LINE TYPE & TEST', {
-                fontSize: '14px',
+            const descText = this.add.text(col2X, itemY + 12, line.desc, {
+                fontSize: '9px',
                 fontFamily: 'Courier New',
-                color: '#cccccc'
+                color: '#888888'
             });
-            titleText.setOrigin(0.5, 0.5);
-            titleText.setDepth(2001);
-            this.time.delayedCall(16, () => titleText.destroy());
+            descText.setDepth(2001);
+            this.time.delayedCall(16, () => descText.destroy());
+        });
 
-            // Line Type Section
-            const lineTypeSectionY = contentY;
-            const lineTypeSectionActive = this.lineTabFocus === 0;
-            const lineTypeHeaderText = this.add.text(contentX, lineTypeSectionY, lineTypeSectionActive ? '→ LINE TYPE:' : 'LINE TYPE:', {
-                fontSize: '12px',
+        // COLUMN 3: LINE TEST STRENGTH
+        const lineTestHeaderText = this.add.text(col3X, contentY, 'LINE TEST', {
+            fontSize: '14px',
+            fontFamily: 'Courier New',
+            color: this.tackleBoxTab === 2 ? '#00ffff' : '#ffaa00',
+            fontStyle: 'bold'
+        });
+        lineTestHeaderText.setDepth(2001);
+        this.time.delayedCall(16, () => lineTestHeaderText.destroy());
+
+        this.tackleBoxGear.lineTestStrengths.forEach((lineTest, index) => {
+            const itemY = contentY + 30 + index * 22;
+            const isSelected = this.tackleBoxTab === 2 && index === this.tackleBoxSelected.lineTest;
+            const isCurrent = this.reelModel.lineTestStrength === lineTest.value;
+
+            const labelText = this.add.text(col3X, itemY, lineTest.label, {
+                fontSize: isSelected ? '12px' : '11px',
                 fontFamily: 'Courier New',
-                color: lineTypeSectionActive ? '#00ffff' : '#ffaa00',
-                fontStyle: 'bold'
+                color: isSelected ? '#00ffff' : (isCurrent ? '#ffff00' : '#00ff00'),
+                fontStyle: isSelected ? 'bold' : 'normal'
             });
-            lineTypeHeaderText.setDepth(2001);
-            this.time.delayedCall(16, () => lineTypeHeaderText.destroy());
+            labelText.setDepth(2001);
+            this.time.delayedCall(16, () => labelText.destroy());
 
-            this.tackleBoxGear.lineTypes.forEach((line, index) => {
-                const itemY = lineTypeSectionY + 25 + index * 30;
-                const isSelected = index === this.tackleBoxSelected.line;
-                const isCurrent = this.fishingLine.lineType === line.value;
-
-                const labelText = this.add.text(contentX + 10, itemY, line.label, {
-                    fontSize: isSelected ? '15px' : '13px',
-                    fontFamily: 'Courier New',
-                    color: isSelected ? '#00ffff' : '#00ff00',
-                    fontStyle: isSelected ? 'bold' : 'normal'
-                });
-                labelText.setDepth(2001);
-                this.time.delayedCall(16, () => labelText.destroy());
-
-                const descText = this.add.text(contentX + 160, itemY, line.desc, {
-                    fontSize: '11px',
-                    fontFamily: 'Courier New',
-                    color: isSelected ? '#cccccc' : '#888888'
-                });
-                descText.setDepth(2001);
-                this.time.delayedCall(16, () => descText.destroy());
-
-                if (isCurrent) {
-                    const currentText = this.add.text(contentX + 420, itemY, '← CURRENT', {
-                        fontSize: '11px',
-                        fontFamily: 'Courier New',
-                        color: '#ffff00'
-                    });
-                    currentText.setDepth(2001);
-                    this.time.delayedCall(16, () => currentText.destroy());
-                }
-            });
-
-            // Line Test Strength Section
-            const lineTestSectionY = contentY + 120;
-            const lineTestSectionActive = this.lineTabFocus === 1;
-            const lineTestHeaderText = this.add.text(contentX, lineTestSectionY, lineTestSectionActive ? '→ LINE TEST STRENGTH:' : 'LINE TEST STRENGTH:', {
-                fontSize: '12px',
+            const descText = this.add.text(col3X, itemY + 11, lineTest.desc, {
+                fontSize: '9px',
                 fontFamily: 'Courier New',
-                color: lineTestSectionActive ? '#00ffff' : '#ffaa00',
-                fontStyle: 'bold'
+                color: '#888888'
             });
-            lineTestHeaderText.setDepth(2001);
-            this.time.delayedCall(16, () => lineTestHeaderText.destroy());
+            descText.setDepth(2001);
+            this.time.delayedCall(16, () => descText.destroy());
+        });
 
-            this.tackleBoxGear.lineTestStrengths.forEach((lineTest, index) => {
-                const itemY = lineTestSectionY + 25 + index * 25;
-                const isSelected = index === this.tackleBoxSelected.lineTest;
-                const isCurrent = this.reelModel.lineTestStrength === lineTest.value;
+        // COLUMN 4: REEL TYPE
+        const reelHeaderText = this.add.text(col4X, contentY, 'REEL TYPE', {
+            fontSize: '14px',
+            fontFamily: 'Courier New',
+            color: this.tackleBoxTab === 3 ? '#00ffff' : '#ffaa00',
+            fontStyle: 'bold'
+        });
+        reelHeaderText.setDepth(2001);
+        this.time.delayedCall(16, () => reelHeaderText.destroy());
 
-                const labelText = this.add.text(contentX + 10, itemY, lineTest.label, {
-                    fontSize: isSelected ? '14px' : '12px',
-                    fontFamily: 'Courier New',
-                    color: isSelected ? '#00ffff' : '#00ff00',
-                    fontStyle: isSelected ? 'bold' : 'normal'
-                });
-                labelText.setDepth(2001);
-                this.time.delayedCall(16, () => labelText.destroy());
+        this.tackleBoxGear.reelTypes.forEach((reel, index) => {
+            const itemY = contentY + 30 + index * 35;
+            const isSelected = this.tackleBoxTab === 3 && index === this.tackleBoxSelected.reel;
+            const isCurrent = this.reelModel.reelType === reel.value;
 
-                const descText = this.add.text(contentX + 100, itemY, lineTest.desc, {
-                    fontSize: '10px',
-                    fontFamily: 'Courier New',
-                    color: isSelected ? '#cccccc' : '#888888'
-                });
-                descText.setDepth(2001);
-                this.time.delayedCall(16, () => descText.destroy());
-
-                if (isCurrent) {
-                    const currentText = this.add.text(contentX + 420, itemY, '← CURRENT', {
-                        fontSize: '10px',
-                        fontFamily: 'Courier New',
-                        color: '#ffff00'
-                    });
-                    currentText.setDepth(2001);
-                    this.time.delayedCall(16, () => currentText.destroy());
-                }
-            });
-        } else if (this.tackleBoxTab === 2) {
-            // REEL tab - just reel type selection
-            const titleText = this.add.text(panelX + panelWidth / 2, contentY - 20, 'SELECT REEL TYPE', {
-                fontSize: '14px',
+            const labelText = this.add.text(col4X, itemY, reel.label, {
+                fontSize: isSelected ? '14px' : '12px',
                 fontFamily: 'Courier New',
-                color: '#cccccc'
+                color: isSelected ? '#00ffff' : (isCurrent ? '#ffff00' : '#00ff00'),
+                fontStyle: isSelected ? 'bold' : 'normal'
             });
-            titleText.setOrigin(0.5, 0.5);
-            titleText.setDepth(2001);
-            this.time.delayedCall(16, () => titleText.destroy());
+            labelText.setDepth(2001);
+            this.time.delayedCall(16, () => labelText.destroy());
 
-            this.tackleBoxGear.reelTypes.forEach((reel, index) => {
-                const itemY = contentY + index * 40;
-                const isSelected = index === this.tackleBoxSelected.reel;
-                const isCurrent = this.reelModel.reelType === reel.value;
-
-                const labelText = this.add.text(contentX, itemY, reel.label, {
-                    fontSize: isSelected ? '16px' : '14px',
-                    fontFamily: 'Courier New',
-                    color: isSelected ? '#00ffff' : '#00ff00',
-                    fontStyle: isSelected ? 'bold' : 'normal'
-                });
-                labelText.setDepth(2001);
-                this.time.delayedCall(16, () => labelText.destroy());
-
-                const descText = this.add.text(contentX + 150, itemY, reel.desc, {
-                    fontSize: '12px',
-                    fontFamily: 'Courier New',
-                    color: isSelected ? '#cccccc' : '#888888'
-                });
-                descText.setDepth(2001);
-                this.time.delayedCall(16, () => descText.destroy());
-
-                if (isCurrent) {
-                    const currentText = this.add.text(contentX + 450, itemY, '← CURRENT', {
-                        fontSize: '12px',
-                        fontFamily: 'Courier New',
-                        color: '#ffff00'
-                    });
-                    currentText.setDepth(2001);
-                    this.time.delayedCall(16, () => currentText.destroy());
-                }
+            const descText = this.add.text(col4X, itemY + 13, reel.desc, {
+                fontSize: '9px',
+                fontFamily: 'Courier New',
+                color: '#888888'
             });
-        }
+            descText.setDepth(2001);
+            this.time.delayedCall(16, () => descText.destroy());
+        });
 
-        // Instructions - different for line tab
-        let hintMessage = 'Arrow Keys: Navigate | X: Select | TAB/Select: Close';
-        if (this.tackleBoxTab === 1) {
-            hintMessage = 'L/R: Switch Section | Up/Down: Navigate | X: Select | TAB: Close';
-        }
-        const hintText = this.add.text(panelX + panelWidth / 2, panelY + panelHeight - 20, hintMessage, {
+        // Instructions for unified layout
+        const hintText = this.add.text(panelX + panelWidth / 2, panelY + panelHeight - 25,
+            'L/R Arrows: Switch Column | Up/Down: Navigate | X: Select | TAB/Select: Close', {
             fontSize: '12px',
             fontFamily: 'Courier New',
             color: '#aaaaaa'
@@ -2013,7 +2163,14 @@ export class GameScene extends Phaser.Scene {
         hintText.setOrigin(0.5, 0.5);
         hintText.setDepth(2001);
         this.time.delayedCall(16, () => hintText.destroy());
+
+        // Column separators for visual clarity (3 vertical lines for 4 columns)
+        this.tackleBoxGraphics.lineStyle(1, 0x00ff0030, 1.0);
+        this.tackleBoxGraphics.lineBetween(col2X - 15, panelY + 60, col2X - 15, panelY + panelHeight - 50);
+        this.tackleBoxGraphics.lineBetween(col3X - 15, panelY + 60, col3X - 15, panelY + panelHeight - 50);
+        this.tackleBoxGraphics.lineBetween(col4X - 15, panelY + 60, col4X - 15, panelY + panelHeight - 50);
     }
+
 
     /**
      * Clean up scene resources
@@ -2035,8 +2192,10 @@ export class GameScene extends Phaser.Scene {
         }
 
         // Clean up entities
-        this.fishes.forEach(fish => fish.destroy());
-        this.baitfishClouds.forEach(cloud => cloud.destroy());
+        // Phaser Groups automatically destroy their children
+        if (this.fishGroup) {
+            this.fishGroup.clear(true, true); // Remove all, destroy them
+        }
         this.baitfishSchools.forEach(fish => fish.destroy());
         this.zooplankton.forEach(zp => zp.destroy());
 
@@ -2074,7 +2233,7 @@ export class GameScene extends Phaser.Scene {
      */
     selectFish(fish) {
         this.selectedFish = fish;
-        this.selectedFishId = fish ? fish.model.id : null;
+        this.selectedFishId = fish ? fish.id : null;
         // UI will update on next frame via updateFishStatus in index.js
     }
 }

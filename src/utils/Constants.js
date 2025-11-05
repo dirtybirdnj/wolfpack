@@ -68,7 +68,13 @@ export const Utils = {
     },
     
     calculateDistance: (x1, y1, x2, y2) => {
-        return Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+        // Use Phaser's optimized distance calculation
+        return Phaser.Math.Distance.Between(x1, y1, x2, y2);
+    },
+
+    // Calculate distance between two objects with x/y properties
+    calculateDistanceBetweenObjects: (obj1, obj2) => {
+        return Phaser.Math.Distance.Between(obj1.x, obj1.y, obj2.x, obj2.y);
     }
 };
 

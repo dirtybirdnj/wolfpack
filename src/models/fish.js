@@ -202,24 +202,63 @@ export class Fish extends AquaticOrganism {
 
             const movement = this.ai.getMovementVector();
 
-            // Calculate angle based on target direction
-            if (this.ai.targetX !== null && this.ai.targetY !== null) {
-                const dx = this.ai.targetX - this.x;
-                const dy = this.ai.targetY - this.y;
+            // Calculate angle based on movement direction (not target position)
+            // This prevents oscillation when crossing over target
+            // Use Phaser's optimized distance calculation
+            const movementSpeed = Phaser.Math.Distance.Between(0, 0, movement.x, movement.y);
+            if (movementSpeed > 0.1) {
+                // Determine facing direction based on horizontal movement
+                // Fish should face the direction they're moving
+                const isMovingLeft = movement.x < 0;
+                const isMovingRight = movement.x > 0;
 
-                const distToTarget = Math.sqrt(dx * dx + dy * dy);
-                if (distToTarget > 5) {
-                    if (dx < 0) {
-                        this.targetAngle = -Math.atan2(dy, Math.abs(dx));
-                    } else {
-                        this.targetAngle = Math.atan2(dy, Math.abs(dx));
+                // Calculate target angle for the body tilt (relative to horizontal)
+                // This controls how much the fish tilts up or down
+                const horizontalSpeed = Math.abs(movement.x);
+                const verticalSpeed = Math.abs(movement.y);
+
+                // Body tilt based on vertical movement component
+                // Angle represents UP/DOWN tilt only (sprite flip handles left/right)
+                if (horizontalSpeed > 0.1) {
+                    this.targetAngle = Math.atan2(movement.y, horizontalSpeed);
+                }
+
+                // Smoothly interpolate to target angle (responsive but not instant)
+                const angleDiff = this.targetAngle - this.angle;
+                this.angle += angleDiff * 0.15; // Faster turning for more natural movement
+
+                // Allow steeper angles for vertical chasing (up to 60 degrees)
+                const isVerticalChase = verticalSpeed > horizontalSpeed * 0.8;
+                const maxAngle = isVerticalChase ? (Math.PI / 3) : (Math.PI / 4); // 60° or 45°
+                this.angle = Math.max(-maxAngle, Math.min(maxAngle, this.angle));
+
+                // Track direction changes to limit rapid 180s (max 2 turns per 2 seconds)
+                if (!this.turnTracking) {
+                    this.turnTracking = {
+                        lastDirection: isMovingLeft ? -1 : 1,
+                        turnCount: 0,
+                        turnWindowStart: this.scene.time.now
+                    };
+                }
+
+                const currentDirection = isMovingLeft ? -1 : 1;
+                const now = this.scene.time.now;
+
+                // Reset turn count every 2 seconds
+                if (now - this.turnTracking.turnWindowStart > 2000) {
+                    this.turnTracking.turnCount = 0;
+                    this.turnTracking.turnWindowStart = now;
+                }
+
+                // Detect direction change (180 turn)
+                if (currentDirection !== this.turnTracking.lastDirection && Math.abs(movement.x) > 0.5) {
+                    this.turnTracking.turnCount++;
+                    this.turnTracking.lastDirection = currentDirection;
+
+                    // If exceeded turn limit, prevent the turn by zeroing horizontal movement
+                    if (this.turnTracking.turnCount > 2) {
+                        movement.x *= 0.1; // Significantly reduce turn ability
                     }
-
-                    const angleDiff = this.targetAngle - this.angle;
-                    this.angle += angleDiff * 0.15;
-
-                    const maxAngle = Math.PI / 4;
-                    this.angle = Math.max(-maxAngle, Math.min(maxAngle, this.angle));
                 }
             } else {
                 this.angle *= 0.9;
@@ -246,7 +285,8 @@ export class Fish extends AquaticOrganism {
 
             // Cap maximum velocity based on fish speed
             const maxVelocity = this.speed * 3;
-            const currentSpeed = Math.sqrt(this.velocityX * this.velocityX + this.velocityY * this.velocityY);
+            // Use Phaser's optimized distance calculation
+            const currentSpeed = Phaser.Math.Distance.Between(0, 0, this.velocityX, this.velocityY);
             if (currentSpeed > maxVelocity) {
                 this.velocityX = (this.velocityX / currentSpeed) * maxVelocity;
                 this.velocityY = (this.velocityY / currentSpeed) * maxVelocity;
@@ -349,33 +389,9 @@ export class Fish extends AquaticOrganism {
                 const offsetFromPlayer = this.worldX - playerWorldX;
                 this.x = (actualGameWidth / 2) + offsetFromPlayer;
 
-                // SCREEN BOUNDARY DETECTION: Check if fish is stuck at screen edges
-                // Fish shouldn't be within 150px of screen edges (causes visual sticking)
-                const screenMargin = 150;
-                const atLeftEdge = this.x < screenMargin;
-                const atRightEdge = this.x > actualGameWidth - screenMargin;
-
-                if ((atLeftEdge || atRightEdge) && this.ai && this.ai.state === Constants.FISH_STATE.IDLE) {
-                    // Fish is too close to screen edge - adjust worldX to pull them back
-                    if (atLeftEdge) {
-                        // Too far left on screen - move worldX right
-                        this.worldX = playerWorldX - (actualGameWidth / 2) + screenMargin + 50;
-                        console.log(`${this.species} (${this.name}) too close to left screen edge - pulling back`);
-                    } else {
-                        // Too far right on screen - move worldX left
-                        this.worldX = playerWorldX + (actualGameWidth / 2) - screenMargin - 50;
-                        console.log(`${this.species} (${this.name}) too close to right screen edge - pulling back`);
-                    }
-
-                    // Flip direction and reset AI
-                    this.ai.idleDirection *= -1;
-                    this.ai.targetX = null;
-                    this.ai.targetY = null;
-
-                    // Recalculate screen position with corrected worldX
-                    const newOffsetFromPlayer = this.worldX - playerWorldX;
-                    this.x = (actualGameWidth / 2) + newOffsetFromPlayer;
-                }
+                // REMOVED: Screen boundary detection system
+                // The worldX boundary system (lines 322-340) already handles boundaries properly
+                // Having two boundary systems caused conflicts where fish got stuck
             }
 
             // FROZEN DETECTION: Check if predator fish is stuck (not moving for extended period)
@@ -387,7 +403,8 @@ export class Fish extends AquaticOrganism {
             } else {
                 const dx = this.worldX - this.lastPosition.worldX;
                 const dy = this.y - this.lastPosition.y;
-                const distMoved = Math.sqrt(dx * dx + dy * dy);
+                // Use Phaser's optimized distance calculation
+                const distMoved = Phaser.Math.Distance.Between(0, 0, dx, dy);
                 const horizontalMoved = Math.abs(dx);
 
                 // VIBRATION DETECTION: Fish moving vertically but not horizontally (stuck at side)

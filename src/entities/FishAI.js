@@ -29,6 +29,17 @@ export class FishAI {
         this.targetBaitfish = null;
         this.isFrenzying = false;
 
+        // Baitfish detection timer - if no baitfish seen for 10 seconds, leave area
+        this.lastBaitfishSightingTime = null; // Will be set when fish spawns
+        this.baitfishTimeout = 10000; // 10 seconds in milliseconds
+        this.leavingArea = false; // Flag to indicate fish is swimming off-screen
+
+        // Hunting commitment - prevents oscillation when fish starts hunting
+        this.huntingStartTime = null; // When fish started hunting current cloud
+        this.minHuntingCommitment = 2000; // Must commit for 2 seconds minimum
+        this.lastAbandonedCloud = null; // Cloud that was just abandoned
+        this.abandonCooldown = 3000; // Can't rehunt same cloud for 3 seconds
+
         // Thermocline behavior (summer modes only)
         this.returningToThermocline = false;
 
@@ -186,6 +197,35 @@ export class FishAI {
     }
 
     update(lure, currentTime, allFish = [], baitfishClouds = [], crayfish = []) {
+        // Initialize lastBaitfishSightingTime on first update
+        if (this.lastBaitfishSightingTime === null) {
+            this.lastBaitfishSightingTime = currentTime;
+        }
+
+        // MIGRATION LOGIC: If no baitfish for too long, leave the area
+        const validBaitfishClouds = (baitfishClouds || []).filter(cloud => {
+            const baitfishArray = cloud.baitfish || cloud.members || [];
+            const cloudVisible = cloud.visible !== false || cloud.members;
+            // Count only ACTIVE and VISIBLE baitfish
+            const activeBaitfish = baitfishArray.filter(b => b && b.active && b.visible && !b.consumed);
+            return cloudVisible && activeBaitfish.length > 0;
+        });
+
+        if (validBaitfishClouds.length > 0) {
+            // Reset timer when baitfish are present
+            this.lastBaitfishSightingTime = currentTime;
+            this.leavingArea = false;
+        } else if (!this.leavingArea && currentTime - this.lastBaitfishSightingTime > this.baitfishTimeout) {
+            // No baitfish for 10+ seconds - time to leave!
+            console.log(`${this.fish.name} sees no food, migrating away...`);
+            this.leavingArea = true;
+            this.state = Constants.FISH_STATE.IDLE;
+            // Pick direction to leave (away from screen center)
+            const canvasWidth = this.fish.scene.scale.width;
+            const screenCenter = canvasWidth / 2;
+            this.idleDirection = this.fish.worldX > screenCenter ? 1 : -1; // Swim toward nearest edge
+        }
+
         // Make decisions at intervals, not every frame
         if (currentTime - this.lastDecisionTime < this.decisionCooldown) {
             return;
@@ -197,16 +237,33 @@ export class FishAI {
         // Fish prioritize real food over lures, especially when hungry
         const nearbyBaitfishCloud = this.findNearestBaitfishCloud(baitfishClouds);
 
+        // DEBUG: Log cloud detection and hunting decision (ALWAYS log to diagnose)
+        if (nearbyBaitfishCloud) {
+            const shouldHunt = this.shouldHuntBaitfish(nearbyBaitfishCloud);
+            if (Math.random() < 0.05) { // 5% logging
+                console.log(`🐟 ${this.fish.species} at (${this.fish.x.toFixed(0)}, ${this.fish.y.toFixed(0)}) detected cloud at distance ${nearbyBaitfishCloud.distance.toFixed(0)}px, cloudY: ${nearbyBaitfishCloud.cloud.centerY.toFixed(0)}, hunger: ${this.fish.hunger.toFixed(0)}, shouldHunt: ${shouldHunt}, state: ${this.state}`);
+            }
+        }
+
+        // DEBUG: Log state when hunting baitfish
+        if (this.state === Constants.FISH_STATE.HUNTING_BAITFISH && Math.random() < 0.05) {
+            console.log(`🎯 ${this.fish.species} HUNTING at (${this.fish.x.toFixed(0)}, ${this.fish.y.toFixed(0)}) targeting (${this.targetX?.toFixed(0)}, ${this.targetY?.toFixed(0)})`);
+        }
+
+        // Note: Removed timeout logic - fish stay in bounds and continue hunting
+
         // Check for crayfish (opportunistic bottom feeding for lake trout)
         const nearbyCrayfish = this.findNearestCrayfish(crayfish);
 
-        // In nature simulation mode (no lure), fish only hunt baitfish or idle
-        if (!lure) {
+        // In observation mode (no lure OR lure out of water), fish only hunt baitfish or idle
+        // This allows player to "pause" fishing and observe natural behavior by reeling lure above surface
+        if (!lure || !lure.inWater) {
             // Nature simulation mode - no lure to track
             if (nearbyBaitfishCloud && this.shouldHuntBaitfish(nearbyBaitfishCloud)) {
                 this.startHuntingBaitfish(nearbyBaitfishCloud);
             } else if (nearbyCrayfish && this.shouldHuntCrayfish(nearbyCrayfish)) {
-                this.huntCrayfish(nearbyCrayfish);
+                //temp bugfix
+                //this.huntCrayfish(nearbyCrayfish);
             } else if (this.state === Constants.FISH_STATE.HUNTING_BAITFISH) {
                 this.huntingBaitfishBehavior(baitfishClouds, null);
             } else if (this.state === Constants.FISH_STATE.FEEDING) {
@@ -654,13 +711,27 @@ export class FishAI {
     }
     
     getMovementVector() {
+        // MIGRATION: If leaving area, swim at full speed toward edge
+        if (this.leavingArea) {
+            return {
+                x: this.fish.speed * 2 * this.idleDirection, // 2x speed to leave quickly
+                y: 0 // Swim straight horizontally
+            };
+        }
+
         // IDLE fish cruise horizontally without a specific target
         if (this.state === Constants.FISH_STATE.IDLE || !this.targetX || !this.targetY) {
             // Northern Pike: ambush behavior - stay near ambush position
             if (this.isAmbushPredator) {
+                // Calculate direction to ambush position
                 const dx = this.ambushPosition.x - this.fish.worldX;
                 const dy = this.ambushPosition.y - this.fish.y;
-                const distanceFromAmbush = Math.sqrt(dx * dx + dy * dy);
+
+                // Use Phaser's optimized distance calculation
+                const distanceFromAmbush = Phaser.Math.Distance.Between(
+                    this.fish.worldX, this.fish.y,
+                    this.ambushPosition.x, this.ambushPosition.y
+                );
 
                 // Dead zone: if very close to ambush position, stop completely
                 if (distanceFromAmbush < 10) {
@@ -688,16 +759,23 @@ export class FishAI {
             }
 
             // Ice fishing mode: normal idle behavior (lake trout)
+            // Lake trout actively change depths while cruising to hunt for food
+            // Use slow sine wave for natural depth changes (30-60 second cycles)
+            const depthCycleSpeed = 0.005; // Very slow depth changes
+            const depthAmplitude = 0.15; // Small vertical movement
+            const verticalDrift = Math.sin(this.fish.frameAge * depthCycleSpeed) * depthAmplitude;
+
             return {
                 x: this.fish.speed * this.idleDirection,
-                y: 0 // Stay at current depth while idle
+                y: verticalDrift // Slow natural depth variation while idle
             };
         }
 
         // Use worldX for horizontal movement calculations (not screen x)
         const dx = this.targetX - this.fish.worldX;
         const dy = this.targetY - this.fish.y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
+        // Use Phaser's optimized distance calculation
+        const distance = Phaser.Math.Distance.Between(this.fish.worldX, this.fish.y, this.targetX, this.targetY);
 
         // Don't force fish to stop - let momentum carry them
         // Just slow down near target instead of stopping
@@ -748,8 +826,9 @@ export class FishAI {
                 } else {
                     speedMultiplier = GameConfig.BAITFISH_PURSUIT_SPEED;
                 }
-                // Hungrier fish move faster vertically to reach baitfish (0-100 scale)
-                verticalSpeedMultiplier = 0.85 + (this.fish.hunger * GameConfig.HUNGER_VERTICAL_SCALING);
+                // Equal vertical and horizontal speed when hunting
+                // Lake trout are aggressive 3D hunters - they attack from any angle
+                verticalSpeedMultiplier = 1.0; // No penalty for vertical movement
                 break;
             case Constants.FISH_STATE.FEEDING:
                 // Don't slow down when feeding - maintain momentum!
@@ -780,11 +859,28 @@ export class FishAI {
             const cloudVisible = cloud.visible !== false || cloud.members; // Schools don't have visible property
             if (!cloudVisible || baitfishArray.length === 0) {continue;}
 
+            // IMPORTANT: Use screen coordinates for distance calculation
+            // Old clouds use centerX (screen), adapted schools use centerWorldX (world)
+            // Convert centerWorldX to screen X if needed
+            let cloudScreenX = cloud.centerX; // Old cloud system
+            if (!cloudScreenX && cloud.centerWorldX !== undefined) {
+                // Adapted school - convert worldX to screenX
+                const scene = this.fish.scene || this.scene;
+                const actualCanvasWidth = scene?.scale?.width || GameConfig.CANVAS_WIDTH;
+                const playerWorldX = actualCanvasWidth / 2;
+                const offsetFromPlayer = cloud.centerWorldX - playerWorldX;
+                cloudScreenX = (actualCanvasWidth / 2) + offsetFromPlayer;
+            }
+
             const distance = Utils.calculateDistance(
-                this.fish.x, this.fish.y,
-                cloud.centerX || cloud.centerWorldX,
-                cloud.centerY
+                this.fish.x, this.fish.y,           // Fish screen position
+                cloudScreenX, cloud.centerY          // Cloud screen position
             );
+
+            // DEBUG: Log if we found a cloud (to verify fix)
+            if (Math.random() < 0.01 && distance < GameConfig.BAITFISH_DETECTION_RANGE * 1.5) {
+                console.log(`✅ ${this.fish.species} found cloud at screenX=${cloudScreenX?.toFixed(0)}, worldX=${cloud.centerWorldX?.toFixed(0)}, distance=${distance.toFixed(0)}px`);
+            }
 
             // Hunger affects how far vertically fish will pursue baitfish (0-100 scale)
             const verticalDistance = Math.abs(this.fish.y - cloud.centerY);
@@ -820,6 +916,14 @@ export class FishAI {
     shouldHuntBaitfish(cloudInfo) {
         if (!cloudInfo) {return false;}
 
+        // Don't rehunt a cloud we just abandoned (prevents oscillation)
+        if (this.lastAbandonedCloud === cloudInfo.cloud) {
+            const timeSinceAbandon = Date.now() - (this.abandonedCloudTime || 0);
+            if (timeSinceAbandon < this.abandonCooldown) {
+                return false; // Still in cooldown period
+            }
+        }
+
         // Hunger is the primary driver (0-100 scale, higher = hungrier)
         const hungerFactor = this.fish.hunger / 100;
 
@@ -847,14 +951,16 @@ export class FishAI {
         const pickyFactor = this.fish.hunger > 70 ? 0.3 : 1.0;
         const dietBonus = dietPreference * pickyFactor * 0.4; // Can add up to 0.22 for preferred prey
 
-        // SIZE/TROPHY BONUS - Larger fish are more aggressive hunters
-        // Trophy fish (>30 lbs) and large fish (>15 lbs) need more food and hunt more aggressively
+        // SIZE BONUS - All fish get bonuses, but larger fish hunt more aggressively
+        // Small fish (< 5 lbs) need to hunt frequently to survive
         const sizeBonus = this.fish.weight > 30 ? 0.35 :  // Trophy: +35% hunt score
                          this.fish.weight > 15 ? 0.20 :  // Large: +20% hunt score
-                         this.fish.weight > 5 ? 0.10 : 0; // Medium: +10% hunt score
+                         this.fish.weight > 5 ? 0.10 :   // Medium: +10% hunt score
+                         0.15; // Small: +15% hunt score (AGGRESSIVE - need food to grow!)
 
         // Base hunt score (hunger + distance + frenzy)
-        let huntScore = (hungerFactor * 0.6) + (distanceFactor * 0.3) + frenzyBonus + frenzyTargetBonus;
+        // INCREASED weights to make fish more aggressive
+        let huntScore = (hungerFactor * 0.8) + (distanceFactor * 0.5) + frenzyBonus + frenzyTargetBonus;
 
         // Apply diet preference bonus
         huntScore += dietBonus;
@@ -867,7 +973,7 @@ export class FishAI {
             huntScore += 0.15; // Rare delicacy!
         }
 
-        return huntScore > 0.35; // Lowered from 0.5 for more aggressive pursuit
+        return huntScore > 0.2; // Very aggressive - hunt almost any nearby baitfish
     }
 
     startHuntingBaitfish(cloudInfo) {
@@ -876,6 +982,8 @@ export class FishAI {
         this.isFrenzying = cloudInfo.cloud.lakersChasing.length > 0;
         this.consecutiveCatches = 0; // Reset for new hunting run
         this.decisionCooldown = 150; // Reduced from 300 for faster pursuit reactions
+        this.huntingStartTime = Date.now(); // Record when we started hunting
+        this.lastAbandonedCloud = null; // Clear any previous abandoned cloud
     }
 
     huntingBaitfishBehavior(baitfishClouds, lure) {
@@ -885,8 +993,25 @@ export class FishAI {
             this.targetBaitfishCloud.visible !== false || this.targetBaitfishCloud.members
         );
 
-        if (!this.targetBaitfishCloud || !cloudVisible || baitfishArray.length === 0) {
-            // Cloud depleted or gone, return to idle
+        // Check if we should abandon this cloud
+        const shouldAbandon = !this.targetBaitfishCloud || !cloudVisible || baitfishArray.length === 0;
+
+        if (shouldAbandon) {
+            // Check if we've met minimum commitment time
+            const huntingDuration = Date.now() - (this.huntingStartTime || 0);
+
+            if (huntingDuration < this.minHuntingCommitment) {
+                // Haven't committed long enough - keep hunting even if cloud seems gone
+                // This prevents premature abandonment due to temporary issues
+                // Just keep swimming toward last known position
+                if (this.targetX && this.targetY) {
+                    return; // Continue moving toward target
+                }
+            }
+
+            // Met minimum commitment time or no target position - can abandon now
+            this.lastAbandonedCloud = this.targetBaitfishCloud;
+            this.abandonedCloudTime = Date.now();
             this.state = Constants.FISH_STATE.IDLE;
             this.targetBaitfishCloud = null;
             this.targetBaitfish = null;
@@ -894,16 +1019,36 @@ export class FishAI {
             return;
         }
 
-        // Find closest baitfish in the cloud
-        const result = this.targetBaitfishCloud.getClosestBaitfish(this.fish.x, this.fish.y);
+        // Calculate mouth position (front of fish body)
+        // Account for fish angle when calculating mouth position
+        const bodySize = Math.max(8, this.fish.weight / 2);
+        const mouthOffset = bodySize * 1.25; // Front of fish
+
+        // Get movement direction to know which way fish is facing
+        const movement = this.getMovementVector();
+        const isMovingRight = movement.x >= 0;
+
+        // Calculate mouth position accounting for fish angle
+        // Fish facing right = mouth on the RIGHT (positive X)
+        // Fish facing left = mouth on the LEFT (negative X)
+        // IMPORTANT: Use worldX coordinates - getClosestBaitfish expects worldX for x parameter
+        const angleOffset = this.fish.angle || 0;
+        const mouthX = isMovingRight ?
+            this.fish.worldX + Math.cos(angleOffset) * mouthOffset :  // Mouth on RIGHT side when facing right
+            this.fish.worldX - Math.cos(angleOffset) * mouthOffset;   // Mouth on LEFT side when facing left
+        const mouthY = this.fish.y + Math.sin(angleOffset) * mouthOffset;
+
+        // Find closest baitfish to the MOUTH position (not fish center)
+        const result = this.targetBaitfishCloud.getClosestBaitfish(mouthX, mouthY);
 
         if (result.baitfish) {
             this.targetBaitfish = result.baitfish;
-            this.targetX = result.baitfish.x;
-            this.targetY = result.baitfish.y;
+            // Use worldX for target position (baitfish use world coordinates)
+            this.targetX = result.baitfish.model ? result.baitfish.model.worldX : result.baitfish.worldX;
+            this.targetY = result.baitfish.model ? result.baitfish.model.y : result.baitfish.y;
 
-            // Check if we're close enough to eat the baitfish
-            if (result.distance < 10) { // Increased from 8 for easier catches
+            // Check if mouth is touching the baitfish
+            if (result.distance < 8) { // Mouth must touch baitfish
                 // Consume the baitfish!
                 const preySpecies = this.targetBaitfishCloud.speciesType;
                 this.targetBaitfishCloud.consumeBaitfish();
@@ -916,7 +1061,9 @@ export class FishAI {
             }
         } else {
             // No baitfish available - cloud is depleted or all consumed
-            // Return to idle instead of getting stuck at cloud center
+            // Mark this cloud as abandoned to prevent immediate rehunting
+            this.lastAbandonedCloud = this.targetBaitfishCloud;
+            this.abandonedCloudTime = Date.now();
             this.state = Constants.FISH_STATE.IDLE;
             this.targetBaitfishCloud = null;
             this.targetBaitfish = null;
@@ -960,7 +1107,9 @@ export class FishAI {
                 this.state = Constants.FISH_STATE.HUNTING_BAITFISH;
                 this.decisionCooldown = 20; // Very short for rapid feeding
             } else {
-                // Cloud depleted, return to idle
+                // Cloud depleted, mark as abandoned to prevent immediate rehunting
+                this.lastAbandonedCloud = this.targetBaitfishCloud;
+                this.abandonedCloudTime = Date.now();
                 this.state = Constants.FISH_STATE.IDLE;
                 this.targetBaitfishCloud = null;
                 this.targetBaitfish = null;
@@ -968,6 +1117,7 @@ export class FishAI {
             }
         } else {
             // Satisfied or no target cloud - return to idle
+            // Don't mark as abandoned if we're satisfied - we left by choice
             this.state = Constants.FISH_STATE.IDLE;
             this.targetBaitfishCloud = null;
             this.targetBaitfish = null;
@@ -1023,11 +1173,11 @@ export class FishAI {
     }
 
     /**
-     * Should this fish hunt crayfish? (Only lake trout when hungry and near bottom)
+     * Should this fish hunt crayfish? (Lake trout and smallmouth bass love crayfish!)
      */
     shouldHuntCrayfish(crayfish) {
-        // Only lake trout hunt crayfish (opportunistic bottom feeders)
-        if (this.fish.species !== 'lake_trout') {
+        // Lake trout and smallmouth bass hunt crayfish (bass LOVE crayfish!)
+        if (this.fish.species !== 'lake_trout' && this.fish.species !== 'smallmouth_bass') {
             return false;
         }
 
@@ -1052,27 +1202,73 @@ export class FishAI {
     }
 
     /**
-     * Hunt crayfish (lake trout bottom feeding)
+     * Hunt crayfish (lake trout and smallmouth bass bottom feeding)
      */
-    huntCrayfish(crayfish) {
+    huntCrayfish(crayfish) {x``
         // Move toward crayfish
-        this.targetX = crayfish.x;
+        // Use worldX for target position (crayfish use world coordinates)
+        this.targetX = crayfish.worldX;
         this.targetY = crayfish.y;
         this.state = Constants.FISH_STATE.HUNTING_BAITFISH; // Reuse hunting state
 
-        // Check if close enough to eat
+        // Calculate mouth position (front of fish body)
+        // Account for fish angle when calculating mouth position
+        const bodySize = Math.max(8, this.fish.weight / 2);
+        const mouthOffset = bodySize * 1.25; // Front of fish
+
+        // Get movement direction to know which way fish is facing
+        const movement = this.getMovementVector();
+        const isMovingRight = movement.x >= 0;
+
+        // Calculate mouth position accounting for fish angle
+        // Fish facing right = mouth on the RIGHT (positive X)
+        // Fish facing left = mouth on the LEFT (negative X)
+        // IMPORTANT: Use worldX for horizontal position
+        const angleOffset = this.fish.angle || 0;
+        const mouthX = isMovingRight ?
+            this.fish.worldX + Math.cos(angleOffset) * mouthOffset :  // Mouth on RIGHT side when facing right
+            this.fish.worldX - Math.cos(angleOffset) * mouthOffset;   // Mouth on LEFT side when facing left
+        const mouthY = this.fish.y + Math.sin(angleOffset) * mouthOffset;
+
+        // Check if mouth is touching crayfish (use worldX)
         const distance = Utils.calculateDistance(
-            this.fish.x, this.fish.y,
-            crayfish.x, crayfish.y
+            mouthX, mouthY,
+            crayfish.worldX, crayfish.y
         );
 
-        if (distance < 15) {
+        if (distance < 8) { // Mouth must touch crayfish
             // Consume the crayfish!
             crayfish.consume();
             this.fish.feedOnCrayfish();
             this.state = Constants.FISH_STATE.FEEDING;
             this.decisionCooldown = 100; // Brief pause after eating
         }
+    }
+
+    /**
+     * Make fish swim toward nearest screen edge to despawn
+     * Fish swims at normal speed toward the closest edge
+     */
+    swimOffScreen() {
+        // Determine which edge is closer (left or right)
+        const screenCenter = GameConfig.CANVAS_WIDTH / 2;
+        const distToLeft = this.fish.worldX;
+        const distToRight = GameConfig.CANVAS_WIDTH - this.fish.worldX;
+
+        // Swim toward nearest edge
+        if (distToLeft < distToRight) {
+            // Swim left (off left edge)
+            this.targetX = -400; // Target well off-screen
+        } else {
+            // Swim right (off right edge)
+            this.targetX = GameConfig.CANVAS_WIDTH + 400;
+        }
+
+        // Keep current depth while swimming off
+        this.targetY = this.fish.y;
+
+        // Mark state as leaving
+        this.state = Constants.FISH_STATE.IDLE;
     }
 }
 

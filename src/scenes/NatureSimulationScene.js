@@ -953,17 +953,15 @@ export class NatureSimulationScene extends Phaser.Scene {
             if (cf.visible && !cf.consumed) {
                 // Find nearby zooplankton for hunting
                 const nearbyZooplankton = this.zooplankton.filter(zp => {
-                    const dx = cf.x - zp.x;
-                    const dy = cf.y - zp.y;
-                    return Math.sqrt(dx * dx + dy * dy) < 150;
+                    // Use Phaser's optimized distance calculation
+                    return Phaser.Math.Distance.Between(cf.x, cf.y, zp.x, zp.y) < 150;
                 });
 
                 // Check if smallmouth bass nearby (predators)
                 const predatorsNearby = this.fishes.some(f => {
                     if (f.species !== 'smallmouth_bass') {return false;}
-                    const dx = cf.x - f.x;
-                    const dy = cf.y - f.y;
-                    return Math.sqrt(dx * dx + dy * dy) < 200;
+                    // Use Phaser's optimized distance calculation
+                    return Phaser.Math.Distance.Between(cf.x, cf.y, f.x, f.y) < 200;
                 });
 
                 cf.update(nearbyZooplankton, predatorsNearby);

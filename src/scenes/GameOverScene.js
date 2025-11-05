@@ -31,7 +31,6 @@ export class GameOverScene extends Phaser.Scene {
         const { width, height } = this.cameras.main;
 
         // Get game data from registry
-        const gameMode = this.registry.get('gameMode');
         const fishCaught = this.registry.get('finalFishCaught') || 0;
         const fishLost = this.registry.get('finalFishLost') || 0;
         const gameTime = this.registry.get('finalGameTime') || 0;
@@ -50,18 +49,18 @@ export class GameOverScene extends Phaser.Scene {
         }
 
         // Title
-        const title = gameMode === GameConfig.GAME_MODE_ARCADE ? 'TIME\'S UP!' : 'SESSION COMPLETE';
-        this.add.text(width / 2, 40, title, {
+        this.add.text(width / 2, 40, 'SESSION COMPLETE', {
             fontSize: '32px',
             fontFamily: 'Courier New',
             color: '#ff6600',
             fontStyle: 'bold'
         }).setOrigin(0.5);
 
-        // Game stats
-        const minutes = Math.floor(gameTime / 60);
+        // Game stats - Format time as HH:MM:SS
+        const hours = Math.floor(gameTime / 3600);
+        const minutes = Math.floor((gameTime % 3600) / 60);
         const secs = gameTime % 60;
-        const timeStr = `${minutes}:${secs.toString().padStart(2, '0')}`;
+        const timeStr = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
 
         const statsY = 90;
         this.add.text(width / 2, statsY, 'GAME STATISTICS', {

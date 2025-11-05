@@ -4,18 +4,35 @@ import { BAITFISH_SPECIES } from '../config/SpeciesData.js';
 export class SonarDisplay {
     constructor(scene) {
         this.scene = scene;
+
+        // Cache current dimensions for responsive rendering
+        // Use scale dimensions which represent the game world coordinates
+
+        const actualWidth = this.scene.scale.width;
+        const actualHeight = this.scene.scale.height;
+
+        this.canvasWidth = actualWidth;
+        this.canvasHeight = actualHeight;
+
+        console.log(`🎨 SonarDisplay creating with dimensions: ${this.canvasWidth}x${this.canvasHeight}`);
+        console.log(`   scene.scale: ${this.scene.scale.width}x${this.scene.scale.height}`);
+        console.log(`   Actual canvas: ${actualWidth}x${actualHeight}`);
+
+        // RenderTexture for static background elements (rendered once, reused every frame)
+        this.backgroundRT = scene.add.renderTexture(0, 0, actualWidth, actualHeight);
+        this.backgroundRT.setOrigin(0, 0); // CRITICAL: Set origin to top-left so (0,0) position works correctly
+        this.backgroundRT.setDepth(0); // Bottom layer
+
+        // Graphics for dynamic elements (thermoclines, surface line)
         this.graphics = scene.add.graphics();
-        this.graphics.setDepth(0); // Render as background
+        this.graphics.setDepth(0); // Same depth as background
+
         this.gridOffset = 0;
         this.scanLineX = 0;
 
-        // Cache current dimensions for responsive rendering
-        this.canvasWidth = this.scene.scale.width;
-        this.canvasHeight = this.scene.scale.height;
-
         // Cached max depth (updated dynamically)
         this.cachedMaxDepth = GameConfig.MAX_DEPTH;
-        this.cachedDepthScale = GameConfig.DEPTH_SCALE;
+        this.cachedDepthScale = GameConfig.getDepthScale(actualHeight);
 
         // Noise and interference patterns
         this.noiseParticles = [];
@@ -50,7 +67,24 @@ export class SonarDisplay {
         };
 
         // Listen for resize events to update dimensions
-        this.scene.scale.on('resize', this.handleResize, this);
+        //this.scene.scale.on('resize', this.handleResize, this);
+
+        // Render static background ONCE (after listeners are set up)
+        this.renderStaticBackground();
+
+        // IMPORTANT: Force a resize check on next frame to catch any size changes that happened
+        // during initialization (game container might resize AFTER scene creation)
+        // this.scene.time.delayedCall(50, () => {
+        //     const actualWidth = this.scene.game.canvas.width;
+        //     const actualHeight = this.scene.game.canvas.height;
+
+        //     if (actualWidth !== this.canvasWidth || actualHeight !== this.canvasHeight) {
+        //         console.log(`⚠️  Size mismatch detected! Forcing resize: ${this.canvasWidth}x${this.canvasHeight} → ${actualWidth}x${actualHeight}`);
+        //         this.handleResize({ width: actualWidth, height: actualHeight });
+        //     } else {
+        //         console.log(`✅ Canvas size confirmed: ${actualWidth}x${actualHeight}`);
+        //     }
+        // });
     }
 
     getActualMaxDepth() {
@@ -65,11 +99,12 @@ export class SonarDisplay {
         /**
          * Calculate pixels per foot based on actual max depth and current canvas height
          * This ensures the sonar display scales proportionally
-         * Water column height = canvasHeight - LAKE_BOTTOM_RESERVE_PX (96px for brown bottom)
+         * Water column height = canvasHeight - lake bottom reserve (dynamic ratio)
          * @returns {number} Pixels per foot of depth
          */
         const maxDepth = this.getActualMaxDepth();
-        const waterColumnHeight = this.canvasHeight - GameConfig.LAKE_BOTTOM_RESERVE_PX;
+        const reservePx = GameConfig.getLakeBottomReservePx(this.canvasHeight);
+        const waterColumnHeight = this.canvasHeight - reservePx;
         return waterColumnHeight / maxDepth;
     }
     
@@ -86,11 +121,17 @@ export class SonarDisplay {
     }
     
     generateBottomProfile() {
-        // Generate a realistic lakebed profile at fixed Y position
-        // Bottom is rendered at canvasHeight - LAKE_BOTTOM_RESERVE_PX (96px from bottom)
-        // This ensures the water column fills the screen and bottom area is exactly 96 pixels
+        // Generate a realistic lakebed profile at dynamic Y position
+        // Bottom is rendered at canvasHeight - reserve pixels (calculated dynamically)
+        // This ensures the water column fills the screen with proportional bottom area
         const profile = [];
-        const baseBottomY = this.canvasHeight - GameConfig.LAKE_BOTTOM_RESERVE_PX;
+
+
+        const actualWidth = this.canvasWidth;
+        const actualHeight = this.canvasHeight
+
+        const reservePx = GameConfig.getLakeBottomReservePx(actualHeight);
+        const baseBottomY = actualHeight - reservePx;
         let yOffset = 0; // Variation in bottom contour
 
         for (let x = 0; x < this.canvasWidth + 200; x += 20) {
@@ -111,6 +152,29 @@ export class SonarDisplay {
         return profile;
     }
     
+    /**
+     * Render static background elements to RenderTexture (called once, and on resize)
+     * This includes: gradient, depth grid, bottom profile
+     */
+    renderStaticBackground() {
+        // Create temporary graphics for rendering to texture
+        const tempGraphics = this.scene.add.graphics();
+
+        // Draw all static elements
+        this.drawBackgroundGradient(tempGraphics);
+        //this.drawDepthGrid(tempGraphics);
+        this.drawBottomProfile(tempGraphics);
+
+        // Render to texture
+        this.backgroundRT.clear();
+        this.backgroundRT.draw(tempGraphics);
+
+        // Destroy temporary graphics
+        tempGraphics.destroy();
+
+        console.log('📊 SonarDisplay: Static background rendered to texture');
+    }
+
     update() {
         // No more scrolling - we're stationary at an ice hole!
         // Just update noise particles for visual effect
@@ -132,42 +196,32 @@ export class SonarDisplay {
     }
     
     render() {
+        // Clear only the dynamic graphics layer (background RT persists)
         this.graphics.clear();
 
-        // Draw background gradient
-        this.drawBackgroundGradient();
+        // NOTE: Background gradient, depth grid, and bottom profile are in RenderTexture
+        // They don't need to be redrawn every frame!
 
-        // Draw depth zones (visual indicators)
-        // this.drawDepthZones(); // Hidden for cleaner display
+        // Draw ONLY dynamic elements that change every frame
+        this.drawThermoclines(this.graphics);     // Animated wavy lines
+        this.drawSurfaceLine(this.graphics);      // Animated ice waves
+        //this.drawSpeciesLegend(this.graphics);    // Text elements (TODO: optimize separately)
+        this.drawDebugBoundaries(this.graphics);  // Debug overlays
 
-        // Draw depth grid
-        this.drawDepthGrid();
-
-        // Draw thermoclines
-        this.drawThermoclines();
-
-        // Draw bottom profile
-        this.drawBottomProfile();
-
-        // Draw species legend
-        this.drawSpeciesLegend();
-
-        // Draw depth markers
-        this.drawDepthMarkers();
-
-        // Draw surface line
-        this.drawSurfaceLine();
-
-        // Draw debug boundaries (fish constraints)
-        this.drawDebugBoundaries();
+        // Depth markers are already rendered as persistent text objects (no redraw needed)
     }
     
-    drawBackgroundGradient() {
+        drawBackgroundGradient(graphics) {
         // Realistic olive/army green water gradient - lighter at surface, darker at depth
         // Based on Lake Champlain ice hole reference photos
         // Fill entire canvas height to prevent any gaps
-        for (let y = 0; y < this.canvasHeight; y += 10) {
-            const depthRatio = y / this.canvasHeight;
+        
+        const actualWidth = this.canvasWidth;
+        const actualHeight = this.canvasHeight;
+
+
+        for (let y = 0; y < actualHeight; y += 10) {
+            const depthRatio = y / actualHeight;
 
             // Interpolate between surface (army green) and deep (olive green)
             // Surface: #5a6f4a (90, 111, 74)
@@ -177,123 +231,90 @@ export class SonarDisplay {
             const b = Math.floor(74 - (74 - 58) * depthRatio);
 
             const color = (r << 16) | (g << 8) | b;
-            this.graphics.fillStyle(color, 1.0);
-            this.graphics.fillRect(0, y, this.canvasWidth, 10);
+            graphics.fillStyle(color, 1.0);
+            graphics.fillRect(0, y, actualWidth + 500, 50);
         }
     }
 
-    drawDepthZones() {
-        // Draw subtle visual indicators for depth behavior zones
-        const zones = GameConfig.DEPTH_ZONES;
-        const depthScale = this.getDepthScale();
 
-        // Surface zone - slight yellow tint
-        const surfaceY = zones.SURFACE.max * depthScale;
-        this.graphics.fillStyle(0xffff00, 0.02);
-        this.graphics.fillRect(0, 0, this.canvasWidth, surfaceY);
-
-        // Mid-column zone - slight green tint
-        const midY = zones.MID_COLUMN.min * depthScale;
-        const midHeight = (zones.MID_COLUMN.max - zones.MID_COLUMN.min) * depthScale;
-        this.graphics.fillStyle(0x00ff00, 0.02);
-        this.graphics.fillRect(0, midY, this.canvasWidth, midHeight);
-
-        // Bottom zone - slight gray tint
-        const bottomY = zones.BOTTOM.min * depthScale;
-        const waterColumnBottom = this.canvasHeight - GameConfig.LAKE_BOTTOM_RESERVE_PX;
-        const bottomHeight = waterColumnBottom - bottomY;
-        this.graphics.fillStyle(0x888888, 0.02);
-        this.graphics.fillRect(0, bottomY, this.canvasWidth, bottomHeight);
-
-        // Draw zone boundary lines
-        this.graphics.lineStyle(1, 0xffff00, 0.15);
-        this.graphics.lineBetween(0, surfaceY, this.canvasWidth, surfaceY);
-
-        this.graphics.lineStyle(1, 0x888888, 0.15);
-        this.graphics.lineBetween(0, bottomY, this.canvasWidth, bottomY);
-    }
     
-    drawDepthGrid() {
+    drawDepthGrid(graphics) {
         // Vertical lines (static - no scrolling)
-        this.graphics.lineStyle(1, GameConfig.COLOR_GRID, 0.2);
+        graphics.lineStyle(1, GameConfig.COLOR_GRID, 0.2);
         for (let x = 0; x < this.canvasWidth; x += GameConfig.GRID_SIZE) {
-            this.graphics.lineBetween(x, 0, x, this.canvasHeight);
+            graphics.lineBetween(x, 0, x, this.canvasHeight);
         }
 
         // Horizontal lines (static - depth markers) using actual water depth
         const maxDepth = this.getActualMaxDepth();
         const depthScale = this.getDepthScale();
-        const waterColumnBottom = this.canvasHeight - GameConfig.LAKE_BOTTOM_RESERVE_PX;
+        const reservePx = GameConfig.getLakeBottomReservePx(this.canvasHeight);
+        const waterColumnBottom = this.canvasHeight - reservePx;
 
         for (let y = 0; y < waterColumnBottom; y += GameConfig.GRID_SIZE * 2) {
             const depth = y / depthScale;
             if (depth <= maxDepth) {
-                this.graphics.lineStyle(1, GameConfig.COLOR_GRID, 0.15);
-                this.graphics.lineBetween(0, y, this.canvasWidth, y);
+                graphics.lineStyle(1, GameConfig.COLOR_GRID, 0.15);
+                graphics.lineBetween(0, y, this.canvasWidth, y);
             }
         }
     }
     
-    drawThermoclines() {
-        // Ice fishing only: Draw subtle temperature layers
+    drawThermoclines(graphics) {
+        // Ice fishing only: Draw subtle temperature layers (DYNAMIC - animated)
         const depthScale = this.getDepthScale();
 
         this.thermoclines.forEach(layer => {
             const y = layer.depth * depthScale;
-            this.graphics.lineStyle(1, 0x0099ff, layer.strength * 0.3);
+            graphics.lineStyle(1, 0x0099ff, layer.strength * 0.3);
 
             // Wavy line to show thermocline
-            this.graphics.beginPath();
-            this.graphics.moveTo(0, y);
+            graphics.beginPath();
+            graphics.moveTo(0, y);
             for (let x = 0; x < this.canvasWidth; x += 10) {
                 const wave = Math.sin((x + this.scene.time.now * 0.001) * 0.02) * 3;
-                this.graphics.lineTo(x, y + wave);
+                graphics.lineTo(x, y + wave);
             }
-            this.graphics.strokePath();
+            graphics.strokePath();
         });
     }
     
-    drawBottomProfile() {
-        // Ice fishing mode only: use static bottom profile
-        this.drawStaticBottomProfile();
-    }
-
-    drawStaticBottomProfile() {
-        // Draw the lakebed (static, for ice fishing)
-        this.graphics.lineStyle(2, 0x444444, 0.8);
-        this.graphics.beginPath();
+    drawBottomProfile(graphics) {
+        // Draw the lakebed (STATIC - rendered to texture)
+        graphics.lineStyle(2, 0x444444, 0.8);
+        graphics.beginPath();
 
         if (this.bottomProfile.length > 0) {
-            this.graphics.moveTo(this.bottomProfile[0].x, this.bottomProfile[0].y);
+            graphics.moveTo(this.bottomProfile[0].x, this.bottomProfile[0].y);
 
             for (let i = 1; i < this.bottomProfile.length; i++) {
                 const point = this.bottomProfile[i];
-                this.graphics.lineTo(point.x, point.y);
+                graphics.lineTo(point.x, point.y);
 
                 // Draw structure markers
                 if (point.type === 'structure') {
-                    this.graphics.fillStyle(0x666666, 0.5);
-                    this.graphics.fillRect(point.x - 5, point.y - 10, 10, 10);
+                    graphics.fillStyle(0x666666, 0.5);
+                    graphics.fillRect(point.x - 5, point.y - 10, 10, 10);
                 }
             }
         }
 
-        this.graphics.strokePath();
+        graphics.strokePath();
 
         // Fill below bottom with solid ground
-        this.graphics.fillStyle(0x8b7355, 1.0); // Solid brown earth color
+        graphics.fillStyle(0x8b7355, 1.0); // Solid brown earth color
         if (this.bottomProfile.length > 0) {
-            this.graphics.beginPath();
-            this.graphics.moveTo(this.bottomProfile[0].x, this.bottomProfile[0].y);
+            graphics.beginPath();
+            graphics.moveTo(this.bottomProfile[0].x, this.bottomProfile[0].y);
 
             for (let i = 1; i < this.bottomProfile.length; i++) {
-                this.graphics.lineTo(this.bottomProfile[i].x, this.bottomProfile[i].y);
+                graphics.lineTo(this.bottomProfile[i].x, this.bottomProfile[i].y);
             }
 
-            this.graphics.lineTo(this.canvasWidth, this.canvasHeight);
-            this.graphics.lineTo(0, this.canvasHeight);
-            this.graphics.closePath();
-            this.graphics.fillPath();
+            graphics.lineTo(this.canvasWidth, this.canvasHeight);
+            graphics.lineTo(0, this.canvasHeight);
+            graphics.closePath();
+            graphics.fillPath();
         }
     }
 
@@ -321,7 +342,8 @@ export class SonarDisplay {
         // Display range is calculated in GameScene to show appropriate depth window
         const maxDepth = this.getActualMaxDepth();
         const depthScale = this.getDepthScale();
-        const waterColumnBottom = this.canvasHeight - GameConfig.LAKE_BOTTOM_RESERVE_PX;
+        const reservePx = GameConfig.getLakeBottomReservePx(this.canvasHeight);
+        const waterColumnBottom = this.canvasHeight - reservePx;
         const textStyle = {
             fontSize: '10px',
             fontFamily: 'Courier New',
@@ -345,41 +367,41 @@ export class SonarDisplay {
         // They persist across frames
     }
     
-    drawSurfaceLine() {
-        // Ice fishing only: Draw ice surface
+    drawSurfaceLine(graphics) {
+        // Ice fishing only: Draw ice surface (DYNAMIC - has animated waves)
         // First draw the water line
-        this.graphics.lineStyle(2, 0x000000, 1.0);
-        this.graphics.lineBetween(0, 0, this.canvasWidth, 0);
+        graphics.lineStyle(2, 0x000000, 1.0);
+        graphics.lineBetween(0, 0, this.canvasWidth, 0);
 
         // Then draw thicker white ice line on top
-        this.graphics.lineStyle(6, 0xffffff, 0.8);
-        this.graphics.lineBetween(0, 0, this.canvasWidth, 0);
+        graphics.lineStyle(6, 0xffffff, 0.8);
+        graphics.lineBetween(0, 0, this.canvasWidth, 0);
 
         // Add some texture to ice
-        this.graphics.lineStyle(2, GameConfig.COLOR_SURFACE, 0.5);
-        this.graphics.beginPath();
-        this.graphics.moveTo(0, 2);
+        graphics.lineStyle(2, GameConfig.COLOR_SURFACE, 0.5);
+        graphics.beginPath();
+        graphics.moveTo(0, 2);
 
         // Animated waves under ice
         for (let x = 0; x < this.canvasWidth; x += 5) {
             const wave = Math.sin((x + this.scene.time.now * 0.002) * 0.01) * 2;
-            this.graphics.lineTo(x, wave + 2);
+            graphics.lineTo(x, wave + 2);
         }
 
-        this.graphics.strokePath();
+        graphics.strokePath();
     }
     
-    drawSpeciesLegend() {
-        // Draw a legend showing baitfish species colors
+    drawSpeciesLegend(graphics) {
+        // Draw a legend showing baitfish species colors (TODO: optimize with persistent text objects)
         const legendX = this.canvasWidth - 140;
         const legendY = 10;
         const lineHeight = 14;
 
         // Semi-transparent background
-        this.graphics.fillStyle(0x000000, 0.7);
-        this.graphics.fillRect(legendX - 5, legendY - 5, 135, 90);
-        this.graphics.lineStyle(1, 0x00ff00, 0.5);
-        this.graphics.strokeRect(legendX - 5, legendY - 5, 135, 90);
+        graphics.fillStyle(0x000000, 0.7);
+        graphics.fillRect(legendX - 5, legendY - 5, 135, 90);
+        graphics.lineStyle(1, 0x00ff00, 0.5);
+        graphics.strokeRect(legendX - 5, legendY - 5, 135, 90);
 
         // Title
         const titleStyle = {
@@ -405,10 +427,10 @@ export class SonarDisplay {
             const y = legendY + lineHeight + (index * lineHeight);
 
             // Color indicator (circle)
-            this.graphics.fillStyle(sp.color, 0.8);
-            this.graphics.fillCircle(legendX + 4, y + 4, 4);
-            this.graphics.lineStyle(1, sp.color, 0.9);
-            this.graphics.strokeCircle(legendX + 4, y + 4, 4);
+            graphics.fillStyle(sp.color, 0.8);
+            graphics.fillCircle(legendX + 4, y + 4, 4);
+            graphics.lineStyle(1, sp.color, 0.9);
+            graphics.strokeCircle(legendX + 4, y + 4, 4);
 
             // Species name
             const textStyle = {
@@ -480,7 +502,8 @@ export class SonarDisplay {
         return zone;
     }
 
-    drawDebugBoundaries() {
+    drawDebugBoundaries(graphics) {
+        // Draw visual debug boundaries (currently all hidden for cleaner display)
         // Clean up old interactive zones
         if (this.interactiveZones) {
             this.interactiveZones.forEach(zone => zone.destroy());
@@ -496,7 +519,7 @@ export class SonarDisplay {
             this.scene.input.on('pointerup', this.pointerUpHandler);
         }
 
-        // Draw visual debug boundaries to show fish movement constraints
+        // Get depth info for boundary calculations
         const maxDepth = this.getActualMaxDepth();
         const depthScale = this.getDepthScale();
 
@@ -561,9 +584,22 @@ export class SonarDisplay {
     }
 
     handleResize(gameSize) {
+        // Use actual canvas dimensions as source of truth
+        const actualWidth = this.scene.game.canvas.clientWidth;
+        const actualHeight = this.scene.game.canvas.clientHeight;
+
+        console.log(`📐 SonarDisplay.handleResize() called:`);
+        console.log(`   gameSize event: ${gameSize.width}x${gameSize.height}`);
+        console.log(`   Actual canvas: ${actualWidth}x${actualHeight}`);
+        console.log(`   Current RT size: ${this.backgroundRT.width}x${this.backgroundRT.height}`);
+
         // Update cached dimensions when window resizes
-        this.canvasWidth = gameSize.width;
-        this.canvasHeight = gameSize.height;
+        this.canvasWidth = actualWidth;
+        this.canvasHeight = actualHeight;
+
+        // Resize RenderTexture to match actual canvas
+        this.backgroundRT.setSize(actualWidth, actualHeight);
+        console.log(`   New RT size: ${this.backgroundRT.width}x${this.backgroundRT.height}`);
 
         // Regenerate bottom profile with new dimensions
         this.bottomProfile = this.generateBottomProfile();
@@ -572,7 +608,17 @@ export class SonarDisplay {
         this.noiseParticles = [];
         this.initNoiseParticles();
 
-        console.log(`📐 SonarDisplay resized to: ${gameSize.width}x${gameSize.height}`);
+        // Recreate depth markers with new dimensions/scale
+        // First destroy old markers
+        this.depthTexts.forEach(text => text.destroy());
+        this.depthTexts = [];
+        // Then create new ones at correct positions
+        this.createDepthMarkers();
+
+        // Re-render static background to updated texture
+        this.renderStaticBackground();
+
+        console.log(`✅ SonarDisplay resized to: ${gameSize.width}x${gameSize.height}`);
     }
 
     destroy() {
@@ -595,7 +641,10 @@ export class SonarDisplay {
             this.interactiveZones = [];
         }
 
+        // Destroy graphics objects
         this.graphics.destroy();
+        this.backgroundRT.destroy();
+
         // Clean up depth marker texts
         this.depthTexts.forEach(text => text.destroy());
         this.depthTexts = [];

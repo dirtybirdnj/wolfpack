@@ -4,23 +4,32 @@ export const GameConfig = {
     FISHING_TYPE_ICE: 'ice',
     FISHING_TYPE_NATURE_SIMULATION: 'nature_simulation',
 
-    // Game modes (arcade, unlimited)
-    GAME_MODE_ARCADE: 'arcade',
-    GAME_MODE_UNLIMITED: 'unlimited',
+    // Canvas settings - INITIAL/MINIMUM values only
+    // NOTE: These are only used for Phaser initialization
+    // The game uses Phaser.Scale.RESIZE mode and dynamically fills the container
+    // ALWAYS use scene.scale.width or scene.game.canvas.width at runtime, NEVER these constants!
+    CANVAS_WIDTH: 1562,  // Initial width (game will resize to container)
+    CANVAS_HEIGHT: 874,  // Initial height (game will resize to container)
 
-    ARCADE_TIME_LIMIT: 120, // 2 minutes in seconds
-    ARCADE_EMERGENCY_SPAWN_TIME: 30, // spawn emergency fish when < 30 seconds left
+    // Water boundaries (fish cannot swim outside these)
+    WATER_SURFACE_Y: 0,  // Top of water (always 0)
+    // NOTE: WATER_FLOOR_Y is now calculated dynamically - use GameConfig.getWaterFloorY(canvasHeight)
 
-    // Canvas settings - expanded for maximum game area
-    CANVAS_WIDTH: 1400,  // Widened from 1200 to expand into yellow areas
-    CANVAS_HEIGHT: 650,
+    // Lake bottom reserve - ratio of canvas height reserved for brown bottom rendering
+    // On 650px canvas: 96px / 650px = 0.148 (~15%)
+    LAKE_BOTTOM_RESERVE_RATIO: 0.148,
+
+    // Game area buffer zones (off-screen areas where fish can exist)
+    // Visible area: 0 to CANVAS_WIDTH
+    // Left buffer: -500 to 0
+    // Right buffer: CANVAS_WIDTH to CANVAS_WIDTH+500
+    BUFFER_ZONE_SIZE: 500, // Large enough for big bait clouds and smooth transitions
 
     // Sonar display settings
     SONAR_SCROLL_SPEED: 1.35, // pixels per frame (scaled for larger canvas)
     GRID_SIZE: 22, // pixels between grid lines (scaled for larger canvas)
     MAX_DEPTH: 150, // feet
-    DEPTH_SCALE: 3.6, // pixels per foot (scaled for larger canvas) - DEPRECATED: Use dynamic scale from scene.sonarDisplay.getDepthScale()
-    LAKE_BOTTOM_RESERVE_PX: 96, // Reserve 96 pixels (1 inch) at bottom for lake bottom rendering
+    // NOTE: DEPTH_SCALE is DEPRECATED - use scene.sonarDisplay.getDepthScale() for dynamic scaling
 
     // Lure physics
     LURE_GRAVITY: 0.15, // acceleration when dropping
@@ -33,8 +42,8 @@ export const GameConfig = {
     FISH_SPAWN_CHANCE: 0.008, // per frame
     MIN_FISH_DEPTH: 20,
     MAX_FISH_DEPTH: 148, // Increased from 140 to allow bottom feeding (lake is 150ft)
-    FISH_SPEED_MIN: 0.3,
-    FISH_SPEED_MAX: 1.2,
+    FISH_SPEED_MIN: 1.2,  // Increased from 0.4 - lake trout need to catch baitfish (2.2-4.0)
+    FISH_SPEED_MAX: 2.0,  // Increased from 1.4 - allows faster fish to catch prey
 
     // Fish AI - Improved detection ranges for 900px canvas
     DETECTION_RANGE: 150, // pixels (horizontal) - increased from 80 for better gameplay
@@ -51,8 +60,8 @@ export const GameConfig = {
     TENSION_PER_REEL: 15, // tension added per spacebar press
     MIN_REEL_INTERVAL: 100, // milliseconds between valid reels
     FISH_PULL_BASE: 5, // base tension from fish fighting
-    FISH_TIRE_RATE: 0.5, // how fast fish gets tired
-    REEL_DISTANCE_PER_TAP: 2, // pixels reeled per tap
+    FISH_TIRE_RATE: 0.8, // how fast fish gets tired (increased from 0.5 for quicker fights)
+    REEL_DISTANCE_PER_TAP: 5, // pixels reeled per tap (increased from 2 for better progress)
 
     // Colors - realistic lake trout and water colors based on reference photos
     COLOR_BACKGROUND: 0x3a4f3a, // Olive green water (deeper)
@@ -85,15 +94,15 @@ export const GameConfig = {
     BAITFISH_CLOUD_SPAWN_CHANCE: 0.004, // Increased to keep up with hungry lakers
     BAITFISH_CLOUD_MIN_COUNT: 5, // Minimum cloud size
     BAITFISH_CLOUD_MAX_COUNT: 50, // Allows for massive schools
-    BAITFISH_CLOUD_RADIUS: 100, // pixels - increased for larger cloud dimensions
+    BAITFISH_CLOUD_RADIUS: 60, // pixels - reduced to keep schools tighter (was 100)
     COLOR_BAITFISH: 0x88ccff, // Light blue/silver for alewives
     COLOR_BAITFISH_PANIC: 0xccddff, // Brighter when panicking
 
     // Baitfish pursuit mechanics (works with 0-100 hunger scale) - More aggressive pursuit
-    BAITFISH_DETECTION_RANGE: 140, // Reduced from 150 to balance with lure detection
+    BAITFISH_DETECTION_RANGE: 200, // Increased from 140 - fish should notice nearby bait clouds
     BAITFISH_PURSUIT_SPEED: 2.8, // Increased from 2.2 for more aggressive hunting
-    BAITFISH_VERTICAL_PURSUIT_RANGE: 250, // Increased from 200 for better vertical pursuit
-    HUNGER_VERTICAL_SCALING: 0.015, // Increased from 0.01 for more aggressive vertical pursuit
+    BAITFISH_VERTICAL_PURSUIT_RANGE: 350, // Increased from 250 for better vertical awareness (~97ft at 3.6px/ft)
+    HUNGER_VERTICAL_SCALING: 0.02, // Increased from 0.015 - even low-hunger fish should hunt nearby bait
     BAITFISH_CONSUMPTION_HUNGER_REDUCTION: 15, // Hunger reduced when eating baitfish
 
     // Depth-based behavior zones - Improved thresholds for better gameplay
@@ -126,6 +135,38 @@ export const GameConfig = {
             description: 'Bottom feeding - slow and cautious'
         }
     }
+};
+
+// Helper functions for dynamic calculations
+// These calculate runtime values based on actual canvas dimensions
+
+/**
+ * Calculate the water floor Y position based on canvas height
+ * @param {number} canvasHeight - Actual canvas height in pixels
+ * @returns {number} Y position of water floor (bottom boundary for fish)
+ */
+GameConfig.getWaterFloorY = function(canvasHeight) {
+    const reservePx = Math.floor(canvasHeight * GameConfig.LAKE_BOTTOM_RESERVE_RATIO);
+    return canvasHeight - reservePx;
+};
+
+/**
+ * Calculate the lake bottom reserve pixels based on canvas height
+ * @param {number} canvasHeight - Actual canvas height in pixels
+ * @returns {number} Pixels reserved for lake bottom rendering
+ */
+GameConfig.getLakeBottomReservePx = function(canvasHeight) {
+    return Math.floor(canvasHeight * GameConfig.LAKE_BOTTOM_RESERVE_RATIO);
+};
+
+/**
+ * Calculate depth scale (pixels per foot) based on canvas height
+ * @param {number} canvasHeight - Actual canvas height in pixels
+ * @returns {number} Pixels per foot of depth
+ */
+GameConfig.getDepthScale = function(canvasHeight) {
+    const waterColumnHeight = canvasHeight - GameConfig.getLakeBottomReservePx(canvasHeight);
+    return waterColumnHeight / GameConfig.MAX_DEPTH;
 };
 
 // Lake Champlain flavor text
