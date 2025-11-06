@@ -1,6 +1,19 @@
 import GameConfig from '../config/GameConfig.js';
 
 /**
+ * Water column info interface
+ */
+export interface WaterColumnInfo {
+    canvasHeight: number;
+    maxDepth: number;
+    waterColumnHeight: number;
+    depthScale: string;
+    surfaceY: number;
+    waterFloorY: number;
+    reservePx: number;
+}
+
+/**
  * DepthConverter - Utility for converting between depth (feet) and screen Y coordinates
  *
  * Handles the water column coordinate system:
@@ -11,20 +24,33 @@ import GameConfig from '../config/GameConfig.js';
  * This is the single source of truth for depth-to-pixel conversions.
  */
 export class DepthConverter {
+    public canvasHeight: number;
+    public maxDepth: number;
+    public waterColumnHeight: number;
+    public waterFloorY: number;
+    public depthScale: number;
+    public surfaceY: number;
+    public reservePx: number;
+
     /**
-     * @param {number} canvasHeight - Height of the game canvas in pixels
-     * @param {number} maxDepth - Maximum water depth in feet
+     * @param canvasHeight - Height of the game canvas in pixels
+     * @param maxDepth - Maximum water depth in feet
      */
-    constructor(canvasHeight, maxDepth) {
+    constructor(canvasHeight: number, maxDepth: number) {
         this.canvasHeight = canvasHeight;
         this.maxDepth = maxDepth;
+        this.waterColumnHeight = 0;
+        this.waterFloorY = 0;
+        this.depthScale = 0;
+        this.surfaceY = 0;
+        this.reservePx = 0;
         this.recalculate();
     }
 
     /**
      * Recalculate scale factors based on current dimensions
      */
-    recalculate() {
+    recalculate(): void {
         // Reserve space at bottom for lake floor visualization
         this.reservePx = GameConfig.getLakeBottomReservePx(this.canvasHeight);
 
@@ -43,46 +69,46 @@ export class DepthConverter {
 
     /**
      * Convert depth in feet to screen Y coordinate
-     * @param {number} depthInFeet - Depth below surface in feet (0 = surface)
-     * @returns {number} Screen Y coordinate in pixels
+     * @param depthInFeet - Depth below surface in feet (0 = surface)
+     * @returns Screen Y coordinate in pixels
      */
-    depthToY(depthInFeet) {
+    depthToY(depthInFeet: number): number {
         return this.surfaceY + (depthInFeet * this.depthScale);
     }
 
     /**
      * Convert screen Y coordinate to depth in feet
-     * @param {number} pixelY - Screen Y coordinate
-     * @returns {number} Depth below surface in feet
+     * @param pixelY - Screen Y coordinate
+     * @returns Depth below surface in feet
      */
-    yToDepth(pixelY) {
+    yToDepth(pixelY: number): number {
         return (pixelY - this.surfaceY) / this.depthScale;
     }
 
     /**
      * Check if a Y coordinate is within the water column
-     * @param {number} y - Screen Y coordinate
-     * @returns {boolean} True if Y is between surface and floor
+     * @param y - Screen Y coordinate
+     * @returns True if Y is between surface and floor
      */
-    isInWater(y) {
+    isInWater(y: number): boolean {
         return y >= this.surfaceY && y <= this.waterFloorY;
     }
 
     /**
      * Clamp Y coordinate to stay within water boundaries
-     * @param {number} y - Screen Y coordinate
-     * @returns {number} Clamped Y coordinate
+     * @param y - Screen Y coordinate
+     * @returns Clamped Y coordinate
      */
-    clampToWater(y) {
+    clampToWater(y: number): number {
         return Math.max(this.surfaceY, Math.min(this.waterFloorY, y));
     }
 
     /**
      * Update dimensions (call when canvas resizes)
-     * @param {number} canvasHeight - New canvas height
-     * @param {number} maxDepth - New max depth (optional)
+     * @param canvasHeight - New canvas height
+     * @param maxDepth - New max depth (optional)
      */
-    resize(canvasHeight, maxDepth = null) {
+    resize(canvasHeight: number, maxDepth: number | null = null): void {
         this.canvasHeight = canvasHeight;
         if (maxDepth !== null) {
             this.maxDepth = maxDepth;
@@ -92,9 +118,9 @@ export class DepthConverter {
 
     /**
      * Get info about the water column for debugging
-     * @returns {object} Water column dimensions and scale
+     * @returns Water column dimensions and scale
      */
-    getInfo() {
+    getInfo(): WaterColumnInfo {
         return {
             canvasHeight: this.canvasHeight,
             maxDepth: this.maxDepth,
