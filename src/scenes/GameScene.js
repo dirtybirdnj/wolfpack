@@ -1128,13 +1128,12 @@ export class GameScene extends Phaser.Scene {
             this.zooplanktonGraphics = this.add.graphics();
             this.zooplanktonGraphics.setDepth(10); // Well above background, below fish (50)
         }
-        this.zooplanktonGraphics.clear();
 
-        // Update zooplankton
+        // Update zooplankton (sprites render automatically, no manual render needed)
         this.zooplankton = this.zooplankton.filter(zp => {
             if (zp.visible && !zp.consumed) {
-                zp.update();
-                zp.render(this.zooplanktonGraphics); // Pass graphics object
+                // ZooplanktonSprite.preUpdate() is called automatically by Phaser
+                // No need to call update() or render() manually
                 return true;
             } else{
                 zp.destroy();

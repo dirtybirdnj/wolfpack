@@ -1,3 +1,5 @@
+import GameConfig from '../config/GameConfig.js';
+
 /**
  * OrganismSprite - Base class for ALL water organisms
  *
@@ -62,7 +64,7 @@ export class OrganismSprite extends Phaser.GameObjects.Sprite {
     getDepth() {
         // Use scene's depth converter if available
         if (this.scene.depthConverter) {
-            return this.scene.depthConverter.pixelsToDepth(this.y);
+            return this.scene.depthConverter.yToDepth(this.y);
         }
 
         // Fallback: simple calculation
@@ -131,8 +133,8 @@ export class OrganismSprite extends Phaser.GameObjects.Sprite {
      */
     enforceBoundaries() {
         const canvasHeight = this.scene.scale.height;
-        const waterSurfaceY = this.scene.GameConfig?.WATER_SURFACE_Y || 0;
-        const waterFloorY = this.scene.GameConfig?.getWaterFloorY?.(canvasHeight) || canvasHeight * 0.85;
+        const waterSurfaceY = GameConfig.WATER_SURFACE_Y;
+        const waterFloorY = GameConfig.getWaterFloorY(canvasHeight);
 
         // Keep within vertical bounds
         if (this.y < waterSurfaceY) {

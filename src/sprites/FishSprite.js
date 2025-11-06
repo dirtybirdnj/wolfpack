@@ -1,7 +1,7 @@
 import { OrganismSprite } from './OrganismSprite.js';
 import { getOrganismData } from '../config/OrganismData.js';
 import GameConfig from '../config/GameConfig.js';
-import { Utils } from '../utils/Constants.js';
+import { Constants, Utils } from '../utils/Constants.js';
 import FishAI from '../entities/FishAI.js';
 
 /**
@@ -97,21 +97,23 @@ export class FishSprite extends OrganismSprite {
 
         // Size and weight (predators have variable sizes)
         this.sizeCategory = size;
-        const sizeData = this.speciesData.size[size.toLowerCase()];
-        if (!sizeData) {
-            console.warn(`Invalid size ${size} for ${this.species}, using medium`);
-            this.sizeData = this.speciesData.size.medium;
-        } else {
-            this.sizeData = sizeData;
+        this.size = Constants.FISH_SIZE[size];
+        if (!this.size) {
+            console.warn(`Invalid size ${size} for ${this.species}, using MEDIUM`);
+            this.size = Constants.FISH_SIZE.MEDIUM;
         }
 
-        this.weight = Utils.randomBetween(this.sizeData.weight.min, this.sizeData.weight.max);
+        this.weight = Utils.randomBetween(this.size.min, this.size.max);
         this.length = this.calculateLength();
-        this.points = this.sizeData.points;
+        this.points = this.size.points;
 
         // Speed and movement
         this.baseSpeed = this.speciesData.speed.base;
         this.speed = this.baseSpeed;
+
+        // Depth zone behavior (needed by FishAI)
+        this.depthZone = this.getDepthZone();
+        this.speed = this.baseSpeed * this.depthZone.speedMultiplier;
 
         // Biological age
         this.biologicalAge = this.calculateBiologicalAge();
@@ -236,7 +238,7 @@ export class FishSprite extends OrganismSprite {
      */
     calculateBiologicalAge() {
         const baseAge = this.speciesData.maturityAge || 4;
-        const weightRatio = this.weight / (this.sizeData.weight.max || 10);
+        const weightRatio = this.weight / (this.size.max || 10);
         return Math.floor(baseAge + (weightRatio * 10));
     }
 
@@ -245,6 +247,24 @@ export class FishSprite extends OrganismSprite {
      */
     calculateSonarStrength() {
         return 0.5 + (this.weight / 50) * 0.5;
+    }
+
+    /**
+     * Get depth zone based on current depth (needed by FishAI)
+     * @returns {Object} Depth zone with name, speedMultiplier, aggressivenessBonus, interestThreshold
+     */
+    getDepthZone() {
+        const depth = this.getDepth();
+        const zones = GameConfig.DEPTH_ZONES;
+
+        // Check depth against each zone
+        if (depth >= zones.BOTTOM.min && depth <= zones.BOTTOM.max) {
+            return zones.BOTTOM;
+        } else if (depth >= zones.MID_COLUMN.min && depth < zones.MID_COLUMN.max) {
+            return zones.MID_COLUMN;
+        } else {
+            return zones.SURFACE;
+        }
     }
 
     /**
@@ -316,8 +336,10 @@ export class FishSprite extends OrganismSprite {
      * (from FishSprite.js updateFish method)
      */
     updatePredator(time, delta) {
-        // Update depth zone
+        // Update depth and depth zone (needed by FishAI)
         this.depth = this.y / GameConfig.DEPTH_SCALE;
+        this.depthZone = this.getDepthZone();
+        this.speed = this.baseSpeed * this.depthZone.speedMultiplier;
 
         // Update AI
         if (this.ai) {
@@ -484,6 +506,21 @@ export class FishSprite extends OrganismSprite {
                 }
             }
         }
+    }
+
+    /**
+     * Feed on baitfish (alias for feedOnPrey, needed by FishAI)
+     * @param {string} preySpecies - Species of baitfish consumed
+     */
+    feedOnBaitfish(preySpecies) {
+        return this.feedOnPrey(preySpecies);
+    }
+
+    /**
+     * Feed on crayfish (needed by FishAI)
+     */
+    feedOnCrayfish() {
+        return this.feedOnPrey('crayfish');
     }
 
     /**

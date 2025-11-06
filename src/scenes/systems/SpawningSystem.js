@@ -204,7 +204,7 @@ export class SpawningSystem {
         }
 
         // Create the fish using FishSprite with pooling
-        const fish = new FishSprite(this.scene, worldX, y, size, species);
+        const fish = new FishSprite(this.scene, worldX, y, species, size);
 
         // Set initial movement direction
         if (fish.ai) {
@@ -581,7 +581,7 @@ export class SpawningSystem {
         const size = sizes[Math.floor(Math.random() * sizes.length)];
 
         // Create fish using FishSprite
-        const fish = new FishSprite(this.scene, worldX, y, size, species);
+        const fish = new FishSprite(this.scene, worldX, y, species, size);
         this.scene.fishes.push(fish);
 
         console.log(`🎣 ${species} (${size}) spawning at ${depth.toFixed(0)}ft`);
@@ -697,7 +697,7 @@ export class SpawningSystem {
 
         // Create fish with max hunger and low health (size MEDIUM for balance)
         // Emergency fish is always lake trout for consistency
-        const fish = new FishSprite(this.scene, worldX, y, 'MEDIUM', 'lake_trout');
+        const fish = new FishSprite(this.scene, worldX, y, 'lake_trout', 'MEDIUM');
         fish.hunger = 100; // Max hunger - very motivated!
         fish.health = 30; // Low health makes it easier to catch
         fish.isEmergencyFish = true; // Mark as emergency fish

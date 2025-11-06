@@ -377,7 +377,7 @@ export class CrayfishSprite extends OrganismSprite {
         if (this.scene.depthConverter) {
             const canvasHeight = this.scene.scale.height;
             const waterFloorY = GameConfig.getWaterFloorY(canvasHeight);
-            return this.scene.depthConverter.pixelsToDepth(waterFloorY);
+            return this.scene.depthConverter.yToDepth(waterFloorY);
         }
 
         // Fallback: use default max depth
