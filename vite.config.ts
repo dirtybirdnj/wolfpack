@@ -25,7 +25,8 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src')
-    }
+    },
+    extensions: ['.ts', '.js', '.json']
   },
 
   // Plugin to copy static assets during build
