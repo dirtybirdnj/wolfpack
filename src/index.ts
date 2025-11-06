@@ -80,20 +80,8 @@ const config: Phaser.Types.Core.GameConfig = {
 
 // Initialize the game
 window.addEventListener('load', (): void => {
-    // TypeScript Conversion Complete Banner
-    console.log('%c🎉 TYPESCRIPT CONVERSION COMPLETE!', 'background: #4CAF50; color: white; font-size: 20px; padding: 10px; font-weight: bold;');
-    console.log('%c✅ Phase 1: Utils & Config (5 files)', 'color: #4CAF50; font-size: 14px;');
-    console.log('%c✅ Phase 2: Sprites (4 files)', 'color: #4CAF50; font-size: 14px;');
-    console.log('%c✅ Phase 3: Systems (7 files)', 'color: #4CAF50; font-size: 14px;');
-    console.log('%c✅ Phase 4: AI & Components (3 files)', 'color: #4CAF50; font-size: 14px;');
-    console.log('%c✅ Phase 5: Scenes (8 files)', 'color: #4CAF50; font-size: 14px;');
-    console.log('%c✅ Phase 6: Entry Point (index.ts)', 'color: #4CAF50; font-size: 14px;');
-    console.log('%c📊 Total: 28/28 files (100%) | Removed 1,055 duplicate lines', 'background: #2196F3; color: white; font-size: 14px; padding: 5px; font-weight: bold;');
-    console.log('');
-
     // Initialize gamepad manager globally
     window.gamepadManager = gamepadManager;
-    console.log('🎮 Gamepad Manager initialized');
 
     // Create the game instance
     const game = new Phaser.Game(config);
