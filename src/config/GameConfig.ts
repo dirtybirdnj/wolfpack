@@ -24,9 +24,8 @@ export interface DepthZones {
  * Game configuration interface
  */
 export interface GameConfigType {
-    // Fishing types
+    // Fishing type
     FISHING_TYPE_ICE: string;
-    FISHING_TYPE_NATURE_SIMULATION: string;
 
     // Canvas settings
     CANVAS_WIDTH: number;
@@ -130,9 +129,8 @@ export interface GameConfigType {
 
 // Game configuration and constants
 export const GameConfig: GameConfigType = {
-    // Fishing types (ice fishing and nature simulation only)
+    // Fishing type (ice fishing only)
     FISHING_TYPE_ICE: 'ice',
-    FISHING_TYPE_NATURE_SIMULATION: 'nature_simulation',
 
     // Canvas settings - INITIAL/MINIMUM values only
     // NOTE: These are only used for Phaser initialization
