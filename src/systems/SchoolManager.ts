@@ -261,10 +261,10 @@ export class SchoolManager {
                 y: fish.y - center.y
             };
 
-            // Tell fish's schooling behavior about the school
-            if (fish.schooling) {
-                fish.schooling.setSchool(schoolId, center, offset);
-            }
+            // Store school ID on fish
+            // Note: fish.schooling is a simple object with separation/cohesion/alignment vectors
+            // The setSchool method doesn't exist, so we just set the schoolId directly
+            fish.schoolId = schoolId;
         });
 
         console.log(`Created school ${schoolId} with ${members.length} ${species}`);
