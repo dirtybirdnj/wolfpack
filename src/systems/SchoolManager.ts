@@ -369,9 +369,8 @@ export class SchoolManager {
 
         // Clear school membership from all fish
         school.members.forEach(fish => {
-            if (fish.schooling) {
-                fish.schooling.clearSchool();
-            }
+            // Just clear the schoolId - fish.schooling is a simple vector object
+            fish.schoolId = null;
         });
 
         // Remove school from active schools
@@ -473,13 +472,14 @@ export class SchoolManager {
      * Remove fish from school (when consumed or removed from scene)
      */
     removeFishFromSchool(fish: FishSprite): void {
-        if (!fish.schooling || !fish.schooling.schoolId) return;
+        if (!fish.schooling || !fish.schoolId) return;
 
         const schoolMap = fish.type === 'bait' ? this.baitfishSchools : this.predatorSchools;
-        const school = schoolMap.get(fish.schooling.schoolId);
+        const school = schoolMap.get(fish.schoolId);
         if (school) {
             school.members.delete(fish);
-            fish.schooling.clearSchool();
+            // Just clear the schoolId - fish.schooling is a simple vector object
+            fish.schoolId = null;
         }
     }
 
