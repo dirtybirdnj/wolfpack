@@ -23,6 +23,84 @@ import SchoolManager from '../systems/SchoolManager.js';
 import FoodChainSystem from '../systems/FoodChainSystem.js';
 
 /**
+ * Hookset window state
+ */
+interface HooksetWindow {
+    active: boolean;
+    fish: FishSprite | null;
+    startTime: number;
+    duration: number;
+    hasHookset: boolean;
+}
+
+/**
+ * Jig detection state for pike summoning
+ */
+interface JigDetection {
+    lastStickY: number;
+    jigCount: number;
+    lastJigTime: number;
+    jigTimeout: number;
+    needsReset: boolean;
+    threshold: number;
+}
+
+/**
+ * Tackle box button states
+ */
+interface TackleBoxButtonStates {
+    select: boolean;
+    circle: boolean;
+    start: boolean;
+    left: boolean;
+    right: boolean;
+    up: boolean;
+    down: boolean;
+    x: boolean;
+}
+
+/**
+ * Tackle box selection indices
+ */
+interface TackleBoxSelection {
+    lure: number;
+    line: number;
+    reel: number;
+    lineTest: number;
+}
+
+/**
+ * Gear option (lure/line/reel)
+ */
+interface GearOption {
+    label: string;
+    value: number | string;
+    desc: string;
+}
+
+/**
+ * Tackle box gear configurations
+ */
+interface TackleBoxGear {
+    lureWeights: GearOption[];
+    lineTypes: GearOption[];
+    lineTestStrengths: GearOption[];
+    reelTypes: GearOption[];
+}
+
+/**
+ * Caught fish data for game over screen
+ */
+export interface CaughtFishData {
+    species: string;
+    weight: number;
+    length: number;
+    points: number;
+    fightDuration: number;
+    hooksetQuality: string;
+}
+
+/**
  * GameScene - Main game logic orchestrator
  *
  * This scene has been refactored to use a systems-based architecture.
@@ -41,75 +119,113 @@ import FoodChainSystem from '../systems/FoodChainSystem.js';
  * - Adjust debug display → src/scenes/systems/DebugSystem.js
  */
 export class GameScene extends Phaser.Scene {
+    // Entity arrays
+    public fishes: FishSprite[] = [];
+    public zooplankton: ZooplanktonSprite[] = [];
+    public crayfish: CrayfishSprite[] = [];
+
+    // Selected fish for detailed view
+    public selectedFish: FishSprite | null = null;
+
+    // Spawn mode state
+    public spawnMode: boolean = false;
+    public selectedSpawnButton: number = 0;
+
+    // Game state
+    public fishCaught: number = 0;
+    public fishLost: number = 0;
+    public gameTime: number = 0;
+    public waterTemp: number = 40;
+    public debugMode: boolean = false;
+    public visionRangeDebug: boolean = false;
+    public currentFight: FishFight | null = null;
+    public controllerTestMode: boolean = false;
+    public controllerTestUI: any = null;
+    public selectedFishId: string | null = null;
+
+    // Hookset window state
+    public hooksetWindow: HooksetWindow;
+
+    // Jig detection state (for pike summoning)
+    public jigDetection: JigDetection;
+
+    // Caught fish data
+    public caughtFishData: CaughtFishData[] = [];
+
+    // Game components
+    public lure!: Lure;
+    public fishingLine!: FishingLine;
+    public fishingLineModel!: FishingLineModel;
+    public reelModel!: ReelModel;
+    public depthConverter!: DepthConverter;
+    public fishingType!: string;
+    public maxDepth!: number;
+
+    // Systems (initialized in create())
+    public spawningSystem!: SpawningSystem;
+    public inputSystem!: InputSystem;
+    public collisionSystem!: CollisionSystem;
+    public debugSystem!: DebugSystem;
+    public schoolManager!: SchoolManager;
+    public foodChainSystem!: FoodChainSystem;
+    public notificationSystem!: NotificationSystem;
+
+    // Phaser Groups for entity pooling
+    public fishGroup!: Phaser.GameObjects.Group;
+    public baitfishSchools: FishSprite[] = [];
+    public schools: any[] = [];
+
+    // Graphics layers
+    private zooplanktonGraphics?: Phaser.GameObjects.Graphics;
+    private schoolEffectsGraphics?: Phaser.GameObjects.Graphics;
+
+    // Controller test mode
+    private controllerTestUpdate?: () => void;
+
+    // Gamepad event handlers
+    private gamepadDisconnectedHandler?: (gamepad: any) => void;
+    private gamepadConnectedHandler?: (gamepad: any) => void;
+
+    // Tackle box state
+    public tackleBoxOpen: boolean = false;
+    public tackleBoxTab: number = 0;
+    public tackleBoxSelected: TackleBoxSelection;
+    public lineTabFocus: number = 0;
+    public switchingToPauseMenu: boolean = false;
+    public catchPopupActive: boolean = false;
+    public tackleBoxButtonStates: TackleBoxButtonStates;
+    public tackleBoxGear: TackleBoxGear;
+    public tackleBoxGraphics: Phaser.GameObjects.Graphics | null = null;
+
     constructor() {
         super({ key: 'GameScene' });
-
-        // Entity arrays
-        this.fishes = [];
-        this.zooplankton = [];
-        this.crayfish = [];
-
-        // Selected fish for detailed view
-        this.selectedFish = null;
-
-        // Spawn mode state
-        this.spawnMode = false; // false = info mode, true = spawn mode
-        this.selectedSpawnButton = 0; // 0 = fish, 1 = cloud, 2 = crayfish, 3 = zooplankton
 
         // Bind select fish method so it can be called from Fish entities
         this.selectFish = this.selectFish.bind(this);
 
-        // Game state
-        this.fishCaught = 0;
-        this.fishLost = 0;
-        this.gameTime = 0;
-        this.waterTemp = 40;
-        this.debugMode = false;
-        this.visionRangeDebug = false; // Toggle with V key to show predator vision cones
-        this.currentFight = null;
-        this.controllerTestMode = false;
-        this.controllerTestUI = null;
-        this.selectedFishId = null; // Fish selected in status panel
-
-        // Hookset window state
+        // Initialize hookset window state
         this.hooksetWindow = {
             active: false,
             fish: null,
             startTime: 0,
-            duration: 45, // frames (~750ms at 60fps) to perform hookset
+            duration: 45,
             hasHookset: false
         };
 
-        // Jig detection state (for pike summoning)
+        // Initialize jig detection state
         this.jigDetection = {
             lastStickY: 0,
             jigCount: 0,
             lastJigTime: 0,
-            jigTimeout: 2000, // Reset jig count if 2 seconds pass between jigs
-            needsReset: false, // Track if we need to reset to neutral position
-            threshold: 0.5 // Stick movement threshold
+            jigTimeout: 2000,
+            needsReset: false,
+            threshold: 0.5
         };
 
-        // Game mode specific
-        // gameMode removed - only one mode now
-        this.caughtFishData = [];
+        // Initialize tackle box selected state
+        this.tackleBoxSelected = { lure: 0, line: 0, reel: 0, lineTest: 1 };
 
-        // Systems (initialized in create())
-        this.spawningSystem = null;
-        this.inputSystem = null;
-        this.collisionSystem = null;
-        this.debugSystem = null;
-        this.schoolManager = null;
-        this.foodChainSystem = null;
-        this.notificationSystem = null;
-
-        // Tackle box state
-        this.tackleBoxOpen = false;
-        this.tackleBoxTab = 0; // 0=lure, 1=line, 2=reel
-        this.tackleBoxSelected = { lure: 0, line: 0, reel: 0, lineTest: 1 }; // Default to 10 lb test (index 1)
-        this.lineTabFocus = 0; // 0=line type section, 1=line test section
-        this.switchingToPauseMenu = false; // Flag to keep game paused when switching menus
-        this.catchPopupActive = false; // Flag to block input when catch popup is displayed
+        // Initialize tackle box button states
         this.tackleBoxButtonStates = {
             select: false,
             circle: false,
@@ -120,6 +236,8 @@ export class GameScene extends Phaser.Scene {
             down: false,
             x: false
         };
+
+        // Initialize tackle box gear
         this.tackleBoxGear = {
             lureWeights: [
                 { label: '1/4 oz', value: 0.25, desc: 'Ultralight - slow sink' },
@@ -148,13 +266,12 @@ export class GameScene extends Phaser.Scene {
                 { label: 'Spincaster', value: 'spincaster', desc: 'Beginner-friendly, forgiving' }
             ]
         };
-        this.tackleBoxGraphics = null;
     }
 
     /**
      * Create game scene and initialize all systems
      */
-    create() {
+    create(): void {
         try {
             // Generate sprite textures for all entities (done once)
             if (!this.registry.get('texturesGenerated')) {
@@ -303,7 +420,7 @@ export class GameScene extends Phaser.Scene {
     /**
      * Set water temperature (ice fishing only)
      */
-    initializeWaterTemp() {
+    private initializeWaterTemp(): void {
         // Always use winter/ice fishing water temp
         this.waterTemp = Utils.randomBetween(GameConfig.WATER_TEMP_MIN, GameConfig.WATER_TEMP_MAX);
     }
@@ -312,7 +429,7 @@ export class GameScene extends Phaser.Scene {
      * Initialize creature groups with Phaser pooling
      * Now using Phaser Groups for automatic rendering and object pooling
      */
-    initializeCreatureGroups() {
+    private initializeCreatureGroups(): void {
         console.log('🌊 Initializing creature groups with pooling...');
 
         // Phaser Group for ALL fish (bait + predators) with object pooling
@@ -354,7 +471,7 @@ export class GameScene extends Phaser.Scene {
      * Get ALL fish (predators + baitfish) - unified access for systems
      * @returns {Array} All fish sprites
      */
-    getAllFish() {
+    public getAllFish(): FishSprite[] {
         return [
             ...this.fishes,           // Predators (scene.add.existing)
             ...this.baitfishSchools   // Baitfish (array, will migrate to group)
@@ -365,7 +482,7 @@ export class GameScene extends Phaser.Scene {
      * Get all active organisms (for collision detection, AI, etc.)
      * @returns {Object} All organisms by type
      */
-    getAllOrganisms() {
+    public getAllOrganisms(): (FishSprite | ZooplanktonSprite | CrayfishSprite)[] {
         return {
             predators: this.fishes.filter(f => f.active && f.visible),
             baitfish: this.baitfishSchools.filter(f => f.active && f.visible && !f.consumed),
@@ -382,7 +499,7 @@ export class GameScene extends Phaser.Scene {
      * @param {string} species - Fish species
      * @returns {FishSprite} The spawned fish
      */
-    spawnPooledFish(worldX, y, size, species) {
+    public spawnPooledFish(worldX: number, y: number, size: string, species: string): FishSprite | null {
         // Try to get inactive fish from pool
         const fish = this.fishGroup.getFirstDead(false);
 
@@ -400,7 +517,7 @@ export class GameScene extends Phaser.Scene {
     /**
      * Initialize all game systems
      */
-    initializeSystems() {
+    private initializeSystems(): void {
         this.spawningSystem = new SpawningSystem(this);
         this.inputSystem = new InputSystem(this);
         this.collisionSystem = new CollisionSystem(this);
@@ -417,7 +534,7 @@ export class GameScene extends Phaser.Scene {
      * @param {number} time - Current game time
      * @param {number} delta - Time since last frame
      */
-    update(time, delta) {
+    update(time: number, delta: number): void {
         // Controller test mode - update test UI and block game inputs
         if (this.controllerTestMode && this.controllerTestUpdate) {
             this.controllerTestUpdate();
@@ -630,7 +747,7 @@ export class GameScene extends Phaser.Scene {
     /**
      * Update fish status display in GameHUD
      */
-    updateFishStatusDisplay() {
+    private updateFishStatusDisplay(): void {
         // Count entities
         const fishCount = this.fishes.filter(f => f.active && f.visible).length;
 
@@ -728,7 +845,7 @@ export class GameScene extends Phaser.Scene {
      * @param {number} count - Number of fish in school
      * @param {string} species - Species name (rainbow_smelt, alewife, sculpin)
      */
-    spawnBaitfishSchool(worldX, y, count, species = 'rainbow_smelt') {
+    public spawnBaitfishSchool(worldX: number, y: number, count: number, species: string = 'rainbow_smelt'): void {
         console.log(`🐟 Spawning ${count} ${species} at (${worldX}, ${y})`);
 
         // Create school metadata (like BaitfishCloud, tracks center and velocity)
@@ -818,7 +935,7 @@ export class GameScene extends Phaser.Scene {
      * Get the player's center position (always at center of actual canvas width)
      * This adapts to any screen size/resolution
      */
-    getPlayerCenterX() {
+    public getPlayerCenterX(): number {
         return this.scale.width / 2;
     }
 
@@ -827,7 +944,7 @@ export class GameScene extends Phaser.Scene {
      * NOTE: This is a perfect test case for future shader implementation!
      * For now using simple graphics, but shaders could make this look amazing.
      */
-    renderSchoolEffects() {
+    private renderSchoolEffects(): void {
         if (!this.schoolEffectsGraphics) {
             this.schoolEffectsGraphics = this.add.graphics();
             this.schoolEffectsGraphics.setDepth(3); // Behind fish (depth 5) but above background
@@ -943,7 +1060,7 @@ export class GameScene extends Phaser.Scene {
     /**
      * Fish whistle - spawn trophy fish of each species + large bait clouds
      */
-    spawnFishWhistleFish() {
+    private spawnFishWhistleFish(): void {
         console.log('🎵 Fish whistle: Spawning trophy fish and large bait clouds...');
 
         // Use center of screen as player position
@@ -1017,7 +1134,7 @@ export class GameScene extends Phaser.Scene {
      * This creates a bridge layer so predators can hunt the new baitfish schools
      * @returns {Array} Array of cloud-like objects that FishAI can understand
      */
-    getAdaptedSchoolsForAI() {
+    public getAdaptedSchoolsForAI(): any[] {
         return this.schools.map(school => {
             return {
                 // Cloud properties expected by FishAI
@@ -1149,7 +1266,7 @@ export class GameScene extends Phaser.Scene {
         });
     }
 
-    updateEntities() {
+    private updateEntities(): void {
         // Create/clear zooplankton graphics layer (lazy initialization)
         if (!this.zooplanktonGraphics) {
             this.zooplanktonGraphics = this.add.graphics();
@@ -1605,7 +1722,7 @@ export class GameScene extends Phaser.Scene {
      * Update fish fight mechanics
      * @param {number} time - Current game time
      */
-    updateFishFight(time) {
+    private updateFishFight(time: number): void {
         const reelInput = this.inputSystem.handleFishFightInput(); // Analog 0-1 from R2 trigger
 
         // Update the fight
@@ -1634,7 +1751,7 @@ export class GameScene extends Phaser.Scene {
      * Handle fish strike event - opens hookset window
      * @param {Fish} fish - The fish that struck at the lure
      */
-    handleFishStrike(fish) {
+    private handleFishStrike(fish: FishSprite): void {
         console.log(`Fish ${fish.name} strikes! Hookset window opening...`);
 
         // Open hookset window
@@ -1668,7 +1785,7 @@ export class GameScene extends Phaser.Scene {
      * Handle fish caught event (start fish fight)
      * @param {Fish} fish - The fish that was caught
      */
-    handleFishCaught(fish) {
+    private handleFishCaught(fish: FishSprite): void {
         console.log('Fish hooked! Starting fight...');
 
         // Close hookset window
@@ -1689,7 +1806,7 @@ export class GameScene extends Phaser.Scene {
      * Handle fish bump event - haptic feedback based on line sensitivity
      * @param {Fish} fish - The fish that bumped the lure
      */
-    handleFishBump(fish) {
+    private handleFishBump(fish: FishSprite): void {
         // Always show visual feedback - lure vibrates regardless of whether player feels it
         this.lure.vibrate(3, 20); // 3px intensity, 20 frames (~333ms)
 
@@ -1967,7 +2084,7 @@ export class GameScene extends Phaser.Scene {
         }
     }
 
-    closeControllerTest() {
+    private closeControllerTest(): void {
         if (!this.controllerTestUI) {return;}
 
         // Destroy all UI elements
@@ -1989,7 +2106,7 @@ export class GameScene extends Phaser.Scene {
     /**
      * Toggle tackle box menu
      */
-    toggleTackleBox() {
+    private toggleTackleBox(): void {
         this.tackleBoxOpen = !this.tackleBoxOpen;
 
         // Pause/unpause game when tackle box opens/closes
@@ -2013,7 +2130,7 @@ export class GameScene extends Phaser.Scene {
     /**
      * Handle tackle box input
      */
-    handleTackleBoxInput() {
+    private handleTackleBoxInput(): void {
         // TAB/Select to close and return to gameplay
         const tabKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.TAB);
         if (Phaser.Input.Keyboard.JustDown(tabKey)) {
@@ -2373,7 +2490,7 @@ export class GameScene extends Phaser.Scene {
     /**
      * Clean up scene resources
      */
-    shutdown() {
+    shutdown(): void {
         // Remove event listeners first to prevent memory leaks
         this.events.off('fishStrike', this.handleFishStrike, this);
         this.events.off('fishCaught', this.handleFishCaught, this);
@@ -2433,7 +2550,7 @@ export class GameScene extends Phaser.Scene {
     /**
      * Select a fish to show detailed info
      */
-    selectFish(fish) {
+    public selectFish(fish: FishSprite): void {
         this.selectedFish = fish;
         this.selectedFishId = fish ? fish.id : null;
         // UI will update on next frame via updateFishStatus in index.js
