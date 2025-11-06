@@ -1,4 +1,4 @@
-import GameConfig from '../config/GameConfig.js';
+import GameConfig from '../config/GameConfig.js'; // .js extension for ES module compatibility
 
 /**
  * Water column info interface
