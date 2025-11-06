@@ -524,7 +524,7 @@ export class SpawningSystem {
 
         if (actualDepth <= 25) {
             // Shallow water (Perch mode) - mostly perch, some bass
-            species = Math.random() < 0.7 ? 'yellow_perch_large' : 'smallmouth_bass';
+            species = Math.random() < 0.7 ? 'yellow_perch' : 'smallmouth_bass';
         } else if (actualDepth <= 45) {
             // Medium depth (Bass mode) - bass, pike, occasional trout
             const roll = Math.random();
