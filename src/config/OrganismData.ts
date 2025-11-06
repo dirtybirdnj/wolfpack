@@ -14,10 +14,147 @@
 import GameConfig from './GameConfig.js';
 
 // ===================================================================
+// TYPE DEFINITIONS
+// ===================================================================
+
+export type OrganismType = 'fish' | 'crayfish' | 'zooplankton';
+export type OrganismCategory = 'prey' | 'predator' | 'predator_prey';
+
+export interface SizeRange {
+    min: number;
+    max: number;
+}
+
+export interface WeightRange {
+    min: number;
+    max: number;
+}
+
+export interface SpeedConfig {
+    base: number;
+    drift?: number;
+    panic?: number;
+    chase?: number;
+    burst?: number;
+}
+
+export interface SchoolingConfig {
+    enabled: boolean;
+    searchRadius?: number;
+    separationRadius?: number;
+    alignmentRadius?: number;
+    cohesionRadius?: number;
+    maxSchoolSize?: number;
+    fleeSpeed?: number;
+    weights?: {
+        separation: number;
+        alignment: number;
+        cohesion: number;
+    };
+}
+
+export interface BurstEscapeConfig {
+    enabled: boolean;
+    duration: number;
+    cooldown: number;
+    triggerRadius: number;
+    direction: string;
+}
+
+export interface HuntingConfig {
+    enabled: boolean;
+    visionRange: number;
+    strikeSpeed: number;
+    targetTypes: string[];
+    preySize: SizeRange;
+    ambushBehavior?: boolean;
+    aggressive?: boolean;
+    deepWaterHunter?: boolean;
+    preferredPrey?: string[];
+}
+
+export interface BiologyConfig {
+    hunger: boolean;
+    hungerRate: number;
+    health: boolean;
+    metabolismRate: number;
+    maxHunger: number;
+    maxHealth: number;
+}
+
+export interface DepthRange {
+    min: number;
+    max: number;
+}
+
+// Base organism interface
+export interface BaseOrganism {
+    type: OrganismType;
+    category: OrganismCategory;
+    size?: number;
+    sizeRange: SizeRange;
+    weightRange?: WeightRange;
+    length?: number;
+    speed: SpeedConfig;
+    canBeEaten: boolean;
+    eatenBy?: string[];
+    canEat?: string[];
+    depthRange: DepthRange;
+    color: number;
+    panicColor?: number;
+    nutritionValue?: number;
+}
+
+// Zooplankton specific
+export interface ZooplanktonData extends BaseOrganism {
+    type: 'zooplankton';
+    verticalDrift: boolean;
+    lifespan: number;
+    spawnInGroups: boolean;
+    groupSize: SizeRange;
+    hue: number | null;
+    alpha: number;
+}
+
+// Crayfish specific
+export interface CrayfishData extends BaseOrganism {
+    type: 'crayfish';
+    huntingRange: number;
+    consumptionRange: number;
+    burstEscape: BurstEscapeConfig;
+    bottomDwelling: boolean;
+    preferredBy: string[];
+}
+
+// Fish specific (baitfish and predators)
+export interface FishData extends BaseOrganism {
+    type: 'fish';
+    species: string;
+    name: string;
+    schooling: SchoolingConfig;
+    spawnDepthPreference?: number[];
+    bottomDwelling?: boolean;
+    texture: string;
+    preferredBy?: string[];
+    rarity?: string;
+    spawnRateMultiplier?: number;
+    hunting?: HuntingConfig;
+    biology?: BiologyConfig;
+    preferredDepth?: number[];
+    structureOriented?: boolean;
+    vegetationOriented?: boolean;
+    coldWaterSpecies?: boolean;
+    points?: number;
+    difficulty?: string;
+}
+
+export type OrganismData = ZooplanktonData | CrayfishData | FishData;
+
+// ===================================================================
 // ZOOPLANKTON - Base of food chain
 // ===================================================================
 
-export const ZOOPLANKTON_DATA = {
+export const ZOOPLANKTON_DATA: ZooplanktonData = {
     type: 'zooplankton',
     category: 'prey',
 
@@ -52,7 +189,7 @@ export const ZOOPLANKTON_DATA = {
 // CRAYFISH - Middle predator/prey
 // ===================================================================
 
-export const CRAYFISH_DATA = {
+export const CRAYFISH_DATA: CrayfishData = {
     type: 'crayfish',
     category: 'predator_prey',
 
@@ -100,7 +237,7 @@ export const CRAYFISH_DATA = {
 // BAITFISH - Prey fish that school
 // ===================================================================
 
-export const BAITFISH_SPECIES = {
+export const BAITFISH_SPECIES: Record<string, FishData> = {
     alewife: {
         type: 'fish',
         category: 'prey',
@@ -333,7 +470,7 @@ export const BAITFISH_SPECIES = {
 // PREDATOR FISH - Game fish with AI and hunting
 // ===================================================================
 
-export const PREDATOR_SPECIES = {
+export const PREDATOR_SPECIES: Record<string, FishData> = {
     yellow_perch: {
         type: 'fish',
         category: 'predator_prey', // Can be eaten by larger fish
@@ -556,7 +693,7 @@ export const PREDATOR_SPECIES = {
 // UNIFIED ORGANISM DATA
 // ===================================================================
 
-export const ORGANISMS = {
+export const ORGANISMS: Record<string, OrganismData> = {
     // Bottom of food chain
     zooplankton: ZOOPLANKTON_DATA,
 
@@ -577,38 +714,38 @@ export const ORGANISMS = {
 /**
  * Get organism data by type/species
  */
-export function getOrganismData(typeOrSpecies) {
+export function getOrganismData(typeOrSpecies: string): OrganismData | undefined {
     return ORGANISMS[typeOrSpecies];
 }
 
 /**
  * Get all baitfish species
  */
-export function getBaitfishSpecies() {
+export function getBaitfishSpecies(): string[] {
     return Object.keys(BAITFISH_SPECIES);
 }
 
 /**
  * Get all predator species
  */
-export function getPredatorSpecies() {
+export function getPredatorSpecies(): string[] {
     return Object.keys(PREDATOR_SPECIES);
 }
 
 /**
  * Check if predator can eat prey
  */
-export function canEat(predatorType, preyType) {
+export function canEat(predatorType: string, preyType: string): boolean {
     const predator = getOrganismData(predatorType);
     const prey = getOrganismData(preyType);
 
     if (!predator || !prey) return false;
 
     // Check if predator's canEat includes prey's category
-    if (predator.canEat.includes(prey.category)) return true;
+    if (predator.canEat && predator.canEat.includes(prey.category)) return true;
 
     // Check if predator's canEat includes specific prey species
-    if (predator.canEat.includes(preyType)) return true;
+    if (predator.canEat && predator.canEat.includes(preyType)) return true;
 
     // Check if prey's eatenBy includes predator species
     if (prey.eatenBy && prey.eatenBy.includes(predatorType)) return true;
@@ -619,7 +756,7 @@ export function canEat(predatorType, preyType) {
 /**
  * Get food chain level (0 = bottom, higher = top predator)
  */
-export function getFoodChainLevel(typeOrSpecies) {
+export function getFoodChainLevel(typeOrSpecies: string): number {
     const organism = getOrganismData(typeOrSpecies);
     if (!organism) return 0;
 

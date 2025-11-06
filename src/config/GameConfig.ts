@@ -1,5 +1,135 @@
+/**
+ * Depth zone configuration interface
+ */
+export interface DepthZoneConfig {
+    min: number;
+    max: number;
+    name: string;
+    speedMultiplier: number;
+    aggressivenessBonus: number;
+    interestThreshold: number;
+    description: string;
+}
+
+/**
+ * Depth zones configuration type
+ */
+export interface DepthZones {
+    SURFACE: DepthZoneConfig;
+    MID_COLUMN: DepthZoneConfig;
+    BOTTOM: DepthZoneConfig;
+}
+
+/**
+ * Game configuration interface
+ */
+export interface GameConfigType {
+    // Fishing types
+    FISHING_TYPE_ICE: string;
+    FISHING_TYPE_NATURE_SIMULATION: string;
+
+    // Canvas settings
+    CANVAS_WIDTH: number;
+    CANVAS_HEIGHT: number;
+
+    // Water boundaries
+    WATER_SURFACE_Y: number;
+
+    // Lake bottom reserve
+    LAKE_BOTTOM_RESERVE_RATIO: number;
+
+    // Game area buffer zones
+    BUFFER_ZONE_SIZE: number;
+
+    // Sonar display settings
+    SONAR_SCROLL_SPEED: number;
+    GRID_SIZE: number;
+    MAX_DEPTH: number;
+    DEPTH_SCALE: number;
+
+    // Lure physics
+    LURE_GRAVITY: number;
+    LURE_MAX_FALL_SPEED: number;
+    LURE_MIN_RETRIEVE_SPEED: number;
+    LURE_MAX_RETRIEVE_SPEED: number;
+    LURE_SPEED_INCREMENT: number;
+
+    // Fish spawning
+    FISH_SPAWN_CHANCE: number;
+    MIN_FISH_DEPTH: number;
+    MAX_FISH_DEPTH: number;
+    FISH_SPEED_MIN: number;
+    FISH_SPEED_MAX: number;
+
+    // Fish AI
+    DETECTION_RANGE: number;
+    VERTICAL_DETECTION_RANGE: number;
+    OPTIMAL_LURE_SPEED: number;
+    SPEED_TOLERANCE: number;
+    CHASE_SPEED_MULTIPLIER: number;
+    STRIKE_DISTANCE: number;
+
+    // Fish fight mechanics
+    MAX_LINE_TENSION: number;
+    TENSION_BREAK_THRESHOLD: number;
+    TENSION_DECAY_RATE: number;
+    TENSION_PER_REEL: number;
+    MIN_REEL_INTERVAL: number;
+    FISH_PULL_BASE: number;
+    FISH_TIRE_RATE: number;
+    REEL_DISTANCE_PER_TAP: number;
+
+    // Colors
+    COLOR_BACKGROUND: number;
+    COLOR_BACKGROUND_SURFACE: number;
+    COLOR_GRID: number;
+    COLOR_TEXT: number;
+    COLOR_LURE: number;
+    COLOR_FISH_BODY: number;
+    COLOR_FISH_BELLY: number;
+    COLOR_FISH_FINS: number;
+    COLOR_FISH_SPOTS: number;
+    COLOR_FISH_WEAK: number;
+    COLOR_FISH_MEDIUM: number;
+    COLOR_FISH_STRONG: number;
+    COLOR_SURFACE: number;
+
+    // Game settings
+    WATER_TEMP_MIN: number;
+    WATER_TEMP_MAX: number;
+    LAKE_TROUT_PREFERRED_DEPTH_MIN: number;
+    LAKE_TROUT_PREFERRED_DEPTH_MAX: number;
+
+    // UI settings
+    UI_FONT_SIZE: number;
+    UI_PADDING: number;
+
+    // Baitfish settings
+    BAITFISH_CLOUD_SPAWN_CHANCE: number;
+    BAITFISH_CLOUD_MIN_COUNT: number;
+    BAITFISH_CLOUD_MAX_COUNT: number;
+    BAITFISH_CLOUD_RADIUS: number;
+    COLOR_BAITFISH: number;
+    COLOR_BAITFISH_PANIC: number;
+
+    // Baitfish pursuit mechanics
+    BAITFISH_DETECTION_RANGE: number;
+    BAITFISH_PURSUIT_SPEED: number;
+    BAITFISH_VERTICAL_PURSUIT_RANGE: number;
+    HUNGER_VERTICAL_SCALING: number;
+    BAITFISH_CONSUMPTION_HUNGER_REDUCTION: number;
+
+    // Depth-based behavior zones
+    DEPTH_ZONES: DepthZones;
+
+    // Helper methods
+    getWaterFloorY(canvasHeight: number): number;
+    getLakeBottomReservePx(canvasHeight: number): number;
+    getDepthScale(canvasHeight: number): number;
+}
+
 // Game configuration and constants
-export const GameConfig = {
+export const GameConfig: GameConfigType = {
     // Fishing types (ice fishing and nature simulation only)
     FISHING_TYPE_ICE: 'ice',
     FISHING_TYPE_NATURE_SIMULATION: 'nature_simulation',
@@ -134,43 +264,43 @@ export const GameConfig = {
             interestThreshold: 35,      // Lowered from 50 - significantly easier
             description: 'Bottom feeding - slow and cautious'
         }
+    },
+
+    // Helper functions for dynamic calculations
+    // These calculate runtime values based on actual canvas dimensions
+
+    /**
+     * Calculate the water floor Y position based on canvas height
+     * @param canvasHeight - Actual canvas height in pixels
+     * @returns Y position of water floor (bottom boundary for fish)
+     */
+    getWaterFloorY(canvasHeight: number): number {
+        const reservePx = Math.floor(canvasHeight * this.LAKE_BOTTOM_RESERVE_RATIO);
+        return canvasHeight - reservePx;
+    },
+
+    /**
+     * Calculate the lake bottom reserve pixels based on canvas height
+     * @param canvasHeight - Actual canvas height in pixels
+     * @returns Pixels reserved for lake bottom rendering
+     */
+    getLakeBottomReservePx(canvasHeight: number): number {
+        return Math.floor(canvasHeight * this.LAKE_BOTTOM_RESERVE_RATIO);
+    },
+
+    /**
+     * Calculate depth scale (pixels per foot) based on canvas height
+     * @param canvasHeight - Actual canvas height in pixels
+     * @returns Pixels per foot of depth
+     */
+    getDepthScale(canvasHeight: number): number {
+        const waterColumnHeight = canvasHeight - this.getLakeBottomReservePx(canvasHeight);
+        return waterColumnHeight / this.MAX_DEPTH;
     }
 };
 
-// Helper functions for dynamic calculations
-// These calculate runtime values based on actual canvas dimensions
-
-/**
- * Calculate the water floor Y position based on canvas height
- * @param {number} canvasHeight - Actual canvas height in pixels
- * @returns {number} Y position of water floor (bottom boundary for fish)
- */
-GameConfig.getWaterFloorY = function(canvasHeight) {
-    const reservePx = Math.floor(canvasHeight * GameConfig.LAKE_BOTTOM_RESERVE_RATIO);
-    return canvasHeight - reservePx;
-};
-
-/**
- * Calculate the lake bottom reserve pixels based on canvas height
- * @param {number} canvasHeight - Actual canvas height in pixels
- * @returns {number} Pixels reserved for lake bottom rendering
- */
-GameConfig.getLakeBottomReservePx = function(canvasHeight) {
-    return Math.floor(canvasHeight * GameConfig.LAKE_BOTTOM_RESERVE_RATIO);
-};
-
-/**
- * Calculate depth scale (pixels per foot) based on canvas height
- * @param {number} canvasHeight - Actual canvas height in pixels
- * @returns {number} Pixels per foot of depth
- */
-GameConfig.getDepthScale = function(canvasHeight) {
-    const waterColumnHeight = canvasHeight - GameConfig.getLakeBottomReservePx(canvasHeight);
-    return waterColumnHeight / GameConfig.MAX_DEPTH;
-};
-
 // Lake Champlain flavor text
-export const LAKE_CHAMPLAIN_FACTS = [
+export const LAKE_CHAMPLAIN_FACTS: string[] = [
     "Lake Champlain: 120 miles long, 400 feet deep",
     "Home to landlocked Atlantic salmon and lake trout",
     "Water temp in winter: 38-42°F",
