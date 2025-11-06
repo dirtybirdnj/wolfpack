@@ -33,10 +33,15 @@ export class OrganismSprite extends Phaser.GameObjects.Sprite {
 
         // State
         this.consumed = false; // Has this organism been eaten?
-        this.age = 0; // Age in frames
+        this.frameAge = 0; // Frame counter for animations and timing
 
         // Set initial screen position
         this.updateScreenPosition();
+
+        // Ensure sprite is visible and active (must be after updateScreenPosition)
+        // This fixes rendering issues where sprites created but not visible
+        this.setVisible(true);
+        this.setActive(true);
     }
 
     /**
@@ -93,7 +98,7 @@ export class OrganismSprite extends Phaser.GameObjects.Sprite {
         this.worldX = worldX;
         this.y = y;
         this.consumed = false;
-        this.age = 0;
+        this.frameAge = 0;
 
         this.setActive(true);
         this.setVisible(true);
@@ -143,15 +148,15 @@ export class OrganismSprite extends Phaser.GameObjects.Sprite {
             this.y = waterFloorY;
         }
 
-        // Keep within horizontal bounds (with buffer for off-screen spawning)
+        // Check if off-screen horizontally and mark for despawning
+        // Larger margin to allow fish to swim slightly off-screen before despawning
         const canvasWidth = this.scene.scale.width;
-        const buffer = 500;
-        const minX = -buffer;
-        const maxX = canvasWidth + buffer;
+        const margin = 200; // Generous margin for natural movement
+        const isOffScreenHorizontally = this.x < -margin || this.x > canvasWidth + margin;
 
-        // Note: We check screen position, not worldX, for despawning
-        if (this.x < minX || this.x > maxX) {
-            // Off-screen - let scene handle despawning
+        if (isOffScreenHorizontally) {
+            this.setActive(false);
+            this.setVisible(false);
         }
     }
 
@@ -185,8 +190,8 @@ export class OrganismSprite extends Phaser.GameObjects.Sprite {
     preUpdate(time, delta) {
         super.preUpdate(time, delta);
 
-        // Increment age
-        this.age++;
+        // Increment frame counter (for animations and timing)
+        this.frameAge++;
 
         // Update screen position (for camera/scrolling)
         this.updateScreenPosition();
@@ -206,7 +211,7 @@ export class OrganismSprite extends Phaser.GameObjects.Sprite {
             screenX: this.x.toFixed(1),
             y: this.y.toFixed(1),
             depth: this.getDepth().toFixed(1),
-            age: this.age,
+            frameAge: this.frameAge,
             consumed: this.consumed,
             active: this.active,
             visible: this.visible

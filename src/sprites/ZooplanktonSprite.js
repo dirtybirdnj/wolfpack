@@ -78,7 +78,7 @@ export class ZooplanktonSprite extends OrganismSprite {
         }
 
         // Despawn if too old (natural lifecycle)
-        if (this.age > this.maxAge) {
+        if (this.frameAge > this.maxAge) {
             this.setActive(false);
             this.setVisible(false);
             return;
@@ -107,31 +107,39 @@ export class ZooplanktonSprite extends OrganismSprite {
         const waterFloorY = GameConfig.getWaterFloorY(canvasHeight);
         const bottomY = bottomDepth * depthScale;
 
-        // Wide vertical range (5-60 feet from bottom)
-        const minY = bottomY - (60 * depthScale); // 60 feet from bottom (migration range)
-        const maxY = Math.min(bottomY - (5 * depthScale), waterFloorY); // 5 feet from bottom or floor
+        // Keep near bottom with upward migration allowed (bottom to 60 feet up from bottom)
+        // minY = higher up in water column (60ft above bottom)
+        // maxY = bottom layer (at bottom)
+        const minY = bottomY - (60 * depthScale); // Can migrate up to 60 feet from bottom
+        const maxY = bottomY; // Bottom limit (stays on/near bottom)
 
-        // Add vertical drift - occasional upward migration (5% chance per frame)
-        if (Math.random() < 0.05) {
-            this.y -= 0.2; // Drift up slowly
+        // Add vertical drift - occasional upward migration (3% chance per frame)
+        if (Math.random() < 0.03) {
+            this.y -= 0.15; // Drift up slowly (upward migration)
         }
 
-        // Very gentle push back towards bottom zone
+        // Gentle push back towards bottom zone
         if (this.y < minY) {
-            this.y += 0.15; // Gentle push down
+            this.y += 0.2; // Push down if too high
         } else if (this.y > maxY) {
-            this.y -= 0.05; // Very weak push
+            this.y -= 0.3; // Stronger push if below bottom
         }
 
-        // Update depth
-        this.depth = this.y / depthScale;
+        // Gravity-like settling towards bottom (zooplankton naturally sink)
+        if (this.y < maxY) {
+            this.y += 0.05; // Constant slow settling
+        }
+
+        // Update depth in feet (NOT rendering depth!)
+        this.depthInFeet = this.y / depthScale;
 
         // Update screen position
         this.updateScreenPosition();
 
         // Check if off-screen (despawn)
+        // Small margin to prevent pop-in at screen edges
         const canvasWidth = this.scene.scale.width;
-        const margin = 100;
+        const margin = 50; // Matching other organisms
         const isOffScreen = this.x < -margin || this.x > canvasWidth + margin;
 
         if (isOffScreen) {

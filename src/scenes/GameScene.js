@@ -3,10 +3,6 @@ import { Constants, Utils } from '../utils/Constants.js';
 import DepthConverter from '../utils/DepthConverter.js';
 import { SpriteGenerator } from '../utils/SpriteGenerator.js';
 import Lure from '../entities/Lure.js';
-import Fish from '../entities/Fish.js';
-import { FishSprite as LegacyFishSprite } from '../models/FishSprite.js';
-import { BaitfishSprite } from '../models/BaitfishSprite.js';
-import Crayfish from '../entities/Crayfish.js';
 import FishFight from '../entities/FishFight.js';
 import FishingLine from '../entities/FishingLine.js';
 import { FishingLineModel } from '../models/FishingLineModel.js';
@@ -355,6 +351,30 @@ export class GameScene extends Phaser.Scene {
     }
 
     /**
+     * Get ALL fish (predators + baitfish) - unified access for systems
+     * @returns {Array} All fish sprites
+     */
+    getAllFish() {
+        return [
+            ...this.fishes,           // Predators (scene.add.existing)
+            ...this.baitfishSchools   // Baitfish (array, will migrate to group)
+        ];
+    }
+
+    /**
+     * Get all active organisms (for collision detection, AI, etc.)
+     * @returns {Object} All organisms by type
+     */
+    getAllOrganisms() {
+        return {
+            predators: this.fishes.filter(f => f.active && f.visible),
+            baitfish: this.baitfishSchools.filter(f => f.active && f.visible && !f.consumed),
+            zooplankton: this.zooplankton.filter(z => z.active && z.visible && !z.consumed),
+            crayfish: this.crayfish.filter(c => c.active && c.visible && !c.consumed)
+        };
+    }
+
+    /**
      * Spawn a fish from the object pool
      * @param {number} worldX - World X position
      * @param {number} y - Y position
@@ -592,7 +612,12 @@ export class GameScene extends Phaser.Scene {
         this.debugSystem.update(time, delta);
 
         // Update new ecosystem systems
-        this.schoolManager.update(this.fishes);
+        // SchoolManager handles both baitfish and predator schools
+        // Get all FishSprite instances from display list
+        const allFishSprites = this.children.list.filter(obj =>
+            obj.constructor.name === 'FishSprite'
+        );
+        this.schoolManager.update(allFishSprites);
         this.foodChainSystem.update();
 
         // Check for emergency fish spawn (arcade mode)
@@ -741,12 +766,13 @@ export class GameScene extends Phaser.Scene {
         for (let i = 0; i < count; i++) {
             const { offsetX, offsetY } = positions[i];
 
-            // Create baitfish using BaitfishSprite
-            const fish = new BaitfishSprite(
+            // Create baitfish using unified FishSprite (no size param for bait)
+            const fish = new FishSprite(
                 this,
                 worldX + offsetX,
                 y + offsetY,
-                species
+                species,
+                'MEDIUM' // Size doesn't matter for baitfish, but FishSprite requires it
             );
 
             // Associate fish with school
@@ -923,8 +949,8 @@ export class GameScene extends Phaser.Scene {
         // Use center of screen as player position
         const playerWorldX = this.getPlayerCenterX();
 
-        // Spawn 1 trophy fish of each species
-        const species = ['yellow_perch', 'lake_trout', 'northern_pike', 'smallmouth_bass'];
+        // Spawn 1 trophy fish of each species (only species with generated textures)
+        const species = ['lake_trout', 'northern_pike', 'smallmouth_bass'];
 
         species.forEach((speciesName, index) => {
             // Space them out around the player
@@ -946,12 +972,13 @@ export class GameScene extends Phaser.Scene {
 
             const y = this.depthConverter.depthToY(depth);
 
-            // All TROPHY size - using FishSprite
-            const fish = new FishSprite(this, worldX, y, 'TROPHY', speciesName);
+            // All TROPHY size - using FishSprite (species, size order!)
+            const fish = new FishSprite(this, worldX, y, speciesName, 'TROPHY');
 
             // Set movement direction
             fish.ai.idleDirection = Math.random() < 0.5 ? -1 : 1;
 
+            // Add ONLY to legacy array (predators use scene.add.existing for rendering)
             this.fishes.push(fish);
             console.log(`  Spawned trophy ${speciesName} at ${depth}ft`);
         });
@@ -1285,7 +1312,8 @@ export class GameScene extends Phaser.Scene {
         this.renderSchoolEffects();
 
         // Update baitfish schools (BaitfishSprite with Boids schooling)
-        // BaitfishSprite.preUpdate() is called automatically by Phaser
+        // BaitfishSprite.preUpdate() is called automatically by Phaser (via scene.add.existing())
+        // Fish spawn within visible window and despawn when they swim off-screen
         this.baitfishSchools = this.baitfishSchools.filter(fish => {
             // BaitfishSprite IS the model (no .model wrapper needed)
             if (fish.visible && !fish.consumed) {
@@ -1440,7 +1468,7 @@ export class GameScene extends Phaser.Scene {
                             const canFeed = timeSinceLastFeed >= fish.feedCooldown;
 
                             if (dist < 12 && !closestFood.consumed && canFeed) {
-                                closestFood.consume();
+                                closestFood.markConsumed(); // Use new OrganismSprite method
                                 fish.lastFeedTime = currentTime; // Record feeding time
                                 // Baitfish "ate" the zooplankton - could track nutrition here later
                             }

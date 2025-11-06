@@ -56,34 +56,40 @@ No build step is required - the game runs directly from static files!
 
 ## 📁 Project Structure
 
+**⚠️ Updated Nov 2025** - Major refactor to unified organism architecture
+
 ```
 wolfpack/
 ├── index.html           # Main HTML file
 ├── package.json         # Node.js dependencies
-├── README.md           # This file
 └── src/
-    ├── index.js        # Game initialization
+    ├── index.js         # Game initialization
     ├── config/
     │   ├── GameConfig.js    # Game constants and settings
-    │   └── SpeciesData.js   # Fish species data and behavior
+    │   └── OrganismData.js  # All organism definitions (NEW)
+    ├── sprites/         # NEW unified architecture
+    │   ├── OrganismSprite.js    # Base class for all organisms
+    │   ├── FishSprite.js        # Unified fish (bait + predators)
+    │   ├── CrayfishSprite.js    # Crayfish organisms
+    │   └── ZooplanktonSprite.js # Zooplankton organisms
     ├── scenes/
-    │   ├── BootScene.js     # Asset loading
+    │   ├── BootScene.js     # Boot screen with texture generation
     │   ├── GameScene.js     # Main game logic
-    │   └── UIScene.js       # HUD and interface
+    │   └── systems/         # Scene systems
+    │       └── SpawningSystem.js # Population management
     ├── entities/
     │   ├── Lure.js          # Player lure logic
-    │   ├── Fish.js          # Fish factory (creates species)
-    │   └── FishAI.js        # Fish decision making
-    ├── models/
-    │   ├── fish.js          # Base fish biological model
-    │   ├── lake-trout.js    # Lake Trout species
-    │   ├── northern-pike.js # Northern Pike species
-    │   ├── smallmouth-bass.js # Smallmouth Bass species
-    │   └── yellow-perch.js  # Yellow Perch species
+    │   ├── FishAI.js        # Predator hunting AI
+    │   └── FishFight.js     # Fight mechanics
+    ├── systems/
+    │   ├── SchoolManager.js     # Emergent schooling behavior
+    │   └── FoodChainSystem.js   # Predator-prey interactions
     └── utils/
-        ├── SonarDisplay.js  # Sonar rendering logic
-        └── Constants.js     # Game constants
+        ├── SpriteGenerator.js   # Procedural texture generation
+        └── Constants.js         # Game constants
 ```
+
+See `docs/FILE_MAP.md` for detailed file navigation.
 
 ## 🏔️ Setting
 

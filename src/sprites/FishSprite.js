@@ -55,7 +55,8 @@ export class FishSprite extends OrganismSprite {
         }
 
         // Determine texture key based on fish type
-        const textureKey = speciesData.category === 'prey' ?
+        // Both 'prey' and 'predator_prey' use baitfish textures when spawned in schools
+        const textureKey = (speciesData.category === 'prey' || speciesData.category === 'predator_prey') ?
             `baitfish_${species}` :
             `fish_${species}_${size}`;
 
@@ -65,9 +66,10 @@ export class FishSprite extends OrganismSprite {
         // Store species and type
         this.species = species;
         this.speciesData = speciesData;
-        this.type = speciesData.category === 'prey' ? 'bait' : 'predator';
+        // 'prey' and 'predator_prey' act as baitfish, only pure 'predator' gets full AI
+        this.type = (speciesData.category === 'prey' || speciesData.category === 'predator_prey') ? 'bait' : 'predator';
 
-        // Set depth for rendering order (behind lure)
+        // Set depth for rendering order (behind lure at 60, baitfish at 40, predators at 50)
         this.setDepth(this.type === 'bait' ? 40 : 50);
 
         // Initialize properties based on type
@@ -83,7 +85,7 @@ export class FishSprite extends OrganismSprite {
             this.directionArrow.setDepth(this.depth + 10);
         }
 
-        // Update screen position
+        // Update screen position (parent OrganismSprite now handles setVisible/setActive)
         this.updateScreenPosition();
     }
 
@@ -288,8 +290,14 @@ export class FishSprite extends OrganismSprite {
             const arrowLength = 30;
             const startX = this.x;
             const startY = this.y;
-            const endX = startX + (movement.x / speed) * arrowLength;
-            const endY = startY + (movement.y / speed) * arrowLength;
+
+            // Convert sprite angle to radians and account for flip
+            const angleRad = Phaser.Math.DegToRad(this.angle);
+            const flipMultiplier = this.flipX ? -1 : 1;
+
+            // Calculate arrow direction matching sprite's visual orientation
+            const endX = startX + flipMultiplier * Math.cos(angleRad) * arrowLength;
+            const endY = startY + Math.sin(angleRad) * arrowLength;
 
             // Draw arrow line
             this.directionArrow.lineStyle(2, 0xff0000, 0.8);
@@ -299,18 +307,18 @@ export class FishSprite extends OrganismSprite {
             this.directionArrow.strokePath();
 
             // Draw arrowhead
-            const angle = Math.atan2(movement.y, movement.x);
+            const arrowAngle = Math.atan2(endY - startY, endX - startX);
             const arrowHeadSize = 8;
             this.directionArrow.fillStyle(0xff0000, 0.8);
             this.directionArrow.beginPath();
             this.directionArrow.moveTo(endX, endY);
             this.directionArrow.lineTo(
-                endX - arrowHeadSize * Math.cos(angle - Math.PI / 6),
-                endY - arrowHeadSize * Math.sin(angle - Math.PI / 6)
+                endX - arrowHeadSize * Math.cos(arrowAngle - Math.PI / 6),
+                endY - arrowHeadSize * Math.sin(arrowAngle - Math.PI / 6)
             );
             this.directionArrow.lineTo(
-                endX - arrowHeadSize * Math.cos(angle + Math.PI / 6),
-                endY - arrowHeadSize * Math.sin(angle + Math.PI / 6)
+                endX - arrowHeadSize * Math.cos(arrowAngle + Math.PI / 6),
+                endY - arrowHeadSize * Math.sin(arrowAngle + Math.PI / 6)
             );
             this.directionArrow.closePath();
             this.directionArrow.fillPath();
@@ -336,8 +344,8 @@ export class FishSprite extends OrganismSprite {
      * (from FishSprite.js updateFish method)
      */
     updatePredator(time, delta) {
-        // Update depth and depth zone (needed by FishAI)
-        this.depth = this.y / GameConfig.DEPTH_SCALE;
+        // Update depth in feet (for AI/game logic, NOT rendering depth!)
+        this.depthInFeet = this.y / GameConfig.DEPTH_SCALE;
         this.depthZone = this.getDepthZone();
         this.speed = this.baseSpeed * this.depthZone.speedMultiplier;
 
@@ -358,9 +366,13 @@ export class FishSprite extends OrganismSprite {
             // Update rotation based on movement
             if (Math.abs(movement.x) > 0.1 || Math.abs(movement.y) > 0.1) {
                 const isMovingRight = movement.x > 0;
-                const targetAngle = Math.atan2(movement.y, Math.abs(movement.x));
-                this.setFlipX(isMovingRight);
-                this.angle = isMovingRight ? Phaser.Math.RadToDeg(targetAngle) : Phaser.Math.RadToDeg(-targetAngle);
+                // Calculate angle using actual velocity direction
+                const targetAngle = Math.atan2(movement.y, movement.x);
+                this.setFlipX(!isMovingRight); // Flip when moving left
+                // Convert to degrees, adjust angle when flipped
+                this.angle = isMovingRight ?
+                    Phaser.Math.RadToDeg(targetAngle) :
+                    Phaser.Math.RadToDeg(Math.PI - targetAngle);
             }
         }
 
@@ -381,9 +393,6 @@ export class FishSprite extends OrganismSprite {
         // Update screen position and draw debug arrow
         this.updateScreenPosition();
         this.drawDirectionArrow();
-
-        // Check if off-screen
-        this.checkOffScreen();
     }
 
     /**
@@ -395,16 +404,20 @@ export class FishSprite extends OrganismSprite {
         // Update rotation based on velocity
         if (Math.abs(this.velocity.x) > 0.1 || Math.abs(this.velocity.y) > 0.1) {
             const isMovingRight = this.velocity.x > 0;
-            const targetAngle = Math.atan2(this.velocity.y, Math.abs(this.velocity.x));
-            this.setFlipX(isMovingRight);
-            this.angle = isMovingRight ? Phaser.Math.RadToDeg(targetAngle) : Phaser.Math.RadToDeg(-targetAngle);
+            // Calculate angle using actual velocity direction
+            const targetAngle = Math.atan2(this.velocity.y, this.velocity.x);
+            this.setFlipX(!isMovingRight); // Flip when moving left
+            // Convert to degrees, adjust angle when flipped
+            this.angle = isMovingRight ?
+                Phaser.Math.RadToDeg(targetAngle) :
+                Phaser.Math.RadToDeg(Math.PI - targetAngle);
         }
 
         // Update screen position
         this.updateScreenPosition();
 
-        // Check if off-screen
-        this.checkOffScreen();
+        // Enforce boundaries (parent method handles off-screen detection)
+        this.enforceBoundaries();
     }
 
     /**
@@ -448,22 +461,6 @@ export class FishSprite extends OrganismSprite {
         this.depth = this.y / GameConfig.DEPTH_SCALE;
     }
 
-    /**
-     * Check if fish is off-screen and deactivate
-     */
-    checkOffScreen() {
-        const canvasWidth = this.scene.scale.width;
-        const margin = 200;
-        const isOffScreenHorizontally = this.x < -margin || this.x > canvasWidth + margin;
-
-        if (isOffScreenHorizontally) {
-            this.setActive(false);
-            this.setVisible(false);
-            if (this.directionArrow) {
-                this.directionArrow.clear();
-            }
-        }
-    }
 
     /**
      * Feed on prey (predators only)
@@ -479,7 +476,7 @@ export class FishSprite extends OrganismSprite {
         if (this.stomachContents) {
             this.stomachContents.push({
                 species: preySpecies,
-                timestamp: this.age
+                timestamp: this.frameAge
             });
         }
 
@@ -489,7 +486,7 @@ export class FishSprite extends OrganismSprite {
 
         const previousHunger = this.hunger;
         this.hunger = Math.max(0, this.hunger - nutritionValue);
-        this.lastFed = this.age;
+        this.lastFed = this.frameAge;
 
         // Health restoration: excess nutrition restores health
         if (this.hunger === 0 && previousHunger > 0) {

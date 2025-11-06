@@ -1,5 +1,6 @@
 import GameConfig from '../config/GameConfig.js';
 import { PREDATOR_SPECIES, BAITFISH_SPECIES } from '../config/SpeciesData.js';
+import { ORGANISMS } from '../config/OrganismData.js';
 
 /**
  * SpriteGenerator - Procedurally generates sprite textures for entities
@@ -30,20 +31,30 @@ export class SpriteGenerator {
 
     /**
      * Generate textures for all predator species
+     * Only generates textures for species that are actually spawned as predators
      */
     static generatePredatorTextures(scene) {
-        const species = ['lake_trout', 'northern_pike', 'smallmouth_bass', 'yellow_perch'];
+        // List of species that spawn as predators (from SpawningSystem.js line 119-129 + GameScene initial spawn)
+        const predatorSpecies = ['lake_trout', 'northern_pike', 'smallmouth_bass', 'yellow_perch'];
 
-        species.forEach(speciesName => {
-            const speciesData = PREDATOR_SPECIES[speciesName];
-            if (!speciesData) return;
+        console.log(`🎨 Generating textures for predator species: ${predatorSpecies.join(', ')}`);
+
+        predatorSpecies.forEach(speciesName => {
+            const speciesData = ORGANISMS[speciesName];
+            if (!speciesData) {
+                console.error(`❌ Missing species data for ${speciesName} in ORGANISMS`);
+                return;
+            }
 
             // Generate textures for different sizes
             ['TINY', 'SMALL', 'MEDIUM', 'LARGE', 'TROPHY'].forEach(size => {
                 const textureKey = `fish_${speciesName}_${size}`;
 
                 // Skip if already exists
-                if (scene.textures.exists(textureKey)) return;
+                if (scene.textures.exists(textureKey)) {
+                    console.log(`✓ Texture ${textureKey} already exists`);
+                    return;
+                }
 
                 // Determine dimensions based on size
                 const dimensions = this.getFishDimensions(size);
@@ -101,12 +112,17 @@ export class SpriteGenerator {
         const textureKey = 'zooplankton';
         if (scene.textures.exists(textureKey)) return;
 
-        const texture = scene.textures.createCanvas(textureKey, 3, 3);
+        const texture = scene.textures.createCanvas(textureKey, 8, 8);
         const ctx = texture.getContext();
 
-        // Simple dot
-        ctx.fillStyle = '#00ff00';
-        ctx.fillRect(1, 1, 1, 1);
+        // Larger, more visible zooplankton
+        // Greenish-white dot with slight glow effect
+        ctx.fillStyle = '#88ff88';
+        ctx.fillRect(2, 2, 4, 4); // Main body
+
+        // Brighter center
+        ctx.fillStyle = '#ccffcc';
+        ctx.fillRect(3, 3, 2, 2);
 
         texture.refresh();
     }

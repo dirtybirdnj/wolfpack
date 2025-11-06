@@ -102,7 +102,7 @@ export class CrayfishSprite extends OrganismSprite {
         }
 
         // Despawn if too old
-        if (this.age > this.maxAge) {
+        if (this.frameAge > this.maxAge) {
             this.setActive(false);
             this.setVisible(false);
             return;

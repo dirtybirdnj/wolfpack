@@ -216,6 +216,42 @@ export const BAITFISH_SPECIES = {
         nutritionValue: 8
     },
 
+    cisco: {
+        type: 'fish',
+        category: 'prey',
+        species: 'cisco',
+        name: 'Cisco / Lake Herring',
+
+        sizeRange: { min: 8, max: 16 }, // Larger baitfish
+        weightRange: { min: 0.3, max: 1.0 },
+        speed: { base: 4.0, panic: 8.0 }, // Extremely fast - elite swimmers!
+
+        canBeEaten: true,
+        eatenBy: ['yellow_perch', 'smallmouth_bass', 'northern_pike', 'lake_trout'],
+        canEat: ['zooplankton'],
+
+        schooling: {
+            enabled: true,
+            searchRadius: 100,
+            separationRadius: 25,
+            alignmentRadius: 60,
+            cohesionRadius: 80,
+            maxSchoolSize: 80,
+            fleeSpeed: 8.0
+        },
+
+        depthRange: { min: 50, max: 100 }, // Deep, cold water specialist
+        spawnDepthPreference: [60, 100],
+
+        color: 0xaaccff, // Bright silver with blue-violet back
+        panicColor: 0xccddff,
+        texture: 'baitfish_cisco',
+
+        nutritionValue: 18, // Large, nutritious
+        rarity: 'rare', // Historically important but now rare
+        spawnRateMultiplier: 0.1 // Only 10% of normal spawn rate
+    },
+
     shiner: {
         type: 'fish',
         category: 'prey',
