@@ -29,6 +29,7 @@ export class MenuScene extends Phaser.Scene {
     }
 
     createProgrammaticAssets() {
+        // Textures already generated in BootScene
         // Create simple textures programmatically
 
         // Lure texture
@@ -535,6 +536,8 @@ export class MenuScene extends Phaser.Scene {
 
         console.log('🧹 MenuScene cleanup complete');
     }
+
+    // Texture atlas moved to BootScene
 }
 
 export default MenuScene;

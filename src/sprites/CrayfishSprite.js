@@ -1,25 +1,58 @@
+import { OrganismSprite } from './OrganismSprite.js';
+import { getOrganismData } from '../config/OrganismData.js';
 import GameConfig from '../config/GameConfig.js';
 import { Utils } from '../utils/Constants.js';
-import AquaticOrganism from './AquaticOrganism.js';
 
 /**
- * Crayfish Model - Extends AquaticOrganism
- * Bottom-dwelling invertebrate that hunts zooplankton
+ * CrayfishSprite - Bottom-dwelling invertebrate using Phaser Sprite
  *
- * Crayfish are small invertebrates that:
- * - Stay on the lake bottom
+ * Extends OrganismSprite for consistent architecture with other water organisms
+ *
+ * Crayfish behavior:
+ * - Stay on lake bottom
  * - Hunt zooplankton
  * - Escape threats with backward "zoom" bursts
  * - Get fatigued after multiple bursts
- * - Are preferred prey for smallmouth bass
+ * - Preferred prey for smallmouth bass
  */
-export class Crayfish extends AquaticOrganism {
+export class CrayfishSprite extends OrganismSprite {
+    /**
+     * @param {Phaser.Scene} scene - Game scene
+     * @param {number} worldX - World X position
+     * @param {number} y - Y position (will be adjusted to bottom)
+     */
     constructor(scene, worldX, y) {
-        // Call parent constructor (no species data for simple organisms)
-        super(scene, worldX, y);
+        // Get crayfish configuration
+        const speciesData = getOrganismData('crayfish');
 
-        // Biological properties (small invertebrates, larger than zooplankton)
-        this.size = Utils.randomBetween(2.0, 4.0); // Inches (realistic crayfish size, more visible)
+        // Use crayfish texture
+        const textureKey = 'crayfish';
+
+        // Call parent constructor
+        super(scene, worldX, y, textureKey);
+
+        // Store species data
+        this.speciesData = speciesData;
+
+        // Set depth for rendering (above zooplankton, below fish)
+        this.setDepth(35);
+
+        // Initialize crayfish properties
+        this.initCrayfishProperties(scene);
+
+        // Update screen position
+        this.updateScreenPosition();
+    }
+
+    /**
+     * Initialize crayfish-specific properties
+     */
+    initCrayfishProperties(scene) {
+        // Unique identifier
+        this.id = `crayfish_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+
+        // Biological properties (small invertebrates)
+        this.size = Utils.randomBetween(2.0, 4.0); // Inches (realistic crayfish size)
         this.length = this.size;
         this.speed = Utils.randomBetween(0.3, 0.6); // Slow crawling speed
 
@@ -27,7 +60,7 @@ export class Crayfish extends AquaticOrganism {
         this.roamDirection = Math.random() < 0.5 ? -1 : 1; // Left or right
         this.roamSpeed = Utils.randomBetween(0.2, 0.4);
 
-        // Hunting behavior (similar to baitfish)
+        // Hunting behavior
         this.currentTarget = null; // Currently targeted zooplankton
         this.targetLockTime = 0;
         this.minLockDuration = 90; // 1.5 seconds at 60fps
@@ -46,7 +79,6 @@ export class Crayfish extends AquaticOrganism {
         this.fatigueRecoveryDuration = 180; // 3 seconds to fully recover
 
         // State
-        this.consumed = false;
         this.threatened = false; // Is there a predator nearby?
 
         // Visual properties
@@ -54,28 +86,29 @@ export class Crayfish extends AquaticOrganism {
 
         // Lifecycle
         this.maxAge = Utils.randomBetween(9000, 18000); // 2.5-5 minutes at 60fps
+
+        // Angle for rendering
+        this.angle = this.roamDirection > 0 ? 0 : Math.PI;
     }
 
     /**
-     * Update crayfish position and behavior
+     * Phaser preUpdate - called automatically every frame
      */
-    update(nearbyZooplankton = [], predatorsNearby = false) {
-        if (this.consumed || !this.visible) {
+    preUpdate(time, delta) {
+        super.preUpdate(time, delta);
+
+        if (this.consumed || !this.active) {
             return;
         }
-
-        this.age++;
 
         // Despawn if too old
-        if (this.age > this.maxAge) {
-            this.visible = false;
+        if (this.frameAge > this.maxAge) {
+            this.setActive(false);
+            this.setVisible(false);
             return;
         }
 
-        // Update threat status
-        this.threatened = predatorsNearby;
-
-        // Handle burst mechanics if threatened
+        // Update burst mechanics if threatened
         if (this.threatened && this.burstState === 'idle') {
             this.initiateBurst();
         }
@@ -95,6 +128,9 @@ export class Crayfish extends AquaticOrganism {
                 }
             }
 
+            // Get nearby zooplankton from scene
+            const nearbyZooplankton = this.findNearbyZooplankton();
+
             // Choose behavior: hunting or roaming
             if (nearbyZooplankton && nearbyZooplankton.length > 0) {
                 this.handleHuntingBehavior(nearbyZooplankton);
@@ -106,17 +142,45 @@ export class Crayfish extends AquaticOrganism {
         // Keep on bottom of lake
         this.stayOnBottom();
 
-        // Update depth and screen position (use dynamic depth scale)
+        // Update depth
         const depthScale = this.scene.sonarDisplay ?
             this.scene.sonarDisplay.getDepthScale() :
             GameConfig.DEPTH_SCALE;
         this.depth = this.y / depthScale;
+
+        // Update screen position
         this.updateScreenPosition();
 
-        // Check if too far from player
+        // Check if too far from player (despawn)
         if (this.isTooFarFromPlayer(600)) {
-            this.visible = false;
+            this.setActive(false);
+            this.setVisible(false);
         }
+
+        // Update sprite rotation based on angle
+        this.rotation = this.angle;
+
+        // Flip sprite based on direction
+        const isMovingRight = Math.cos(this.angle) > 0;
+        this.setFlipX(isMovingRight);
+    }
+
+    /**
+     * Find nearby zooplankton for hunting
+     */
+    findNearbyZooplankton() {
+        if (!this.scene.zooplankton) return [];
+
+        return this.scene.zooplankton.filter(zp => {
+            if (!zp.visible || zp.consumed) return false;
+
+            const distance = Phaser.Math.Distance.Between(
+                this.worldX, this.y,
+                zp.worldX, zp.y
+            );
+
+            return distance < 150; // Detection range
+        });
     }
 
     /**
@@ -124,7 +188,6 @@ export class Crayfish extends AquaticOrganism {
      */
     initiateBurst() {
         // Determine burst direction (backwards from current facing)
-        // If we have an angle, burst opposite; otherwise pick random backward direction
         this.burstDirection = this.angle !== 0
             ? this.angle + Math.PI
             : (Math.random() < 0.5 ? Math.PI : 0);
@@ -145,7 +208,6 @@ export class Crayfish extends AquaticOrganism {
 
             // Execute burst movement (fast horizontal backwards)
             const burstX = Math.cos(this.burstDirection) * this.burstSpeed;
-            const burstY = 0; // Horizontal only, stay on bottom
             this.worldX += burstX;
 
             // Update angle for rendering
@@ -182,17 +244,16 @@ export class Crayfish extends AquaticOrganism {
     }
 
     /**
-     * Hunt zooplankton (similar to baitfish hunting)
+     * Hunt zooplankton
      */
     handleHuntingBehavior(nearbyZooplankton) {
         // Check if current target is still valid
         if (this.currentTarget && this.currentTarget.visible && !this.currentTarget.consumed) {
             this.targetLockTime++;
 
-            // Use Phaser's optimized distance calculation
             const currentDist = Phaser.Math.Distance.Between(
-                this.x, this.y,
-                this.currentTarget.x, this.currentTarget.y
+                this.worldX, this.y,
+                this.currentTarget.worldX, this.currentTarget.y
             );
 
             // Keep current target if within range
@@ -203,12 +264,11 @@ export class Crayfish extends AquaticOrganism {
                     let bestScore = currentDist;
 
                     nearbyZooplankton.forEach(zp => {
-                        if (!zp.visible || zp.consumed || zp === this.currentTarget) {return;}
+                        if (!zp.visible || zp.consumed || zp === this.currentTarget) return;
 
-                        // Use Phaser's optimized distance calculation
                         const distance = Phaser.Math.Distance.Between(
-                            this.x, this.y,
-                            zp.x, zp.y
+                            this.worldX, this.y,
+                            zp.worldX, zp.y
                         );
 
                         // Only switch if significantly better (40% improvement)
@@ -237,12 +297,11 @@ export class Crayfish extends AquaticOrganism {
             let bestDistance = Infinity;
 
             nearbyZooplankton.forEach(zp => {
-                if (!zp.visible || zp.consumed) {return;}
+                if (!zp.visible || zp.consumed) return;
 
-                // Use Phaser's optimized distance calculation
                 const distance = Phaser.Math.Distance.Between(
-                    this.x, this.y,
-                    zp.x, zp.y
+                    this.worldX, this.y,
+                    zp.worldX, zp.y
                 );
 
                 if (distance < bestDistance) {
@@ -259,7 +318,6 @@ export class Crayfish extends AquaticOrganism {
         if (this.currentTarget) {
             const dx = this.currentTarget.worldX - this.worldX;
             const dy = this.currentTarget.y - this.y;
-            // Use Phaser's optimized distance calculation
             const distance = Phaser.Math.Distance.Between(
                 this.worldX, this.y,
                 this.currentTarget.worldX, this.currentTarget.y
@@ -267,7 +325,7 @@ export class Crayfish extends AquaticOrganism {
 
             // If close enough, consume the zooplankton
             if (distance < 8) {
-                this.currentTarget.consume();
+                this.currentTarget.markConsumed();
                 this.currentTarget = null;
                 this.targetLockTime = 0;
             } else {
@@ -287,12 +345,12 @@ export class Crayfish extends AquaticOrganism {
     stayOnBottom() {
         const bottomDepth = this.getBottomDepthAtPosition();
 
-        // Use dynamic depth scale from sonar display (not static GameConfig.DEPTH_SCALE)
+        // Use dynamic depth scale from sonar display
         const depthScale = this.scene.sonarDisplay ?
             this.scene.sonarDisplay.getDepthScale() :
             GameConfig.DEPTH_SCALE;
 
-        // Calculate bottom Y position with small offset to appear grounded (same as lure)
+        // Calculate bottom Y position with small offset to appear grounded
         const BOTTOM_OFFSET_PX = 12;
         const bottomY = (bottomDepth * depthScale) + BOTTOM_OFFSET_PX;
 
@@ -312,80 +370,35 @@ export class Crayfish extends AquaticOrganism {
     }
 
     /**
-     * Mark as consumed by a predator (likely a smallmouth bass!)
+     * Get bottom depth at current position
      */
-    consume() {
-        this.consumed = true;
-        this.visible = false;
+    getBottomDepthAtPosition() {
+        // Use scene's depth converter if available
+        if (this.scene.depthConverter) {
+            const canvasHeight = this.scene.scale.height;
+            const waterFloorY = GameConfig.getWaterFloorY(canvasHeight);
+            return this.scene.depthConverter.yToDepth(waterFloorY);
+        }
+
+        // Fallback: use default max depth
+        return GameConfig.MAX_DEPTH || 100;
     }
 
     /**
-     * Get current position
+     * Check if too far from player (for despawning)
      */
-    getPosition() {
-        return { x: this.x, y: this.y };
+    isTooFarFromPlayer(maxDistance) {
+        const canvasWidth = this.scene.scale.width;
+        const playerWorldX = canvasWidth / 2;
+        const distance = Math.abs(this.worldX - playerWorldX);
+        return distance > maxDistance;
     }
 
     /**
-     * Check if within range of a position
+     * Set threat status (called by FoodChainSystem when predators nearby)
      */
-    isWithinRange(x, y, range) {
-        // Use Phaser's optimized distance calculation
-        const distance = Phaser.Math.Distance.Between(this.x, this.y, x, y);
-        return distance < range;
-    }
-
-    /**
-     * Render the crayfish (procedural rendering)
-     * @param {Phaser.GameObjects.Graphics} graphics - Graphics object to render to
-     */
-    render(graphics) {
-        if (!this.visible || this.consumed) {
-            return;
-        }
-
-        const alpha = 0.7;
-        const screenX = this.x;
-        const screenY = this.y;
-        const bodySize = this.size * 1.5; // Increased visual size for better visibility
-
-        // Different visual based on state
-        let color = 0xaa6633; // Brownish-orange
-        if (this.burstState === 'bursting') {
-            color = 0xff8844; // Brighter when bursting
-        } else if (this.threatened) {
-            color = 0xdd7744; // Slightly brighter when threatened
-        }
-
-        // Outer glow
-        graphics.fillStyle(color, alpha * 0.3);
-        graphics.fillCircle(screenX, screenY, bodySize * 1.5);
-
-        // Body (slightly elongated for crayfish shape)
-        graphics.fillStyle(color, alpha * 0.8);
-        graphics.fillEllipse(screenX, screenY, bodySize * 1.5, bodySize * 0.8);
-
-        // Brighter center
-        graphics.fillStyle(color, alpha);
-        graphics.fillCircle(screenX, screenY, bodySize * 0.5);
-
-        // Claws (two small dots on sides)
-        if (this.burstState !== 'bursting') {
-            const clawSize = bodySize * 0.3;
-            graphics.fillStyle(color, alpha * 0.6);
-            graphics.fillCircle(screenX - bodySize * 0.7, screenY - bodySize * 0.3, clawSize);
-            graphics.fillCircle(screenX - bodySize * 0.7, screenY + bodySize * 0.3, clawSize);
-        }
-
-        // Burst effect (motion lines)
-        if (this.burstState === 'bursting') {
-            graphics.lineStyle(1, color, alpha * 0.5);
-            for (let i = 0; i < 3; i++) {
-                const offset = (i + 1) * bodySize * 1.5;
-                const lineX = screenX + Math.cos(this.burstDirection) * offset;
-                graphics.lineBetween(screenX, screenY, lineX, screenY);
-            }
-        }
+    setThreatened(threatened) {
+        this.threatened = threatened;
     }
 
     /**
@@ -393,13 +406,8 @@ export class Crayfish extends AquaticOrganism {
      */
     getInfo() {
         return {
-            x: this.x,
-            y: this.y,
-            depth: Math.floor(this.depth),
+            ...super.getInfo(),
             size: this.size.toFixed(2),
-            visible: this.visible,
-            consumed: this.consumed,
-            age: this.age,
             burstState: this.burstState,
             burstsFired: this.burstsFired,
             fatigueFactor: this.fatigueFactor.toFixed(2),
@@ -407,6 +415,23 @@ export class Crayfish extends AquaticOrganism {
             hunting: this.currentTarget !== null
         };
     }
+
+    /**
+     * Reset crayfish for object pooling
+     */
+    reset(worldX, y) {
+        super.reset(worldX, y);
+        this.initCrayfishProperties(this.scene);
+        this.updateScreenPosition();
+    }
+
+    /**
+     * Clean up
+     */
+    destroy(fromScene) {
+        this.currentTarget = null;
+        super.destroy(fromScene);
+    }
 }
 
-export default Crayfish;
+export default CrayfishSprite;

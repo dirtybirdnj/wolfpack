@@ -1,9 +1,10 @@
 import GameConfig from '../../config/GameConfig.js';
 import { Constants, Utils } from '../../utils/Constants.js';
-import Fish from '../../entities/Fish.js';
-import { FishSprite } from '../../models/FishSprite.js';
-import Zooplankton from '../../entities/Zooplankton.js';
-import Crayfish from '../../entities/Crayfish.js';
+import { FishSprite } from '../../sprites/FishSprite.js';
+import { CrayfishSprite } from '../../sprites/CrayfishSprite.js';
+import { ZooplanktonSprite } from '../../sprites/ZooplanktonSprite.js';
+import { getOrganismData } from '../../config/OrganismData.js';
+// Legacy imports for compatibility during transition
 import { getBaitfishSpecies, selectRandomSpecies, getPredatorSpecies } from '../../config/SpeciesData.js';
 
 /**
@@ -191,7 +192,7 @@ export class SpawningSystem {
         const fromLeft = Math.random() < 0.5;
 
         // Use dynamic depth scale from scene
-        const depthScale = this.scene.depthConverter.depthScale;
+        const depthScale = this.scene.depthConverter?.depthScale || GameConfig.DEPTH_SCALE || 4;
         let y = depth * depthScale;
 
         // Validate Y is within canvas bounds (safety check)
@@ -202,16 +203,24 @@ export class SpawningSystem {
             y = waterFloorY;
         }
 
-        // Create the fish using FishSprite with pooling
-        const fish = new FishSprite(this.scene, worldX, y, size, species);
+        // Final validation - ensure y is a valid number
+        if (isNaN(y)) {
+            console.error(`❌ CRITICAL: y is NaN for ${species}! depth=${depth}, depthScale=${depthScale}`);
+            return null;
+        }
+
+        // Create the fish using FishSprite
+        const fish = new FishSprite(this.scene, worldX, y, species, size);
 
         // Set initial movement direction
         if (fish.ai) {
             fish.ai.idleDirection = fromLeft ? 1 : -1;
         }
 
-        // Add to legacy array for compatibility (will be removed later)
+        // Add ONLY to legacy array (predators use scene.add.existing for rendering)
         this.scene.fishes.push(fish);
+
+        console.log(`🐟 Spawned ${species} (${size}) at depth ${depth.toFixed(1)}ft`);
         return fish;
     }
 
@@ -312,18 +321,10 @@ export class SpawningSystem {
         const maxBaitfishDepth = Math.max(10, actualDepth - 5);
         depth = Math.min(depth, maxBaitfishDepth);
 
-        // Always spawn FAR off-screen so schools swim into view from sides
+        // Spawn within visible window (matching predator fish spawning)
         // Use CURRENT canvas width (handles window resize)
         const canvasWidth = this.scene.scale.width;
-        const playerWorldX = canvasWidth / 2;
-        const fromLeft = Math.random() < 0.5;
-        // Spawn distance relative to screen width (1-1.5x half screen width)
-        const baseSpawnDistance = canvasWidth / 2;
-        const spawnDistance = Utils.randomBetween(baseSpawnDistance, baseSpawnDistance * 1.5);
-
-        const worldX = fromLeft ?
-            (playerWorldX - canvasWidth / 2 - spawnDistance) :
-            (playerWorldX + canvasWidth / 2 + spawnDistance);
+        const worldX = Utils.randomBetween(100, canvasWidth - 100);
 
         // Convert depth to screen Y
         const depthScale = this.scene.depthConverter.depthScale;
@@ -370,20 +371,9 @@ export class SpawningSystem {
         const spawnCount = Math.floor(Utils.randomBetween(3, 6));
 
         for (let i = 0; i < spawnCount; i++) {
-            // Spawn at random position around player in world coordinates
-            // In nature simulation mode, spawn randomly across screen
-            let worldX;
-
-            if (isNatureSimulation) {
-                const canvasWidth = this.scene.scale.width;
-                const screenLeft = -200;
-                const screenRight = canvasWidth + 200;
-                worldX = Utils.randomBetween(screenLeft, screenRight);
-            } else {
-                // Doubled spawn range from -300/+300 to -600/+600
-                const offsetX = Utils.randomBetween(-600, 600);
-                worldX = playerWorldX + offsetX;
-            }
+            // Spawn within visible window (matching other entity spawning)
+            const canvasWidth = this.scene.scale.width;
+            const worldX = Utils.randomBetween(100, canvasWidth - 100);
 
             // Spawn heavily weighted toward bottom, with some at mid-depths
             // 70% spawn at bottom (85-100 feet), 30% at mid-depth (60-85 feet)
@@ -410,8 +400,8 @@ export class SpawningSystem {
                 y = waterFloorY;
             }
 
-            // Create zooplankton
-            const zp = new Zooplankton(this.scene, worldX, y);
+            // Create zooplankton using new sprite class
+            const zp = new ZooplanktonSprite(this.scene, worldX, y);
             this.scene.zooplankton.push(zp);
         }
 
@@ -580,7 +570,9 @@ export class SpawningSystem {
         const size = sizes[Math.floor(Math.random() * sizes.length)];
 
         // Create fish using FishSprite
-        const fish = new FishSprite(this.scene, worldX, y, size, species);
+        const fish = new FishSprite(this.scene, worldX, y, species, size);
+
+        // Add ONLY to legacy array (predators use scene.add.existing for rendering)
         this.scene.fishes.push(fish);
 
         console.log(`🎣 ${species} (${size}) spawning at ${depth.toFixed(0)}ft`);
@@ -617,18 +609,9 @@ export class SpawningSystem {
         // Always use center of screen as player position
         playerWorldX = this.scene.scale.width / 2;
 
-        // Random horizontal position
-        let worldX;
-        if (isNatureSimulation) {
-            const canvasWidth = this.scene.scale.width;
-            const screenLeft = -200;
-            const screenRight = canvasWidth + 200;
-            worldX = Utils.randomBetween(screenLeft, screenRight);
-        } else {
-            // Spawn around player (wider range than zooplankton)
-            const offsetX = Utils.randomBetween(-400, 400);
-            worldX = playerWorldX + offsetX;
-        }
+        // Spawn within visible window (matching other entity spawning)
+        const canvasWidth = this.scene.scale.width;
+        const worldX = Utils.randomBetween(100, canvasWidth - 100);
 
         // Spawn on the actual bottom depth (use MAX_DEPTH which is the lake's bottom)
         const depth = GameConfig.MAX_DEPTH;
@@ -648,8 +631,8 @@ export class SpawningSystem {
             y = waterFloorY;
         }
 
-        // Create crayfish
-        const crayfish = new Crayfish(this.scene, worldX, y);
+        // Create crayfish using new sprite class
+        const crayfish = new CrayfishSprite(this.scene, worldX, y);
         this.scene.crayfish.push(crayfish);
 
         return crayfish;
@@ -696,7 +679,7 @@ export class SpawningSystem {
 
         // Create fish with max hunger and low health (size MEDIUM for balance)
         // Emergency fish is always lake trout for consistency
-        const fish = new FishSprite(this.scene, worldX, y, 'MEDIUM', 'lake_trout');
+        const fish = new FishSprite(this.scene, worldX, y, 'lake_trout', 'MEDIUM');
         fish.hunger = 100; // Max hunger - very motivated!
         fish.health = 30; // Low health makes it easier to catch
         fish.isEmergencyFish = true; // Mark as emergency fish

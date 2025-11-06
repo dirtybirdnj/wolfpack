@@ -29,7 +29,7 @@ export const GameConfig = {
     SONAR_SCROLL_SPEED: 1.35, // pixels per frame (scaled for larger canvas)
     GRID_SIZE: 22, // pixels between grid lines (scaled for larger canvas)
     MAX_DEPTH: 150, // feet
-    // NOTE: DEPTH_SCALE is DEPRECATED - use scene.sonarDisplay.getDepthScale() for dynamic scaling
+    DEPTH_SCALE: 4, // Default depth scale (pixels per foot) - prefer scene.depthConverter.depthScale when available
 
     // Lure physics
     LURE_GRAVITY: 0.15, // acceleration when dropping

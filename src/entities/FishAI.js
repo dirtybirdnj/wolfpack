@@ -87,10 +87,15 @@ export class FishAI {
     }
     
     calculateDepthPreference() {
-        // Ice fishing: Lake trout prefer deeper, cooler water
-        const minDepth = GameConfig.LAKE_TROUT_PREFERRED_DEPTH_MIN;
-        const maxDepth = GameConfig.LAKE_TROUT_PREFERRED_DEPTH_MAX;
-        return Utils.randomBetween(minDepth, maxDepth);
+        // Get species-specific depth preferences from OrganismData
+        const depthRange = this.fish.speciesData.depthRange;
+
+        if (!depthRange) {
+            console.warn(`⚠️ No depthRange for species ${this.fish.species}, using fallback 40-130ft`);
+            return Utils.randomBetween(40, 130);
+        }
+
+        return Utils.randomBetween(depthRange.min, depthRange.max);
     }
 
     detectFrenzy(lure, allFish, baitfishClouds = []) {
@@ -942,10 +947,10 @@ export class FishAI {
             console.log(`🎯 Fish locked onto frenzy target cloud!`);
         }
 
-        // DIET PREFERENCE - Lake trout prefer certain prey species (based on real-world data)
+        // DIET PREFERENCE - Each predator has species-specific prey preferences
         const preySpecies = cloudInfo.cloud.speciesType;
-        const dietPreference = calculateDietPreference('lake_trout', preySpecies);
-        // Diet preferences: alewife 0.55, smelt 0.25, perch 0.08, sculpin 0.08, cisco 0.04
+        const dietPreference = calculateDietPreference(this.fish.species, preySpecies);
+        // Note: Diet preferences vary by predator species (lake_trout, northern_pike, smallmouth_bass, yellow_perch)
 
         // Very hungry fish (>70%) are less picky about species
         const pickyFactor = this.fish.hunger > 70 ? 0.3 : 1.0;
@@ -1043,9 +1048,9 @@ export class FishAI {
 
         if (result.baitfish) {
             this.targetBaitfish = result.baitfish;
-            // Use worldX for target position (baitfish use world coordinates)
-            this.targetX = result.baitfish.model ? result.baitfish.model.worldX : result.baitfish.worldX;
-            this.targetY = result.baitfish.model ? result.baitfish.model.y : result.baitfish.y;
+            // Baitfish are now FishSprite instances with worldX and y properties
+            this.targetX = result.baitfish.worldX;
+            this.targetY = result.baitfish.y;
 
             // Check if mouth is touching the baitfish
             if (result.distance < 8) { // Mouth must touch baitfish
@@ -1238,7 +1243,7 @@ export class FishAI {
 
         if (distance < 8) { // Mouth must touch crayfish
             // Consume the crayfish!
-            crayfish.consume();
+            crayfish.markConsumed(); // Use new OrganismSprite method
             this.fish.feedOnCrayfish();
             this.state = Constants.FISH_STATE.FEEDING;
             this.decisionCooldown = 100; // Brief pause after eating

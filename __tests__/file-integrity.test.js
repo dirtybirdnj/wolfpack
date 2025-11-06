@@ -72,6 +72,70 @@ describe('File Integrity', () => {
     });
   });
 
+  test('No references to deleted entity classes from organism refactor', () => {
+    const deletedEntities = [
+      "from '../entities/Baitfish.js'",
+      "from '../entities/BaitfishCloud.js'",
+      "from '../entities/Crayfish.js'",
+      "from '../entities/Fish.js'",
+      "from '../entities/Zooplankton.js'",
+      "from '../../entities/Baitfish.js'",
+      "from '../../entities/BaitfishCloud.js'",
+      "from '../../entities/Crayfish.js'",
+      "from '../../entities/Fish.js'",
+      "from '../../entities/Zooplankton.js'"
+    ];
+
+    srcFiles.forEach(file => {
+      const content = fs.readFileSync(file, 'utf-8');
+      deletedEntities.forEach(entityImport => {
+        if (content.includes(entityImport)) {
+          fail(`Found import of deleted entity in ${file}: ${entityImport}`);
+        }
+      });
+    });
+  });
+
+  test('No references to deleted model files from organism refactor', () => {
+    const deletedModels = [
+      "from '../models/AquaticOrganism.js'",
+      "from '../models/BaitfishSprite.js'",
+      "from '../models/FishSprite.js'",
+      "from '../models/baitfish.js'",
+      "from '../models/crayfish.js'",
+      "from '../models/fish.js'",
+      "from '../models/zooplankton.js'",
+      "from '../models/species/LakeTrout.js'",
+      "from '../models/species/NorthernPike.js'",
+      "from '../models/species/SmallmouthBass.js'",
+      "from '../models/species/YellowPerch.js'",
+      "from '../../models/AquaticOrganism.js'",
+      "from '../../models/BaitfishSprite.js'",
+      "from '../../models/FishSprite.js'",
+      "from '../../models/baitfish.js'",
+      "from '../../models/crayfish.js'",
+      "from '../../models/fish.js'",
+      "from '../../models/zooplankton.js'"
+    ];
+
+    srcFiles.forEach(file => {
+      const content = fs.readFileSync(file, 'utf-8');
+      deletedModels.forEach(modelImport => {
+        if (content.includes(modelImport)) {
+          fail(`Found import of deleted model in ${file}: ${modelImport}`);
+        }
+      });
+    });
+  });
+
+  test('No references to deleted SchoolingBehavior component', () => {
+    srcFiles.forEach(file => {
+      const content = fs.readFileSync(file, 'utf-8');
+      expect(content).not.toMatch(/import.*SchoolingBehavior/);
+      expect(content).not.toMatch(/from.*\/components\/SchoolingBehavior/);
+    });
+  });
+
   test('No orphaned else statements (syntax check)', () => {
     srcFiles.forEach(file => {
       const content = fs.readFileSync(file, 'utf-8');
