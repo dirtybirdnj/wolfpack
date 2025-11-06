@@ -1,6 +1,28 @@
 import GameConfig from '../config/GameConfig.js';
 
 /**
+ * Position interface for world coordinates
+ */
+export interface WorldPosition {
+    worldX: number;
+    y: number;
+}
+
+/**
+ * Organism debug info interface
+ */
+export interface OrganismInfo {
+    worldX: string;
+    screenX: string;
+    y: string;
+    depth: string;
+    frameAge: number;
+    consumed: boolean;
+    active: boolean;
+    visible: boolean;
+}
+
+/**
  * OrganismSprite - Base class for ALL water organisms
  *
  * Extends Phaser.GameObjects.Sprite to provide common functionality
@@ -14,13 +36,17 @@ import GameConfig from '../config/GameConfig.js';
  * - Depth management
  */
 export class OrganismSprite extends Phaser.GameObjects.Sprite {
+    public worldX: number;
+    public consumed: boolean;
+    public frameAge: number;
+
     /**
-     * @param {Phaser.Scene} scene - Game scene
-     * @param {number} worldX - World X position (independent of camera)
-     * @param {number} y - Screen Y position
-     * @param {string} texture - Phaser texture key
+     * @param scene - Game scene
+     * @param worldX - World X position (independent of camera)
+     * @param y - Screen Y position
+     * @param texture - Phaser texture key
      */
-    constructor(scene, worldX, y, texture) {
+    constructor(scene: Phaser.Scene, worldX: number, y: number, texture: string) {
         // Initialize sprite at screen position 0, y
         // We'll update screen position based on worldX
         super(scene, 0, y, texture);
@@ -48,7 +74,7 @@ export class OrganismSprite extends Phaser.GameObjects.Sprite {
      * Update screen X position based on world position and camera
      * Called every frame to handle horizontal scrolling
      */
-    updateScreenPosition() {
+    updateScreenPosition(): void {
         // Get current canvas width (handles window resize)
         const canvasWidth = this.scene.scale.width;
 
@@ -64,16 +90,16 @@ export class OrganismSprite extends Phaser.GameObjects.Sprite {
 
     /**
      * Calculate depth in feet based on Y position
-     * @returns {number} Depth in feet
+     * @returns Depth in feet
      */
-    getDepth() {
+    getDepth(): number {
         // Use scene's depth converter if available
-        if (this.scene.depthConverter) {
-            return this.scene.depthConverter.yToDepth(this.y);
+        if ((this.scene as any).depthConverter) {
+            return (this.scene as any).depthConverter.yToDepth(this.y);
         }
 
         // Fallback: simple calculation
-        const depthScale = this.scene.sonarDisplay?.getDepthScale() || 10;
+        const depthScale = (this.scene as any).sonarDisplay?.getDepthScale() || 10;
         return this.y / depthScale;
     }
 
@@ -81,7 +107,7 @@ export class OrganismSprite extends Phaser.GameObjects.Sprite {
      * Mark this organism as consumed/eaten
      * Removes from gameplay but doesn't destroy sprite (for pooling)
      */
-    markConsumed() {
+    markConsumed(): void {
         this.consumed = true;
         this.setActive(false);
         this.setVisible(false);
@@ -91,10 +117,10 @@ export class OrganismSprite extends Phaser.GameObjects.Sprite {
      * Reset organism for object pooling
      * Override in subclasses to reset specific properties
      *
-     * @param {number} worldX - New world X position
-     * @param {number} y - New Y position
+     * @param worldX - New world X position
+     * @param y - New Y position
      */
-    reset(worldX, y) {
+    reset(worldX: number, y: number): void {
         this.worldX = worldX;
         this.y = y;
         this.consumed = false;
@@ -108,9 +134,9 @@ export class OrganismSprite extends Phaser.GameObjects.Sprite {
 
     /**
      * Get position for distance calculations
-     * @returns {object} Position object {worldX, y}
+     * @returns Position object {worldX, y}
      */
-    getPosition() {
+    getPosition(): WorldPosition {
         return {
             worldX: this.worldX,
             y: this.y
@@ -119,12 +145,12 @@ export class OrganismSprite extends Phaser.GameObjects.Sprite {
 
     /**
      * Check if this organism is within range of a position
-     * @param {number} x - World X position
-     * @param {number} y - Y position
-     * @param {number} range - Maximum distance
-     * @returns {boolean} True if within range
+     * @param x - World X position
+     * @param y - Y position
+     * @param range - Maximum distance
+     * @returns True if within range
      */
-    isWithinRange(x, y, range) {
+    isWithinRange(x: number, y: number, range: number): boolean {
         const distance = Phaser.Math.Distance.Between(
             this.worldX, this.y,
             x, y
@@ -136,7 +162,7 @@ export class OrganismSprite extends Phaser.GameObjects.Sprite {
      * Enforce water boundaries
      * Keeps organism within playable water area
      */
-    enforceBoundaries() {
+    enforceBoundaries(): void {
         const canvasHeight = this.scene.scale.height;
         const waterSurfaceY = GameConfig.WATER_SURFACE_Y;
         const waterFloorY = GameConfig.getWaterFloorY(canvasHeight);
@@ -164,10 +190,10 @@ export class OrganismSprite extends Phaser.GameObjects.Sprite {
      * Update rotation based on velocity
      * Override in subclasses for specific behavior
      *
-     * @param {number} vx - X velocity
-     * @param {number} vy - Y velocity
+     * @param vx - X velocity
+     * @param vy - Y velocity
      */
-    updateRotation(vx, vy) {
+    updateRotation(vx: number, vy: number): void {
         if (Math.abs(vx) > 0.1 || Math.abs(vy) > 0.1) {
             const isMovingRight = vx > 0;
             const targetAngle = Math.atan2(vy, Math.abs(vx));
@@ -184,10 +210,10 @@ export class OrganismSprite extends Phaser.GameObjects.Sprite {
      * Phaser preUpdate - called automatically every frame
      * Override in subclasses for organism-specific behavior
      *
-     * @param {number} time - Total elapsed time
-     * @param {number} delta - Time since last frame
+     * @param time - Total elapsed time
+     * @param delta - Time since last frame
      */
-    preUpdate(time, delta) {
+    preUpdate(time: number, delta: number): void {
         super.preUpdate(time, delta);
 
         // Increment frame counter (for animations and timing)
@@ -203,9 +229,9 @@ export class OrganismSprite extends Phaser.GameObjects.Sprite {
      * Get debug info about this organism
      * Override in subclasses to add specific info
      *
-     * @returns {object} Debug information
+     * @returns Debug information
      */
-    getInfo() {
+    getInfo(): OrganismInfo {
         return {
             worldX: this.worldX.toFixed(1),
             screenX: this.x.toFixed(1),
@@ -220,9 +246,9 @@ export class OrganismSprite extends Phaser.GameObjects.Sprite {
 
     /**
      * Clean up sprite
-     * @param {boolean} fromScene - Removing from scene?
+     * @param fromScene - Removing from scene?
      */
-    destroy(fromScene) {
+    destroy(fromScene?: boolean): void {
         // Subclasses can override to clean up components
         super.destroy(fromScene);
     }

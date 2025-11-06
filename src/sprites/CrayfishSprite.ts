@@ -1,7 +1,24 @@
-import { OrganismSprite } from './OrganismSprite.js';
-import { getOrganismData } from '../config/OrganismData.js';
+import { OrganismSprite, OrganismInfo } from './OrganismSprite.js';
+import { getOrganismData, CrayfishData } from '../config/OrganismData.js';
 import GameConfig from '../config/GameConfig.js';
 import { Utils } from '../utils/Constants.js';
+
+/**
+ * Burst state type
+ */
+type BurstState = 'idle' | 'bursting' | 'cooldown';
+
+/**
+ * Extended crayfish info interface
+ */
+interface CrayfishInfo extends OrganismInfo {
+    size: string;
+    burstState: BurstState;
+    burstsFired: number;
+    fatigueFactor: string;
+    threatened: boolean;
+    hunting: boolean;
+}
 
 /**
  * CrayfishSprite - Bottom-dwelling invertebrate using Phaser Sprite
@@ -16,14 +33,41 @@ import { Utils } from '../utils/Constants.js';
  * - Preferred prey for smallmouth bass
  */
 export class CrayfishSprite extends OrganismSprite {
+    public id: string;
+    public speciesData: CrayfishData;
+    public size: number;
+    public length: number;
+    public speed: number;
+    public roamDirection: number;
+    public roamSpeed: number;
+    public currentTarget: any | null;
+    public targetLockTime: number;
+    public minLockDuration: number;
+    public huntingSpeed: number;
+    public burstState: BurstState;
+    public burstDirection: number;
+    public burstSpeed: number;
+    public burstDuration: number;
+    public burstTimer: number;
+    public burstsFired: number;
+    public baseBurstCooldown: number;
+    public fatigueFactor: number;
+    public fatigueRecoveryTimer: number;
+    public fatigueRecoveryDuration: number;
+    public threatened: boolean;
+    public hue: number;
+    public maxAge: number;
+    public angle: number;
+    public depth?: number;
+
     /**
-     * @param {Phaser.Scene} scene - Game scene
-     * @param {number} worldX - World X position
-     * @param {number} y - Y position (will be adjusted to bottom)
+     * @param scene - Game scene
+     * @param worldX - World X position
+     * @param y - Y position (will be adjusted to bottom)
      */
-    constructor(scene, worldX, y) {
+    constructor(scene: Phaser.Scene, worldX: number, y: number) {
         // Get crayfish configuration
-        const speciesData = getOrganismData('crayfish');
+        const speciesData = getOrganismData('crayfish') as CrayfishData;
 
         // Use crayfish texture
         const textureKey = 'crayfish';
@@ -37,6 +81,32 @@ export class CrayfishSprite extends OrganismSprite {
         // Set depth for rendering (above zooplankton, below fish)
         this.setDepth(35);
 
+        // Initialize placeholder values (will be set in init method)
+        this.id = '';
+        this.size = 0;
+        this.length = 0;
+        this.speed = 0;
+        this.roamDirection = 0;
+        this.roamSpeed = 0;
+        this.currentTarget = null;
+        this.targetLockTime = 0;
+        this.minLockDuration = 0;
+        this.huntingSpeed = 0;
+        this.burstState = 'idle';
+        this.burstDirection = 0;
+        this.burstSpeed = 0;
+        this.burstDuration = 0;
+        this.burstTimer = 0;
+        this.burstsFired = 0;
+        this.baseBurstCooldown = 0;
+        this.fatigueFactor = 0;
+        this.fatigueRecoveryTimer = 0;
+        this.fatigueRecoveryDuration = 0;
+        this.threatened = false;
+        this.hue = 0;
+        this.maxAge = 0;
+        this.angle = 0;
+
         // Initialize crayfish properties
         this.initCrayfishProperties(scene);
 
@@ -47,7 +117,7 @@ export class CrayfishSprite extends OrganismSprite {
     /**
      * Initialize crayfish-specific properties
      */
-    initCrayfishProperties(scene) {
+    private initCrayfishProperties(scene: Phaser.Scene): void {
         // Unique identifier
         this.id = `crayfish_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 
@@ -94,7 +164,7 @@ export class CrayfishSprite extends OrganismSprite {
     /**
      * Phaser preUpdate - called automatically every frame
      */
-    preUpdate(time, delta) {
+    preUpdate(time: number, delta: number): void {
         super.preUpdate(time, delta);
 
         if (this.consumed || !this.active) {
@@ -143,8 +213,8 @@ export class CrayfishSprite extends OrganismSprite {
         this.stayOnBottom();
 
         // Update depth
-        const depthScale = this.scene.sonarDisplay ?
-            this.scene.sonarDisplay.getDepthScale() :
+        const depthScale = (this.scene as any).sonarDisplay ?
+            (this.scene as any).sonarDisplay.getDepthScale() :
             GameConfig.DEPTH_SCALE;
         this.depth = this.y / depthScale;
 
@@ -168,10 +238,10 @@ export class CrayfishSprite extends OrganismSprite {
     /**
      * Find nearby zooplankton for hunting
      */
-    findNearbyZooplankton() {
-        if (!this.scene.zooplankton) return [];
+    private findNearbyZooplankton(): any[] {
+        if (!(this.scene as any).zooplankton) return [];
 
-        return this.scene.zooplankton.filter(zp => {
+        return (this.scene as any).zooplankton.filter((zp: any) => {
             if (!zp.visible || zp.consumed) return false;
 
             const distance = Phaser.Math.Distance.Between(
@@ -186,7 +256,7 @@ export class CrayfishSprite extends OrganismSprite {
     /**
      * Initiate escape burst
      */
-    initiateBurst() {
+    private initiateBurst(): void {
         // Determine burst direction (backwards from current facing)
         this.burstDirection = this.angle !== 0
             ? this.angle + Math.PI
@@ -202,7 +272,7 @@ export class CrayfishSprite extends OrganismSprite {
     /**
      * Update burst mechanics (bursting and cooldown)
      */
-    updateBurstMechanics() {
+    private updateBurstMechanics(): void {
         if (this.burstState === 'bursting') {
             this.burstTimer--;
 
@@ -232,7 +302,7 @@ export class CrayfishSprite extends OrganismSprite {
     /**
      * Roam along the bottom looking for food
      */
-    handleRoamingBehavior() {
+    private handleRoamingBehavior(): void {
         // Change direction occasionally
         if (Math.random() < 0.02) {
             this.roamDirection *= -1;
@@ -246,7 +316,7 @@ export class CrayfishSprite extends OrganismSprite {
     /**
      * Hunt zooplankton
      */
-    handleHuntingBehavior(nearbyZooplankton) {
+    private handleHuntingBehavior(nearbyZooplankton: any[]): void {
         // Check if current target is still valid
         if (this.currentTarget && this.currentTarget.visible && !this.currentTarget.consumed) {
             this.targetLockTime++;
@@ -293,7 +363,7 @@ export class CrayfishSprite extends OrganismSprite {
 
         // If no valid current target, find a new one
         if (!this.currentTarget) {
-            let bestZooplankton = null;
+            let bestZooplankton: any = null;
             let bestDistance = Infinity;
 
             nearbyZooplankton.forEach(zp => {
@@ -342,12 +412,12 @@ export class CrayfishSprite extends OrganismSprite {
     /**
      * Keep crayfish on the lake bottom
      */
-    stayOnBottom() {
+    private stayOnBottom(): void {
         const bottomDepth = this.getBottomDepthAtPosition();
 
         // Use dynamic depth scale from sonar display
-        const depthScale = this.scene.sonarDisplay ?
-            this.scene.sonarDisplay.getDepthScale() :
+        const depthScale = (this.scene as any).sonarDisplay ?
+            (this.scene as any).sonarDisplay.getDepthScale() :
             GameConfig.DEPTH_SCALE;
 
         // Calculate bottom Y position with small offset to appear grounded
@@ -372,12 +442,12 @@ export class CrayfishSprite extends OrganismSprite {
     /**
      * Get bottom depth at current position
      */
-    getBottomDepthAtPosition() {
+    private getBottomDepthAtPosition(): number {
         // Use scene's depth converter if available
-        if (this.scene.depthConverter) {
+        if ((this.scene as any).depthConverter) {
             const canvasHeight = this.scene.scale.height;
             const waterFloorY = GameConfig.getWaterFloorY(canvasHeight);
-            return this.scene.depthConverter.yToDepth(waterFloorY);
+            return (this.scene as any).depthConverter.yToDepth(waterFloorY);
         }
 
         // Fallback: use default max depth
@@ -387,7 +457,7 @@ export class CrayfishSprite extends OrganismSprite {
     /**
      * Check if too far from player (for despawning)
      */
-    isTooFarFromPlayer(maxDistance) {
+    private isTooFarFromPlayer(maxDistance: number): boolean {
         const canvasWidth = this.scene.scale.width;
         const playerWorldX = canvasWidth / 2;
         const distance = Math.abs(this.worldX - playerWorldX);
@@ -397,14 +467,14 @@ export class CrayfishSprite extends OrganismSprite {
     /**
      * Set threat status (called by FoodChainSystem when predators nearby)
      */
-    setThreatened(threatened) {
+    setThreatened(threatened: boolean): void {
         this.threatened = threatened;
     }
 
     /**
      * Get debug info
      */
-    getInfo() {
+    getInfo(): CrayfishInfo {
         return {
             ...super.getInfo(),
             size: this.size.toFixed(2),
@@ -419,7 +489,7 @@ export class CrayfishSprite extends OrganismSprite {
     /**
      * Reset crayfish for object pooling
      */
-    reset(worldX, y) {
+    reset(worldX: number, y: number): void {
         super.reset(worldX, y);
         this.initCrayfishProperties(this.scene);
         this.updateScreenPosition();
@@ -428,7 +498,7 @@ export class CrayfishSprite extends OrganismSprite {
     /**
      * Clean up
      */
-    destroy(fromScene) {
+    destroy(fromScene?: boolean): void {
         this.currentTarget = null;
         super.destroy(fromScene);
     }

@@ -1,7 +1,7 @@
 import { OrganismSprite } from './OrganismSprite.js';
-import { getOrganismData } from '../config/OrganismData.js';
+import { getOrganismData, FishData } from '../config/OrganismData.js';
 import GameConfig from '../config/GameConfig.js';
-import { Constants, Utils } from '../utils/Constants.js';
+import { Constants, Utils, FishState, FishSizeCategory, FishSize } from '../utils/Constants.js';
 import FishAI from '../entities/FishAI.js';
 
 /**
@@ -23,32 +23,166 @@ import FishAI from '../entities/FishAI.js';
 const DEBUG_SHOW_DIRECTION_ARROWS = true;
 
 // Fish name pools (for predators)
-const MALE_NAMES = [
+const MALE_NAMES: string[] = [
     'Dave', 'Bob', 'Steve', 'Mike', 'Tom', 'Jim', 'Frank', 'Bill', 'Joe', 'Dan',
     'Rick', 'Gary', 'Larry', 'Barry', 'Jerry', 'Terry', 'Carl', 'Paul', 'Ron', 'Don',
     'Mark', 'John', 'Jeff', 'Pete', 'Chad', 'Brad', 'Kyle', 'Jake', 'Sam', 'Max'
 ];
 
-const FEMALE_NAMES = [
+const FEMALE_NAMES: string[] = [
     'Susan', 'Linda', 'Karen', 'Nancy', 'Betty', 'Lisa', 'Sarah', 'Emily', 'Mary', 'Anna',
     'Ruth', 'Carol', 'Diane', 'Janet', 'Julie', 'Kelly', 'Laura', 'Marie', 'Alice', 'Rose',
     'Grace', 'Helen', 'Donna', 'Joyce', 'Paula', 'Martha', 'Cindy', 'Sandy', 'Wendy', 'Pam'
 ];
 
 /**
+ * Fish type: 'bait' for prey fish, 'predator' for game fish
+ */
+export type FishType = 'bait' | 'predator';
+
+/**
+ * Fish gender (predators only)
+ */
+export type FishGender = 'male' | 'female';
+
+/**
+ * Fish engagement state (predators only)
+ */
+export type EngagementState = 'waiting' | 'attacking' | 'loitering';
+
+/**
+ * 2D velocity vector
+ */
+export interface Velocity {
+    x: number;
+    y: number;
+}
+
+/**
+ * Schooling behavior forces (Boids algorithm)
+ */
+export interface SchoolingForces {
+    separation: Velocity;
+    cohesion: Velocity;
+    alignment: Velocity;
+    isPanicking?: boolean;
+    panicSpeed?: number;
+    scaredLevel?: number;
+}
+
+/**
+ * Depth zone with behavior modifiers
+ */
+export interface DepthZone {
+    min: number;
+    max: number;
+    name: string;
+    speedMultiplier: number;
+    aggressivenessBonus: number;
+    interestThreshold: number;
+}
+
+/**
+ * Stomach contents entry (predators only)
+ */
+export interface StomachContent {
+    species: string;
+    timestamp: number;
+}
+
+/**
+ * Extended OrganismInfo with fish-specific data
+ */
+export interface FishInfo {
+    worldX: string;
+    screenX: string;
+    y: string;
+    depth: string;
+    frameAge: number;
+    consumed: boolean;
+    active: boolean;
+    visible: boolean;
+    name?: string;
+    species: string;
+    gender?: FishGender;
+    biologicalAge?: string;
+    weight?: string;
+    length?: string;
+    state?: FishState;
+    points?: number;
+    hunger?: string;
+    health?: string;
+    inFrenzy?: boolean;
+    frenzyIntensity?: string;
+    schoolId?: string | null;
+    isPanicking?: boolean;
+}
+
+/**
  * Unified FishSprite class
  */
 export class FishSprite extends OrganismSprite {
+    // Common properties
+    public id: string;
+    public species: string;
+    public speciesData: FishData;
+    public type: FishType;
+    public size: number | FishSize;
+    public length: number;
+    public baseSpeed: number;
+    public speed: number;
+    public velocity: Velocity;
+    public schoolId: string | null;
+    public schooling: SchoolingForces;
+
+    // Predator-specific properties
+    public sizeCategory?: FishSizeCategory;
+    public weight?: number;
+    public points?: number;
+    public depthZone?: DepthZone;
+    public biologicalAge?: number;
+    public gender?: FishGender;
+    public name?: string;
+    public ai?: FishAI;
+    public sonarStrength?: number;
+    public caught?: boolean;
+    public hunger?: number;
+    public health?: number;
+    public lastFed?: number;
+    public metabolism?: number;
+    public inFrenzy?: boolean;
+    public frenzyTimer?: number;
+    public frenzyIntensity?: number;
+    public frenzyTargetCloud?: any;
+    public stomachContents?: StomachContent[];
+    public interestFlash?: number;
+    public interestFlashDecay?: number;
+    public speedPreference?: number;
+    public swipeChances?: number;
+    public maxSwipeChances?: number;
+    public isEngaged?: boolean;
+    public engagementState?: EngagementState;
+    public lastStateChange?: number;
+    public isFastFleeing?: boolean;
+    public hasCalmedDown?: boolean;
+    public directionArrow?: Phaser.GameObjects.Graphics;
+
+    // Baitfish-specific properties
+    public panicSpeed?: number;
+    public lastFeedTime?: number;
+    public feedCooldown?: number;
+    public depthInFeet?: number;
+
     /**
-     * @param {Phaser.Scene} scene - Game scene
-     * @param {number} worldX - World X position
-     * @param {number} y - Y position
-     * @param {string} species - Species key from OrganismData (e.g., 'alewife', 'smallmouth_bass')
-     * @param {string} size - Size category for predators ('SMALL', 'MEDIUM', 'LARGE')
+     * @param scene - Game scene
+     * @param worldX - World X position
+     * @param y - Y position
+     * @param species - Species key from OrganismData (e.g., 'alewife', 'smallmouth_bass')
+     * @param size - Size category for predators ('SMALL', 'MEDIUM', 'LARGE')
      */
-    constructor(scene, worldX, y, species, size = 'MEDIUM') {
+    constructor(scene: Phaser.Scene, worldX: number, y: number, species: string, size: FishSizeCategory = 'MEDIUM') {
         // Get species configuration
-        const speciesData = getOrganismData(species);
+        const speciesData = getOrganismData(species) as FishData | undefined;
         if (!speciesData) {
             console.error(`Unknown fish species: ${species}`);
             throw new Error(`Unknown fish species: ${species}`);
@@ -72,6 +206,20 @@ export class FishSprite extends OrganismSprite {
         // Set depth for rendering order (behind lure at 60, baitfish at 40, predators at 50)
         this.setDepth(this.type === 'bait' ? 40 : 50);
 
+        // Initialize common properties (will be set in init methods)
+        this.id = '';
+        this.size = 1;
+        this.length = 0;
+        this.baseSpeed = 0;
+        this.speed = 0;
+        this.velocity = { x: 0, y: 0 };
+        this.schoolId = null;
+        this.schooling = {
+            separation: { x: 0, y: 0 },
+            cohesion: { x: 0, y: 0 },
+            alignment: { x: 0, y: 0 }
+        };
+
         // Initialize properties based on type
         if (this.type === 'predator') {
             this.initPredatorProperties(scene, size);
@@ -93,7 +241,7 @@ export class FishSprite extends OrganismSprite {
      * Initialize predator fish properties
      * (from FishSprite.js)
      */
-    initPredatorProperties(scene, size) {
+    private initPredatorProperties(scene: Phaser.Scene, size: FishSizeCategory): void {
         // Unique identifier
         this.id = `fish_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 
@@ -187,7 +335,7 @@ export class FishSprite extends OrganismSprite {
      * Initialize baitfish properties
      * (from BaitfishSprite.js)
      */
-    initBaitProperties(scene) {
+    private initBaitProperties(scene: Phaser.Scene): void {
         // Unique identifier
         this.id = `baitfish_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 
@@ -226,36 +374,36 @@ export class FishSprite extends OrganismSprite {
     /**
      * Calculate fish length from weight (predators only)
      */
-    calculateLength() {
+    private calculateLength(): number {
         const params = this.speciesData.lengthWeightParams;
-        if (!params) return Math.floor(this.weight * 2); // Fallback estimate
+        if (!params) return Math.floor((this.weight || 0) * 2); // Fallback estimate
 
         const a = params.a || 0.00559;
         const b = params.b || 3.08;
-        return Math.pow(this.weight / a, 1 / b);
+        return Math.pow((this.weight || 0) / a, 1 / b);
     }
 
     /**
      * Calculate biological age (predators only)
      */
-    calculateBiologicalAge() {
+    private calculateBiologicalAge(): number {
         const baseAge = this.speciesData.maturityAge || 4;
-        const weightRatio = this.weight / (this.size.max || 10);
+        const weightRatio = (this.weight || 10) / ((this.size as FishSize).max || 10);
         return Math.floor(baseAge + (weightRatio * 10));
     }
 
     /**
      * Calculate sonar strength (predators only)
      */
-    calculateSonarStrength() {
-        return 0.5 + (this.weight / 50) * 0.5;
+    private calculateSonarStrength(): number {
+        return 0.5 + ((this.weight || 0) / 50) * 0.5;
     }
 
     /**
      * Get depth zone based on current depth (needed by FishAI)
-     * @returns {Object} Depth zone with name, speedMultiplier, aggressivenessBonus, interestThreshold
+     * @returns Depth zone with name, speedMultiplier, aggressivenessBonus, interestThreshold
      */
-    getDepthZone() {
+    public getDepthZone(): DepthZone {
         const depth = this.getDepth();
         const zones = GameConfig.DEPTH_ZONES;
 
@@ -272,7 +420,7 @@ export class FishSprite extends OrganismSprite {
     /**
      * Draw arrow showing swimming direction (debug, predators only)
      */
-    drawDirectionArrow() {
+    private drawDirectionArrow(): void {
         if (!DEBUG_SHOW_DIRECTION_ARROWS || !this.directionArrow || this.type !== 'predator') {
             return;
         }
@@ -329,7 +477,7 @@ export class FishSprite extends OrganismSprite {
      * Phaser preUpdate - called automatically every frame
      * Delegates to type-specific update methods
      */
-    preUpdate(time, delta) {
+    preUpdate(time: number, delta: number): void {
         super.preUpdate(time, delta);
 
         if (this.type === 'predator') {
@@ -343,7 +491,7 @@ export class FishSprite extends OrganismSprite {
      * Update predator fish
      * (from FishSprite.js updateFish method)
      */
-    updatePredator(time, delta) {
+    private updatePredator(time: number, delta: number): void {
         // Update depth in feet (for AI/game logic, NOT rendering depth!)
         this.depthInFeet = this.y / GameConfig.DEPTH_SCALE;
         this.depthZone = this.getDepthZone();
@@ -351,10 +499,10 @@ export class FishSprite extends OrganismSprite {
 
         // Update AI
         if (this.ai) {
-            const allFish = this.scene.fishes || [];
-            const baitfishClouds = this.scene.getAdaptedSchoolsForAI ? this.scene.getAdaptedSchoolsForAI() : [];
-            const crayfish = this.scene.crayfish || [];
-            this.ai.update(this.scene.lure, this.scene.time.now, allFish, baitfishClouds, crayfish);
+            const allFish = (this.scene as any).fishes || [];
+            const baitfishClouds = (this.scene as any).getAdaptedSchoolsForAI ? (this.scene as any).getAdaptedSchoolsForAI() : [];
+            const crayfish = (this.scene as any).crayfish || [];
+            this.ai.update((this.scene as any).lure, this.scene.time.now, allFish, baitfishClouds, crayfish);
         }
 
         // Apply AI movement
@@ -380,13 +528,13 @@ export class FishSprite extends OrganismSprite {
         this.enforceBoundaries();
 
         // Update hunger (if biological system enabled)
-        if (this.hunger !== undefined) {
+        if (this.hunger !== undefined && this.metabolism !== undefined) {
             this.hunger += 0.01 * this.metabolism;
             this.hunger = Math.min(100, this.hunger);
         }
 
         // Decay interest flash
-        if (this.interestFlash > 0) {
+        if (this.interestFlash !== undefined && this.interestFlash > 0 && this.interestFlashDecay !== undefined) {
             this.interestFlash -= this.interestFlashDecay;
         }
 
@@ -400,7 +548,7 @@ export class FishSprite extends OrganismSprite {
      * (from BaitfishSprite.js preUpdate method)
      * Note: Boids movement is applied externally via applyBoidsMovement()
      */
-    updateBait(time, delta) {
+    private updateBait(time: number, delta: number): void {
         // Update rotation based on velocity
         if (Math.abs(this.velocity.x) > 0.1 || Math.abs(this.velocity.y) > 0.1) {
             const isMovingRight = this.velocity.x > 0;
@@ -423,7 +571,7 @@ export class FishSprite extends OrganismSprite {
     /**
      * Apply Boids movement (called by school update for baitfish)
      */
-    applyBoidsMovement(separation, cohesion, alignment, foodAttraction = { x: 0, y: 0 }) {
+    public applyBoidsMovement(separation: Velocity, cohesion: Velocity, alignment: Velocity, foodAttraction: Velocity = { x: 0, y: 0 }): void {
         this.schooling.separation = separation;
         this.schooling.cohesion = cohesion;
         this.schooling.alignment = alignment;
@@ -433,7 +581,7 @@ export class FishSprite extends OrganismSprite {
         this.velocity.y += separation.y + cohesion.y + alignment.y + foodAttraction.y;
 
         // Limit speed
-        const currentSpeed = this.schooling.isPanicking ? this.panicSpeed : this.baseSpeed;
+        const currentSpeed = this.schooling.isPanicking ? (this.panicSpeed || this.baseSpeed) : this.baseSpeed;
         const speed = Math.sqrt(this.velocity.x ** 2 + this.velocity.y ** 2);
         if (speed > currentSpeed) {
             this.velocity.x = (this.velocity.x / speed) * currentSpeed;
@@ -464,9 +612,9 @@ export class FishSprite extends OrganismSprite {
 
     /**
      * Feed on prey (predators only)
-     * @param {string} preySpecies - Species of prey consumed
+     * @param preySpecies - Species of prey consumed
      */
-    feedOnPrey(preySpecies) {
+    public feedOnPrey(preySpecies: string): void {
         // Only predatory fish with biology system can feed
         if (this.type !== 'predator' || !this.hunger) {
             return;
@@ -489,7 +637,7 @@ export class FishSprite extends OrganismSprite {
         this.lastFed = this.frameAge;
 
         // Health restoration: excess nutrition restores health
-        if (this.hunger === 0 && previousHunger > 0) {
+        if (this.hunger === 0 && previousHunger > 0 && this.health !== undefined) {
             const excessNutrition = nutritionValue - previousHunger;
 
             if (excessNutrition > 0) {
@@ -507,24 +655,24 @@ export class FishSprite extends OrganismSprite {
 
     /**
      * Feed on baitfish (alias for feedOnPrey, needed by FishAI)
-     * @param {string} preySpecies - Species of baitfish consumed
+     * @param preySpecies - Species of baitfish consumed
      */
-    feedOnBaitfish(preySpecies) {
+    public feedOnBaitfish(preySpecies: string): void {
         return this.feedOnPrey(preySpecies);
     }
 
     /**
      * Feed on crayfish (needed by FishAI)
      */
-    feedOnCrayfish() {
+    public feedOnCrayfish(): void {
         return this.feedOnPrey('crayfish');
     }
 
     /**
      * Trigger visual interest flash (predators only, called by AI)
      */
-    triggerInterestFlash(intensity = 0.5) {
-        if (this.type === 'predator') {
+    public triggerInterestFlash(intensity: number = 0.5): void {
+        if (this.type === 'predator' && this.interestFlash !== undefined) {
             this.interestFlash = Math.max(this.interestFlash, intensity);
         }
     }
@@ -532,7 +680,7 @@ export class FishSprite extends OrganismSprite {
     /**
      * Get fish information for UI display
      */
-    getInfo() {
+    public getInfo(): FishInfo {
         const baseInfo = super.getInfo();
 
         if (this.type === 'predator') {
@@ -541,8 +689,8 @@ export class FishSprite extends OrganismSprite {
                 name: this.name,
                 species: this.speciesData.name,
                 gender: this.gender,
-                biologicalAge: this.biologicalAge + ' years',
-                weight: this.weight.toFixed(1) + ' lbs',
+                biologicalAge: (this.biologicalAge || 0) + ' years',
+                weight: (this.weight || 0).toFixed(1) + ' lbs',
                 length: Math.floor(this.length) + ' in',
                 state: this.ai ? this.ai.state : 'unknown',
                 points: this.points,
@@ -566,14 +714,16 @@ export class FishSprite extends OrganismSprite {
     /**
      * Reset fish for object pooling
      */
-    reset(worldX, y, species, size = 'MEDIUM') {
+    public reset(worldX: number, y: number, species?: string, size: FishSizeCategory = 'MEDIUM'): void {
         // Call parent reset
         super.reset(worldX, y);
 
-        // Update species and type
-        this.species = species;
-        this.speciesData = getOrganismData(species);
-        this.type = this.speciesData.category === 'prey' ? 'bait' : 'predator';
+        // Update species and type if provided
+        if (species) {
+            this.species = species;
+            this.speciesData = getOrganismData(species) as FishData;
+            this.type = this.speciesData.category === 'prey' ? 'bait' : 'predator';
+        }
 
         // Re-initialize properties
         if (this.type === 'predator') {
@@ -594,13 +744,13 @@ export class FishSprite extends OrganismSprite {
     /**
      * Clean up fish
      */
-    destroy(fromScene) {
+    public destroy(fromScene?: boolean): void {
         if (this.ai) {
-            this.ai = null;
+            this.ai = undefined;
         }
         if (this.directionArrow) {
             this.directionArrow.destroy();
-            this.directionArrow = null;
+            this.directionArrow = undefined;
         }
         super.destroy(fromScene);
     }

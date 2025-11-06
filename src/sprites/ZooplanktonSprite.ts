@@ -1,7 +1,16 @@
-import { OrganismSprite } from './OrganismSprite.js';
-import { getOrganismData } from '../config/OrganismData.js';
+import { OrganismSprite, OrganismInfo } from './OrganismSprite.js';
+import { getOrganismData, ZooplanktonData } from '../config/OrganismData.js';
 import GameConfig from '../config/GameConfig.js';
 import { Utils } from '../utils/Constants.js';
+
+/**
+ * Extended zooplankton info interface
+ */
+interface ZooplanktonInfo extends OrganismInfo {
+    size: string;
+    driftDirection: string;
+    driftSpeed: string;
+}
 
 /**
  * ZooplanktonSprite - Bottom of food chain using Phaser Sprite
@@ -16,14 +25,25 @@ import { Utils } from '../utils/Constants.js';
  * - Occasional vertical migration
  */
 export class ZooplanktonSprite extends OrganismSprite {
+    public id: string;
+    public speciesData: ZooplanktonData;
+    public size: number;
+    public length: number;
+    public speed: number;
+    public driftDirection: number;
+    public driftSpeed: number;
+    public hue: number;
+    public maxAge: number;
+    public depthInFeet?: number;
+
     /**
-     * @param {Phaser.Scene} scene - Game scene
-     * @param {number} worldX - World X position
-     * @param {number} y - Y position (typically near bottom)
+     * @param scene - Game scene
+     * @param worldX - World X position
+     * @param y - Y position (typically near bottom)
      */
-    constructor(scene, worldX, y) {
+    constructor(scene: Phaser.Scene, worldX: number, y: number) {
         // Get zooplankton configuration
-        const speciesData = getOrganismData('zooplankton');
+        const speciesData = getOrganismData('zooplankton') as ZooplanktonData;
 
         // Use zooplankton texture
         const textureKey = 'zooplankton';
@@ -37,6 +57,16 @@ export class ZooplanktonSprite extends OrganismSprite {
         // Set depth for rendering (behind everything except background)
         this.setDepth(30);
 
+        // Initialize placeholder values (will be set in init method)
+        this.id = '';
+        this.size = 0;
+        this.length = 0;
+        this.speed = 0;
+        this.driftDirection = 0;
+        this.driftSpeed = 0;
+        this.hue = 0;
+        this.maxAge = 0;
+
         // Initialize zooplankton properties
         this.initZooplanktonProperties(scene);
 
@@ -47,7 +77,7 @@ export class ZooplanktonSprite extends OrganismSprite {
     /**
      * Initialize zooplankton-specific properties
      */
-    initZooplanktonProperties(scene) {
+    private initZooplanktonProperties(scene: Phaser.Scene): void {
         // Unique identifier
         this.id = `zooplankton_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 
@@ -70,7 +100,7 @@ export class ZooplanktonSprite extends OrganismSprite {
     /**
      * Phaser preUpdate - called automatically every frame
      */
-    preUpdate(time, delta) {
+    preUpdate(time: number, delta: number): void {
         super.preUpdate(time, delta);
 
         if (this.consumed || !this.active) {
@@ -98,8 +128,8 @@ export class ZooplanktonSprite extends OrganismSprite {
         const bottomDepth = this.getBottomDepthAtPosition();
 
         // Use dynamic depth scale
-        const depthScale = this.scene.depthConverter ?
-            this.scene.depthConverter.depthScale :
+        const depthScale = (this.scene as any).depthConverter ?
+            (this.scene as any).depthConverter.depthScale :
             GameConfig.DEPTH_SCALE;
 
         // Vertical migration with bottom concentration
@@ -151,12 +181,12 @@ export class ZooplanktonSprite extends OrganismSprite {
     /**
      * Get bottom depth at current position
      */
-    getBottomDepthAtPosition() {
+    private getBottomDepthAtPosition(): number {
         // Use scene's depth converter if available
-        if (this.scene.depthConverter) {
+        if ((this.scene as any).depthConverter) {
             const canvasHeight = this.scene.scale.height;
             const waterFloorY = GameConfig.getWaterFloorY(canvasHeight);
-            return this.scene.depthConverter.yToDepth(waterFloorY);
+            return (this.scene as any).depthConverter.yToDepth(waterFloorY);
         }
 
         // Fallback: use default max depth
@@ -166,7 +196,7 @@ export class ZooplanktonSprite extends OrganismSprite {
     /**
      * Get debug info
      */
-    getInfo() {
+    getInfo(): ZooplanktonInfo {
         return {
             ...super.getInfo(),
             size: this.size.toFixed(2),
@@ -178,7 +208,7 @@ export class ZooplanktonSprite extends OrganismSprite {
     /**
      * Reset zooplankton for object pooling
      */
-    reset(worldX, y) {
+    reset(worldX: number, y: number): void {
         super.reset(worldX, y);
         this.initZooplanktonProperties(this.scene);
         this.updateScreenPosition();
@@ -187,7 +217,7 @@ export class ZooplanktonSprite extends OrganismSprite {
     /**
      * Clean up
      */
-    destroy(fromScene) {
+    destroy(fromScene?: boolean): void {
         super.destroy(fromScene);
     }
 }
