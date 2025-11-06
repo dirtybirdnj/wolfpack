@@ -87,7 +87,7 @@ window.addEventListener('load', (): void => {
     const game = new Phaser.Game(config);
 
     // Game initialized
-    console.log('Lake Champlain Fishing Game - Ready');
+    console.log('Wolfpack - The Lake Champlain Fishing Simulator - by http://www.verticaltubejig.com');
 
     // Prevent right-click context menu on game canvas
     game.canvas.addEventListener('contextmenu', (e: MouseEvent): boolean => {

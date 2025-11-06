@@ -36,8 +36,6 @@ export class SpriteGenerator {
      * @param scene - The scene to add textures to
      */
     static generateAllTextures(scene: Phaser.Scene): void {
-        console.log('🎨 Generating sprite textures...');
-
         // Generate predator fish textures
         this.generatePredatorTextures(scene);
 
@@ -47,8 +45,6 @@ export class SpriteGenerator {
         // Generate other entity textures
         this.generateZooplanktonTexture(scene);
         this.generateCrayfishTexture(scene);
-
-        console.log('✅ All sprite textures generated');
     }
 
     /**
@@ -58,8 +54,6 @@ export class SpriteGenerator {
     static generatePredatorTextures(scene: Phaser.Scene): void {
         // List of species that spawn as predators (from SpawningSystem.js line 119-129 + GameScene initial spawn)
         const predatorSpecies = ['lake_trout', 'northern_pike', 'smallmouth_bass', 'yellow_perch'];
-
-        console.log(`🎨 Generating textures for predator species: ${predatorSpecies.join(', ')}`);
 
         predatorSpecies.forEach(speciesName => {
             const speciesData = ORGANISMS[speciesName];
@@ -74,7 +68,6 @@ export class SpriteGenerator {
 
                 // Skip if already exists
                 if (scene.textures.exists(textureKey)) {
-                    console.log(`✓ Texture ${textureKey} already exists`);
                     return;
                 }
 
