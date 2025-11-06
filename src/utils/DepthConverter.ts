@@ -1,0 +1,136 @@
+import GameConfig from '../config/GameConfig.js'; // .js extension for ES module compatibility
+
+/**
+ * Water column info interface
+ */
+export interface WaterColumnInfo {
+    canvasHeight: number;
+    maxDepth: number;
+    waterColumnHeight: number;
+    depthScale: string;
+    surfaceY: number;
+    waterFloorY: number;
+    reservePx: number;
+}
+
+/**
+ * DepthConverter - Utility for converting between depth (feet) and screen Y coordinates
+ *
+ * Handles the water column coordinate system:
+ * - Surface is at Y = 0 (top of canvas)
+ * - Depth increases downward (positive Y)
+ * - Lake floor is at bottom with reserved space
+ *
+ * This is the single source of truth for depth-to-pixel conversions.
+ */
+export class DepthConverter {
+    public canvasHeight: number;
+    public maxDepth: number;
+    public waterColumnHeight: number;
+    public waterFloorY: number;
+    public depthScale: number;
+    public surfaceY: number;
+    public reservePx: number;
+
+    /**
+     * @param canvasHeight - Height of the game canvas in pixels
+     * @param maxDepth - Maximum water depth in feet
+     */
+    constructor(canvasHeight: number, maxDepth: number) {
+        this.canvasHeight = canvasHeight;
+        this.maxDepth = maxDepth;
+        this.waterColumnHeight = 0;
+        this.waterFloorY = 0;
+        this.depthScale = 0;
+        this.surfaceY = 0;
+        this.reservePx = 0;
+        this.recalculate();
+    }
+
+    /**
+     * Recalculate scale factors based on current dimensions
+     */
+    recalculate(): void {
+        // Reserve space at bottom for lake floor visualization
+        this.reservePx = GameConfig.getLakeBottomReservePx(this.canvasHeight);
+
+        // Water column height is canvas height minus the reserved bottom space
+        this.waterColumnHeight = this.canvasHeight - this.reservePx;
+
+        // Water floor Y (where water meets lake bed)
+        this.waterFloorY = this.canvasHeight - this.reservePx;
+
+        // Depth scale: pixels per foot of water depth
+        this.depthScale = this.waterColumnHeight / this.maxDepth;
+
+        // Surface Y is always at top
+        this.surfaceY = GameConfig.WATER_SURFACE_Y;
+    }
+
+    /**
+     * Convert depth in feet to screen Y coordinate
+     * @param depthInFeet - Depth below surface in feet (0 = surface)
+     * @returns Screen Y coordinate in pixels
+     */
+    depthToY(depthInFeet: number): number {
+        return this.surfaceY + (depthInFeet * this.depthScale);
+    }
+
+    /**
+     * Convert screen Y coordinate to depth in feet
+     * @param pixelY - Screen Y coordinate
+     * @returns Depth below surface in feet
+     */
+    yToDepth(pixelY: number): number {
+        return (pixelY - this.surfaceY) / this.depthScale;
+    }
+
+    /**
+     * Check if a Y coordinate is within the water column
+     * @param y - Screen Y coordinate
+     * @returns True if Y is between surface and floor
+     */
+    isInWater(y: number): boolean {
+        return y >= this.surfaceY && y <= this.waterFloorY;
+    }
+
+    /**
+     * Clamp Y coordinate to stay within water boundaries
+     * @param y - Screen Y coordinate
+     * @returns Clamped Y coordinate
+     */
+    clampToWater(y: number): number {
+        return Math.max(this.surfaceY, Math.min(this.waterFloorY, y));
+    }
+
+    /**
+     * Update dimensions (call when canvas resizes)
+     * @param canvasHeight - New canvas height
+     * @param maxDepth - New max depth (optional)
+     */
+    resize(canvasHeight: number, maxDepth: number | null = null): void {
+        this.canvasHeight = canvasHeight;
+        if (maxDepth !== null) {
+            this.maxDepth = maxDepth;
+        }
+        this.recalculate();
+    }
+
+    /**
+     * Get info about the water column for debugging
+     * @returns Water column dimensions and scale
+     */
+    getInfo(): WaterColumnInfo {
+        return {
+            canvasHeight: this.canvasHeight,
+            maxDepth: this.maxDepth,
+            waterColumnHeight: this.waterColumnHeight,
+            depthScale: this.depthScale.toFixed(2),
+            surfaceY: this.surfaceY,
+            waterFloorY: this.waterFloorY,
+            reservePx: this.reservePx
+        };
+    }
+}
+
+export default DepthConverter;

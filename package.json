@@ -5,16 +5,16 @@
   "main": "electron-main.js",
   "type": "module",
   "scripts": {
-    "start": "npm run game",
-    "dev": "npm run game",
-    "game": "http-server . -p 8080 -c-1",
+    "start": "vite",
+    "dev": "vite",
+    "game": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
     "kill-ports": "node scripts/kill-ports.js",
     "git:wtf": "bash scripts/git-wtf.sh",
-    "build": "node build.js",
-    "build:electron": "node build.js && npm run package:electron",
+    "build:electron": "npm run build && npm run package:electron",
     "package:electron": "electron-builder --config electron-builder.json",
     "electron": "electron .",
-    "preview": "npm run build && http-server dist -p 8081 -c-1",
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
     "test:watch": "node --experimental-vm-modules node_modules/jest/bin/jest.js --watch",
     "test:coverage": "node --experimental-vm-modules node_modules/jest/bin/jest.js --coverage",
@@ -33,12 +33,16 @@
   "license": "MIT",
   "devDependencies": {
     "@types/jest": "^30.0.0",
+    "@types/node": "^24.10.0",
     "concurrently": "^8.2.2",
     "electron": "^28.0.0",
     "electron-builder": "^24.9.1",
     "eslint": "^9.38.0",
     "http-server": "^14.1.1",
-    "jest": "^30.2.0"
+    "jest": "^30.2.0",
+    "typescript": "^5.9.3",
+    "vite": "^7.2.1",
+    "vite-plugin-static-copy": "^3.1.4"
   },
   "engines": {
     "node": ">=20.0.0"

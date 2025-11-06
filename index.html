@@ -308,7 +308,7 @@
     <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 
     <!-- Load game modules -->
-    <script type="module" src="src/index.js"></script>
+    <script type="module" src="src/index.ts"></script>
 
     <!-- Collapsible Section Controls -->
     <script>
@@ -332,7 +332,7 @@
 
     <!-- Initialize Gamepad Manager and Test Button -->
     <script type="module">
-        import gamepadManager from './src/utils/GamepadManager.js';
+        import gamepadManager from './src/utils/GamepadManager';
 
         // Make gamepad manager globally available for Phaser scenes
         window.gamepadManager = gamepadManager;
