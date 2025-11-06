@@ -22,10 +22,12 @@ import { Constants } from '../../utils/Constants.js';
  * collisionSystem.update(time, delta);
  */
 export class CollisionSystem {
+    private scene: Phaser.Scene;
+
     /**
-     * @param {Phaser.Scene} scene - The game scene
+     * @param scene - The game scene
      */
-    constructor(scene) {
+    constructor(scene: Phaser.Scene) {
         this.scene = scene;
     }
 
@@ -33,23 +35,23 @@ export class CollisionSystem {
      * Check if lure is passing through baitfish clouds and split them
      * DISABLED: Old BaitfishCloud system removed - schools use Boids behavior
      */
-    checkCloudSplitting() {
+    checkCloudSplitting(): void {
         return; // Disabled - using school-based Boids system now
 
         // Only check when lure is dropping
-        if (this.scene.lure.state !== Constants.LURE_STATE.DROPPING) {
+        if ((this.scene as any).lure.state !== Constants.LURE_STATE.DROPPING) {
             return;
         }
 
         // TODO: Implement school scatter behavior when lure passes through
 
-        const newClouds = []; // Store new clouds created from splits
+        const newClouds: any[] = []; // Store new clouds created from splits
 
-        for (const cloud of this.scene.baitfishClouds) {
+        for (const cloud of (this.scene as any).baitfishClouds) {
             // Check if lure is within the cloud
             const distance = Math.sqrt(
-                Math.pow(this.scene.lure.x - cloud.centerX, 2) +
-                Math.pow(this.scene.lure.y - cloud.centerY, 2)
+                Math.pow((this.scene as any).lure.x - cloud.centerX, 2) +
+                Math.pow((this.scene as any).lure.y - cloud.centerY, 2)
             );
 
             // If lure passes through cloud, 50% chance to split
@@ -69,7 +71,7 @@ export class CollisionSystem {
 
         // Add new split clouds to the array
         if (newClouds.length > 0) {
-            this.scene.baitfishClouds.push(...newClouds);
+            (this.scene as any).baitfishClouds.push(...newClouds);
         }
     }
 
@@ -77,25 +79,25 @@ export class CollisionSystem {
      * Check if baitfish clouds are close enough to merge
      * DISABLED: Old BaitfishCloud system removed - schools use Boids behavior
      */
-    checkCloudMerging() {
+    checkCloudMerging(): void {
         return; // Disabled - using school-based Boids system now
 
-        if (this.scene.baitfishClouds.length <= 1) {
+        if ((this.scene as any).baitfishClouds.length <= 1) {
             return; // Need at least 2 clouds to merge
         }
 
         const mergeDistance = 80; // pixels - clouds within this distance will merge
-        const cloudsToRemove = new Set();
+        const cloudsToRemove = new Set<number>();
 
-        for (let i = 0; i < this.scene.baitfishClouds.length; i++) {
+        for (let i = 0; i < (this.scene as any).baitfishClouds.length; i++) {
             if (cloudsToRemove.has(i)) continue;
 
-            const cloudA = this.scene.baitfishClouds[i];
+            const cloudA = (this.scene as any).baitfishClouds[i];
 
-            for (let j = i + 1; j < this.scene.baitfishClouds.length; j++) {
+            for (let j = i + 1; j < (this.scene as any).baitfishClouds.length; j++) {
                 if (cloudsToRemove.has(j)) continue;
 
-                const cloudB = this.scene.baitfishClouds[j];
+                const cloudB = (this.scene as any).baitfishClouds[j];
 
                 // Calculate distance between cloud centers
                 const distance = Math.sqrt(
@@ -114,7 +116,7 @@ export class CollisionSystem {
 
         // Remove merged clouds
         if (cloudsToRemove.size > 0) {
-            this.scene.baitfishClouds = this.scene.baitfishClouds.filter((cloud, index) => !cloudsToRemove.has(index));
+            (this.scene as any).baitfishClouds = (this.scene as any).baitfishClouds.filter((_cloud: any, index: number) => !cloudsToRemove.has(index));
         }
     }
 
@@ -122,20 +124,20 @@ export class CollisionSystem {
      * Reset split flags for next frame
      * DISABLED: Old BaitfishCloud system removed - schools use Boids behavior
      */
-    resetSplitFlags() {
+    resetSplitFlags(): void {
         return; // Disabled - using school-based Boids system now
 
-        this.scene.baitfishClouds.forEach(cloud => {
+        (this.scene as any).baitfishClouds.forEach((cloud: any) => {
             cloud.splitThisFrame = false;
         });
     }
 
     /**
      * Update collision system each frame
-     * @param {number} time - Current game time
-     * @param {number} delta - Time since last frame
+     * @param time - Current game time
+     * @param delta - Time since last frame
      */
-    update(time, delta) {
+    update(time: number, delta: number): void {
         // Check for cloud splitting
         this.checkCloudSplitting();
 
@@ -149,7 +151,7 @@ export class CollisionSystem {
     /**
      * Clean up collision system
      */
-    destroy() {
+    destroy(): void {
         // No cleanup needed
     }
 }

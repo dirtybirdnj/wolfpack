@@ -1,4 +1,54 @@
 import GameConfig from '../../config/GameConfig.js';
+import { FishSprite } from '../../sprites/FishSprite.js';
+
+/**
+ * Pause menu button
+ */
+export interface PauseMenuButton {
+    container: Phaser.GameObjects.Container;
+    bg: Phaser.GameObjects.Graphics;
+    text: Phaser.GameObjects.Text;
+    callback: () => void;
+}
+
+/**
+ * Pause overlay components
+ */
+export interface PauseOverlay {
+    overlay: Phaser.GameObjects.Graphics;
+    pausedText: Phaser.GameObjects.Text;
+    hintText: Phaser.GameObjects.Text;
+    buttons: PauseMenuButton[];
+}
+
+/**
+ * Controls dialog components
+ */
+export interface ControlsDialog {
+    background: Phaser.GameObjects.Graphics;
+    elements: Phaser.GameObjects.GameObject[];
+}
+
+/**
+ * Disconnect warning components
+ */
+export interface DisconnectWarning {
+    overlay: Phaser.GameObjects.Graphics;
+    title: Phaser.GameObjects.Text;
+    message: Phaser.GameObjects.Text;
+    hint: Phaser.GameObjects.Text;
+}
+
+/**
+ * Button state tracking
+ */
+export interface ButtonStates {
+    up: boolean;
+    down: boolean;
+    x: boolean;
+    circle: boolean;
+    select: boolean;
+}
 
 /**
  * NotificationSystem - Handles all in-game notifications and messages
@@ -22,10 +72,23 @@ import GameConfig from '../../config/GameConfig.js';
  * notificationSystem.showCatchNotification(fish);
  */
 export class NotificationSystem {
+    private scene: Phaser.Scene;
+    private pauseOverlay: PauseOverlay | null;
+    private isPaused: boolean;
+    private selectedButtonIndex: number;
+    private buttons: PauseMenuButton[];
+    private buttonStates: ButtonStates;
+    private controlsDialogOpen: boolean;
+    private controlsDialog: ControlsDialog | null;
+    public switchToTackleBox: boolean;
+    private disconnectWarning: DisconnectWarning | null;
+    private controllerReconnected: boolean;
+    private xButtonWasPressed: boolean;
+
     /**
-     * @param {Phaser.Scene} scene - The game scene
+     * @param scene - The game scene
      */
-    constructor(scene) {
+    constructor(scene: Phaser.Scene) {
         this.scene = scene;
         this.pauseOverlay = null;
         this.isPaused = false;
@@ -43,6 +106,7 @@ export class NotificationSystem {
 
         // Controls dialog state
         this.controlsDialogOpen = false;
+        this.controlsDialog = null;
 
         // Flag to signal switching to tackle box
         this.switchToTackleBox = false;
@@ -56,8 +120,8 @@ export class NotificationSystem {
     /**
      * Show game mode notification at start
      */
-    showGameModeNotification() {
-        const modeText = this.scene.gameMode === GameConfig.GAME_MODE_ARCADE ?
+    showGameModeNotification(): void {
+        const modeText = (this.scene as any).gameMode === GameConfig.GAME_MODE_ARCADE ?
             'ARCADE MODE\n2 Minutes - Catch as many as you can!' :
             'UNLIMITED MODE\nRelax and fish at your own pace';
 
@@ -83,12 +147,12 @@ export class NotificationSystem {
 
     /**
      * Show fish caught notification
-     * @param {Fish} fish - The fish that was caught
+     * @param fish - The fish that was caught
      */
-    showCatchNotification(fish) {
+    showCatchNotification(fish: FishSprite): void {
         const info = fish.getInfo();
         const text = this.scene.add.text(GameConfig.CANVAS_WIDTH / 2, 240,
-            `FISH ON!\n${info.weight}\n+${fish.points} points`,
+            `FISH ON!\n${info.weight}\n+${(fish as any).points} points`,
             {
                 fontSize: '19px',
                 fontFamily: 'Courier New',
@@ -117,7 +181,7 @@ export class NotificationSystem {
     /**
      * Show fish hooked notification (start of fight)
      */
-    showFishHookedNotification() {
+    showFishHookedNotification(): void {
         const text = this.scene.add.text(GameConfig.CANVAS_WIDTH / 2, 160,
             'FISH ON!\nTAP SPACEBAR OR R2 TO REEL!',
             {
@@ -142,9 +206,9 @@ export class NotificationSystem {
 
     /**
      * Show gamepad connected notification
-     * @param {string} gamepadId - The gamepad identifier
+     * @param gamepadId - The gamepad identifier
      */
-    showGamepadConnected(gamepadId) {
+    showGamepadConnected(gamepadId: string): void {
         const text = this.scene.add.text(GameConfig.CANVAS_WIDTH / 2, 40, 'Gamepad Connected!', {
             fontSize: '13px',
             fontFamily: 'Courier New',
@@ -168,7 +232,7 @@ export class NotificationSystem {
      * Show gamepad disconnected warning
      * Important notification when controller dies during gameplay
      */
-    showGamepadDisconnected() {
+    showGamepadDisconnected(): DisconnectWarning {
         // Create persistent overlay that stays until dismissed - reduced opacity
         // Use dynamic scale dimensions instead of hardcoded GameConfig values
         const overlay = this.scene.add.graphics();
@@ -251,7 +315,7 @@ export class NotificationSystem {
     /**
      * Dismiss gamepad disconnected warning
      */
-    dismissDisconnectWarning() {
+    dismissDisconnectWarning(): void {
         if (!this.disconnectWarning) return;
 
         this.disconnectWarning.overlay.destroy();
@@ -269,17 +333,17 @@ export class NotificationSystem {
     /**
      * Check if disconnect warning is active
      */
-    hasDisconnectWarning() {
+    hasDisconnectWarning(): boolean {
         return this.disconnectWarning !== null && this.disconnectWarning !== undefined;
     }
 
     /**
      * Show generic message
-     * @param {string} title - Message title
-     * @param {string} description - Message description
-     * @param {number} y - Y position (default: 100)
+     * @param title - Message title
+     * @param description - Message description
+     * @param y - Y position (default: 100)
      */
-    showMessage(title, description, y = 100) {
+    showMessage(title: string, description: string, y: number = 100): void {
         const text = this.scene.add.text(GameConfig.CANVAS_WIDTH / 2, y,
             `${title}\n${description}`,
             {
@@ -305,7 +369,7 @@ export class NotificationSystem {
     /**
      * Toggle pause state
      */
-    togglePause() {
+    togglePause(): boolean {
         this.isPaused = !this.isPaused;
 
         if (this.isPaused) {
@@ -322,7 +386,7 @@ export class NotificationSystem {
     /**
      * Create pause overlay
      */
-    createPauseOverlay() {
+    private createPauseOverlay(): void {
         if (this.pauseOverlay) return; // Already exists
 
         // Semi-transparent black overlay - reduced opacity to see game
@@ -411,7 +475,7 @@ export class NotificationSystem {
     /**
      * Create a pause menu button
      */
-    createPauseMenuButton(x, y, text, callback) {
+    private createPauseMenuButton(x: number, y: number, text: string, callback: () => void): PauseMenuButton {
         const container = this.scene.add.container(x, y);
         container.setDepth(2001);
 
@@ -444,7 +508,7 @@ export class NotificationSystem {
     /**
      * Update visual highlight for selected button in pause menu
      */
-    updatePauseMenuHighlight() {
+    private updatePauseMenuHighlight(): void {
         this.buttons.forEach((button, index) => {
             const isSelected = index === this.selectedButtonIndex;
 
@@ -473,12 +537,12 @@ export class NotificationSystem {
     /**
      * Close controls dialog
      */
-    closeControlsDialog() {
+    private closeControlsDialog(): void {
         if (!this.controlsDialogOpen) return;
 
         // Destroy all dialog elements
-        this.controlsDialog.background.destroy();
-        this.controlsDialog.elements.forEach(element => {
+        this.controlsDialog!.background.destroy();
+        this.controlsDialog!.elements.forEach(element => {
             if (element && element.destroy) {
                 element.destroy();
             }
@@ -491,15 +555,15 @@ export class NotificationSystem {
     /**
      * Handle input for pause menu navigation
      */
-    handlePauseMenuInput() {
+    handlePauseMenuInput(): void {
         // If controls dialog is open, handle closing it
         if (this.controlsDialogOpen) {
             let closePressed = false;
 
             // Keyboard input
-            if (Phaser.Input.Keyboard.JustDown(this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER)) ||
-                Phaser.Input.Keyboard.JustDown(this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.X)) ||
-                Phaser.Input.Keyboard.JustDown(this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ESC))) {
+            if (Phaser.Input.Keyboard.JustDown(this.scene.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER)) ||
+                Phaser.Input.Keyboard.JustDown(this.scene.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.X)) ||
+                Phaser.Input.Keyboard.JustDown(this.scene.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.ESC))) {
                 closePressed = true;
             }
 
@@ -537,15 +601,15 @@ export class NotificationSystem {
         let confirmPressed = false;
 
         // Keyboard input
-        const cursors = this.scene.input.keyboard.createCursorKeys();
-        if (Phaser.Input.Keyboard.JustDown(cursors.up)) {
+        const cursors = this.scene.input.keyboard!.createCursorKeys();
+        if (Phaser.Input.Keyboard.JustDown(cursors.up!)) {
             upPressed = true;
         }
-        if (Phaser.Input.Keyboard.JustDown(cursors.down)) {
+        if (Phaser.Input.Keyboard.JustDown(cursors.down!)) {
             downPressed = true;
         }
-        if (Phaser.Input.Keyboard.JustDown(this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER)) ||
-            Phaser.Input.Keyboard.JustDown(this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.X))) {
+        if (Phaser.Input.Keyboard.JustDown(this.scene.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER)) ||
+            Phaser.Input.Keyboard.JustDown(this.scene.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.X))) {
             confirmPressed = true;
         }
 
@@ -553,9 +617,9 @@ export class NotificationSystem {
         let circlePressed = false;
         let selectPressed = false;
 
-        if (window.gamepadManager && window.gamepadManager.isConnected()) {
-            const circleButton = window.gamepadManager.getButton('Circle');
-            const selectButton = window.gamepadManager.getButton('Select');
+        if ((window as any).gamepadManager && (window as any).gamepadManager.isConnected()) {
+            const circleButton = (window as any).gamepadManager.getButton('Circle');
+            const selectButton = (window as any).gamepadManager.getButton('Select');
 
             // CIRCLE button - close pause menu and return to game
             if (circleButton && circleButton.pressed && !this.buttonStates.circle) {
@@ -644,7 +708,7 @@ export class NotificationSystem {
     /**
      * Show controls dialog
      */
-    showControlsDialog() {
+    private showControlsDialog(): void {
         if (this.controlsDialogOpen) return;
 
         this.controlsDialogOpen = true;
@@ -697,6 +761,7 @@ export class NotificationSystem {
             { key: 'D / BACKSPACE', action: 'Toggle Debug Mode' }
         ];
 
+        const kbElements: Phaser.GameObjects.GameObject[] = [];
         keyboardControls.forEach(control => {
             const controlText = this.scene.add.text(leftX, currentY, `${control.key}`, {
                 fontSize: '11px',
@@ -706,6 +771,7 @@ export class NotificationSystem {
                 strokeThickness: 1
             });
             controlText.setDepth(2101);
+            kbElements.push(controlText);
 
             const actionText = this.scene.add.text(leftX + 140, currentY, control.action, {
                 fontSize: '11px',
@@ -715,6 +781,7 @@ export class NotificationSystem {
                 strokeThickness: 1
             });
             actionText.setDepth(2101);
+            kbElements.push(actionText);
 
             currentY += 20;
         });
@@ -756,6 +823,7 @@ export class NotificationSystem {
             { key: 'START', action: 'Pause / Resume' }
         ];
 
+        const gpElements: Phaser.GameObjects.GameObject[] = [];
         gamepadFishingControls.forEach(control => {
             const controlText = this.scene.add.text(rightX, currentY, `${control.key}`, {
                 fontSize: '10px',
@@ -765,6 +833,7 @@ export class NotificationSystem {
                 strokeThickness: 1
             });
             controlText.setDepth(2101);
+            gpElements.push(controlText);
 
             const actionText = this.scene.add.text(rightX + 130, currentY, control.action, {
                 fontSize: '10px',
@@ -774,6 +843,7 @@ export class NotificationSystem {
                 strokeThickness: 1
             });
             actionText.setDepth(2101);
+            gpElements.push(actionText);
 
             currentY += 18;
         });
@@ -795,22 +865,14 @@ export class NotificationSystem {
         // Store dialog elements
         this.controlsDialog = {
             background: dialogBg,
-            elements: [title, kbTitle, gpTitle, fishingLabel, movementLabel, boatLabel, closeHint]
+            elements: [title, kbTitle, gpTitle, fishingLabel, closeHint, ...kbElements, ...gpElements]
         };
-
-        // Add all control text elements
-        this.scene.children.list.forEach(child => {
-            if (child.depth === 2101 && child !== title && child !== kbTitle && child !== gpTitle &&
-                child !== fishingLabel && child !== movementLabel && child !== boatLabel && child !== closeHint) {
-                this.controlsDialog.elements.push(child);
-            }
-        });
     }
 
     /**
      * Open tackle box from pause menu
      */
-    openTackleBox() {
+    private openTackleBox(): void {
         this.switchToTackleBox = true;
         this.togglePause(); // Close pause menu (game stays paused via tackle box)
     }
@@ -818,7 +880,7 @@ export class NotificationSystem {
     /**
      * Go to main menu
      */
-    goToMainMenu() {
+    private goToMainMenu(): void {
         this.destroyPauseOverlay();
         this.isPaused = false;
         this.scene.cameras.main.fadeOut(500);
@@ -830,7 +892,7 @@ export class NotificationSystem {
     /**
      * Destroy pause overlay
      */
-    destroyPauseOverlay() {
+    private destroyPauseOverlay(): void {
         if (!this.pauseOverlay) return;
 
         // Close controls dialog if open
@@ -853,18 +915,18 @@ export class NotificationSystem {
 
     /**
      * Check if game is paused
-     * @returns {boolean} True if paused
+     * @returns True if paused
      */
-    isPausedState() {
+    isPausedState(): boolean {
         return this.isPaused;
     }
 
     /**
      * Update notification system each frame
-     * @param {number} time - Current game time
-     * @param {number} delta - Time since last frame
+     * @param time - Current game time
+     * @param delta - Time since last frame
      */
-    update(time, delta) {
+    update(time: number, delta: number): void {
         // Handle pause menu input when paused (but NOT when disconnect warning is showing)
         if (this.isPaused && !this.hasDisconnectWarning()) {
             this.handlePauseMenuInput();
@@ -873,18 +935,18 @@ export class NotificationSystem {
         // Handle disconnect warning dismissal
         if (this.hasDisconnectWarning()) {
             // Check if controller reconnected
-            if (window.gamepadManager && window.gamepadManager.isConnected() && !this.controllerReconnected) {
+            if ((window as any).gamepadManager && (window as any).gamepadManager.isConnected() && !this.controllerReconnected) {
                 // Controller just reconnected - update message to show "Press X to continue"
                 this.controllerReconnected = true;
 
                 // Update the hint text
-                this.disconnectWarning.hint.setText('🎮 Controller Reconnected!\nPress X to continue');
-                this.disconnectWarning.hint.setColor('#00ff00');
+                this.disconnectWarning!.hint.setText('🎮 Controller Reconnected!\nPress X to continue');
+                this.disconnectWarning!.hint.setColor('#00ff00');
 
                 // Stop the title pulsing animation (controller is back!)
-                this.scene.tweens.killTweensOf(this.disconnectWarning.title);
-                this.disconnectWarning.title.setAlpha(1);
-                this.disconnectWarning.title.setColor('#00ff00');
+                this.scene.tweens.killTweensOf(this.disconnectWarning!.title);
+                this.disconnectWarning!.title.setAlpha(1);
+                this.disconnectWarning!.title.setColor('#00ff00');
             }
 
             // If controller is reconnected, wait for X button to continue
@@ -893,8 +955,8 @@ export class NotificationSystem {
                 let dismissWarning = false;
 
                 // Check X button on gamepad (with JustDown logic)
-                if (window.gamepadManager && window.gamepadManager.isConnected()) {
-                    const xButton = window.gamepadManager.getButton('X');
+                if ((window as any).gamepadManager && (window as any).gamepadManager.isConnected()) {
+                    const xButton = (window as any).gamepadManager.getButton('X');
                     xButtonPressed = xButton && xButton.pressed;
 
                     // JustDown = pressed now but wasn't pressed before
@@ -907,16 +969,16 @@ export class NotificationSystem {
                 this.xButtonWasPressed = xButtonPressed;
 
                 // Also allow keyboard X or SPACE
-                const xKey = this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.X);
-                const spaceKey = this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+                const xKey = this.scene.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.X);
+                const spaceKey = this.scene.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
 
                 if (Phaser.Input.Keyboard.JustDown(xKey) || Phaser.Input.Keyboard.JustDown(spaceKey) || dismissWarning) {
                     this.dismissDisconnectWarning();
                 }
             } else {
                 // Controller still disconnected - allow keyboard dismissal
-                const spaceKey = this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
-                const escKey = this.scene.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ESC);
+                const spaceKey = this.scene.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+                const escKey = this.scene.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.ESC);
 
                 if (Phaser.Input.Keyboard.JustDown(spaceKey) || Phaser.Input.Keyboard.JustDown(escKey)) {
                     this.dismissDisconnectWarning();
@@ -928,7 +990,7 @@ export class NotificationSystem {
     /**
      * Clean up notification system
      */
-    destroy() {
+    destroy(): void {
         if (this.pauseOverlay) {
             this.destroyPauseOverlay();
         }

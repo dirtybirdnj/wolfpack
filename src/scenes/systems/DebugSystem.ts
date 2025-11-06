@@ -1,4 +1,12 @@
 import GameConfig from '../../config/GameConfig.js';
+import { FishSprite } from '../../sprites/FishSprite.js';
+
+/**
+ * Fish state colors for debug visualization
+ */
+export interface StateColors {
+    [state: string]: number;
+}
 
 /**
  * DebugSystem - Handles debug visualization and developer tools
@@ -15,7 +23,7 @@ import GameConfig from '../../config/GameConfig.js';
  * COMMON TASKS:
  * - Add new debug visualizations → render() method
  * - Change debug colors → stateColors constant
- * - Toggle debug elements → this.debugMode boolean
+ * - Toggle debug elements → this.enabled boolean
  *
  * @example
  * const debugSystem = new DebugSystem(scene);
@@ -23,10 +31,14 @@ import GameConfig from '../../config/GameConfig.js';
  * debugSystem.update(time, delta);
  */
 export class DebugSystem {
+    private scene: Phaser.Scene;
+    private debugGraphics: Phaser.GameObjects.Graphics | null;
+    private enabled: boolean;
+
     /**
-     * @param {Phaser.Scene} scene - The game scene
+     * @param scene - The game scene
      */
-    constructor(scene) {
+    constructor(scene: Phaser.Scene) {
         this.scene = scene;
         this.debugGraphics = null;
         this.enabled = false;
@@ -34,9 +46,9 @@ export class DebugSystem {
 
     /**
      * Enable or disable debug visualization
-     * @param {boolean} enabled - True to enable debug mode
+     * @param enabled - True to enable debug mode
      */
-    setEnabled(enabled) {
+    setEnabled(enabled: boolean): void {
         this.enabled = enabled;
         if (!enabled && this.debugGraphics) {
             this.debugGraphics.clear();
@@ -45,9 +57,9 @@ export class DebugSystem {
 
     /**
      * Toggle debug mode on/off
-     * @returns {boolean} New debug mode state
+     * @returns New debug mode state
      */
-    toggle() {
+    toggle(): boolean {
         this.setEnabled(!this.enabled);
         return this.enabled;
     }
@@ -55,7 +67,7 @@ export class DebugSystem {
     /**
      * Create debug graphics object if needed
      */
-    ensureGraphics() {
+    private ensureGraphics(): void {
         if (!this.debugGraphics) {
             this.debugGraphics = this.scene.add.graphics();
             this.debugGraphics.setDepth(1000);
@@ -65,7 +77,7 @@ export class DebugSystem {
     /**
      * Render all debug information
      */
-    render() {
+    render(): void {
         if (!this.enabled) {
             if (this.debugGraphics) {
                 this.debugGraphics.clear();
@@ -74,17 +86,17 @@ export class DebugSystem {
         }
 
         this.ensureGraphics();
-        this.debugGraphics.clear();
+        this.debugGraphics!.clear();
 
         // Draw lure detection ranges (only if lure exists - not in nature simulation mode)
-        if (this.scene.lure) {
+        if ((this.scene as any).lure) {
             // Draw detection range around lure
-            this.debugGraphics.lineStyle(2, 0xffff00, 0.3);
-            this.debugGraphics.strokeCircle(this.scene.lure.x, this.scene.lure.y, GameConfig.DETECTION_RANGE);
+            this.debugGraphics!.lineStyle(2, 0xffff00, 0.3);
+            this.debugGraphics!.strokeCircle((this.scene as any).lure.x, (this.scene as any).lure.y, GameConfig.DETECTION_RANGE);
 
             // Draw strike distance around lure
-            this.debugGraphics.lineStyle(2, 0xff0000, 0.5);
-            this.debugGraphics.strokeCircle(this.scene.lure.x, this.scene.lure.y, GameConfig.STRIKE_DISTANCE);
+            this.debugGraphics!.lineStyle(2, 0xff0000, 0.5);
+            this.debugGraphics!.strokeCircle((this.scene as any).lure.x, (this.scene as any).lure.y, GameConfig.STRIKE_DISTANCE);
         }
 
         // Draw fish debug info
@@ -94,9 +106,9 @@ export class DebugSystem {
     /**
      * Render debug information for all fish
      */
-    renderFishDebug() {
+    private renderFishDebug(): void {
         // Fish state color mapping
-        const stateColors = {
+        const stateColors: StateColors = {
             'IDLE': 0x888888,
             'INTERESTED': 0xffff00,
             'CHASING': 0xff8800,
@@ -106,33 +118,34 @@ export class DebugSystem {
             'FEEDING': 0x88ff00
         };
 
-        this.scene.fishes.forEach(fish => {
+        const fishes = (this.scene as any).fishes as FishSprite[];
+        fishes.forEach(fish => {
             // Defensive check: Only Fish objects have AI - skip if not a fish
-            if (!fish.ai || typeof fish.hunger === 'undefined') {
+            if (!(fish as any).ai || typeof (fish as any).hunger === 'undefined') {
                 return; // Skip non-fish entities
             }
 
             // Draw line from fish to lure if lure exists and within detection range
-            if (this.scene.lure) {
+            if ((this.scene as any).lure) {
                 const dist = Math.sqrt(
-                    Math.pow(fish.x - this.scene.lure.x, 2) +
-                    Math.pow(fish.y - this.scene.lure.y, 2)
+                    Math.pow(fish.x - (this.scene as any).lure.x, 2) +
+                    Math.pow(fish.y - (this.scene as any).lure.y, 2)
                 );
 
                 if (dist < GameConfig.DETECTION_RANGE * 2) {
-                    this.debugGraphics.lineStyle(1, 0x00ffff, 0.3);
-                    this.debugGraphics.lineBetween(fish.x, fish.y, this.scene.lure.x, this.scene.lure.y);
+                    this.debugGraphics!.lineStyle(1, 0x00ffff, 0.3);
+                    this.debugGraphics!.lineBetween(fish.x, fish.y, (this.scene as any).lure.x, (this.scene as any).lure.y);
                 }
             }
 
             // Draw fish state indicator
-            const color = stateColors[fish.ai.state] || 0xffffff;
-            this.debugGraphics.fillStyle(color, 0.3);
-            this.debugGraphics.fillCircle(fish.x, fish.y, 15);
+            const color = stateColors[(fish as any).ai.state] || 0xffffff;
+            this.debugGraphics!.fillStyle(color, 0.3);
+            this.debugGraphics!.fillCircle(fish.x, fish.y, 15);
 
             // Draw fish detection circle
-            this.debugGraphics.lineStyle(1, color, 0.2);
-            this.debugGraphics.strokeCircle(fish.x, fish.y, GameConfig.DETECTION_RANGE);
+            this.debugGraphics!.lineStyle(1, color, 0.2);
+            this.debugGraphics!.strokeCircle(fish.x, fish.y, GameConfig.DETECTION_RANGE);
 
             // Draw fish info text
             this.drawFishInfo(fish, color);
@@ -141,12 +154,12 @@ export class DebugSystem {
 
     /**
      * Draw debug text for a fish
-     * @param {Fish} fish - The fish to draw info for
-     * @param {number} color - Color for the text
+     * @param fish - The fish to draw info for
+     * @param color - Color for the text
      */
-    drawFishInfo(fish, color) {
+    private drawFishInfo(fish: FishSprite, color: number): void {
         // Defensive check: Only Fish objects have AI and hunger - skip if not a fish
-        if (!fish.ai || typeof fish.hunger === 'undefined') {
+        if (!(fish as any).ai || typeof (fish as any).hunger === 'undefined') {
             return; // Not a fish, skip debug info
         }
 
@@ -154,10 +167,10 @@ export class DebugSystem {
         // In normal modes, only show info for fish within reasonable distance of lure
         let showInfo = true;
 
-        if (this.scene.lure) {
+        if ((this.scene as any).lure) {
             const dist = Math.sqrt(
-                Math.pow(fish.x - this.scene.lure.x, 2) +
-                Math.pow(fish.y - this.scene.lure.y, 2)
+                Math.pow(fish.x - (this.scene as any).lure.x, 2) +
+                Math.pow(fish.y - (this.scene as any).lure.y, 2)
             );
 
             if (dist > GameConfig.DETECTION_RANGE * 3) {
@@ -170,7 +183,7 @@ export class DebugSystem {
         // Create temporary text object for this frame
         const info = fish.getInfo();
         const debugText = this.scene.add.text(fish.x + 20, fish.y - 20,
-            `${fish.ai.state}\n${info.weight}\nH:${Math.floor(fish.hunger)}`,
+            `${(fish as any).ai.state}\n${info.weight}\nH:${Math.floor((fish as any).hunger)}`,
             {
                 fontSize: '10px',
                 fontFamily: 'Courier New',
@@ -187,10 +200,10 @@ export class DebugSystem {
 
     /**
      * Update debug system each frame
-     * @param {number} time - Current game time
-     * @param {number} delta - Time since last frame
+     * @param time - Current game time
+     * @param delta - Time since last frame
      */
-    update(time, delta) {
+    update(time: number, delta: number): void {
         if (this.enabled) {
             this.render();
         }
@@ -199,7 +212,7 @@ export class DebugSystem {
     /**
      * Clean up debug system
      */
-    destroy() {
+    destroy(): void {
         if (this.debugGraphics) {
             this.debugGraphics.destroy();
             this.debugGraphics = null;

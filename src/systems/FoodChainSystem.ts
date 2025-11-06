@@ -1,4 +1,39 @@
 import { getOrganismData, canEat, getFoodChainLevel } from '../config/OrganismData.js';
+import { FishSprite } from '../sprites/FishSprite.js';
+import { CrayfishSprite } from '../sprites/CrayfishSprite.js';
+import { ZooplanktonSprite } from '../sprites/ZooplanktonSprite.js';
+
+/**
+ * Food chain system configuration
+ */
+export interface FoodChainConfig {
+    zooplanktonDetectionRange: number;
+    crayfishDetectionRange: number;
+    baitfishDetectionRange: number;
+    zooplanktonConsumeRange: number;
+    crayfishConsumeRange: number;
+    baitfishConsumeRange: number;
+    crayfishThreatRadius: number;
+    updateFrequency: number;
+}
+
+/**
+ * Food chain statistics
+ */
+export interface FoodChainStats {
+    zooplanktonConsumed: number;
+    crayfishConsumed: number;
+    baitfishConsumed: number;
+    perchConsumed: number;
+}
+
+/**
+ * Nearest prey result
+ */
+export interface NearestPrey<T> {
+    prey: T;
+    distance: number;
+}
 
 /**
  * FoodChainSystem - Manages predator-prey interactions
@@ -19,7 +54,12 @@ import { getOrganismData, canEat, getFoodChainLevel } from '../config/OrganismDa
  * - Crayfish burst escape when threatened
  */
 export class FoodChainSystem {
-    constructor(scene) {
+    private scene: Phaser.Scene;
+    private config: FoodChainConfig;
+    private frameCount: number;
+    private stats: FoodChainStats;
+
+    constructor(scene: Phaser.Scene) {
         this.scene = scene;
 
         // Configuration
@@ -55,7 +95,7 @@ export class FoodChainSystem {
     /**
      * Update food chain interactions
      */
-    update() {
+    update(): void {
         this.frameCount++;
 
         // Only update every N frames for performance
@@ -64,8 +104,8 @@ export class FoodChainSystem {
         }
 
         // Get all organisms from scene
-        const zooplankton = this.scene.zooplankton || [];
-        const crayfish = this.scene.crayfish || [];
+        const zooplankton = (this.scene as any).zooplankton as ZooplanktonSprite[] || [];
+        const crayfish = (this.scene as any).crayfish as CrayfishSprite[] || [];
         const baitfish = this.getBaitfish();
         const predators = this.getPredators();
 
@@ -82,23 +122,23 @@ export class FoodChainSystem {
     /**
      * Get all baitfish from scene
      */
-    getBaitfish() {
-        const allFish = this.scene.fishes || [];
+    private getBaitfish(): FishSprite[] {
+        const allFish = (this.scene as any).fishes as FishSprite[] || [];
         return allFish.filter(fish => fish.type === 'bait');
     }
 
     /**
      * Get all predator fish from scene
      */
-    getPredators() {
-        const allFish = this.scene.fishes || [];
+    private getPredators(): FishSprite[] {
+        const allFish = (this.scene as any).fishes as FishSprite[] || [];
         return allFish.filter(fish => fish.type === 'predator');
     }
 
     /**
      * Update zooplankton feeding (baitfish and crayfish eat zooplankton)
      */
-    updateZooplanktonFeeding(baitfish, crayfish, zooplankton) {
+    private updateZooplanktonFeeding(baitfish: FishSprite[], crayfish: CrayfishSprite[], zooplankton: ZooplanktonSprite[]): void {
         // Filter active zooplankton
         const activeZooplankton = zooplankton.filter(zp =>
             zp.active && !zp.consumed && zp.visible
@@ -112,7 +152,7 @@ export class FoodChainSystem {
 
             // Check feeding cooldown
             const now = this.scene.time.now;
-            if (fish.lastFeedTime && now - fish.lastFeedTime < fish.feedCooldown) {
+            if ((fish as any).lastFeedTime && now - (fish as any).lastFeedTime < (fish as any).feedCooldown) {
                 return; // Still cooling down
             }
 
@@ -129,7 +169,7 @@ export class FoodChainSystem {
                 // Close enough to consume?
                 if (distance < this.config.zooplanktonConsumeRange) {
                     nearest.prey.markConsumed();
-                    fish.lastFeedTime = now;
+                    (fish as any).lastFeedTime = now;
                     this.stats.zooplanktonConsumed++;
                 }
             }
@@ -156,7 +196,7 @@ export class FoodChainSystem {
     /**
      * Update crayfish threat detection (triggers burst escape)
      */
-    updateCrayfishThreats(crayfish, predators) {
+    private updateCrayfishThreats(crayfish: CrayfishSprite[], predators: FishSprite[]): void {
         crayfish.forEach(cf => {
             if (!cf.active || cf.consumed) return;
 
@@ -187,13 +227,13 @@ export class FoodChainSystem {
     /**
      * Update predator feeding (predators eat baitfish, crayfish, and smaller fish)
      */
-    updatePredatorFeeding(predators, baitfish, crayfish) {
+    private updatePredatorFeeding(predators: FishSprite[], baitfish: FishSprite[], crayfish: CrayfishSprite[]): void {
         predators.forEach(predator => {
-            if (!predator.active || predator.caught) return;
+            if (!predator.active || (predator as any).caught) return;
 
             // Skip if predator has AI (FishAI handles its own feeding)
             // This system is for predators without AI or as a backup
-            if (predator.ai) return;
+            if ((predator as any).ai) return;
 
             const predatorData = getOrganismData(predator.species);
             if (!predatorData) return;
@@ -247,7 +287,7 @@ export class FoodChainSystem {
             if (otherFish.length > 0) {
                 // Find smaller predators this fish can eat
                 const possiblePrey = predators.filter(other => {
-                    if (other === predator || !other.active || other.caught) return false;
+                    if (other === predator || !other.active || (other as any).caught) return false;
                     return otherFish.includes(other.species);
                 });
 
@@ -267,10 +307,14 @@ export class FoodChainSystem {
 
     /**
      * Find nearest prey within range
-     * @returns {Object|null} { prey, distance } or null if none found
+     * @returns { prey, distance } or null if none found
      */
-    findNearestPrey(predator, preyList, maxRange) {
-        let nearest = null;
+    private findNearestPrey<T extends { worldX: number; y: number }>(
+        predator: { worldX: number; y: number },
+        preyList: T[],
+        maxRange: number
+    ): NearestPrey<T> | null {
+        let nearest: NearestPrey<T> | null = null;
         let nearestDist = maxRange;
 
         preyList.forEach(prey => {
@@ -290,27 +334,27 @@ export class FoodChainSystem {
     /**
      * Consume prey (mark as consumed, update predator biology)
      */
-    consumePrey(predator, prey) {
+    private consumePrey(predator: FishSprite, prey: FishSprite | CrayfishSprite): void {
         // Mark prey as consumed
         prey.markConsumed();
 
         // Update predator biology (if it has biology system)
-        if (predator.feedOnPrey) {
-            predator.feedOnPrey(prey.species);
+        if ((predator as any).feedOnPrey) {
+            (predator as any).feedOnPrey(prey.species);
         }
     }
 
     /**
      * Get system stats
      */
-    getStats() {
+    getStats(): FoodChainStats {
         return { ...this.stats };
     }
 
     /**
      * Reset stats
      */
-    resetStats() {
+    resetStats(): void {
         this.stats = {
             zooplanktonConsumed: 0,
             crayfishConsumed: 0,
@@ -322,12 +366,12 @@ export class FoodChainSystem {
     /**
      * Get debug info
      */
-    getDebugInfo() {
+    getDebugInfo(): any {
         return {
             frameCount: this.frameCount,
             stats: this.getStats(),
-            zooplanktonCount: (this.scene.zooplankton || []).filter(z => z.active).length,
-            crayfishCount: (this.scene.crayfish || []).filter(c => c.active).length,
+            zooplanktonCount: ((this.scene as any).zooplankton || []).filter((z: any) => z.active).length,
+            crayfishCount: ((this.scene as any).crayfish || []).filter((c: any) => c.active).length,
             baitfishCount: this.getBaitfish().filter(f => f.active).length,
             predatorCount: this.getPredators().filter(f => f.active).length
         };
@@ -335,20 +379,20 @@ export class FoodChainSystem {
 
     /**
      * Check if organism can eat another organism
-     * @param {string} predatorSpecies - Species of predator
-     * @param {string} preySpecies - Species of prey
-     * @returns {boolean} True if predator can eat prey
+     * @param predatorSpecies - Species of predator
+     * @param preySpecies - Species of prey
+     * @returns True if predator can eat prey
      */
-    static canEat(predatorSpecies, preySpecies) {
+    static canEat(predatorSpecies: string, preySpecies: string): boolean {
         return canEat(predatorSpecies, preySpecies);
     }
 
     /**
      * Get food chain level for organism
-     * @param {string} species - Species name
-     * @returns {number} Food chain level (0 = bottom, higher = top)
+     * @param species - Species name
+     * @returns Food chain level (0 = bottom, higher = top)
      */
-    static getFoodChainLevel(species) {
+    static getFoodChainLevel(species: string): number {
         return getFoodChainLevel(species);
     }
 }

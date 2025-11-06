@@ -1,3 +1,54 @@
+import { FishSprite } from '../sprites/FishSprite.js';
+
+/**
+ * School center position
+ */
+export interface SchoolCenter {
+    worldX: number;
+    y: number;
+}
+
+/**
+ * School offset for fish within school
+ */
+export interface SchoolOffset {
+    x: number;
+    y: number;
+}
+
+/**
+ * School data structure
+ */
+export interface School {
+    id: string;
+    species: string;
+    fishType: 'baitfish' | 'predator';
+    members: Set<FishSprite>;
+    center: SchoolCenter;
+    createdAt: number;
+}
+
+/**
+ * School configuration per fish type
+ */
+export interface SchoolTypeConfig {
+    detectionRadius: number;
+    minSchoolSize: number;
+    maxSchoolSize: number;
+    fragmentationRadius: number;
+    fragmentationThreshold: number;
+}
+
+/**
+ * School manager configuration
+ */
+export interface SchoolConfig {
+    baitfish: SchoolTypeConfig;
+    predator: SchoolTypeConfig;
+    detectionFrequency: number;
+    updateFrequency: number;
+}
+
 /**
  * SchoolManager System - Emergent School Formation
  *
@@ -11,12 +62,20 @@
  * Schools are species-exclusive (for now).
  */
 export class SchoolManager {
-    constructor(scene) {
+    private scene: Phaser.Scene;
+    private baitfishSchools: Map<string, School>;
+    private predatorSchools: Map<string, School>;
+    private nextBaitfishSchoolId: number;
+    private nextPredatorSchoolId: number;
+    private config: SchoolConfig;
+    private frameCount: number;
+
+    constructor(scene: Phaser.Scene) {
         this.scene = scene;
 
         // Active schools - separate pools for different fish types
-        this.baitfishSchools = new Map(); // schoolId -> School object (baitfish)
-        this.predatorSchools = new Map(); // schoolId -> School object (predators)
+        this.baitfishSchools = new Map();
+        this.predatorSchools = new Map();
         this.nextBaitfishSchoolId = 1;
         this.nextPredatorSchoolId = 1;
 
@@ -46,9 +105,9 @@ export class SchoolManager {
 
     /**
      * Update school management
-     * @param {Array} allFish - All fish in scene (should be baitfish or schooling predators)
+     * @param allFish - All fish in scene (should be baitfish or schooling predators)
      */
-    update(allFish) {
+    update(allFish: FishSprite[]): void {
         if (!allFish || allFish.length === 0) return;
 
         this.frameCount++;
@@ -73,10 +132,10 @@ export class SchoolManager {
 
     /**
      * Detect clusters of fish and create new schools
-     * @param {Array} allFish - Fish to process
-     * @param {string} fishType - 'baitfish' or 'predator'
+     * @param allFish - Fish to process
+     * @param fishType - 'baitfish' or 'predator'
      */
-    detectNewSchools(allFish, fishType) {
+    private detectNewSchools(allFish: FishSprite[], fishType: 'baitfish' | 'predator'): void {
         const config = this.config[fishType];
 
         // Only consider fish that aren't already in schools
@@ -98,7 +157,7 @@ export class SchoolManager {
         }
 
         // Group by species (schools are species-exclusive)
-        const speciesGroups = {};
+        const speciesGroups: { [species: string]: FishSprite[] } = {};
         unschooledFish.forEach(fish => {
             if (!speciesGroups[fish.species]) {
                 speciesGroups[fish.species] = [];
@@ -122,26 +181,26 @@ export class SchoolManager {
 
     /**
      * Find clusters of fish using proximity grouping
-     * @param {Array} fishList - List of fish to cluster
-     * @param {number} radius - Maximum distance to be in same cluster
-     * @returns {Array} Array of clusters (each cluster is array of fish)
+     * @param fishList - List of fish to cluster
+     * @param radius - Maximum distance to be in same cluster
+     * @returns Array of clusters (each cluster is array of fish)
      */
-    findClusters(fishList, radius) {
-        const clusters = [];
-        const visited = new Set();
+    private findClusters(fishList: FishSprite[], radius: number): FishSprite[][] {
+        const clusters: FishSprite[][] = [];
+        const visited = new Set<FishSprite>();
         const radiusSq = radius * radius;
 
         fishList.forEach(fish => {
             if (visited.has(fish)) return;
 
             // Start new cluster with this fish
-            const cluster = [fish];
+            const cluster: FishSprite[] = [fish];
             visited.add(fish);
 
             // Find all fish within radius (recursive flood fill)
-            const queue = [fish];
+            const queue: FishSprite[] = [fish];
             while (queue.length > 0) {
-                const current = queue.shift();
+                const current = queue.shift()!;
 
                 fishList.forEach(other => {
                     if (visited.has(other)) return;
@@ -159,7 +218,7 @@ export class SchoolManager {
                 });
             }
 
-            if (cluster.length >= this.config.minSchoolSize) {
+            if (cluster.length >= this.config.baitfish.minSchoolSize) {
                 clusters.push(cluster);
             }
         });
@@ -169,10 +228,11 @@ export class SchoolManager {
 
     /**
      * Create a new school
-     * @param {string} species - Species of fish in school
-     * @param {Array} members - Fish in this school
+     * @param species - Species of fish in school
+     * @param members - Fish in this school
+     * @param fishType - Type of fish
      */
-    createSchool(species, members, fishType) {
+    private createSchool(species: string, members: FishSprite[], fishType: 'baitfish' | 'predator'): void {
         // Use appropriate school pool and ID counter
         const schoolMap = fishType === 'baitfish' ? this.baitfishSchools : this.predatorSchools;
         const idCounter = fishType === 'baitfish' ? this.nextBaitfishSchoolId++ : this.nextPredatorSchoolId++;
@@ -182,7 +242,7 @@ export class SchoolManager {
         const center = this.calculateCenter(members);
 
         // Create school object
-        const school = {
+        const school: School = {
             id: schoolId,
             species: species,
             fishType: fishType,
@@ -196,7 +256,7 @@ export class SchoolManager {
         // Assign fish to school
         members.forEach(fish => {
             // Calculate offset from center for this fish
-            const offset = {
+            const offset: SchoolOffset = {
                 x: fish.worldX - center.worldX,
                 y: fish.y - center.y
             };
@@ -212,10 +272,10 @@ export class SchoolManager {
 
     /**
      * Update existing schools (recalculate centers, check fragmentation)
-     * @param {Array} allFish - Fish to process (not currently used, kept for consistency)
-     * @param {string} fishType - 'baitfish' or 'predator'
+     * @param allFish - Fish to process (not currently used, kept for consistency)
+     * @param fishType - 'baitfish' or 'predator'
      */
-    updateSchools(allFish, fishType) {
+    private updateSchools(allFish: FishSprite[], fishType: 'baitfish' | 'predator'): void {
         const config = this.config[fishType];
         const schoolMap = fishType === 'baitfish' ? this.baitfishSchools : this.predatorSchools;
 
@@ -251,7 +311,7 @@ export class SchoolManager {
     /**
      * Calculate center of mass for a group of fish
      */
-    calculateCenter(fishList) {
+    private calculateCenter(fishList: FishSprite[]): SchoolCenter {
         if (fishList.length === 0) {
             return { worldX: 0, y: 0 };
         }
@@ -272,11 +332,11 @@ export class SchoolManager {
 
     /**
      * Check if school is too spread out and should disband
-     * @param {object} school - School to check
-     * @param {Array} activeMembers - Active members of school
-     * @param {object} config - Configuration for this fish type
+     * @param school - School to check
+     * @param activeMembers - Active members of school
+     * @param config - Configuration for this fish type
      */
-    isSchoolFragmented(school, activeMembers, config) {
+    private isSchoolFragmented(school: School, activeMembers: FishSprite[], config: SchoolTypeConfig): boolean {
         if (activeMembers.length < config.minSchoolSize) {
             return true; // Too small to be a school
         }
@@ -304,7 +364,7 @@ export class SchoolManager {
     /**
      * Disband a school (clear membership, let fish be free agents)
      */
-    disbandSchool(school) {
+    private disbandSchool(school: School): void {
         console.log(`Disbanding school ${school.id} (${school.species})`);
 
         // Clear school membership from all fish
@@ -315,16 +375,17 @@ export class SchoolManager {
         });
 
         // Remove school from active schools
-        this.schools.delete(school.id);
+        const schoolMap = school.fishType === 'baitfish' ? this.baitfishSchools : this.predatorSchools;
+        schoolMap.delete(school.id);
     }
 
     /**
      * Clean up empty schools
      */
-    cleanupSchools() {
+    private cleanupSchools(): void {
         // Clean up both baitfish and predator schools
         [this.baitfishSchools, this.predatorSchools].forEach(schoolMap => {
-            const toDelete = [];
+            const toDelete: string[] = [];
 
             schoolMap.forEach(school => {
                 if (school.members.size === 0) {
@@ -340,9 +401,9 @@ export class SchoolManager {
 
     /**
      * Get school count
-     * @param {string} fishType - Optional: 'baitfish', 'predator', or undefined for total
+     * @param fishType - Optional: 'baitfish', 'predator', or undefined for total
      */
-    getSchoolCount(fishType) {
+    getSchoolCount(fishType?: 'baitfish' | 'predator'): number {
         if (fishType === 'baitfish') return this.baitfishSchools.size;
         if (fishType === 'predator') return this.predatorSchools.size;
         return this.baitfishSchools.size + this.predatorSchools.size;
@@ -351,9 +412,14 @@ export class SchoolManager {
     /**
      * Get schools for a specific species
      */
-    getSchoolsBySpecies(species) {
-        const result = [];
-        this.schools.forEach(school => {
+    getSchoolsBySpecies(species: string): School[] {
+        const result: School[] = [];
+        this.baitfishSchools.forEach(school => {
+            if (school.species === species) {
+                result.push(school);
+            }
+        });
+        this.predatorSchools.forEach(school => {
             if (school.species === species) {
                 result.push(school);
             }
@@ -364,48 +430,53 @@ export class SchoolManager {
     /**
      * Get debug info
      */
-    getDebugInfo() {
-        const info = {
-            schoolCount: this.schools.size,
-            schools: []
-        };
+    getDebugInfo(): any {
+        const totalSchools = this.baitfishSchools.size + this.predatorSchools.size;
+        const schools: any[] = [];
 
-        this.schools.forEach(school => {
-            const activeMembers = Array.from(school.members).filter(f => f.active);
-            info.schools.push({
-                id: school.id,
-                species: school.species,
-                memberCount: activeMembers.length,
-                center: {
-                    worldX: school.center.worldX.toFixed(1),
-                    y: school.center.y.toFixed(1)
-                }
+        [this.baitfishSchools, this.predatorSchools].forEach(schoolMap => {
+            schoolMap.forEach(school => {
+                const activeMembers = Array.from(school.members).filter(f => f.active);
+                schools.push({
+                    id: school.id,
+                    species: school.species,
+                    memberCount: activeMembers.length,
+                    center: {
+                        worldX: school.center.worldX.toFixed(1),
+                        y: school.center.y.toFixed(1)
+                    }
+                });
             });
         });
 
-        return info;
+        return {
+            schoolCount: totalSchools,
+            schools: schools
+        };
     }
 
     /**
      * Force create a school (for testing or manual school creation)
      */
-    forceCreateSchool(species, fishList) {
-        if (fishList.length < this.config.minSchoolSize) {
-            console.warn(`Cannot create school: need at least ${this.config.minSchoolSize} fish`);
+    forceCreateSchool(species: string, fishList: FishSprite[]): string | null {
+        if (fishList.length < this.config.baitfish.minSchoolSize) {
+            console.warn(`Cannot create school: need at least ${this.config.baitfish.minSchoolSize} fish`);
             return null;
         }
 
-        this.createSchool(species, fishList);
+        const fishType = fishList[0].type === 'bait' ? 'baitfish' : 'predator';
+        this.createSchool(species, fishList, fishType);
         return fishList[0].schooling?.schoolId || null;
     }
 
     /**
      * Remove fish from school (when consumed or removed from scene)
      */
-    removeFishFromSchool(fish) {
+    removeFishFromSchool(fish: FishSprite): void {
         if (!fish.schooling || !fish.schooling.schoolId) return;
 
-        const school = this.schools.get(fish.schooling.schoolId);
+        const schoolMap = fish.type === 'bait' ? this.baitfishSchools : this.predatorSchools;
+        const school = schoolMap.get(fish.schooling.schoolId);
         if (school) {
             school.members.delete(fish);
             fish.schooling.clearSchool();
@@ -415,12 +486,16 @@ export class SchoolManager {
     /**
      * Reset school manager (clear all schools)
      */
-    reset() {
-        this.schools.forEach(school => {
-            this.disbandSchool(school);
+    reset(): void {
+        [this.baitfishSchools, this.predatorSchools].forEach(schoolMap => {
+            schoolMap.forEach(school => {
+                this.disbandSchool(school);
+            });
         });
-        this.schools.clear();
-        this.nextSchoolId = 1;
+        this.baitfishSchools.clear();
+        this.predatorSchools.clear();
+        this.nextBaitfishSchoolId = 1;
+        this.nextPredatorSchoolId = 1;
         this.frameCount = 0;
     }
 }
