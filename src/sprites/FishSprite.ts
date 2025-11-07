@@ -556,8 +556,11 @@ export class FishSprite extends OrganismSprite {
         this.depthZone = this.getDepthZone();
         this.speed = this.baseSpeed * this.depthZone.speedMultiplier;
 
-        // Update AI - use unified organisms pool
-        if (this.ai) {
+        // Check if this fish uses schooling (boids) or AI for movement
+        const usesSchooling = this.speciesData?.schooling?.enabled === true;
+
+        // Update AI - use unified organisms pool (only for non-schooling fish)
+        if (this.ai && !usesSchooling) {
             // Get all predators from unified organisms pool
             const allFish = (this.scene as any).organisms
                 ? (this.scene as any).organisms.filter((o: any) =>
@@ -577,8 +580,8 @@ export class FishSprite extends OrganismSprite {
             this.ai.update((this.scene as any).lure, this.scene.time.now, allFish, baitfishClouds, crayfish);
         }
 
-        // Apply AI movement
-        if (this.ai && this.ai.getMovementVector) {
+        // Apply AI movement (only for non-schooling fish - schooling uses boids via SchoolManager)
+        if (this.ai && this.ai.getMovementVector && !usesSchooling) {
             const movement = this.ai.getMovementVector();
             this.worldX += movement.x;
             this.y += movement.y;
