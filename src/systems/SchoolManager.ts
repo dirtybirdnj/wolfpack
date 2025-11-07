@@ -120,7 +120,9 @@ export class SchoolManager {
         // Detect new schools periodically
         if (this.frameCount % this.config.detectionFrequency === 0) {
             this.detectNewSchools(baitfish, 'baitfish');
-            this.detectNewSchools(predators, 'predator');
+            // NOTE: Predators don't form schools through proximity detection
+            // They form emergent wolf packs when multiple predators chase the same prey
+            // this.detectNewSchools(predators, 'predator');
         }
 
         // Update existing schools

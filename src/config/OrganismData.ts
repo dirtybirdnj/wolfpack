@@ -249,7 +249,7 @@ export const BAITFISH_SPECIES: Record<string, FishData> = {
         weightRange: { min: 0.1, max: 0.3 },
 
         // Movement
-        speed: { base: 2.2, panic: 4.5 },
+        speed: { base: 1.0, panic: 3.0 }, // Reduced for more natural movement
 
         // Behavior
         canBeEaten: true,
@@ -293,7 +293,7 @@ export const BAITFISH_SPECIES: Record<string, FishData> = {
 
         sizeRange: { min: 5, max: 10 },
         weightRange: { min: 0.15, max: 0.4 },
-        speed: { base: 2.5, panic: 5.0 },
+        speed: { base: 1.2, panic: 3.5 }, // Reduced for more natural movement
 
         canBeEaten: true,
         eatenBy: ['yellow_perch', 'smallmouth_bass', 'northern_pike', 'lake_trout'],

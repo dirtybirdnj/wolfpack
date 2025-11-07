@@ -658,6 +658,11 @@ export class FishSprite extends OrganismSprite {
         this.schooling.cohesion = cohesion;
         this.schooling.alignment = alignment;
 
+        // Apply velocity damping to prevent runaway speed (fish naturally lose momentum)
+        const damping = 0.95; // 5% drag per frame
+        this.velocity.x *= damping;
+        this.velocity.y *= damping;
+
         // Update velocity based on Boids forces (including food attraction)
         this.velocity.x += separation.x + cohesion.x + alignment.x + foodAttraction.x;
         this.velocity.y += separation.y + cohesion.y + alignment.y + foodAttraction.y;
