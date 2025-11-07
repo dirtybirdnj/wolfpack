@@ -487,11 +487,14 @@ export class GameScene extends Phaser.Scene {
      * @returns {Object} All organisms by type
      */
     public getAllOrganisms(): (FishSprite | ZooplanktonSprite | CrayfishSprite)[] {
+        // Filter from unified organisms pool instead of legacy arrays
+        const activeOrganisms = this.organisms.filter(o => o.active && o.visible);
+
         return {
-            predators: this.fishes.filter(f => f.active && f.visible),
-            baitfish: this.baitfishSchools.filter(f => f.active && f.visible && !f.consumed),
-            zooplankton: this.zooplankton.filter(z => z.active && z.visible && !z.consumed),
-            crayfish: this.crayfish.filter(c => c.active && c.visible && !c.consumed)
+            predators: activeOrganisms.filter(o => o instanceof FishSprite && o.type === 'predator'),
+            baitfish: activeOrganisms.filter(o => o instanceof FishSprite && o.type === 'bait' && !o.consumed),
+            zooplankton: activeOrganisms.filter(o => o instanceof ZooplanktonSprite && !o.consumed),
+            crayfish: activeOrganisms.filter(o => o instanceof CrayfishSprite && !o.consumed)
         };
     }
 
@@ -752,29 +755,31 @@ export class GameScene extends Phaser.Scene {
      * Update fish status display in GameHUD
      */
     private updateFishStatusDisplay(): void {
-        // Count entities
-        const fishCount = this.fishes.filter(f => f.active && f.visible).length;
+        // Count entities from unified organisms pool
+        const activeOrganisms = this.organisms.filter(o => o.active && o.visible);
 
-        // Count bait clouds and individual baitfish
+        const predatorFish = activeOrganisms.filter(o => o instanceof FishSprite && o.type === 'predator') as FishSprite[];
+        const baitfish = activeOrganisms.filter(o => o instanceof FishSprite && o.type === 'bait') as FishSprite[];
+        const crayfish = activeOrganisms.filter(o => o instanceof CrayfishSprite) as CrayfishSprite[];
+        const zooplankton = activeOrganisms.filter(o => o instanceof ZooplanktonSprite) as ZooplanktonSprite[];
+
+        const fishCount = predatorFish.length;
+        const baitfishCount = baitfish.length;
+        const crayfishCount = crayfish.length;
+        const zooplanktonCount = zooplankton.length;
+
+        // Count bait clouds
         const baitCloudCount = this.schools ? this.schools.filter(school => {
             const members = school.members || [];
             return members.some(b => b.active && b.visible);
         }).length : 0;
 
-        const baitfishCount = this.schools ? this.schools.reduce((total, school) => {
-            return total + (school.members ? school.members.filter(b => b.active && b.visible).length : 0);
-        }, 0) : 0;
-
-        const crayfishCount = this.crayfish ? this.crayfish.filter(c => c.active && c.visible).length : 0;
-        const zooplanktonCount = this.zooplankton ? this.zooplankton.filter(z => z.visible).length : 0;
-
-        const entityCounts = `🐟 ${fishCount} ☁️ ${baitCloudCount} 🦞 ${crayfishCount} 🪳 ${zooplanktonCount}`;
+        const entityCounts = `🐟 ${fishCount} 🐠 ${baitfishCount} ☁️ ${baitCloudCount} 🦞 ${crayfishCount} 🪳 ${zooplanktonCount}`;
         this.registry.set('entityCounts', entityCounts);
 
         // Build fish list data - send as array of objects for proper styling
         if (fishCount > 0) {
-            const fishListData = this.fishes
-                .filter(f => f.active && f.visible)
+            const fishListData = predatorFish
                 .map((f, i) => ({
                     id: f.id,
                     name: f.name || 'Fish-' + i,
@@ -793,7 +798,7 @@ export class GameScene extends Phaser.Scene {
         }
 
         // Fish detail - show selected fish or first fish
-        const detailFish = this.selectedFish || (fishCount > 0 ? this.fishes.find(f => f.active && f.visible) : null);
+        const detailFish = this.selectedFish || (fishCount > 0 ? predatorFish[0] : null);
         if (detailFish) {
             const species = detailFish.species || 'Unknown';
             const name = detailFish.name || 'Unknown';

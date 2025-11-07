@@ -556,11 +556,24 @@ export class FishSprite extends OrganismSprite {
         this.depthZone = this.getDepthZone();
         this.speed = this.baseSpeed * this.depthZone.speedMultiplier;
 
-        // Update AI
+        // Update AI - use unified organisms pool
         if (this.ai) {
-            const allFish = (this.scene as any).fishes || [];
+            // Get all predators from unified organisms pool
+            const allFish = (this.scene as any).organisms
+                ? (this.scene as any).organisms.filter((o: any) =>
+                    o.active && o.visible && o.type === 'predator'
+                  )
+                : [];
+
             const baitfishClouds = (this.scene as any).getAdaptedSchoolsForAI ? (this.scene as any).getAdaptedSchoolsForAI() : [];
-            const crayfish = (this.scene as any).crayfish || [];
+
+            // Get crayfish from unified organisms pool
+            const crayfish = (this.scene as any).organisms
+                ? (this.scene as any).organisms.filter((o: any) =>
+                    o.active && o.visible && o.constructor.name === 'CrayfishSprite'
+                  )
+                : [];
+
             this.ai.update((this.scene as any).lure, this.scene.time.now, allFish, baitfishClouds, crayfish);
         }
 

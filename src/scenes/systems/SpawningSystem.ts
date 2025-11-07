@@ -95,8 +95,11 @@ export class SpawningSystem {
      * @returns The spawned fish or null if spawn failed
      */
     trySpawnFish(): FishSprite | null {
-        // Count current populations
-        const predatorCount = (this.scene as any).fishes.length;
+        // Count current populations from unified organisms pool
+        const organisms = (this.scene as any).organisms || [];
+        const predatorCount = organisms.filter((o: any) =>
+            o.active && o.visible && o.type === 'predator'
+        ).length;
         const baitCount = this.countBaitfish();
 
         // Don't spawn if we're at max predators
@@ -222,8 +225,9 @@ export class SpawningSystem {
             (fish as any).ai.idleDirection = fromLeft ? 1 : -1;
         }
 
-        // Add ONLY to legacy array (predators use scene.add.existing for rendering)
+        // Add to legacy array and unified pool
         (this.scene as any).fishes.push(fish);
+        (this.scene as any).organisms.push(fish); // Unified pool
 
         console.log(`🐟 Spawned ${species} (${size}) at depth ${depth.toFixed(1)}ft`);
         return fish;
@@ -406,6 +410,7 @@ export class SpawningSystem {
             // Create zooplankton using new sprite class
             const zp = new ZooplanktonSprite(this.scene, worldX, y);
             (this.scene as any).zooplankton.push(zp);
+            (this.scene as any).organisms.push(zp); // Unified pool
         }
 
         return spawnCount;
@@ -575,8 +580,9 @@ export class SpawningSystem {
         // Create fish using FishSprite
         const fish = new FishSprite(this.scene, worldX, y, species, size);
 
-        // Add ONLY to legacy array (predators use scene.add.existing for rendering)
+        // Add to legacy array and unified pool
         (this.scene as any).fishes.push(fish);
+        (this.scene as any).organisms.push(fish); // Unified pool
 
         console.log(`🎣 ${species} (${size}) spawning at ${depth.toFixed(0)}ft`);
     }
@@ -636,6 +642,7 @@ export class SpawningSystem {
         // Create crayfish using new sprite class
         const crayfish = new CrayfishSprite(this.scene, worldX, y);
         (this.scene as any).crayfish.push(crayfish);
+        (this.scene as any).organisms.push(crayfish); // Unified pool
 
         return crayfish;
     }
@@ -856,16 +863,11 @@ export class SpawningSystem {
      * @returns Total baitfish count
      */
     countBaitfish(): number {
-        const schoolsArray = (this.scene as any).schools || [];
-        let total = 0;
-        schoolsArray.forEach((school: any) => {
-            if (school && school.members) {
-                // Only count ACTIVE and VISIBLE baitfish
-                const activeFish = school.members.filter((fish: any) => fish.active && fish.visible);
-                total += activeFish.length;
-            }
-        });
-        return total;
+        // Count from unified organisms pool
+        const organisms = (this.scene as any).organisms || [];
+        return organisms.filter((o: any) =>
+            o.active && o.visible && o.type === 'bait'
+        ).length;
     }
 
     /**
