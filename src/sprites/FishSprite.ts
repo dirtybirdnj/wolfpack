@@ -512,7 +512,8 @@ export class FishSprite extends OrganismSprite {
             this.y += movement.y;
 
             // Update rotation based on movement
-            if (Math.abs(movement.x) > 0.1 || Math.abs(movement.y) > 0.1) {
+            // Always update rotation when there's any movement to prevent stale orientations
+            if (Math.abs(movement.x) > 0.01 || Math.abs(movement.y) > 0.01) {
                 const isMovingRight = movement.x > 0;
                 // Calculate angle using actual velocity direction
                 const targetAngle = Math.atan2(movement.y, movement.x);
@@ -550,7 +551,8 @@ export class FishSprite extends OrganismSprite {
      */
     private updateBait(time: number, delta: number): void {
         // Update rotation based on velocity
-        if (Math.abs(this.velocity.x) > 0.1 || Math.abs(this.velocity.y) > 0.1) {
+        // Always update rotation when there's any movement to prevent stale orientations
+        if (Math.abs(this.velocity.x) > 0.01 || Math.abs(this.velocity.y) > 0.01) {
             const isMovingRight = this.velocity.x > 0;
             // Calculate angle using actual velocity direction
             const targetAngle = Math.atan2(this.velocity.y, this.velocity.x);
