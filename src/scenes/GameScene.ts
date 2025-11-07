@@ -768,11 +768,9 @@ export class GameScene extends Phaser.Scene {
         const crayfishCount = crayfish.length;
         const zooplanktonCount = zooplankton.length;
 
-        // Count bait clouds
-        const baitCloudCount = this.schools ? this.schools.filter(school => {
-            const members = school.members || [];
-            return members.some(b => b.active && b.visible);
-        }).length : 0;
+        // Count schools from SchoolManager (single source of truth)
+        const baitCloudCount = this.schoolManager ? this.schoolManager.getSchoolCount('baitfish') : 0;
+        const predatorPackCount = this.schoolManager ? this.schoolManager.getSchoolCount('predator') : 0;
 
         const entityCounts = `🐟 ${fishCount} 🐠 ${baitfishCount} ☁️ ${baitCloudCount} 🦞 ${crayfishCount} 🪳 ${zooplanktonCount}`;
         this.registry.set('entityCounts', entityCounts);
@@ -901,17 +899,12 @@ export class GameScene extends Phaser.Scene {
                 'MEDIUM' // Size doesn't matter for baitfish, but FishSprite requires it
             );
 
-            // Associate fish with school
-            fish.schoolId = schoolId;
-            fish.schoolingOffset = {
-                x: offsetX,
-                y: offsetY
-            };
+            // NOTE: No longer manually assigning schoolId - SchoolManager handles this
+            // Let fish spawn close together, SchoolManager will detect the cluster and create a school
 
-            // Set initial velocity to match school (prevents immediate scatter)
-            // BaitfishSprite has velocity directly, not nested in schooling
-            fish.velocity.x = school.velocity.x;
-            fish.velocity.y = school.velocity.y;
+            // Set initial velocity for natural movement
+            fish.velocity.x = Utils.randomBetween(-0.3, 0.3);
+            fish.velocity.y = Utils.randomBetween(-0.1, 0.1);
 
             // Add to arrays
             school.members.push(fish);
@@ -1482,77 +1475,9 @@ export class GameScene extends Phaser.Scene {
             school.members = Array.from(uniqueFish);
         });
 
-        // THEN clean up empty schools (all fish have been consumed or despawned)
-        const schoolCountBefore = this.schools.length;
-        this.schools = this.schools.filter(school => {
-            if (school.members.length === 0) {
-                console.log(`🌊 School ${school.id} disbanded (no fish remaining)`);
-                return false; // Remove empty school
-            }
-            return true; // Keep school
-        });
-        const schoolCountAfter = this.schools.length;
-
-        // DEBUG: Log when schools are removed
-        if (schoolCountBefore > schoolCountAfter) {
-            console.log(`🗑️ Removed ${schoolCountBefore - schoolCountAfter} empty schools (${schoolCountAfter} remaining)`);
-        }
-
-        // NOTE: Boids movement now handled by SchoolManager.applyBoidsToAllSchools()
-        // Old manual boids code removed - SchoolManager handles both baitfish and predator schools
-
-
-        // Merge overlapping schools (only check every 180 frames / ~3 seconds to reduce overhead)
-        // Check each pair of schools to see if they overlap
-        const shouldCheckMerge = this.gameTime % 180 === 0;
-        const mergeRadius = GameConfig.BAITFISH_CLOUD_RADIUS * 1.5; // Merge if centers within 1.5x cloud radius
-        const schoolsToRemove = new Set();
-
-        if (shouldCheckMerge) {
-            for (let i = 0; i < this.schools.length; i++) {
-            if (schoolsToRemove.has(i)) continue;
-
-            const schoolA = this.schools[i];
-            if (schoolA.members.length === 0) continue;
-
-            for (let j = i + 1; j < this.schools.length; j++) {
-                if (schoolsToRemove.has(j)) continue;
-
-                const schoolB = this.schools[j];
-                if (schoolB.members.length === 0) continue;
-
-                // Calculate distance between school centers
-                // Use Phaser's optimized distance calculation
-                const distance = Phaser.Math.Distance.Between(
-                    schoolA.centerWorldX, schoolA.centerY,
-                    schoolB.centerWorldX, schoolB.centerY
-                );
-
-                if (distance < mergeRadius) {
-                    // Merge schoolB into schoolA (prevent duplicates)
-                    let movedCount = 0;
-                    schoolB.members.forEach(fish => {
-                        // Only add if not already in schoolA
-                        if (!schoolA.members.includes(fish)) {
-                            fish.schoolId = schoolA.id;
-                            schoolA.members.push(fish);
-                            movedCount++;
-                        }
-                    });
-
-                    console.log(`🌊 Schools merged: ${movedCount} fish from school ${schoolB.id} joined school ${schoolA.id} (distance: ${distance.toFixed(0)}px)`);
-
-                    // Mark schoolB for removal
-                    schoolsToRemove.add(j);
-                }
-            }
-            }
-
-            // Remove merged schools
-            if (schoolsToRemove.size > 0) {
-                this.schools = this.schools.filter((school, index) => !schoolsToRemove.has(index));
-            }
-        }
+        // NOTE: Old school management code disabled - SchoolManager now handles all schooling
+        // SchoolManager detects clusters, creates/disbands schools, and applies boids movement
+        // The legacy this.schools array is kept for compatibility with getAdaptedSchoolsForAI()
 
         // Update fish (predators)
         // FishSprite.preUpdate() is called automatically by Phaser Group (runChildUpdate: true)
