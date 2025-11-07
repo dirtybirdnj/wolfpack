@@ -521,7 +521,18 @@ export class FishSprite extends OrganismSprite {
                 // Calculate angle using actual velocity direction
                 // Sprite faces RIGHT by default (0°), so atan2 gives us the correct rotation
                 const targetAngle = Math.atan2(movement.y, movement.x);
-                const targetDegrees = Phaser.Math.RadToDeg(targetAngle);
+                let targetDegrees = Phaser.Math.RadToDeg(targetAngle);
+
+                // Prevent fish from swimming upside down by clamping rotation
+                // If angle would be upside down (> 90° or < -90°), flip horizontally instead
+                if (targetDegrees > 90 || targetDegrees < -90) {
+                    // Flip sprite horizontally
+                    this.setFlipY(true);
+                    // Invert the angle to compensate for flip
+                    targetDegrees = targetDegrees > 90 ? targetDegrees - 180 : targetDegrees + 180;
+                } else {
+                    this.setFlipY(false);
+                }
 
                 // Smooth rotation to prevent jitter during feeding/idle
                 // Only update rotation if the change is significant OR enough time has passed
@@ -567,7 +578,15 @@ export class FishSprite extends OrganismSprite {
             // Calculate angle using actual velocity direction
             // Sprite faces RIGHT by default (0°), so atan2 gives us the correct rotation
             const targetAngle = Math.atan2(this.velocity.y, this.velocity.x);
-            const targetDegrees = Phaser.Math.RadToDeg(targetAngle);
+            let targetDegrees = Phaser.Math.RadToDeg(targetAngle);
+
+            // Prevent fish from swimming upside down by flipping vertically instead
+            if (targetDegrees > 90 || targetDegrees < -90) {
+                this.setFlipY(true);
+                targetDegrees = targetDegrees > 90 ? targetDegrees - 180 : targetDegrees + 180;
+            } else {
+                this.setFlipY(false);
+            }
 
             // Smooth rotation to prevent jitter
             const angleDiff = Math.abs(Phaser.Math.Angle.ShortestBetween(this.angle, targetDegrees));
