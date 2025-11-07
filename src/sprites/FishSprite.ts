@@ -519,14 +519,16 @@ export class FishSprite extends OrganismSprite {
             // Always update rotation when there's any movement to prevent stale orientations
             if (Math.abs(movement.x) > 0.01 || Math.abs(movement.y) > 0.01) {
                 // Calculate angle using actual velocity direction
-                // Sprite faces RIGHT by default (0°), so atan2 gives us the correct rotation
+                // Sprite faces LEFT by default, so we need to add 180° to atan2 result
                 const targetAngle = Math.atan2(movement.y, movement.x);
-                let targetDegrees = Phaser.Math.RadToDeg(targetAngle);
+                let targetDegrees = Phaser.Math.RadToDeg(targetAngle) + 180;
 
-                // Prevent fish from swimming upside down by clamping rotation
-                // If angle would be upside down (> 90° or < -90°), flip horizontally instead
+                // Normalize to -180 to 180 range
+                if (targetDegrees > 180) targetDegrees -= 360;
+
+                // Prevent fish from swimming upside down by flipping vertically
+                // If angle would be upside down (> 90° or < -90°), flip vertically
                 if (targetDegrees > 90 || targetDegrees < -90) {
-                    // Flip sprite horizontally
                     this.setFlipY(true);
                     // Invert the angle to compensate for flip
                     targetDegrees = targetDegrees > 90 ? targetDegrees - 180 : targetDegrees + 180;
@@ -576,9 +578,12 @@ export class FishSprite extends OrganismSprite {
         // Always update rotation when there's any movement to prevent stale orientations
         if (Math.abs(this.velocity.x) > 0.01 || Math.abs(this.velocity.y) > 0.01) {
             // Calculate angle using actual velocity direction
-            // Sprite faces RIGHT by default (0°), so atan2 gives us the correct rotation
+            // Sprite faces LEFT by default, so we need to add 180° to atan2 result
             const targetAngle = Math.atan2(this.velocity.y, this.velocity.x);
-            let targetDegrees = Phaser.Math.RadToDeg(targetAngle);
+            let targetDegrees = Phaser.Math.RadToDeg(targetAngle) + 180;
+
+            // Normalize to -180 to 180 range
+            if (targetDegrees > 180) targetDegrees -= 360;
 
             // Prevent fish from swimming upside down by flipping vertically instead
             if (targetDegrees > 90 || targetDegrees < -90) {

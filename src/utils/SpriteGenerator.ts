@@ -197,34 +197,34 @@ export class SpriteGenerator {
         const finColor = this.rgbToHex(GameConfig.COLOR_FISH_FINS);
         const spotColor = this.rgbToHex(GameConfig.COLOR_FISH_SPOTS);
 
-        // Draw body (fish facing RIGHT - head on right, tail on left)
+        // Draw body (fish facing LEFT - head on left, tail on right)
         ctx.fillStyle = bodyColor;
         ctx.beginPath();
         // Body centered
-        ctx.ellipse(width - bodyLength / 2, centerY, bodyLength / 2, height / 3, 0, 0, Math.PI * 2);
+        ctx.ellipse(bodyLength / 2, centerY, bodyLength / 2, height / 3, 0, 0, Math.PI * 2);
         ctx.fill();
 
         // Draw belly (lighter)
         ctx.fillStyle = bellyColor;
         ctx.beginPath();
-        ctx.ellipse(width - bodyLength / 2, centerY + height / 6, bodyLength / 3, height / 6, 0, 0, Math.PI * 2);
+        ctx.ellipse(bodyLength / 2, centerY + height / 6, bodyLength / 3, height / 6, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // Draw tail on LEFT side
+        // Draw tail on RIGHT side
         ctx.fillStyle = finColor;
         ctx.beginPath();
-        ctx.moveTo(width - bodyLength, centerY);
-        ctx.lineTo(0, centerY - height / 4);
-        ctx.lineTo(0, centerY + height / 4);
+        ctx.moveTo(bodyLength, centerY);
+        ctx.lineTo(width, centerY - height / 4);
+        ctx.lineTo(width, centerY + height / 4);
         ctx.closePath();
         ctx.fill();
 
         // Draw dorsal fin
         ctx.fillStyle = finColor;
         ctx.beginPath();
-        ctx.moveTo(width - bodyLength * 2 / 3, centerY - height / 3);
-        ctx.lineTo(width - bodyLength / 2, centerY - height / 2);
-        ctx.lineTo(width - bodyLength / 3, centerY - height / 3);
+        ctx.moveTo(bodyLength / 3, centerY - height / 3);
+        ctx.lineTo(bodyLength / 2, centerY - height / 2);
+        ctx.lineTo(bodyLength * 2 / 3, centerY - height / 3);
         ctx.closePath();
         ctx.fill();
 
@@ -233,19 +233,19 @@ export class SpriteGenerator {
             ctx.fillStyle = spotColor;
             const spotCount = size === 'TROPHY' ? 6 : size === 'LARGE' ? 4 : 3;
             for (let i = 0; i < spotCount; i++) {
-                const x = width - bodyLength * 3 / 4 + (i * bodyLength / spotCount);
+                const x = bodyLength / 4 + (i * bodyLength / spotCount);
                 const y = centerY - height / 6 + (Math.random() * height / 3);
                 ctx.fillRect(x, y, 1, 1);
             }
         }
 
-        // Draw eye on RIGHT (head) side
+        // Draw eye on LEFT (head) side
         ctx.fillStyle = '#000000';
-        ctx.fillRect(width - 4, centerY - 1, 2, 2);
+        ctx.fillRect(2, centerY - 1, 2, 2);
     }
 
     /**
-     * Draw a simple baitfish shape (facing RIGHT - head on right, tail on left)
+     * Draw a simple baitfish shape (facing LEFT - head on left, tail on right)
      */
     static drawBaitfishShape(
         ctx: CanvasRenderingContext2D,
@@ -258,14 +258,14 @@ export class SpriteGenerator {
 
         // Simple oval body
         ctx.fillStyle = color;
-        ctx.fillRect(2, centerY - height / 4, width - 2, height / 2);
+        ctx.fillRect(0, centerY - height / 4, width - 2, height / 2);
 
-        // Tail on LEFT side
-        ctx.fillRect(0, centerY - height / 6, 2, height / 3);
+        // Tail on RIGHT side
+        ctx.fillRect(width - 2, centerY - height / 6, 2, height / 3);
 
-        // Eye on RIGHT (head) side
+        // Eye on LEFT (head) side
         ctx.fillStyle = '#000000';
-        ctx.fillRect(width - 2, centerY, 1, 1);
+        ctx.fillRect(1, centerY, 1, 1);
     }
 
     /**
