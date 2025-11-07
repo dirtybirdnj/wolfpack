@@ -173,10 +173,6 @@ export class FishSprite extends OrganismSprite {
     public feedCooldown?: number;
     public depthInFeet?: number;
 
-    // Rotation smoothing
-    private lastRotationUpdate: number = 0;
-    private targetRotation: number = 0;
-
     // Swim bladder simulation - natural buoyancy keeps fish level
     private swimBladderStrength: number = 0.15; // How strongly fish resists tilting (0-1)
 
@@ -535,16 +531,8 @@ export class FishSprite extends OrganismSprite {
                 const levelAngle = 0; // Horizontal position (swim bladder equilibrium)
                 const targetDegrees = Phaser.Math.Linear(levelAngle, movementDegrees, 1 - this.swimBladderStrength);
 
-                // Smooth rotation to prevent jitter during feeding/idle
-                // Only update rotation if the change is significant OR enough time has passed
-                const angleDiff = Math.abs(Phaser.Math.Angle.ShortestBetween(this.angle, targetDegrees));
-                const timeSinceLastUpdate = time - this.lastRotationUpdate;
-
-                if (angleDiff > 5 || timeSinceLastUpdate > 100) {
-                    // Lerp toward target angle for smooth transitions
-                    this.angle = Phaser.Math.Angle.RotateTo(this.angle, targetDegrees, 0.1);
-                    this.lastRotationUpdate = time;
-                }
+                // Smooth rotation - update every frame for fluid movement
+                this.angle = Phaser.Math.Angle.RotateTo(this.angle, targetDegrees, 0.15);
             } else {
                 // When not moving, swim bladder slowly returns fish to level position
                 const levelAngle = 0;
@@ -597,15 +585,8 @@ export class FishSprite extends OrganismSprite {
             const levelAngle = 0; // Horizontal position (swim bladder equilibrium)
             const targetDegrees = Phaser.Math.Linear(levelAngle, movementDegrees, 1 - this.swimBladderStrength);
 
-            // Smooth rotation to prevent jitter
-            const angleDiff = Math.abs(Phaser.Math.Angle.ShortestBetween(this.angle, targetDegrees));
-            const timeSinceLastUpdate = time - this.lastRotationUpdate;
-
-            if (angleDiff > 5 || timeSinceLastUpdate > 100) {
-                // Lerp toward target angle for smooth transitions
-                this.angle = Phaser.Math.Angle.RotateTo(this.angle, targetDegrees, 0.1);
-                this.lastRotationUpdate = time;
-            }
+            // Smooth rotation - update every frame for fluid movement
+            this.angle = Phaser.Math.Angle.RotateTo(this.angle, targetDegrees, 0.15);
         } else {
             // When not moving, swim bladder slowly returns fish to level position
             const levelAngle = 0;
