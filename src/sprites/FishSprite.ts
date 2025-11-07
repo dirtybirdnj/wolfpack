@@ -173,6 +173,10 @@ export class FishSprite extends OrganismSprite {
     public feedCooldown?: number;
     public depthInFeet?: number;
 
+    // Rotation smoothing
+    private lastRotationUpdate: number = 0;
+    private targetRotation: number = 0;
+
     /**
      * @param scene - Game scene
      * @param worldX - World X position
@@ -514,14 +518,21 @@ export class FishSprite extends OrganismSprite {
             // Update rotation based on movement
             // Always update rotation when there's any movement to prevent stale orientations
             if (Math.abs(movement.x) > 0.01 || Math.abs(movement.y) > 0.01) {
-                const isMovingRight = movement.x > 0;
                 // Calculate angle using actual velocity direction
+                // Sprite faces RIGHT by default (0°), so atan2 gives us the correct rotation
                 const targetAngle = Math.atan2(movement.y, movement.x);
-                this.setFlipX(!isMovingRight); // Flip when moving left
-                // Convert to degrees, adjust angle when flipped
-                this.angle = isMovingRight ?
-                    Phaser.Math.RadToDeg(targetAngle) :
-                    Phaser.Math.RadToDeg(Math.PI - targetAngle);
+                const targetDegrees = Phaser.Math.RadToDeg(targetAngle);
+
+                // Smooth rotation to prevent jitter during feeding/idle
+                // Only update rotation if the change is significant OR enough time has passed
+                const angleDiff = Math.abs(Phaser.Math.Angle.ShortestBetween(this.angle, targetDegrees));
+                const timeSinceLastUpdate = time - this.lastRotationUpdate;
+
+                if (angleDiff > 5 || timeSinceLastUpdate > 100) {
+                    // Lerp toward target angle for smooth transitions
+                    this.angle = Phaser.Math.Angle.RotateTo(this.angle, targetDegrees, 0.1);
+                    this.lastRotationUpdate = time;
+                }
             }
         }
 
@@ -553,14 +564,20 @@ export class FishSprite extends OrganismSprite {
         // Update rotation based on velocity
         // Always update rotation when there's any movement to prevent stale orientations
         if (Math.abs(this.velocity.x) > 0.01 || Math.abs(this.velocity.y) > 0.01) {
-            const isMovingRight = this.velocity.x > 0;
             // Calculate angle using actual velocity direction
+            // Sprite faces RIGHT by default (0°), so atan2 gives us the correct rotation
             const targetAngle = Math.atan2(this.velocity.y, this.velocity.x);
-            this.setFlipX(!isMovingRight); // Flip when moving left
-            // Convert to degrees, adjust angle when flipped
-            this.angle = isMovingRight ?
-                Phaser.Math.RadToDeg(targetAngle) :
-                Phaser.Math.RadToDeg(Math.PI - targetAngle);
+            const targetDegrees = Phaser.Math.RadToDeg(targetAngle);
+
+            // Smooth rotation to prevent jitter
+            const angleDiff = Math.abs(Phaser.Math.Angle.ShortestBetween(this.angle, targetDegrees));
+            const timeSinceLastUpdate = time - this.lastRotationUpdate;
+
+            if (angleDiff > 5 || timeSinceLastUpdate > 100) {
+                // Lerp toward target angle for smooth transitions
+                this.angle = Phaser.Math.Angle.RotateTo(this.angle, targetDegrees, 0.1);
+                this.lastRotationUpdate = time;
+            }
         }
 
         // Update screen position
