@@ -526,15 +526,11 @@ export class FishSprite extends OrganismSprite {
                 // Normalize to -180 to 180 range
                 if (targetDegrees > 180) targetDegrees -= 360;
 
-                // Prevent fish from swimming upside down by flipping vertically
-                // If angle would be upside down (> 90° or < -90°), flip vertically
-                if (targetDegrees > 90 || targetDegrees < -90) {
-                    this.setFlipY(true);
-                    // Invert the angle to compensate for flip
-                    targetDegrees = targetDegrees > 90 ? targetDegrees - 180 : targetDegrees + 180;
-                } else {
-                    this.setFlipY(false);
-                }
+                // Real fish keep their dorsal fin up and belly down - they don't flip upside down
+                // Clamp rotation to reasonable range for natural fish swimming
+                // This allows fish to angle up/down when swimming but prevents unrealistic flipping
+                const MAX_ROTATION = 45; // Maximum degrees fish can tilt from horizontal
+                targetDegrees = Phaser.Math.Clamp(targetDegrees, -MAX_ROTATION, MAX_ROTATION);
 
                 // Smooth rotation to prevent jitter during feeding/idle
                 // Only update rotation if the change is significant OR enough time has passed
@@ -585,13 +581,10 @@ export class FishSprite extends OrganismSprite {
             // Normalize to -180 to 180 range
             if (targetDegrees > 180) targetDegrees -= 360;
 
-            // Prevent fish from swimming upside down by flipping vertically instead
-            if (targetDegrees > 90 || targetDegrees < -90) {
-                this.setFlipY(true);
-                targetDegrees = targetDegrees > 90 ? targetDegrees - 180 : targetDegrees + 180;
-            } else {
-                this.setFlipY(false);
-            }
+            // Real fish keep their dorsal fin up and belly down - they don't flip upside down
+            // Clamp rotation to reasonable range for natural fish swimming
+            const MAX_ROTATION = 45; // Maximum degrees fish can tilt from horizontal
+            targetDegrees = Phaser.Math.Clamp(targetDegrees, -MAX_ROTATION, MAX_ROTATION);
 
             // Smooth rotation to prevent jitter
             const angleDiff = Math.abs(Phaser.Math.Angle.ShortestBetween(this.angle, targetDegrees));
