@@ -12,6 +12,7 @@ import { ReelModel } from '../models/ReelModel.js';
 import { FishSprite } from '../sprites/FishSprite.js';
 import { CrayfishSprite } from '../sprites/CrayfishSprite.js';
 import { ZooplanktonSprite } from '../sprites/ZooplanktonSprite.js';
+import { OrganismSprite } from '../sprites/OrganismSprite.js';
 
 // Import all systems
 import SpawningSystem from './systems/SpawningSystem.js';
@@ -119,10 +120,13 @@ export interface CaughtFishData {
  * - Adjust debug display → src/scenes/systems/DebugSystem.js
  */
 export class GameScene extends Phaser.Scene {
-    // Entity arrays
+    // Entity arrays (legacy - will be deprecated in favor of unified pool)
     public fishes: FishSprite[] = [];
     public zooplankton: ZooplanktonSprite[] = [];
     public crayfish: CrayfishSprite[] = [];
+
+    // Unified organism pool - ALL entities (fish, crayfish, zooplankton, etc.)
+    public organisms: OrganismSprite[] = [];
 
     // Selected fish for detailed view
     public selectedFish: FishSprite | null = null;
@@ -907,6 +911,7 @@ export class GameScene extends Phaser.Scene {
             // Add to arrays
             school.members.push(fish);
             this.baitfishSchools.push(fish);
+            this.organisms.push(fish); // Unified pool
         }
 
         this.schools.push(school);
@@ -1095,8 +1100,9 @@ export class GameScene extends Phaser.Scene {
             // Set movement direction
             fish.ai.idleDirection = Math.random() < 0.5 ? -1 : 1;
 
-            // Add ONLY to legacy array (predators use scene.add.existing for rendering)
+            // Add to legacy array and unified pool
             this.fishes.push(fish);
+            this.organisms.push(fish); // Unified pool
             console.log(`  Spawned trophy ${speciesName} at ${depth}ft`);
         });
 
