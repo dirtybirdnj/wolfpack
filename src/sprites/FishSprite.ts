@@ -174,8 +174,6 @@ export class FishSprite extends OrganismSprite {
     public feedCooldown?: number;
     public depthInFeet?: number;
 
-    // Swim bladder simulation - natural buoyancy keeps fish level
-    private swimBladderStrength: number = 0.15; // How strongly fish resists tilting (0-1)
 
     /**
      * @param scene - Game scene
@@ -583,21 +581,8 @@ export class FishSprite extends OrganismSprite {
                 // Normalize to -180 to 180 range
                 if (movementDegrees > 180) movementDegrees -= 360;
 
-                // Swim bladder simulation: fish naturally try to stay level (0°)
-                // The swim bladder provides buoyancy that resists rotation
-                // Blend between movement direction and level orientation
-                const levelAngle = 0; // Horizontal position (swim bladder equilibrium)
-                const targetDegrees = Phaser.Math.Linear(levelAngle, movementDegrees, 1 - this.swimBladderStrength);
-
                 // Smooth rotation - update every frame for fluid movement
-                this.angle = Phaser.Math.Angle.RotateTo(this.angle, targetDegrees, 0.15);
-            } else {
-                // When not moving, swim bladder slowly returns fish to level position
-                const levelAngle = 0;
-                const angleDiff = Math.abs(Phaser.Math.Angle.ShortestBetween(this.angle, levelAngle));
-                if (angleDiff > 1) {
-                    this.angle = Phaser.Math.Angle.RotateTo(this.angle, levelAngle, this.swimBladderStrength * 0.5);
-                }
+                this.angle = Phaser.Math.Angle.RotateTo(this.angle, movementDegrees, 0.15);
             }
         }
 
@@ -638,21 +623,8 @@ export class FishSprite extends OrganismSprite {
             // Normalize to -180 to 180 range
             if (movementDegrees > 180) movementDegrees -= 360;
 
-            // Swim bladder simulation: fish naturally try to stay level (0°)
-            // The swim bladder provides buoyancy that resists rotation
-            // Blend between movement direction and level orientation
-            const levelAngle = 0; // Horizontal position (swim bladder equilibrium)
-            const targetDegrees = Phaser.Math.Linear(levelAngle, movementDegrees, 1 - this.swimBladderStrength);
-
             // Smooth rotation - update every frame for fluid movement
-            this.angle = Phaser.Math.Angle.RotateTo(this.angle, targetDegrees, 0.15);
-        } else {
-            // When not moving, swim bladder slowly returns fish to level position
-            const levelAngle = 0;
-            const angleDiff = Math.abs(Phaser.Math.Angle.ShortestBetween(this.angle, levelAngle));
-            if (angleDiff > 1) {
-                this.angle = Phaser.Math.Angle.RotateTo(this.angle, levelAngle, this.swimBladderStrength * 0.5);
-            }
+            this.angle = Phaser.Math.Angle.RotateTo(this.angle, movementDegrees, 0.15);
         }
 
         // Update screen position
