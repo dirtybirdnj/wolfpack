@@ -166,6 +166,7 @@ export class FishSprite extends OrganismSprite {
     public isFastFleeing?: boolean;
     public hasCalmedDown?: boolean;
     public directionArrow?: Phaser.GameObjects.Graphics;
+    public visionCone?: Phaser.GameObjects.Graphics;
 
     // Baitfish-specific properties
     public panicSpeed?: number;
@@ -234,6 +235,12 @@ export class FishSprite extends OrganismSprite {
         if (DEBUG_SHOW_DIRECTION_ARROWS && this.type === 'predator') {
             this.directionArrow = scene.add.graphics();
             this.directionArrow.setDepth(this.depth + 10);
+        }
+
+        // Create vision cone for debug (predators only)
+        if (this.type === 'predator') {
+            this.visionCone = scene.add.graphics();
+            this.visionCone.setDepth(this.depth - 1); // Behind fish
         }
 
         // Update screen position (parent OrganismSprite now handles setVisible/setActive)
@@ -477,6 +484,57 @@ export class FishSprite extends OrganismSprite {
     }
 
     /**
+     * Draw vision cone showing fish detection range (debug, predators only)
+     */
+    private drawVisionCone(): void {
+        const gameScene = this.scene as any;
+        if (!gameScene.debugMode || !this.visionCone || this.type !== 'predator' || !this.hunger) {
+            if (this.visionCone) {
+                this.visionCone.clear();
+            }
+            return;
+        }
+
+        this.visionCone.clear();
+
+        if (!this.visible || !this.active) {
+            return;
+        }
+
+        const detectionRange = GameConfig.BAITFISH_DETECTION_RANGE;
+        const verticalRange = GameConfig.BAITFISH_VERTICAL_PURSUIT_RANGE * (this.hunger * GameConfig.HUNGER_VERTICAL_SCALING);
+
+        // Determine fish facing direction from angle
+        // Fish faces LEFT by default (angle = 0), faces RIGHT at angle = 180 or -180
+        const facingRight = this.angle > 90 || this.angle < -90;
+        const direction = facingRight ? 1 : -1;
+
+        const coneWidth = verticalRange * 0.6; // Cone spreads vertically
+
+        // Triangle points: fish position -> cone tip -> upper/lower spread
+        const tipX = this.x + (direction * detectionRange);
+        const tipY = this.y;
+        const upperY = this.y - coneWidth;
+        const lowerY = this.y + coneWidth;
+
+        // Draw semi-transparent cone
+        this.visionCone.fillStyle(0x00ff00, 0.08); // Very subtle green
+        this.visionCone.lineStyle(1, 0x00ff00, 0.3); // Faint green outline
+
+        this.visionCone.beginPath();
+        this.visionCone.moveTo(this.x, this.y);
+        this.visionCone.lineTo(tipX, upperY);
+        this.visionCone.lineTo(tipX, lowerY);
+        this.visionCone.closePath();
+        this.visionCone.fillPath();
+        this.visionCone.strokePath();
+
+        // Add range indicator line (center line)
+        this.visionCone.lineStyle(1, 0x00ff00, 0.2);
+        this.visionCone.lineBetween(this.x, this.y, tipX, tipY);
+    }
+
+    /**
      * Phaser preUpdate - called automatically every frame
      * Delegates to type-specific update methods
      */
@@ -557,9 +615,10 @@ export class FishSprite extends OrganismSprite {
             this.interestFlash -= this.interestFlashDecay;
         }
 
-        // Update screen position and draw debug arrow
+        // Update screen position and draw debug visuals
         this.updateScreenPosition();
         this.drawDirectionArrow();
+        this.drawVisionCone();
     }
 
     /**
@@ -786,6 +845,10 @@ export class FishSprite extends OrganismSprite {
         if (this.directionArrow) {
             this.directionArrow.destroy();
             this.directionArrow = undefined;
+        }
+        if (this.visionCone) {
+            this.visionCone.destroy();
+            this.visionCone = undefined;
         }
         super.destroy(fromScene);
     }
