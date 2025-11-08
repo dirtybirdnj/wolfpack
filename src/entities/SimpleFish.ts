@@ -33,6 +33,11 @@ export class SimpleFish extends Phaser.GameObjects.Sprite {
     private readonly viewDistance: number; // Scales with size - larger fish see farther
     private readonly neighborDistance: number = 100;
 
+    // Lateral line detection - proximity sensing independent of vision
+    // Oval shape: wider horizontally (side-to-side), narrower vertically (above/below)
+    private readonly lateralLineRadiusX: number; // Horizontal radius
+    private readonly lateralLineRadiusY: number; // Vertical radius
+
     // Burst-and-coast swimming - HEAVILY REDUCED for calm, lazy behavior
     private readonly thrustPower: number;      // Force per tail beat
     private readonly cruiseBeatInterval: number = 800;   // ms between beats when cruising (1.25 Hz - lazy)
@@ -44,12 +49,15 @@ export class SimpleFish extends Phaser.GameObjects.Sprite {
     // AI state
     private target: WorldEntity | null = null;
     private targetLockTime: number = 0;
+    private lastDistanceToPrey: number = Infinity; // Track if closing gap
     private desiredHeading: number = 0;  // Where fish wants to go
     private targetHeading: number = 0;   // AI's raw target (smoothed into desiredHeading)
     private currentBehavior: 'chase' | 'flee' | 'wander' = 'wander'; // Current AI mode
 
     // Strike mechanics (C-start burst behavior)
-    private isStriking: boolean = false;  // True when in final attack burst
+    private isStriking: boolean = false;  // True when in strike burst mode
+    private strikeStartTime: number = 0;  // When current strike started (ms)
+    private readonly strikeDuration: number = 1500; // 1.5 second strike burst
     private postStrikePause: number = 0;  // Cooldown after eating (ms)
 
     // Boost meter system (simple and game-like)
@@ -113,14 +121,20 @@ export class SimpleFish extends Phaser.GameObjects.Sprite {
         // Prevents red fish from overshooting prey they can't see yet
         this.viewDistance = 250 + (size * 30);
 
+        // Lateral line detection - close-range proximity sensing (oval shape)
+        // Wider horizontally (detects movement alongside), narrower vertically
+        // Green (1.0): 80x40 | Blue (3.5): 150x75 | Red (7.5): 230x115
+        this.lateralLineRadiusX = 60 + (size * 20); // Horizontal radius
+        this.lateralLineRadiusY = 30 + (size * 10); // Vertical radius (half of horizontal)
+
         // Initial heading
         this.heading = Phaser.Math.Between(0, 360);
         this.desiredHeading = this.heading;
         this.targetHeading = this.heading;
         this.currentBeatInterval = this.cruiseBeatInterval;
 
-        // Visual setup - scale and color by size (increased 3x for visibility)
-        this.setScale(0.6 + size * 0.45); // Bigger fish = bigger sprite (was 0.2 + size * 0.15)
+        // Visual setup - scale and color by size (reduced for red fish arrow visibility)
+        this.setScale(0.4 + size * 0.25); // Green: 0.65, Blue: 1.3, Red: 1.65-2.9
         this.setTint(this.getSizeColor(size));
         this.setDepth(1100); // Draw sprite above debug graphics (depth 1000)
 
@@ -130,13 +144,13 @@ export class SimpleFish extends Phaser.GameObjects.Sprite {
         // Create Matter.js body with SIZE-BASED WATER RESISTANCE
         const radius = (this.displayWidth / 2) * 0.7; // Slightly smaller than visual
 
-        // WATER DRAG scales with size - larger fish are more streamlined (like real fish!)
+        // WATER DRAG scales with size - larger fish are more streamlined but need control
         // Small fish: High drag (quick to slow down between tail beats)
-        // Large fish: Low drag (glide farther, sustain speed better)
+        // Large fish: Lower drag (glide farther) but NOT too low (need maneuverability)
         const baseWaterDrag = 0.10;  // Base water resistance for small fish
-        const dragReduction = Math.min(0.06, size * 0.008); // Streamlining: bigger = less drag
+        const dragReduction = Math.min(0.045, size * 0.006); // Less streamlining = better control
         const waterDrag = baseWaterDrag - dragReduction;
-        // Green (1.0): 0.092 | Blue (3.5): 0.072 | Red (7.5): 0.040
+        // Green (1.0): 0.094 | Blue (3.5): 0.079 | Red (7.5): 0.055 (was 0.025 - too slippery!)
 
         this.body = scene.matter.add.circle(x, y, radius, {
             frictionAir: waterDrag,  // NOTE: Matter.js calls it "frictionAir" but we're simulating WATER
@@ -195,6 +209,10 @@ export class SimpleFish extends Phaser.GameObjects.Sprite {
             }
         }
 
+        // BOOST ACTIVE: Reset every frame (only set true during tail beat if conditions met)
+        // This prevents fire emoji from sticking when fish stops chasing
+        this.isBoostActive = false;
+
         // BOOST COOLDOWN: Decay over time (10 second wait after boost depleted)
         if (this.boostCooldown > 0) {
             this.boostCooldown -= deltaTime;
@@ -204,7 +222,7 @@ export class SimpleFish extends Phaser.GameObjects.Sprite {
         }
 
         // BOOST METER: Only recharge when cooldown expired
-        if (!this.isBoostActive && this.boostMeter < this.maxBoost && this.boostCooldown === 0) {
+        if (this.boostMeter < this.maxBoost && this.boostCooldown === 0) {
             const rechargeAmount = (this.boostRechargeRate / 1000) * deltaTime;
             this.boostMeter = Math.min(this.maxBoost, this.boostMeter + rechargeAmount);
         }
@@ -247,18 +265,42 @@ export class SimpleFish extends Phaser.GameObjects.Sprite {
             // SPAWN PROTECTION ACTIVE: Turn around instead of despawning
             if (this.x < spawnZoneWidth) {
                 // Too close to left edge - turn right (0°)
+                // CRITICAL: Set BOTH heading and targetHeading to prevent bounce-back
                 this.targetHeading = 0;
                 this.heading = 0;
+                this.desiredHeading = 0; // Also set desired to break any AI turn commands
                 this.x = spawnZoneWidth + 5; // Push back into safe zone
+
+                // Clear any target that might be pulling them back
+                this.target = null;
+                this.targetLockTime = 0;
             } else if (this.x > worldWidth - spawnZoneWidth) {
                 // Too close to right edge - turn left (180°)
+                // CRITICAL: Set BOTH heading and targetHeading to prevent bounce-back
                 this.targetHeading = 180;
                 this.heading = 180;
+                this.desiredHeading = 180; // Also set desired to break any AI turn commands
                 this.x = worldWidth - spawnZoneWidth - 5; // Push back into safe zone
+
+                // Clear any target that might be pulling them back
+                this.target = null;
+                this.targetLockTime = 0;
             }
         } else {
             // NO PROTECTION: Despawn if fully off-screen
             if (this.x < 0 || this.x > worldWidth) {
+                // Track despawn in scene stats
+                const scene = this.scene as any;
+                if (scene.despawnCounts) {
+                    if (this.size < 2.0) {
+                        scene.despawnCounts.green++;
+                    } else if (this.size < 5.0) {
+                        scene.despawnCounts.blue++;
+                    } else {
+                        scene.despawnCounts.red++;
+                    }
+                }
+                console.log(`🚪 Fish despawned (size ${this.size.toFixed(1)}) at x=${Math.round(this.x)}`);
                 this.destroy();
                 return;
             }
@@ -370,10 +412,14 @@ export class SimpleFish extends Phaser.GameObjects.Sprite {
         }
 
         // Update status text
-        const statusLabel = decision === null ? 'PAUSE' :
-                           decision.type === 'flee' ? 'FLEE' :
-                           decision.type === 'chase' ? 'CHASE' :
-                           decision.neighbors && decision.neighbors.length > 0 ? 'SCHOOL' :
+        // FEEDING = casually eating easy prey (no boost)
+        // CHASE = pursuing harder prey (no boost, higher thrust)
+        // STRIKE = brief burst when chase failing (boost active, 1-2 sec)
+        const statusLabel = this.postStrikePause > 0 ? 'RESTING' :
+                           this.isStriking ? 'STRIKE' :
+                           decision?.type === 'flee' ? 'FLEE' :
+                           decision?.type === 'chase' ? (this.currentBehavior === 'chase' ? 'CHASE' : 'FEEDING') :
+                           decision?.neighbors && decision.neighbors.length > 0 ? 'SCHOOL' :
                            'WANDER';
         const vx = this.body.velocity.x.toFixed(1);
         const vy = this.body.velocity.y.toFixed(1);
@@ -394,8 +440,11 @@ export class SimpleFish extends Phaser.GameObjects.Sprite {
 
     /**
      * Check if an entity is within the fish's vision cone
-     * Vision cone: 45° on each side of heading direction (90° total)
-     * BUT with elliptical range: Longer horizontally (ahead), shorter vertically (above/below)
+     * Vision cone width scales with predator size:
+     * - Green fish (prey): 90° total (cautious, focused forward)
+     * - Blue fish (predator): 110° total (active hunters)
+     * - Red fish (apex): 130° total (wide scanning)
+     * Also uses elliptical range: Longer ahead, shorter above/below
      */
     private isInVisionCone(entity: WorldEntity): boolean {
         const dx = entity.x - this.x;
@@ -410,8 +459,19 @@ export class SimpleFish extends Phaser.GameObjects.Sprite {
         while (angleDiff > 180) angleDiff -= 360;
         while (angleDiff < -180) angleDiff += 360;
 
-        // Check if within cone angle (45° on each side = 90° total)
-        const coneAngle = 45;
+        // WIDER VISION for predators - bigger hunters have better peripheral vision
+        // Green (prey): 90° cone (cautious, focused forward)
+        // Blue (predator): 110° cone (active hunters)
+        // Red (apex): 130° cone (scan wide area for prey)
+        let coneAngle: number;
+        if (this.size >= 5.0) {
+            coneAngle = 65; // Red: 130° total (65° each side)
+        } else if (this.size >= 2.0) {
+            coneAngle = 55; // Blue: 110° total (55° each side)
+        } else {
+            coneAngle = 45; // Green: 90° total (45° each side)
+        }
+
         if (Math.abs(angleDiff) > coneAngle) {
             return false; // Outside cone angle
         }
@@ -428,6 +488,50 @@ export class SimpleFish extends Phaser.GameObjects.Sprite {
         const maxVerticalDist = this.viewDistance * 0.5;
 
         return forwardDist <= maxForwardDist && lateralDist <= maxVerticalDist;
+    }
+
+    /**
+     * Get emoji for fish based on size
+     */
+    private getColorEmoji(): string {
+        if (this.size < 2.0) return '🟢';
+        if (this.size < 5.0) return '🔵';
+        return '🔴';
+    }
+
+    /**
+     * Get emoji for entity based on type and size
+     */
+    private getEntityEmoji(entity: WorldEntity): string {
+        if (entity.type === 'bug') return '🪳';
+        if (entity.size < 2.0) return '🟢';
+        if (entity.size < 5.0) return '🔵';
+        return '🔴';
+    }
+
+    /**
+     * Get color hex value for this fish based on size
+     */
+    private getFishColor(): number {
+        if (this.size < 2.0) return 0x00ff00; // Green
+        if (this.size < 5.0) return 0x0088ff; // Blue
+        return 0xff0000; // Red
+    }
+
+    /**
+     * Check if entity is within lateral line detection oval
+     * Lateral line detects nearby movement/vibrations regardless of vision
+     * Oval is wider horizontally (side-to-side) than vertically (above/below)
+     */
+    private isInLateralLineRange(entity: WorldEntity): boolean {
+        const dx = entity.x - this.x;
+        const dy = entity.y - this.y;
+
+        // Ellipse equation: (dx/radiusX)^2 + (dy/radiusY)^2 <= 1
+        const normalizedX = dx / this.lateralLineRadiusX;
+        const normalizedY = dy / this.lateralLineRadiusY;
+
+        return (normalizedX * normalizedX + normalizedY * normalizedY) <= 1;
     }
 
     /**
@@ -506,7 +610,7 @@ export class SimpleFish extends Phaser.GameObjects.Sprite {
             } else if (this.size >= 2.0) {
                 // 🔵 BLUE FISH (2.0-5.0): Hunt GREEN (0.5-2) only - NEVER other blues or reds!
                 prey = visible.filter(e => {
-                    if (e.type === 'bug') return true; // Can eat bugs
+                    if (e.type === 'bug') return true; // Can eat bugs (but prefer fish)
                     if (e.type === 'fish') {
                         // Only hunt GREEN fish (< 2.0)
                         return e.size < 2.0;
@@ -514,12 +618,24 @@ export class SimpleFish extends Phaser.GameObjects.Sprite {
                     return false;
                 });
 
+                // EFFICIENCY: Prefer fish over bugs (CRITICAL FIX - blues were eating bugs instead of greens!)
+                const fishPrey = prey.filter(e => e.type === 'fish');
+                if (fishPrey.length > 0) {
+                    prey = fishPrey; // Only hunt fish, ignore bugs
+                }
+
             } else {
                 // 🟢 GREEN FISH (0.5-2.0): Hunt bugs only - NEVER other fish!
                 prey = visible.filter(e => e.type === 'bug');
             }
 
             if (prey.length > 0) {
+                // DIAGNOSTIC: Log blue/red fish hunting
+                if (this.size >= 2.0 && Math.random() < 0.02) { // 2% chance per frame
+                    const preyTypes = prey.map(p => `${this.getEntityEmoji(p)}(${p.size.toFixed(1)})`).join(', ');
+                    console.log(`🔍 ${this.getColorEmoji()} fish sees ${prey.length} prey: ${preyTypes}`);
+                }
+
                 // TARGET LOCK SYSTEM: Prevents retargeting during active pursuit
                 // Check lock BEFORE re-evaluating prey to prevent distance-based switching
                 if (this.targetLockTime > 0) {
@@ -551,11 +667,22 @@ export class SimpleFish extends Phaser.GameObjects.Sprite {
                 this.target = preferredPrey;
                 this.targetLockTime = 800 + (this.size * 100); // Scales with predator size
 
+                // DIAGNOSTIC: Log blue/red fish targeting
+                if (this.size >= 2.0 && Math.random() < 0.02) {
+                    console.log(`🎯 ${this.getColorEmoji()} fish locked onto ${this.getEntityEmoji(preferredPrey)}(${preferredPrey.size.toFixed(1)}) at (${Math.round(preferredPrey.x)}, ${Math.round(preferredPrey.y)})`);
+                }
+
                 return { type: 'chase', target: this.target };
             } else {
                 // No prey available
                 this.target = null;
                 this.targetLockTime = 0;
+
+                // DIAGNOSTIC: Log when blue/red fish can't find prey
+                if (this.size >= 2.0 && Math.random() < 0.01) {
+                    const nearbyCount = this.registry.findNearby(this.x, this.y, this.viewDistance, { excludeId: this.id }).length;
+                    console.log(`❌ ${this.getColorEmoji()} fish sees NO prey! Visible in cone: ${visible.length}, Nearby (360°): ${nearbyCount}`);
+                }
             }
         }
 
@@ -607,8 +734,8 @@ export class SimpleFish extends Phaser.GameObjects.Sprite {
             let score = 0;
             const dist = Phaser.Math.Distance.Between(this.x, this.y, prey.x, prey.y);
 
-            // BASE SCORE: Closer is better (inverse distance)
-            score += 100 / (dist + 1);
+            // NO DISTANCE BONUS - Just use type preference and sticky target
+            // Distance will be used for tie-breaking at the end
 
             // PREFERENCE BONUS based on COLOR CLASS
             if (this.size >= 5.0) {
@@ -637,18 +764,37 @@ export class SimpleFish extends Phaser.GameObjects.Sprite {
                 // Note: Green fish cannot hunt other fish
             }
 
-            // STICKY TARGET: If this is our current target, add bonus to prevent jitter
+            // STICKY TARGET: Massive bonus to prevent frivolous retargeting
+            // Fish should NOT switch targets unless new prey is SIGNIFICANTLY better
             if (this.target && prey.id === this.target.id) {
-                score += 25; // Bonus for keeping current target
+                score += 200; // Large bonus - fish are committed to their hunt
             }
 
             return { prey, score, dist };
         });
 
-        // Sort by score (highest first)
-        scoredPrey.sort((a, b) => b.score - a.score);
+        // PREDATOR FOCUS: If currently hunting fish, DON'T retarget to bugs
+        // Red/blue fish should commit to fish prey, not get distracted by nearby bugs
+        if (this.target && this.target.type === 'fish') {
+            // Filter out bugs - only consider other fish
+            const fishOnly = scoredPrey.filter(sp => sp.prey.type === 'fish');
+            if (fishOnly.length > 0) {
+                // Sort fish prey by score
+                fishOnly.sort((a, b) => b.score - a.score);
+                return fishOnly[0].prey;
+            }
+            // Fallback: If no fish available (shouldn't happen), use all prey
+        }
 
-        // Return highest-scoring prey
+        // Sort by score (highest first), then by distance (closest first) for ties
+        scoredPrey.sort((a, b) => {
+            if (b.score !== a.score) {
+                return b.score - a.score; // Higher score wins
+            }
+            return a.dist - b.dist; // Tie-breaker: closer prey wins
+        });
+
+        // Return highest-scoring (and if tied, closest) prey
         return scoredPrey[0].prey;
     }
 
@@ -660,31 +806,44 @@ export class SimpleFish extends Phaser.GameObjects.Sprite {
     private applyTailBeat(): void {
         let thrustMultiplier = 1.0;
 
-        // CHASE BEHAVIOR: Burst of energy when chasing (calm → aggressive shift)
+        // PREY PURSUIT BEHAVIOR: Three levels of effort
         if (this.currentBehavior === 'chase') {
-            // Red fish (apex predators) get more powerful chase thrust
-            thrustMultiplier = this.size >= 5.0 ? 5.0 : 4.0; // Reds: 5×, Blues/Greens: 4×
+            if (this.isStriking) {
+                // STRIKE MODE: Brief burst (1-2 sec) when chase failing
+                // Only mode that uses boost - high thrust for explosive acceleration
+                if (this.boostMeter > 0 && this.boostCooldown === 0) {
+                    this.isBoostActive = true;
 
-            // BOOST: Extra power during final strike if meter available AND cooldown expired
-            if (this.isStriking && this.boostMeter > 0 && this.boostCooldown === 0) {
-                this.isBoostActive = true;
-                // Red fish get MORE powerful boost (apex predator explosiveness)
-                thrustMultiplier = this.size >= 5.0 ? 8.0 : 6.0; // Reds: 8×, Blues/Greens: 6×
+                    // Red fish (apex predators) get EXPLOSIVE boost power
+                    thrustMultiplier = this.size >= 5.0 ? 12.0 : 6.0; // Reds: 12×, Blues/Greens: 6×
 
-                // Deplete boost meter (based on time since last beat)
-                const timeSinceLastBeat = Date.now() - this.lastBeatTime;
-                const previousMeter = this.boostMeter;
-                this.boostMeter = Math.max(0, this.boostMeter - timeSinceLastBeat);
+                    // Deplete boost meter during strike (based on time since last beat)
+                    const timeSinceLastBeat = Date.now() - this.lastBeatTime;
+                    const previousMeter = this.boostMeter;
+                    this.boostMeter = Math.max(0, this.boostMeter - timeSinceLastBeat);
 
-                // If boost just depleted, start 10 second cooldown
-                if (previousMeter > 0 && this.boostMeter === 0) {
-                    this.boostCooldown = this.boostCooldownDuration;
-                    const sizeClass = this.size < 2.0 ? 'Green' : this.size < 5.0 ? 'Blue' : 'Red';
-                    console.log(`🔥 ${sizeClass} fish (size ${this.size.toFixed(1)}) boost depleted - 10s cooldown started`);
+                    // If boost just depleted, start 10 second cooldown
+                    if (previousMeter > 0 && this.boostMeter === 0) {
+                        this.boostCooldown = this.boostCooldownDuration;
+                        const sizeClass = this.size < 2.0 ? 'Green' : this.size < 5.0 ? 'Blue' : 'Red';
+                        console.log(`🔥 ${sizeClass} fish (size ${this.size.toFixed(1)}) boost depleted - 10s cooldown started`);
+                    }
+                } else {
+                    // Boost unavailable - use chase thrust
+                    this.isBoostActive = false;
+                    thrustMultiplier = this.size >= 5.0 ? 7.0 : 4.0;
                 }
             } else {
+                // CHASE MODE: Pursuing faster prey (NO BOOST)
+                // Higher thrust than feeding, but sustainable
                 this.isBoostActive = false;
+                thrustMultiplier = this.size >= 5.0 ? 7.0 : 4.0; // Reds: 7×, Blues/Greens: 4×
             }
+        } else if (this.target) {
+            // FEEDING MODE: Casually eating slow/easy prey (NO BOOST)
+            // Lower thrust - fish is just cruising and snapping up food
+            this.isBoostActive = false;
+            thrustMultiplier = this.size >= 5.0 ? 3.0 : 2.0; // Reds: 3×, Blues/Greens: 2×
         } else if (this.currentBehavior === 'flee') {
             // FLEE BEHAVIOR: Extra thrust to escape predators
             thrustMultiplier = 1.6; // 60% more thrust when fleeing
@@ -865,10 +1024,12 @@ export class SimpleFish extends Phaser.GameObjects.Sprite {
     private executeDecision(decision: ReturnType<typeof this.makeDecision>, dt: number): void {
         if (decision.type === 'flee' && decision.target) {
             // Flee: Head away from threat, sprint beat interval
-            // IMPORTANT: Clear any previous chase target - we're running for our life!
+            // CLEAN STATE: Clear any previous chase state - we're running for our life!
             this.currentBehavior = 'flee';
             this.target = null;
             this.targetLockTime = 0;
+            this.isStriking = false;
+            this.lastDistanceToPrey = Infinity;
 
             // Set flee cooldown - prevents retargeting prey while actively fleeing
             // Short duration (500ms) - fish are hungry and resume feeding quickly after escaping
@@ -882,46 +1043,75 @@ export class SimpleFish extends Phaser.GameObjects.Sprite {
             this.currentBeatInterval = this.sprintBeatInterval;
 
         } else if (decision.type === 'chase' && decision.target) {
-            // Chase: PREDICT where prey will be (intercept, not follow), sprint beat interval
-            this.currentBehavior = 'chase';
+            // PREY PURSUIT: Varies by fish type
+            // BAITFISH (greens < 2.0): ONLY casual feeding, never chase/strike (they're chill prey)
+            // PREDATORS (blues/reds >= 2.0): Three modes (FEEDING -> CHASE -> STRIKE)
 
-            // Calculate distance to prey for strike detection
+            // CRITICAL: Set target reference so applyTailBeat() can detect FEEDING mode
+            this.target = decision.target;
+
+            // Calculate distance to prey (needed for both baitfish and predators)
             const distToPrey = Phaser.Math.Distance.Between(this.x, this.y, decision.target.x, decision.target.y);
 
-            // STRIKE ZONE: Scales with predator size using diminishing returns
-            // Linear scaling was too aggressive for large fish (size 10 = 150px!)
-            // Square root scaling gives reasonable strike zones:
-            // Green (size 1): 50px | Blue (size 3.5): 67px | Red (size 7.5): 85px
-            const strikeDistance = 30 + (Math.sqrt(this.size) * 20);
+            // BAITFISH BEHAVIOR: Greens stay in wander mode (casual feeding only)
+            if (this.size < 2.0) {
+                // GREEN FISH: Just chill and eat bugs casually, never aggressive
+                this.currentBehavior = 'wander';
+                this.isStriking = false;
+                this.lastDistanceToPrey = Infinity; // Don't track gap closing
+            } else {
+                // PREDATOR BEHAVIOR: Blues/Reds use full pursuit system (FEEDING -> CHASE -> STRIKE)
+                if (this.currentBehavior !== 'chase' && this.currentBehavior !== 'flee') {
+                    this.currentBehavior = 'wander'; // Default: casual feeding (will use target check in applyTailBeat)
+                }
 
+                const now = Date.now();
+
+                // Calculate if closing gap
+                const closingGap = distToPrey < this.lastDistanceToPrey - 2; // Allowing 2px tolerance
+                this.lastDistanceToPrey = distToPrey;
+
+                // STRIKE TIMEOUT: After 1.5 seconds, return to CHASE
+                if (this.isStriking && now - this.strikeStartTime > this.strikeDuration) {
+                    this.isStriking = false;
+                    this.currentBehavior = 'chase'; // Return to CHASE from STRIKE
+                    console.log(`⚡ Strike timeout - returning to CHASE`);
+                }
+
+                // STRIKE TRIGGER: Enter strike if in CHASE, not closing gap, and close-ish
+                const strikeRange = 80 + (Math.sqrt(this.size) * 20); // Blue: 117px, Red: 135px
+                if (!this.isStriking && this.currentBehavior === 'chase' && !closingGap && distToPrey < strikeRange) {
+                    // Can't close gap while chasing - enter STRIKE burst
+                    if (this.boostMeter > 500) { // Need at least 500ms boost available
+                        this.isStriking = true;
+                        this.strikeStartTime = now;
+                        console.log(`🔥 Entering STRIKE mode - boost burst!`);
+                    }
+                }
+
+                // CHASE ESCALATION: If not closing gap on slow prey, escalate from FEEDING to CHASE
+                if (!this.isStriking && this.currentBehavior !== 'chase' && !closingGap && distToPrey > 50) {
+                    this.currentBehavior = 'chase'; // Escalate from FEEDING to CHASE
+                }
+            }
+
+            // INTERCEPT CALCULATION: Predict prey movement
             let interceptX = decision.target.x;
             let interceptY = decision.target.y;
 
-            if (distToPrey > strikeDistance) {
-                // PURSUIT PHASE: LIGHT prediction for intercept (not direct following)
-                // Reduced from 0.5s to 0.15s to prevent aiming at distant points
-                // This creates gentle curves instead of straight lines to far-away intercepts
+            if (!this.isStriking) {
+                // FEEDING/CHASE: Light prediction for intercept
                 if (decision.target.sprite && decision.target.sprite.body && decision.target.sprite.body.velocity) {
-                    // Predict only 0.15 seconds ahead (9 frames at 60fps)
                     const predictionTime = 0.15;
                     interceptX = decision.target.x + (decision.target.sprite.body.velocity.x * predictionTime);
                     interceptY = decision.target.y + (decision.target.sprite.body.velocity.y * predictionTime);
                 } else if (decision.target.sprite && decision.target.sprite.driftVelocity) {
-                    // For bugs (still using simple velocity)
                     const predictionTime = 0.15;
                     interceptX = decision.target.x + (decision.target.sprite.driftVelocity.x * predictionTime);
                     interceptY = decision.target.y + (decision.target.sprite.driftVelocity.y * predictionTime);
                 }
-                this.isStriking = false;
-                this.currentBeatInterval = this.sprintBeatInterval;
-            } else {
-                // STRIKE PHASE: C-start burst - aim directly at prey, no prediction
-                // Real fish use rapid acceleration in final approach
-                interceptX = decision.target.x;
-                interceptY = decision.target.y;
-                this.isStriking = true;
-                this.currentBeatInterval = this.sprintBeatInterval * 0.5; // Double beat frequency for burst
             }
+            // STRIKE: No prediction - aim directly at current position
 
             // Head toward intercept point
             const angle = Math.atan2(
@@ -930,16 +1120,42 @@ export class SimpleFish extends Phaser.GameObjects.Sprite {
             );
             this.targetHeading = Phaser.Math.RadToDeg(angle);
 
-            // Eat prey if within bite range
-            if (distToPrey < 20) {
+            // DEBUG: Log fish-on-fish pursuit
+            if (decision.target.type === 'fish' && Math.random() < 0.05) { // 5% sample
+                const headingDiff = Math.abs(this.targetHeading - this.heading);
+                const speed = Math.sqrt(this.body.velocity.x**2 + this.body.velocity.y**2);
+                console.log(`🎯 ${this.getColorEmoji()} (${this.size.toFixed(1)}) chasing ${this.getEntityEmoji(decision.target)} (${decision.target.size.toFixed(1)}) | Dist: ${distToPrey.toFixed(0)}px | Heading diff: ${headingDiff.toFixed(0)}° | Mode: ${this.isStriking ? 'STRIKE' : this.currentBehavior} | Speed: ${speed.toFixed(1)}`);
+            }
+
+            // Beat interval based on mode
+            if (this.isStriking) {
+                this.currentBeatInterval = this.sprintBeatInterval * 0.5; // Very fast
+            } else if (this.currentBehavior === 'chase') {
+                this.currentBeatInterval = this.sprintBeatInterval; // Fast
+            } else {
+                this.currentBeatInterval = this.cruiseBeatInterval; // Normal (FEEDING)
+            }
+
+            // Eat prey if within bite range (scales with predator size)
+            // Small fish: 25px | Medium: 35px | Large: 45px
+            const biteRange = 20 + (this.size * 2.5); // Green: 22-25px, Blue: 25-32px, Red: 32-45px
+            if (distToPrey < biteRange) {
+                console.log(`🍽️ BITE! ${this.size.toFixed(1)} fish eating ${decision.target.type} at dist ${distToPrey.toFixed(1)}px (bite range: ${biteRange.toFixed(1)}px)`);
                 this.eatPrey(decision.target);
                 this.isStriking = false;
+                this.lastDistanceToPrey = Infinity; // Reset
             }
 
         } else if (decision.type === 'wander' && decision.neighbors && decision.neighbors.length > 0) {
             // SCHOOLING BEHAVIOR (GREEN FISH ONLY)
             // Match average heading of neighbors for cohesive movement
             this.currentBehavior = 'wander';
+
+            // CLEAN STATE: Clear any leftover chase/flee state
+            this.target = null;
+            this.targetLockTime = 0;
+            this.isStriking = false;
+            this.lastDistanceToPrey = Infinity;
             let avgX = 0, avgY = 0;
 
             for (const n of decision.neighbors) {
@@ -976,8 +1192,38 @@ export class SimpleFish extends Phaser.GameObjects.Sprite {
             // LAZY CRUISING: Fish drift horizontally, only occasionally adjusting
             this.currentBehavior = 'wander';
 
+            // CLEAN STATE: Clear any leftover chase/flee state
+            this.target = null;
+            this.targetLockTime = 0;
+            this.isStriking = false;
+            this.lastDistanceToPrey = Infinity;
+
+            // SPAWN ZONE AWARENESS: If fish enters orange spawn zones, head toward center
+            // This prevents fish from wandering off-screen
+            const worldWidth = this.scene.scale.width;
+            const worldHeight = this.scene.scale.height;
+            const spawnZoneWidth = 96; // Orange zone width on each side
+
+            let inSpawnZone = false;
+            if (this.x < spawnZoneWidth) {
+                // In LEFT spawn zone - head toward center-right
+                const targetX = worldWidth * 0.5 + Phaser.Math.Between(-100, 100);
+                const targetY = worldHeight * 0.5 + Phaser.Math.Between(-100, 100);
+                const angle = Math.atan2(targetY - this.y, targetX - this.x);
+                this.targetHeading = Phaser.Math.RadToDeg(angle);
+                inSpawnZone = true;
+            } else if (this.x > worldWidth - spawnZoneWidth) {
+                // In RIGHT spawn zone - head toward center-left
+                const targetX = worldWidth * 0.5 + Phaser.Math.Between(-100, 100);
+                const targetY = worldHeight * 0.5 + Phaser.Math.Between(-100, 100);
+                const angle = Math.atan2(targetY - this.y, targetX - this.x);
+                this.targetHeading = Phaser.Math.RadToDeg(angle);
+                inSpawnZone = true;
+            }
+
             // VERY INFREQUENT direction changes (1% per frame = ~once per 1.5 seconds)
-            if (Math.random() < 0.01) {
+            // Skip if we just did a spawn zone turn
+            if (!inSpawnZone && Math.random() < 0.01) {
                 // Normalize current heading to -180 to 180
                 let normalized = this.targetHeading;
                 while (normalized > 180) normalized -= 360;
@@ -1004,6 +1250,25 @@ export class SimpleFish extends Phaser.GameObjects.Sprite {
     }
 
     private eatPrey(prey: WorldEntity): void {
+        // Draw death marker BEFORE destroying prey sprite
+        this.drawDeathMarker(prey);
+
+        // Track deaths in scene stats
+        const scene = this.scene as any; // Cast to access deathCounts
+        if (scene.deathCounts) {
+            if (prey.type === 'bug') {
+                scene.deathCounts.bugs++;
+            } else if (prey.type === 'fish') {
+                if (prey.size < 2.0) {
+                    scene.deathCounts.green++;
+                } else if (prey.size < 5.0) {
+                    scene.deathCounts.blue++;
+                } else {
+                    scene.deathCounts.red++;
+                }
+            }
+        }
+
         // Destroy the prey sprite
         if (prey.sprite && prey.sprite.destroy) {
             prey.sprite.destroy();
@@ -1027,6 +1292,49 @@ export class SimpleFish extends Phaser.GameObjects.Sprite {
         this.targetLockTime = 0;
 
         // No growth mechanics - fish stay at spawn size
+    }
+
+    /**
+     * Draw a death marker at the location where prey was consumed
+     * Circle color matches the prey's color (green/blue/red for fish, gray for bugs)
+     * Fades out over 2 seconds
+     */
+    private drawDeathMarker(prey: WorldEntity): void {
+        console.log(`💀 Drawing death marker for ${prey.type} at (${prey.x}, ${prey.y})`);
+
+        // Determine marker color based on prey type and size
+        let markerColor: number;
+        if (prey.type === 'bug') {
+            markerColor = 0x888888; // Gray for bugs
+        } else {
+            // Fish - use color based on size (same as getSizeColor)
+            if (prey.size < 2) markerColor = 0x44ff44;      // Green
+            else if (prey.size < 5) markerColor = 0x4444ff; // Blue
+            else markerColor = 0xff4444;                     // Red
+        }
+
+        // Create graphics object for the death marker
+        const marker = this.scene.add.graphics();
+        marker.setDepth(10000); // WAY above everything else
+        marker.setAlpha(1.0); // Start fully visible
+
+        // Size death marker based on prey type
+        let radius: number;
+        if (prey.type === 'bug') {
+            radius = 2; // Tiny dots for bugs
+        } else {
+            radius = 6 + (prey.size * 2); // Fish: Green: 8-10px, Blue: 10-16px, Red: 16-26px
+        }
+        console.log(`   Marker color: 0x${markerColor.toString(16)}, radius: ${radius.toFixed(1)}px`);
+
+        // Just a simple filled circle - no strokes
+        marker.fillStyle(markerColor, 0.8);
+        marker.fillCircle(prey.x, prey.y, radius);
+
+        // PERSIST FOREVER: Death markers stay on screen to show consumption history
+        console.log(`   Death marker will persist (no fade-out)`);
+
+        console.log(`   Marker created successfully`);
     }
 
     /**
@@ -1064,8 +1372,16 @@ export class SimpleFish extends Phaser.GameObjects.Sprite {
     private drawDebugVisuals(): void {
         this.debugGraphics.clear();
 
-        // 1. CYAN TRAIL: Historical path with speed-based brightness AND age-based fading
-        //    Faster swimming = brighter cyan, Older positions = more transparent
+        // 0. LATERAL LINE DETECTION ZONE: Thin colored oval around fish
+        //    Shows proximity sensing range (independent of vision)
+        //    Color matches fish: green/blue/red
+        const fishColor = this.getFishColor();
+        this.debugGraphics.lineStyle(1, fishColor, 0.4); // Thin line, 40% opacity
+        this.debugGraphics.strokeEllipse(this.x, this.y, this.lateralLineRadiusX * 2, this.lateralLineRadiusY * 2);
+
+        // 1. COLORED TRAIL: Historical path with speed-based brightness AND age-based fading
+        //    Trail color matches fish color (green/blue/red), width shows speed
+        //    Faster swimming = brighter + thicker, Older positions = more transparent
         if (this.pathTrail.length > 1) {
             // Find min/max speed for brightness normalization
             let minSpeed = Infinity;
@@ -1075,6 +1391,9 @@ export class SimpleFish extends Phaser.GameObjects.Sprite {
                 if (point.speed > maxSpeed) maxSpeed = point.speed;
             }
             const speedRange = maxSpeed - minSpeed || 1;
+
+            // Get fish color for trail
+            const fishColor = this.getSizeColor(this.size);
 
             // Draw trail segments
             for (let i = 1; i < this.pathTrail.length; i++) {
@@ -1091,7 +1410,10 @@ export class SimpleFish extends Phaser.GameObjects.Sprite {
                 // Combine: brightness * fade
                 const opacity = speedBrightness * ageFade;
 
-                this.debugGraphics.lineStyle(2, 0x00ffff, opacity); // Cyan
+                // Line width varies with speed (thin = slow, thick = fast)
+                const lineWidth = 1 + (normalizedSpeed * 3); // 1-4px width
+
+                this.debugGraphics.lineStyle(lineWidth, fishColor, opacity);
                 this.debugGraphics.beginPath();
                 this.debugGraphics.moveTo(prevPoint.x, prevPoint.y);
                 this.debugGraphics.lineTo(currPoint.x, currPoint.y);
@@ -1305,18 +1627,18 @@ export class SimpleFish extends Phaser.GameObjects.Sprite {
             this.debugGraphics.strokePath();
         }
 
-        // 7. RED TARGET LINE: Shows current chase/flee target (if any)
+        // 7. ORANGE TARGET LINE: Shows current chase/flee target (if any)
         //    Line connects fish to its current target entity
-        //    Red circle highlights the target entity
+        //    Orange circle highlights the target entity
         if (this.target) {
-            this.debugGraphics.lineStyle(2, 0xff0000, 0.8); // Red line
+            this.debugGraphics.lineStyle(2, 0xff8800, 0.8); // Orange line
             this.debugGraphics.beginPath();
             this.debugGraphics.moveTo(this.x, this.y);
             this.debugGraphics.lineTo(this.target.x, this.target.y);
             this.debugGraphics.strokePath();
 
             // Draw circle around target
-            this.debugGraphics.lineStyle(2, 0xff0000, 0.6);
+            this.debugGraphics.lineStyle(2, 0xff8800, 0.6);
             this.debugGraphics.strokeCircle(this.target.x, this.target.y, 15);
         }
     }

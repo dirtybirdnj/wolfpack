@@ -306,21 +306,27 @@ export class SimpleEcosystemSpawner {
         }
 
         // Replenish small fish (green - prey for predators) in spawn zones
+        // TRICKLE SPAWN: Only spawn 1-2 at a time to avoid waves
         if (stats.smallFish < minSmallFish) {
-            const toSpawn = minSmallFish - stats.smallFish;
-            const spawnZoneWidth = 96; // Use same default as initial spawn
+            const needed = minSmallFish - stats.smallFish;
+            const toSpawn = Math.min(Phaser.Math.Between(1, 2), needed); // Max 1-2 per cycle
+            const spawnZoneWidth = 96;
             for (let i = 0; i < toSpawn; i++) {
                 const size = 0.5 + Math.random() * 1.5; // 0.5 to 2.0
                 const fish = this.spawnFishInZone(size, spawnZoneWidth);
                 this.fish.push(fish);
                 spawned++;
             }
-            console.log(`🐟 Spawned ${toSpawn} small fish (total: ${stats.smallFish + toSpawn})`);
+            if (toSpawn > 0) {
+                console.log(`🐟 Spawned ${toSpawn} small fish (${stats.smallFish + toSpawn}/${minSmallFish})`);
+            }
         }
 
         // Replenish medium fish (blue) in spawn zones
+        // TRICKLE SPAWN: Only spawn 1 at a time
         if (stats.mediumFish < minMediumFish) {
-            const toSpawn = minMediumFish - stats.mediumFish;
+            const needed = minMediumFish - stats.mediumFish;
+            const toSpawn = Math.min(1, needed); // Max 1 per cycle
             const spawnZoneWidth = 96;
             for (let i = 0; i < toSpawn; i++) {
                 const size = 2.0 + Math.random() * 3.0; // 2.0 to 5.0
@@ -328,12 +334,16 @@ export class SimpleEcosystemSpawner {
                 this.fish.push(fish);
                 spawned++;
             }
-            console.log(`🐟 Spawned ${toSpawn} medium fish (total: ${stats.mediumFish + toSpawn})`);
+            if (toSpawn > 0) {
+                console.log(`🐟 Spawned ${toSpawn} medium fish (${stats.mediumFish + toSpawn}/${minMediumFish})`);
+            }
         }
 
         // Replenish large fish (red) in spawn zones
-        if (stats.largeFish < minLargeFish) {
-            const toSpawn = minLargeFish - stats.largeFish;
+        // TRICKLE SPAWN: Only spawn 1 at a time, and only 50% of the time
+        if (stats.largeFish < minLargeFish && Math.random() < 0.5) {
+            const needed = minLargeFish - stats.largeFish;
+            const toSpawn = Math.min(1, needed); // Max 1 per cycle
             const spawnZoneWidth = 96;
             for (let i = 0; i < toSpawn; i++) {
                 const size = 5.0 + Math.random() * 5.0; // 5.0 to 10.0
@@ -341,7 +351,9 @@ export class SimpleEcosystemSpawner {
                 this.fish.push(fish);
                 spawned++;
             }
-            console.log(`🐟 Spawned ${toSpawn} large fish (total: ${stats.largeFish + toSpawn})`);
+            if (toSpawn > 0) {
+                console.log(`🐟 Spawned ${toSpawn} large fish (${stats.largeFish + toSpawn}/${minLargeFish})`);
+            }
         }
 
         if (spawned > 0) {
