@@ -1,6 +1,6 @@
 {
   "name": "wolfpack",
-  "version": "0.103.564",
+  "version": "0.104.0",
   "description": "Wolfpack - Lake Champlain ice fishing sonar simulator game built with Phaser",
   "main": "electron-main.js",
   "type": "module",
