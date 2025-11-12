@@ -948,6 +948,9 @@ export class GameScene extends Phaser.Scene {
      * For now using simple graphics, but shaders could make this look amazing.
      */
     private renderSchoolEffects(): void {
+        // DISABLED: No school visualization for simplified gameplay restoration
+        return;
+
         if (!this.schoolEffectsGraphics) {
             this.schoolEffectsGraphics = this.add.graphics();
             this.schoolEffectsGraphics.setDepth(3); // Behind fish (depth 5) but above background
