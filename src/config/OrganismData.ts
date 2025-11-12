@@ -201,7 +201,7 @@ export const TEST_SPECIES: Record<string, FishData> = {
         // Visual - BRIGHT GREEN
         color: 0x00ff00,
         panicColor: 0x88ff88,
-        texture: 'test_green',
+        texture: 'alewife', // Use alewife texture, tint green
 
         // Game mechanics
         nutritionValue: 12,
@@ -266,7 +266,7 @@ export const TEST_SPECIES: Record<string, FishData> = {
 
         // Visual - BRIGHT BLUE
         color: 0x0000ff,
-        texture: 'test_blue',
+        texture: 'yellow_perch', // Use yellow perch texture, tint blue
 
         // Game mechanics
         points: 5,
@@ -323,7 +323,7 @@ export const TEST_SPECIES: Record<string, FishData> = {
 
         // Visual - BRIGHT RED
         color: 0xff0000,
-        texture: 'test_red',
+        texture: 'lake_trout', // Use lake trout texture, tint red
 
         // Game mechanics
         points: 30,

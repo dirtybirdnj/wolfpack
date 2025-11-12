@@ -199,6 +199,11 @@ export class FishSprite extends OrganismSprite {
         // Call parent constructor
         super(scene, worldX, y, textureKey);
 
+        // Apply color tint for baseline species
+        if (speciesData.color) {
+            this.setTint(speciesData.color);
+        }
+
         // Store species and type
         this.species = species;
         this.speciesData = speciesData;

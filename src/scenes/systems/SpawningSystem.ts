@@ -454,17 +454,8 @@ export class SpawningSystem {
      * Spawn a baitfish school from the left or right edge of screen
      */
     spawnSchoolFromSide(): void {
-        // Select species
-        // NOTE: Sculpin excluded - they are solitary bottom-dwellers, not schooling fish
-        let speciesType = 'alewife';
-        const speciesRoll = Math.random();
-        if (speciesRoll < 0.44) {
-            speciesType = 'alewife';
-        } else if (speciesRoll < 0.78) {
-            speciesType = 'rainbow_smelt';
-        } else {
-            speciesType = 'yellow_perch';
-        }
+        // SIMPLIFIED: Only spawn green (prey) baseline species
+        const speciesType = 'test_green';
 
         const speciesData = getBaitfishSpecies(speciesType);
 
@@ -510,33 +501,8 @@ export class SpawningSystem {
     spawnPredatorFromSide(): void {
         const actualDepth = (this.scene as any).maxDepth || GameConfig.MAX_DEPTH;
 
-        // Select appropriate predator for depth
-        let species = 'lake_trout'; // Default
-
-        if (actualDepth <= 25) {
-            // Shallow water (Perch mode) - mostly perch, some bass
-            species = Math.random() < 0.7 ? 'yellow_perch' : 'smallmouth_bass';
-        } else if (actualDepth <= 45) {
-            // Medium depth (Bass mode) - bass, pike, occasional trout
-            const roll = Math.random();
-            if (roll < 0.5) {
-                species = 'smallmouth_bass';
-            } else if (roll < 0.8) {
-                species = 'northern_pike';
-            } else {
-                species = 'lake_trout';
-            }
-        } else {
-            // Deep water (Lake Trout mode) - trout, pike, bass
-            const roll = Math.random();
-            if (roll < 0.6) {
-                species = 'lake_trout';
-            } else if (roll < 0.85) {
-                species = 'northern_pike';
-            } else {
-                species = 'smallmouth_bass';
-            }
-        }
+        // SIMPLIFIED: Only spawn red (apex predator) baseline species
+        const species = 'test_red';
 
         // Spawn at random depth appropriate for the water depth
         // Don't use species depth range for initial spawns - just scatter them throughout the water column
