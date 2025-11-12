@@ -172,7 +172,7 @@ export const TEST_SPECIES: Record<string, FishData> = {
         weightRange: { min: 0.1, max: 0.3 },
 
         // Movement - fast, schooling
-        speed: { base: 2.2, panic: 4.5 },
+        speed: { base: 1.0, panic: 2.5 }, // SLOWED for visibility
 
         // Behavior - prey
         canBeEaten: true,
