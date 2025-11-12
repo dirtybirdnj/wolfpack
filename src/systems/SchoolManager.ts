@@ -1,4 +1,5 @@
 import { FishSprite } from '../sprites/FishSprite.js';
+import { ZooplanktonSprite } from '../sprites/ZooplanktonSprite.js';
 
 /**
  * School center position
@@ -119,7 +120,9 @@ export class SchoolManager {
         // Detect new schools periodically
         if (this.frameCount % this.config.detectionFrequency === 0) {
             this.detectNewSchools(baitfish, 'baitfish');
-            this.detectNewSchools(predators, 'predator');
+            // NOTE: Predators don't form schools through proximity detection
+            // They form emergent wolf packs when multiple predators chase the same prey
+            // this.detectNewSchools(predators, 'predator');
         }
 
         // Update existing schools
@@ -128,6 +131,9 @@ export class SchoolManager {
             this.updateSchools(predators, 'predator');
             this.cleanupSchools();
         }
+
+        // Apply boids movement to all schools (every frame for smooth movement)
+        this.applyBoidsToAllSchools(allFish);
     }
 
     /**
@@ -376,6 +382,207 @@ export class SchoolManager {
         // Remove school from active schools
         const schoolMap = school.fishType === 'baitfish' ? this.baitfishSchools : this.predatorSchools;
         schoolMap.delete(school.id);
+    }
+
+    /**
+     * Apply boids movement to all fish in schools
+     * @param allFish - All fish in the scene (for predator detection)
+     */
+    private applyBoidsToAllSchools(allFish: FishSprite[]): void {
+        // Get zooplankton from scene for food attraction (baitfish only)
+        const zooplankton = (this.scene as any).zooplankton || [];
+
+        // Get all predators for threat detection (baitfish only)
+        const allPredators = allFish.filter(f => f.type === 'predator');
+
+        // Process both baitfish and predator schools
+        [this.baitfishSchools, this.predatorSchools].forEach(schoolMap => {
+            schoolMap.forEach(school => {
+                const isBaitfish = school.fishType === 'baitfish';
+
+                // Predator detection (baitfish only)
+                let nearestPredatorDist = Infinity;
+                let nearbyPredators: FishSprite[] = [];
+
+                if (isBaitfish) {
+                    const predatorDetectionRadius = 150;
+                    nearbyPredators = allPredators.filter(predator => {
+                        if (!predator.visible || !predator.active) return false;
+                        const dist = this.distanceBetween(
+                            school.center.worldX, school.center.y,
+                            predator.worldX, predator.y
+                        );
+                        if (dist < nearestPredatorDist) nearestPredatorDist = dist;
+                        return dist < predatorDetectionRadius;
+                    });
+
+                    // Gradual panic/calm system
+                    if (!(school as any).scaredLevel) (school as any).scaredLevel = 0;
+
+                    if (nearbyPredators.length > 0) {
+                        const dangerThreshold = 75;
+                        const dangerIntensity = nearestPredatorDist < dangerThreshold ? 3.0 : 1.5;
+                        (school as any).scaredLevel = Math.min(100, (school as any).scaredLevel + dangerIntensity);
+                    } else {
+                        (school as any).scaredLevel = Math.max(0, (school as any).scaredLevel - 6.0);
+                    }
+                }
+
+                const isPanicking = isBaitfish && (school as any).scaredLevel > 30;
+
+                // Apply boids to each member
+                Array.from(school.members).forEach(fish => {
+                    if (!fish.active || !fish.visible) return;
+
+                    // Get species schooling config
+                    const schoolingConfig = (fish as any).speciesData?.schooling;
+                    if (!schoolingConfig || !schoolingConfig.enabled) return;
+
+                    // Update fish panic state (baitfish only)
+                    if (isBaitfish && fish.schooling) {
+                        fish.schooling.isPanicking = isPanicking;
+                        fish.schooling.scaredLevel = (school as any).scaredLevel || 0;
+                    }
+
+                    // Calculate boids forces
+                    let separationX = 0, separationY = 0;
+                    let cohesionX = 0, cohesionY = 0;
+                    let alignmentX = 0, alignmentY = 0;
+                    let foodAttractionX = 0, foodAttractionY = 0;
+                    let neighborCount = 0;
+
+                    // Get radii from species config or use panic-adjusted defaults for baitfish
+                    let separationRadius: number;
+                    let neighborRadius: number;
+
+                    if (isBaitfish) {
+                        // Baitfish use panic-adjusted radii
+                        separationRadius = isPanicking ? 8 : 25;
+                        neighborRadius = isPanicking ? 40 : 80;
+                    } else {
+                        // Predators use species-specific radii
+                        separationRadius = schoolingConfig.separationRadius || 60;
+                        neighborRadius = schoolingConfig.cohesionRadius || 100;
+                    }
+
+                    // Food seeking (baitfish only)
+                    if (isBaitfish && (school as any).scaredLevel < 70 && zooplankton.length > 0) {
+                        const foodSearchRadius = 120;
+                        let closestFood: ZooplanktonSprite | null = null;
+                        let closestDist = Infinity;
+
+                        zooplankton.forEach((zp: ZooplanktonSprite) => {
+                            if (!zp.visible || zp.consumed) return;
+                            const dist = this.distanceBetween(fish.worldX, fish.y, zp.worldX, zp.y);
+                            if (dist < foodSearchRadius && dist < closestDist) {
+                                closestFood = zp;
+                                closestDist = dist;
+                            }
+                        });
+
+                        if (closestFood) {
+                            const dx = closestFood.worldX - fish.worldX;
+                            const dy = closestFood.y - fish.y;
+                            const dist = Math.sqrt(dx * dx + dy * dy);
+
+                            if (dist > 0) {
+                                const foodStrength = 0.6 - ((school as any).scaredLevel / 100) * 0.3;
+                                foodAttractionX = (dx / dist) * foodStrength;
+                                foodAttractionY = (dy / dist) * foodStrength;
+
+                                // Consumption
+                                const currentTime = Date.now();
+                                const timeSinceLastFeed = currentTime - (fish as any).lastFeedTime;
+                                const canFeed = timeSinceLastFeed >= (fish as any).feedCooldown;
+
+                                if (dist < 12 && !closestFood.consumed && canFeed) {
+                                    closestFood.markConsumed();
+                                    (fish as any).lastFeedTime = currentTime;
+                                }
+                            }
+                        }
+                    }
+
+                    // Calculate boids forces from neighbors
+                    school.members.forEach(other => {
+                        if (other === fish || !other.active || !other.visible) return;
+
+                        const dx = other.worldX - fish.worldX;
+                        const dy = other.y - fish.y;
+                        const distance = Math.sqrt(dx * dx + dy * dy);
+
+                        // Separation
+                        if (distance < separationRadius && distance > 0) {
+                            const strength = (separationRadius - distance) / separationRadius;
+                            const separationWeight = schoolingConfig.weights?.separation || 1.0;
+                            separationX -= (dx / distance) * strength * separationWeight;
+                            separationY -= (dy / distance) * strength * separationWeight;
+                        }
+
+                        // Cohesion & Alignment
+                        if (distance < neighborRadius && distance > 0) {
+                            cohesionX += other.worldX;
+                            cohesionY += other.y;
+                            alignmentX += other.velocity.x;
+                            alignmentY += other.velocity.y;
+                            neighborCount++;
+                        }
+                    });
+
+                    // Apply cohesion
+                    if (neighborCount > 0) {
+                        const avgNeighborX = cohesionX / neighborCount;
+                        const avgNeighborY = cohesionY / neighborCount;
+
+                        let cohesionStrength: number;
+                        if (isBaitfish) {
+                            cohesionStrength = isPanicking ? 0.02 : 0.005;
+                        } else {
+                            cohesionStrength = (schoolingConfig.weights?.cohesion || 0.5) * 0.01;
+                        }
+
+                        cohesionX = (avgNeighborX - fish.worldX) * cohesionStrength;
+                        cohesionY = (avgNeighborY - fish.y) * cohesionStrength;
+
+                        // Alignment
+                        const avgVelX = alignmentX / neighborCount;
+                        const avgVelY = alignmentY / neighborCount;
+
+                        let alignmentStrength: number;
+                        if (isBaitfish) {
+                            alignmentStrength = isPanicking ? 0.08 : 0.03;
+                        } else {
+                            alignmentStrength = (schoolingConfig.weights?.alignment || 0.5) * 0.05;
+                        }
+
+                        alignmentX = (avgVelX - fish.velocity.x) * alignmentStrength;
+                        alignmentY = (avgVelY - fish.velocity.y) * alignmentStrength;
+                    } else {
+                        cohesionX = 0;
+                        cohesionY = 0;
+                        alignmentX = 0;
+                        alignmentY = 0;
+                    }
+
+                    // Apply boids forces to fish
+                    fish.applyBoidsMovement(
+                        { x: separationX, y: separationY },
+                        { x: cohesionX, y: cohesionY },
+                        { x: alignmentX, y: alignmentY },
+                        { x: foodAttractionX, y: foodAttractionY }
+                    );
+                });
+            });
+        });
+    }
+
+    /**
+     * Helper: Calculate distance between two points
+     */
+    private distanceBetween(x1: number, y1: number, x2: number, y2: number): number {
+        const dx = x2 - x1;
+        const dy = y2 - y1;
+        return Math.sqrt(dx * dx + dy * dy);
     }
 
     /**

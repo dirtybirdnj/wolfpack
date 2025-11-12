@@ -166,12 +166,14 @@ export class FishSprite extends OrganismSprite {
     public isFastFleeing?: boolean;
     public hasCalmedDown?: boolean;
     public directionArrow?: Phaser.GameObjects.Graphics;
+    public visionCone?: Phaser.GameObjects.Graphics;
 
     // Baitfish-specific properties
     public panicSpeed?: number;
     public lastFeedTime?: number;
     public feedCooldown?: number;
     public depthInFeet?: number;
+
 
     /**
      * @param scene - Game scene
@@ -231,6 +233,12 @@ export class FishSprite extends OrganismSprite {
         if (DEBUG_SHOW_DIRECTION_ARROWS && this.type === 'predator') {
             this.directionArrow = scene.add.graphics();
             this.directionArrow.setDepth(this.depth + 10);
+        }
+
+        // Create vision cone for debug (predators only)
+        if (this.type === 'predator') {
+            this.visionCone = scene.add.graphics();
+            this.visionCone.setDepth(this.depth - 1); // Behind fish
         }
 
         // Update screen position (parent OrganismSprite now handles setVisible/setActive)
@@ -474,6 +482,57 @@ export class FishSprite extends OrganismSprite {
     }
 
     /**
+     * Draw vision cone showing fish detection range (debug, predators only)
+     */
+    private drawVisionCone(): void {
+        const gameScene = this.scene as any;
+        if (!gameScene.debugMode || !this.visionCone || this.type !== 'predator' || !this.hunger) {
+            if (this.visionCone) {
+                this.visionCone.clear();
+            }
+            return;
+        }
+
+        this.visionCone.clear();
+
+        if (!this.visible || !this.active) {
+            return;
+        }
+
+        const detectionRange = GameConfig.BAITFISH_DETECTION_RANGE;
+        const verticalRange = GameConfig.BAITFISH_VERTICAL_PURSUIT_RANGE * (this.hunger * GameConfig.HUNGER_VERTICAL_SCALING);
+
+        // Determine fish facing direction from angle
+        // Fish faces LEFT by default (angle = 0), faces RIGHT at angle = 180 or -180
+        const facingRight = this.angle > 90 || this.angle < -90;
+        const direction = facingRight ? 1 : -1;
+
+        const coneWidth = verticalRange * 0.6; // Cone spreads vertically
+
+        // Triangle points: fish position -> cone tip -> upper/lower spread
+        const tipX = this.x + (direction * detectionRange);
+        const tipY = this.y;
+        const upperY = this.y - coneWidth;
+        const lowerY = this.y + coneWidth;
+
+        // Draw semi-transparent cone
+        this.visionCone.fillStyle(0x00ff00, 0.08); // Very subtle green
+        this.visionCone.lineStyle(1, 0x00ff00, 0.3); // Faint green outline
+
+        this.visionCone.beginPath();
+        this.visionCone.moveTo(this.x, this.y);
+        this.visionCone.lineTo(tipX, upperY);
+        this.visionCone.lineTo(tipX, lowerY);
+        this.visionCone.closePath();
+        this.visionCone.fillPath();
+        this.visionCone.strokePath();
+
+        // Add range indicator line (center line)
+        this.visionCone.lineStyle(1, 0x00ff00, 0.2);
+        this.visionCone.lineBetween(this.x, this.y, tipX, tipY);
+    }
+
+    /**
      * Phaser preUpdate - called automatically every frame
      * Delegates to type-specific update methods
      */
@@ -497,30 +556,49 @@ export class FishSprite extends OrganismSprite {
         this.depthZone = this.getDepthZone();
         this.speed = this.baseSpeed * this.depthZone.speedMultiplier;
 
-        // Update AI
-        if (this.ai) {
-            const allFish = (this.scene as any).fishes || [];
+        // Check if this fish uses schooling (boids) or AI for movement
+        const usesSchooling = this.speciesData?.schooling?.enabled === true;
+
+        // Update AI - use unified organisms pool (only for non-schooling fish)
+        if (this.ai && !usesSchooling) {
+            // Get all predators from unified organisms pool
+            const allFish = (this.scene as any).organisms
+                ? (this.scene as any).organisms.filter((o: any) =>
+                    o.active && o.visible && o.type === 'predator'
+                  )
+                : [];
+
             const baitfishClouds = (this.scene as any).getAdaptedSchoolsForAI ? (this.scene as any).getAdaptedSchoolsForAI() : [];
-            const crayfish = (this.scene as any).crayfish || [];
+
+            // Get crayfish from unified organisms pool
+            const crayfish = (this.scene as any).organisms
+                ? (this.scene as any).organisms.filter((o: any) =>
+                    o.active && o.visible && o.constructor.name === 'CrayfishSprite'
+                  )
+                : [];
+
             this.ai.update((this.scene as any).lure, this.scene.time.now, allFish, baitfishClouds, crayfish);
         }
 
-        // Apply AI movement
-        if (this.ai && this.ai.getMovementVector) {
+        // Apply AI movement (only for non-schooling fish - schooling uses boids via SchoolManager)
+        if (this.ai && this.ai.getMovementVector && !usesSchooling) {
             const movement = this.ai.getMovementVector();
             this.worldX += movement.x;
             this.y += movement.y;
 
             // Update rotation based on movement
-            if (Math.abs(movement.x) > 0.1 || Math.abs(movement.y) > 0.1) {
-                const isMovingRight = movement.x > 0;
+            // Always update rotation when there's any movement to prevent stale orientations
+            if (Math.abs(movement.x) > 0.01 || Math.abs(movement.y) > 0.01) {
                 // Calculate angle using actual velocity direction
+                // Sprite faces LEFT by default, so we need to add 180° to atan2 result
                 const targetAngle = Math.atan2(movement.y, movement.x);
-                this.setFlipX(!isMovingRight); // Flip when moving left
-                // Convert to degrees, adjust angle when flipped
-                this.angle = isMovingRight ?
-                    Phaser.Math.RadToDeg(targetAngle) :
-                    Phaser.Math.RadToDeg(Math.PI - targetAngle);
+                let movementDegrees = Phaser.Math.RadToDeg(targetAngle) + 180;
+
+                // Normalize to -180 to 180 range
+                if (movementDegrees > 180) movementDegrees -= 360;
+
+                // Smooth rotation - update every frame for fluid movement
+                this.angle = Phaser.Math.Angle.RotateTo(this.angle, movementDegrees, 0.15);
             }
         }
 
@@ -538,9 +616,10 @@ export class FishSprite extends OrganismSprite {
             this.interestFlash -= this.interestFlashDecay;
         }
 
-        // Update screen position and draw debug arrow
+        // Update screen position and draw debug visuals
         this.updateScreenPosition();
         this.drawDirectionArrow();
+        this.drawVisionCone();
     }
 
     /**
@@ -550,15 +629,18 @@ export class FishSprite extends OrganismSprite {
      */
     private updateBait(time: number, delta: number): void {
         // Update rotation based on velocity
-        if (Math.abs(this.velocity.x) > 0.1 || Math.abs(this.velocity.y) > 0.1) {
-            const isMovingRight = this.velocity.x > 0;
+        // Always update rotation when there's any movement to prevent stale orientations
+        if (Math.abs(this.velocity.x) > 0.01 || Math.abs(this.velocity.y) > 0.01) {
             // Calculate angle using actual velocity direction
+            // Sprite faces LEFT by default, so we need to add 180° to atan2 result
             const targetAngle = Math.atan2(this.velocity.y, this.velocity.x);
-            this.setFlipX(!isMovingRight); // Flip when moving left
-            // Convert to degrees, adjust angle when flipped
-            this.angle = isMovingRight ?
-                Phaser.Math.RadToDeg(targetAngle) :
-                Phaser.Math.RadToDeg(Math.PI - targetAngle);
+            let movementDegrees = Phaser.Math.RadToDeg(targetAngle) + 180;
+
+            // Normalize to -180 to 180 range
+            if (movementDegrees > 180) movementDegrees -= 360;
+
+            // Smooth rotation - update every frame for fluid movement
+            this.angle = Phaser.Math.Angle.RotateTo(this.angle, movementDegrees, 0.15);
         }
 
         // Update screen position
@@ -575,6 +657,11 @@ export class FishSprite extends OrganismSprite {
         this.schooling.separation = separation;
         this.schooling.cohesion = cohesion;
         this.schooling.alignment = alignment;
+
+        // Apply velocity damping to prevent runaway speed (fish naturally lose momentum)
+        const damping = 0.95; // 5% drag per frame
+        this.velocity.x *= damping;
+        this.velocity.y *= damping;
 
         // Update velocity based on Boids forces (including food attraction)
         this.velocity.x += separation.x + cohesion.x + alignment.x + foodAttraction.x;
@@ -751,6 +838,10 @@ export class FishSprite extends OrganismSprite {
         if (this.directionArrow) {
             this.directionArrow.destroy();
             this.directionArrow = undefined;
+        }
+        if (this.visionCone) {
+            this.visionCone.destroy();
+            this.visionCone = undefined;
         }
         super.destroy(fromScene);
     }

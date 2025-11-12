@@ -200,7 +200,7 @@ export class SpriteGenerator {
         // Draw body (fish facing LEFT - head on left, tail on right)
         ctx.fillStyle = bodyColor;
         ctx.beginPath();
-        // Body centered, tail will extend to the right
+        // Body centered
         ctx.ellipse(bodyLength / 2, centerY, bodyLength / 2, height / 3, 0, 0, Math.PI * 2);
         ctx.fill();
 
@@ -210,7 +210,7 @@ export class SpriteGenerator {
         ctx.ellipse(bodyLength / 2, centerY + height / 6, bodyLength / 3, height / 6, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // Draw tail on RIGHT side (extends from body end to width)
+        // Draw tail on RIGHT side
         ctx.fillStyle = finColor;
         ctx.beginPath();
         ctx.moveTo(bodyLength, centerY);
@@ -245,7 +245,7 @@ export class SpriteGenerator {
     }
 
     /**
-     * Draw a simple baitfish shape (facing LEFT - head left, tail right)
+     * Draw a simple baitfish shape (facing LEFT - head on left, tail on right)
      */
     static drawBaitfishShape(
         ctx: CanvasRenderingContext2D,
@@ -258,14 +258,14 @@ export class SpriteGenerator {
 
         // Simple oval body
         ctx.fillStyle = color;
-        ctx.fillRect(2, centerY - height / 4, width - 2, height / 2);
+        ctx.fillRect(0, centerY - height / 4, width - 2, height / 2);
 
         // Tail on RIGHT side
-        ctx.fillRect(0, centerY - height / 6, 2, height / 3);
+        ctx.fillRect(width - 2, centerY - height / 6, 2, height / 3);
 
         // Eye on LEFT (head) side
         ctx.fillStyle = '#000000';
-        ctx.fillRect(width - 2, centerY, 1, 1);
+        ctx.fillRect(1, centerY, 1, 1);
     }
 
     /**

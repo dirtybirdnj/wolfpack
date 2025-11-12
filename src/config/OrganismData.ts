@@ -249,7 +249,7 @@ export const BAITFISH_SPECIES: Record<string, FishData> = {
         weightRange: { min: 0.1, max: 0.3 },
 
         // Movement
-        speed: { base: 2.2, panic: 4.5 },
+        speed: { base: 1.0, panic: 3.0 }, // Reduced for more natural movement
 
         // Behavior
         canBeEaten: true,
@@ -293,7 +293,7 @@ export const BAITFISH_SPECIES: Record<string, FishData> = {
 
         sizeRange: { min: 5, max: 10 },
         weightRange: { min: 0.15, max: 0.4 },
-        speed: { base: 2.5, panic: 5.0 },
+        speed: { base: 1.2, panic: 3.5 }, // Reduced for more natural movement
 
         canBeEaten: true,
         eatenBy: ['yellow_perch', 'smallmouth_bass', 'northern_pike', 'lake_trout'],
@@ -607,8 +607,19 @@ export const PREDATOR_SPECIES: Record<string, FishData> = {
         canBeEaten: false,
         canEat: ['crayfish', 'bait', 'yellow_perch', 'smallmouth_bass'],
 
+        // Wolf pack schooling - pike hunt in loose packs, aggressive peeling
         schooling: {
-            enabled: false // Solitary ambush predator
+            enabled: true,
+            searchRadius: 180,        // Wide search for packmates
+            separationRadius: 70,     // VERY loose - comfortable spacing
+            alignmentRadius: 100,     // Loose alignment
+            cohesionRadius: 130,      // Weak pull together - easy to peel off
+            maxSchoolSize: 6,         // Small aggressive packs (2-6 pike)
+            weights: {
+                separation: 0.5,      // Very low - don't mind being close
+                alignment: 0.3,       // Very low - independent heading
+                cohesion: 0.15        // EXTREMELY low - individuals peel off aggressively
+            }
         },
 
         hunting: {
@@ -654,8 +665,19 @@ export const PREDATOR_SPECIES: Record<string, FishData> = {
         canBeEaten: false,
         canEat: ['crayfish', 'bait', 'yellow_perch'],
 
+        // Wolf pack schooling - loose formation, prone to peeling for strikes
         schooling: {
-            enabled: false // Solitary deep water hunter
+            enabled: true,
+            searchRadius: 200,        // Wide search for packmates
+            separationRadius: 80,     // VERY loose - comfortable spacing
+            alignmentRadius: 120,     // Loose alignment
+            cohesionRadius: 150,      // Weak pull together - easy to peel off
+            maxSchoolSize: 8,         // Small wolf packs (2-8 fish)
+            weights: {
+                separation: 0.6,      // Low - don't mind being close
+                alignment: 0.4,       // Low - independent heading
+                cohesion: 0.2         // VERY low - individuals peel off easily
+            }
         },
 
         hunting: {

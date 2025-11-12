@@ -12,6 +12,7 @@ import { ReelModel } from '../models/ReelModel.js';
 import { FishSprite } from '../sprites/FishSprite.js';
 import { CrayfishSprite } from '../sprites/CrayfishSprite.js';
 import { ZooplanktonSprite } from '../sprites/ZooplanktonSprite.js';
+import { OrganismSprite } from '../sprites/OrganismSprite.js';
 
 // Import all systems
 import SpawningSystem from './systems/SpawningSystem.js';
@@ -119,10 +120,13 @@ export interface CaughtFishData {
  * - Adjust debug display → src/scenes/systems/DebugSystem.js
  */
 export class GameScene extends Phaser.Scene {
-    // Entity arrays
+    // Entity arrays (legacy - will be deprecated in favor of unified pool)
     public fishes: FishSprite[] = [];
     public zooplankton: ZooplanktonSprite[] = [];
     public crayfish: CrayfishSprite[] = [];
+
+    // Unified organism pool - ALL entities (fish, crayfish, zooplankton, etc.)
+    public organisms: OrganismSprite[] = [];
 
     // Selected fish for detailed view
     public selectedFish: FishSprite | null = null;
@@ -483,11 +487,14 @@ export class GameScene extends Phaser.Scene {
      * @returns {Object} All organisms by type
      */
     public getAllOrganisms(): (FishSprite | ZooplanktonSprite | CrayfishSprite)[] {
+        // Filter from unified organisms pool instead of legacy arrays
+        const activeOrganisms = this.organisms.filter(o => o.active && o.visible);
+
         return {
-            predators: this.fishes.filter(f => f.active && f.visible),
-            baitfish: this.baitfishSchools.filter(f => f.active && f.visible && !f.consumed),
-            zooplankton: this.zooplankton.filter(z => z.active && z.visible && !z.consumed),
-            crayfish: this.crayfish.filter(c => c.active && c.visible && !c.consumed)
+            predators: activeOrganisms.filter(o => o instanceof FishSprite && o.type === 'predator'),
+            baitfish: activeOrganisms.filter(o => o instanceof FishSprite && o.type === 'bait' && !o.consumed),
+            zooplankton: activeOrganisms.filter(o => o instanceof ZooplanktonSprite && !o.consumed),
+            crayfish: activeOrganisms.filter(o => o instanceof CrayfishSprite && !o.consumed)
         };
     }
 
@@ -748,29 +755,29 @@ export class GameScene extends Phaser.Scene {
      * Update fish status display in GameHUD
      */
     private updateFishStatusDisplay(): void {
-        // Count entities
-        const fishCount = this.fishes.filter(f => f.active && f.visible).length;
+        // Count entities from unified organisms pool
+        const activeOrganisms = this.organisms.filter(o => o.active && o.visible);
 
-        // Count bait clouds and individual baitfish
-        const baitCloudCount = this.schools ? this.schools.filter(school => {
-            const members = school.members || [];
-            return members.some(b => b.active && b.visible);
-        }).length : 0;
+        const predatorFish = activeOrganisms.filter(o => o instanceof FishSprite && o.type === 'predator') as FishSprite[];
+        const baitfish = activeOrganisms.filter(o => o instanceof FishSprite && o.type === 'bait') as FishSprite[];
+        const crayfish = activeOrganisms.filter(o => o instanceof CrayfishSprite) as CrayfishSprite[];
+        const zooplankton = activeOrganisms.filter(o => o instanceof ZooplanktonSprite) as ZooplanktonSprite[];
 
-        const baitfishCount = this.schools ? this.schools.reduce((total, school) => {
-            return total + (school.members ? school.members.filter(b => b.active && b.visible).length : 0);
-        }, 0) : 0;
+        const fishCount = predatorFish.length;
+        const baitfishCount = baitfish.length;
+        const crayfishCount = crayfish.length;
+        const zooplanktonCount = zooplankton.length;
 
-        const crayfishCount = this.crayfish ? this.crayfish.filter(c => c.active && c.visible).length : 0;
-        const zooplanktonCount = this.zooplankton ? this.zooplankton.filter(z => z.visible).length : 0;
+        // Count schools from SchoolManager (single source of truth)
+        const baitCloudCount = this.schoolManager ? this.schoolManager.getSchoolCount('baitfish') : 0;
+        const predatorPackCount = this.schoolManager ? this.schoolManager.getSchoolCount('predator') : 0;
 
-        const entityCounts = `🐟 ${fishCount} ☁️ ${baitCloudCount} 🦞 ${crayfishCount} 🪳 ${zooplanktonCount}`;
+        const entityCounts = `🐟 ${fishCount} 🐠 ${baitfishCount} ☁️ ${baitCloudCount} 🦞 ${crayfishCount} 🪳 ${zooplanktonCount}`;
         this.registry.set('entityCounts', entityCounts);
 
         // Build fish list data - send as array of objects for proper styling
         if (fishCount > 0) {
-            const fishListData = this.fishes
-                .filter(f => f.active && f.visible)
+            const fishListData = predatorFish
                 .map((f, i) => ({
                     id: f.id,
                     name: f.name || 'Fish-' + i,
@@ -789,7 +796,7 @@ export class GameScene extends Phaser.Scene {
         }
 
         // Fish detail - show selected fish or first fish
-        const detailFish = this.selectedFish || (fishCount > 0 ? this.fishes.find(f => f.active && f.visible) : null);
+        const detailFish = this.selectedFish || (fishCount > 0 ? predatorFish[0] : null);
         if (detailFish) {
             const species = detailFish.species || 'Unknown';
             const name = detailFish.name || 'Unknown';
@@ -892,21 +899,17 @@ export class GameScene extends Phaser.Scene {
                 'MEDIUM' // Size doesn't matter for baitfish, but FishSprite requires it
             );
 
-            // Associate fish with school
-            fish.schoolId = schoolId;
-            fish.schoolingOffset = {
-                x: offsetX,
-                y: offsetY
-            };
+            // NOTE: No longer manually assigning schoolId - SchoolManager handles this
+            // Let fish spawn close together, SchoolManager will detect the cluster and create a school
 
-            // Set initial velocity to match school (prevents immediate scatter)
-            // BaitfishSprite has velocity directly, not nested in schooling
-            fish.velocity.x = school.velocity.x;
-            fish.velocity.y = school.velocity.y;
+            // Set initial velocity for natural movement
+            fish.velocity.x = Utils.randomBetween(-0.3, 0.3);
+            fish.velocity.y = Utils.randomBetween(-0.1, 0.1);
 
             // Add to arrays
             school.members.push(fish);
             this.baitfishSchools.push(fish);
+            this.organisms.push(fish); // Unified pool
         }
 
         this.schools.push(school);
@@ -1095,8 +1098,9 @@ export class GameScene extends Phaser.Scene {
             // Set movement direction
             fish.ai.idleDirection = Math.random() < 0.5 ? -1 : 1;
 
-            // Add ONLY to legacy array (predators use scene.add.existing for rendering)
+            // Add to legacy array and unified pool
             this.fishes.push(fish);
+            this.organisms.push(fish); // Unified pool
             console.log(`  Spawned trophy ${speciesName} at ${depth}ft`);
         });
 
@@ -1471,239 +1475,9 @@ export class GameScene extends Phaser.Scene {
             school.members = Array.from(uniqueFish);
         });
 
-        // THEN clean up empty schools (all fish have been consumed or despawned)
-        const schoolCountBefore = this.schools.length;
-        this.schools = this.schools.filter(school => {
-            if (school.members.length === 0) {
-                console.log(`🌊 School ${school.id} disbanded (no fish remaining)`);
-                return false; // Remove empty school
-            }
-            return true; // Keep school
-        });
-        const schoolCountAfter = this.schools.length;
-
-        // DEBUG: Log when schools are removed
-        if (schoolCountBefore > schoolCountAfter) {
-            console.log(`🗑️ Removed ${schoolCountBefore - schoolCountAfter} empty schools (${schoolCountAfter} remaining)`);
-        }
-
-        // Update Boids behavior for each remaining school
-        this.schools.forEach(school => {
-            // Check for nearby predators with gradual panic/calm system
-            const predatorDetectionRadius = 150; // Reduced from 200 - how far baitfish can sense predators
-            const dangerThreshold = 75; // Close predators trigger stronger panic
-
-            let nearestPredatorDist = Infinity;
-            const nearbyPredators = this.fishes.filter(predator => {
-                if (!predator.visible || !predator.active) return false;
-                const dist = Phaser.Math.Distance.Between(
-                    school.centerWorldX,
-                    school.centerY,
-                    predator.worldX,
-                    predator.y
-                );
-                if (dist < nearestPredatorDist) nearestPredatorDist = dist;
-                return dist < predatorDetectionRadius;
-            });
-
-            // Gradual panic/calm system using scaredLevel
-            // scaredLevel: 0 (calm) to 100 (max panic)
-            if (!school.scaredLevel) school.scaredLevel = 0;
-
-            if (nearbyPredators.length > 0) {
-                // Predator nearby - increase scared level
-                const dangerIntensity = nearestPredatorDist < dangerThreshold ? 3.0 : 1.5;
-                school.scaredLevel = Math.min(100, school.scaredLevel + dangerIntensity);
-            } else {
-                // No predators - calm down QUICKLY (4x faster than panic buildup)
-                school.scaredLevel = Math.max(0, school.scaredLevel - 6.0);
-            }
-
-            // Only panic when scared level is HIGH (> 30)
-            const isPanicking = school.scaredLevel > 30;
-
-            // Apply Boids schooling behavior to each fish
-            school.members.forEach(fish => {
-                // Update individual fish panic state and scared level
-                fish.schooling.isPanicking = isPanicking;
-                fish.schooling.scaredLevel = school.scaredLevel;
-
-                // Calculate Boids forces
-                let separationX = 0, separationY = 0;
-                let cohesionX = 0, cohesionY = 0;
-                let alignmentX = 0, alignmentY = 0;
-                let foodAttractionX = 0, foodAttractionY = 0;
-                let neighborCount = 0;
-
-                // Adjust parameters based on panic state
-                // Relaxed: spread out, loose cohesion
-                // Panicking: tight ball, strong cohesion
-                const separationRadius = isPanicking ? 8 : 25; // Tighter when panicking, spread when relaxed
-                const neighborRadius = isPanicking ? 40 : 80; // Closer awareness when panicking
-
-                // FOOD-SEEKING BEHAVIOR: Find nearby zooplankton
-                // Only disable food seeking when in EXTREME panic (scared > 70)
-                const canSeekFood = school.scaredLevel < 70;
-
-                if (canSeekFood && this.zooplankton && this.zooplankton.length > 0) {
-                    const foodSearchRadius = 120; // Increased from 100 - how far baitfish can sense food
-                    let closestFood = null;
-                    let closestDist = Infinity;
-
-                    // Find closest zooplankton
-                    this.zooplankton.forEach(zp => {
-                        if (!zp.visible || zp.consumed) return;
-
-                        const dist = Phaser.Math.Distance.Between(
-                            fish.worldX, fish.y,
-                            zp.worldX, zp.y
-                        );
-
-                        if (dist < foodSearchRadius && dist < closestDist) {
-                            closestFood = zp;
-                            closestDist = dist;
-                        }
-                    });
-
-                    // If food found, add DOMINANT attraction force
-                    if (closestFood) {
-                        const dx = closestFood.worldX - fish.worldX;
-                        const dy = closestFood.y - fish.y;
-                        const dist = Math.sqrt(dx * dx + dy * dy);
-
-                        if (dist > 0) {
-                            // EXTREMELY strong food attraction - dominates other forces
-                            // Scale based on how calm they are (0.6 when calm, 0.3 when mildly scared)
-                            const foodStrength = 0.6 - (school.scaredLevel / 100) * 0.3;
-                            foodAttractionX = (dx / dist) * foodStrength;
-                            foodAttractionY = (dy / dist) * foodStrength;
-
-                            // Check if close enough to consume (increased to 12 pixels for easier consumption)
-                            // Add cooldown check - fish can only eat once per second
-                            const currentTime = Date.now();
-                            const timeSinceLastFeed = currentTime - fish.lastFeedTime;
-                            const canFeed = timeSinceLastFeed >= fish.feedCooldown;
-
-                            if (dist < 12 && !closestFood.consumed && canFeed) {
-                                closestFood.markConsumed(); // Use new OrganismSprite method
-                                fish.lastFeedTime = currentTime; // Record feeding time
-                                // Baitfish "ate" the zooplankton - could track nutrition here later
-                            }
-                        }
-                    }
-                }
-
-                // Check all other fish in the same school
-                school.members.forEach(other => {
-                    if (other === fish) return;
-
-                    const dx = other.worldX - fish.worldX;
-                    const dy = other.y - fish.y;
-                    const distance = Math.sqrt(dx * dx + dy * dy);
-
-                    // Separation: avoid crowding neighbors
-                    if (distance < separationRadius && distance > 0) {
-                        const strength = (separationRadius - distance) / separationRadius;
-                        separationX -= (dx / distance) * strength * 0.5;
-                        separationY -= (dy / distance) * strength * 0.5;
-                    }
-
-                    // Cohesion & Alignment: stay with neighbors
-                    if (distance < neighborRadius && distance > 0) {
-                        cohesionX += other.worldX;
-                        cohesionY += other.y;
-                        alignmentX += other.velocity.x;
-                        alignmentY += other.velocity.y;
-                        neighborCount++;
-                    }
-                });
-
-                // Apply cohesion (move toward average position of neighbors)
-                if (neighborCount > 0) {
-                    const avgNeighborX = cohesionX / neighborCount;
-                    const avgNeighborY = cohesionY / neighborCount;
-
-                    // Adjust cohesion strength based on panic state
-                    // Panicking: strong cohesion (0.02) = tight ball
-                    // Relaxed: weak cohesion (0.005) = loose spread
-                    const cohesionStrength = isPanicking ? 0.02 : 0.005;
-                    cohesionX = (avgNeighborX - fish.worldX) * cohesionStrength;
-                    cohesionY = (avgNeighborY - fish.y) * cohesionStrength;
-
-                    // Alignment (match velocity with neighbors)
-                    const avgVelX = alignmentX / neighborCount;
-                    const avgVelY = alignmentY / neighborCount;
-                    const alignmentStrength = isPanicking ? 0.08 : 0.03;
-                    alignmentX = (avgVelX - fish.velocity.x) * alignmentStrength;
-                    alignmentY = (avgVelY - fish.velocity.y) * alignmentStrength;
-                } else {
-                    cohesionX = 0;
-                    cohesionY = 0;
-                    alignmentX = 0;
-                    alignmentY = 0;
-                }
-
-                // Apply Boids forces to fish (including food attraction)
-                fish.applyBoidsMovement(
-                    { x: separationX, y: separationY },
-                    { x: cohesionX, y: cohesionY },
-                    { x: alignmentX, y: alignmentY },
-                    { x: foodAttractionX, y: foodAttractionY }
-                );
-            });
-        });
-
-        // Merge overlapping schools (only check every 180 frames / ~3 seconds to reduce overhead)
-        // Check each pair of schools to see if they overlap
-        const shouldCheckMerge = this.gameTime % 180 === 0;
-        const mergeRadius = GameConfig.BAITFISH_CLOUD_RADIUS * 1.5; // Merge if centers within 1.5x cloud radius
-        const schoolsToRemove = new Set();
-
-        if (shouldCheckMerge) {
-            for (let i = 0; i < this.schools.length; i++) {
-            if (schoolsToRemove.has(i)) continue;
-
-            const schoolA = this.schools[i];
-            if (schoolA.members.length === 0) continue;
-
-            for (let j = i + 1; j < this.schools.length; j++) {
-                if (schoolsToRemove.has(j)) continue;
-
-                const schoolB = this.schools[j];
-                if (schoolB.members.length === 0) continue;
-
-                // Calculate distance between school centers
-                // Use Phaser's optimized distance calculation
-                const distance = Phaser.Math.Distance.Between(
-                    schoolA.centerWorldX, schoolA.centerY,
-                    schoolB.centerWorldX, schoolB.centerY
-                );
-
-                if (distance < mergeRadius) {
-                    // Merge schoolB into schoolA (prevent duplicates)
-                    let movedCount = 0;
-                    schoolB.members.forEach(fish => {
-                        // Only add if not already in schoolA
-                        if (!schoolA.members.includes(fish)) {
-                            fish.schoolId = schoolA.id;
-                            schoolA.members.push(fish);
-                            movedCount++;
-                        }
-                    });
-
-                    console.log(`🌊 Schools merged: ${movedCount} fish from school ${schoolB.id} joined school ${schoolA.id} (distance: ${distance.toFixed(0)}px)`);
-
-                    // Mark schoolB for removal
-                    schoolsToRemove.add(j);
-                }
-            }
-            }
-
-            // Remove merged schools
-            if (schoolsToRemove.size > 0) {
-                this.schools = this.schools.filter((school, index) => !schoolsToRemove.has(index));
-            }
-        }
+        // NOTE: Old school management code disabled - SchoolManager now handles all schooling
+        // SchoolManager detects clusters, creates/disbands schools, and applies boids movement
+        // The legacy this.schools array is kept for compatibility with getAdaptedSchoolsForAI()
 
         // Update fish (predators)
         // FishSprite.preUpdate() is called automatically by Phaser Group (runChildUpdate: true)
