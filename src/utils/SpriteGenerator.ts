@@ -54,7 +54,7 @@ export class SpriteGenerator {
     static generatePredatorTextures(scene: Phaser.Scene): void {
         // List of species that spawn as predators (from SpawningSystem.js line 119-129 + GameScene initial spawn)
         // INCLUDES BASELINE SPECIES for simplified gameplay restoration
-        const predatorSpecies = ['test_red', 'lake_trout', 'northern_pike', 'smallmouth_bass', 'yellow_perch'];
+        const predatorSpecies = ['test_red', 'test_blue', 'lake_trout', 'northern_pike', 'smallmouth_bass', 'yellow_perch'];
 
         predatorSpecies.forEach(speciesName => {
             const speciesData = ORGANISMS[speciesName];
