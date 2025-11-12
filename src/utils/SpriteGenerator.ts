@@ -53,7 +53,8 @@ export class SpriteGenerator {
      */
     static generatePredatorTextures(scene: Phaser.Scene): void {
         // List of species that spawn as predators (from SpawningSystem.js line 119-129 + GameScene initial spawn)
-        const predatorSpecies = ['lake_trout', 'northern_pike', 'smallmouth_bass', 'yellow_perch'];
+        // INCLUDES BASELINE SPECIES for simplified gameplay restoration
+        const predatorSpecies = ['test_red', 'lake_trout', 'northern_pike', 'smallmouth_bass', 'yellow_perch'];
 
         predatorSpecies.forEach(speciesName => {
             const speciesData = ORGANISMS[speciesName];
@@ -95,10 +96,12 @@ export class SpriteGenerator {
      * Generate textures for all baitfish species
      */
     static generateBaitfishTextures(scene: Phaser.Scene): void {
-        const species = ['alewife', 'rainbow_smelt', 'yellow_perch', 'sculpin', 'cisco'];
+        // INCLUDES BASELINE SPECIES for simplified gameplay restoration
+        const species = ['test_green', 'test_blue', 'alewife', 'rainbow_smelt', 'yellow_perch', 'sculpin', 'cisco'];
 
         species.forEach(speciesName => {
-            const speciesData = BAITFISH_SPECIES[speciesName];
+            // Check ORGANISMS first for baseline species, then BAITFISH_SPECIES for legacy
+            const speciesData = ORGANISMS[speciesName] || BAITFISH_SPECIES[speciesName];
             if (!speciesData) return;
 
             const textureKey = `baitfish_${speciesName}`;
