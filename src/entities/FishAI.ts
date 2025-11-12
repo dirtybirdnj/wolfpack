@@ -94,18 +94,6 @@ export class FishAI {
     public targetBaitfish: any | null;
     public isFrenzying: boolean;
 
-    // Migration behavior
-    public lastBaitfishSightingTime: number | null;
-    public baitfishTimeout: number;
-    public leavingArea: boolean;
-
-    // Hunting commitment (prevents oscillation)
-    public huntingStartTime: number | null;
-    public minHuntingCommitment: number;
-    public lastAbandonedCloud: BaitfishCloud | null;
-    public abandonCooldown: number;
-    public abandonedCloudTime?: number;
-
     // Thermocline behavior
     public returningToThermocline: boolean;
 
@@ -157,17 +145,6 @@ export class FishAI {
         this.targetBaitfishCloud = null;
         this.targetBaitfish = null;
         this.isFrenzying = false;
-
-        // Baitfish detection timer - if no baitfish seen for 3 seconds, leave area
-        this.lastBaitfishSightingTime = null; // Will be set when fish spawns
-        this.baitfishTimeout = 3000; // 3 seconds
-        this.leavingArea = false;
-
-        // Hunting commitment - prevents oscillation when fish starts hunting
-        this.huntingStartTime = null;
-        this.minHuntingCommitment = 2000; // Must commit for 2 seconds minimum
-        this.lastAbandonedCloud = null;
-        this.abandonCooldown = 3000; // Can't rehunt same cloud for 3 seconds
 
         // Thermocline behavior (summer modes only)
         this.returningToThermocline = false;
@@ -338,31 +315,6 @@ export class FishAI {
      * Main AI update loop
      */
     update(lure: Lure | null, currentTime: number, allFish: FishSprite[] = [], baitfishClouds: BaitfishCloud[] = [], crayfish: Crayfish[] = []): void {
-        // Initialize lastBaitfishSightingTime on first update
-        if (this.lastBaitfishSightingTime === null) {
-            this.lastBaitfishSightingTime = currentTime;
-        }
-
-        // MIGRATION LOGIC: If no baitfish for too long, leave the area
-        const validBaitfishClouds = (baitfishClouds || []).filter(cloud => {
-            const baitfishArray = cloud.baitfish || cloud.members || [];
-            const cloudVisible = cloud.visible !== false || cloud.members;
-            const activeBaitfish = baitfishArray.filter((b: any) => b && b.active && b.visible && !b.consumed);
-            return cloudVisible && activeBaitfish.length > 0;
-        });
-
-        if (validBaitfishClouds.length > 0) {
-            this.lastBaitfishSightingTime = currentTime;
-            this.leavingArea = false;
-        } else if (!this.leavingArea && currentTime - this.lastBaitfishSightingTime > this.baitfishTimeout) {
-            console.log(`${this.fish.name} sees no food, migrating away...`);
-            this.leavingArea = true;
-            this.state = Constants.FISH_STATE.IDLE;
-            const canvasWidth = this.fish.scene.scale.width;
-            const screenCenter = canvasWidth / 2;
-            this.idleDirection = this.fish.worldX > screenCenter ? 1 : -1;
-        }
-
         // Make decisions at intervals
         if (currentTime - this.lastDecisionTime < this.decisionCooldown) {
             return;
@@ -822,14 +774,6 @@ export class FishAI {
      * Get movement vector based on current state
      */
     getMovementVector(): { x: number; y: number } {
-        // MIGRATION: If leaving area, swim at full speed toward edge
-        if (this.leavingArea) {
-            return {
-                x: this.fish.speed * 2 * this.idleDirection,
-                y: 0
-            };
-        }
-
         // IDLE fish cruise horizontally
         if (this.state === Constants.FISH_STATE.IDLE || !this.targetX || !this.targetY) {
             // Northern Pike: ambush behavior
@@ -1002,14 +946,6 @@ export class FishAI {
     shouldHuntBaitfish(cloudInfo: BaitfishCloudInfo): boolean {
         if (!cloudInfo) return false;
 
-        // Don't rehunt a cloud we just abandoned
-        if (this.lastAbandonedCloud === cloudInfo.cloud) {
-            const timeSinceAbandon = Date.now() - (this.abandonedCloudTime || 0);
-            if (timeSinceAbandon < this.abandonCooldown) {
-                return false;
-            }
-        }
-
         const hungerFactor = (this.fish.hunger || 0) / 100;
         const distanceFactor = 1 - (cloudInfo.distance / GameConfig.BAITFISH_DETECTION_RANGE);
 
@@ -1053,8 +989,6 @@ export class FishAI {
         this.isFrenzying = cloudInfo.cloud.lakersChasing.length > 0;
         this.consecutiveCatches = 0;
         this.decisionCooldown = 150;
-        this.huntingStartTime = Date.now();
-        this.lastAbandonedCloud = null;
     }
 
     /**
@@ -1069,16 +1003,6 @@ export class FishAI {
         const shouldAbandon = !this.targetBaitfishCloud || !cloudVisible || baitfishArray.length === 0;
 
         if (shouldAbandon) {
-            const huntingDuration = Date.now() - (this.huntingStartTime || 0);
-
-            if (huntingDuration < this.minHuntingCommitment) {
-                if (this.targetX && this.targetY) {
-                    return;
-                }
-            }
-
-            this.lastAbandonedCloud = this.targetBaitfishCloud;
-            this.abandonedCloudTime = Date.now();
             this.state = Constants.FISH_STATE.IDLE;
             this.targetBaitfishCloud = null;
             this.targetBaitfish = null;
@@ -1115,8 +1039,6 @@ export class FishAI {
                 return;
             }
         } else {
-            this.lastAbandonedCloud = this.targetBaitfishCloud;
-            this.abandonedCloudTime = Date.now();
             this.state = Constants.FISH_STATE.IDLE;
             this.targetBaitfishCloud = null;
             this.targetBaitfish = null;
@@ -1155,8 +1077,6 @@ export class FishAI {
                 this.state = Constants.FISH_STATE.HUNTING_BAITFISH;
                 this.decisionCooldown = 20;
             } else {
-                this.lastAbandonedCloud = this.targetBaitfishCloud;
-                this.abandonedCloudTime = Date.now();
                 this.state = Constants.FISH_STATE.IDLE;
                 this.targetBaitfishCloud = null;
                 this.targetBaitfish = null;
