@@ -452,13 +452,11 @@ export class FishSprite extends OrganismSprite {
             const startX = this.x;
             const startY = this.y;
 
-            // Convert sprite angle to radians and account for flip
-            const angleRad = Phaser.Math.DegToRad(this.angle);
-            const flipMultiplier = this.flipX ? -1 : 1;
-
-            // Calculate arrow direction matching sprite's visual orientation
-            const endX = startX + flipMultiplier * Math.cos(angleRad) * arrowLength;
-            const endY = startY + Math.sin(angleRad) * arrowLength;
+            // Calculate arrow direction from actual movement vector (not sprite angle)
+            // This shows the true direction of travel
+            const moveAngle = Math.atan2(movement.y, movement.x);
+            const endX = startX + Math.cos(moveAngle) * arrowLength;
+            const endY = startY + Math.sin(moveAngle) * arrowLength;
 
             // Draw arrow line
             this.directionArrow.lineStyle(2, 0xff0000, 0.8);

@@ -133,8 +133,8 @@ export class SpawningSystem {
         // Always use center of screen as player position (CURRENT width for resize support)
         playerWorldX = this.scene.scale.width / 2;
 
-        // SIMPLIFIED: Only spawn red (apex predator) for now
-        const species = 'test_red';
+        // SIMPLIFIED: Spawn red and blue baseline species
+        const species = Math.random() < 0.7 ? 'test_red' : 'test_blue';
 
         // Determine fish spawn depth based on species-specific behavior
         let depth: number;
@@ -501,8 +501,8 @@ export class SpawningSystem {
     spawnPredatorFromSide(): void {
         const actualDepth = (this.scene as any).maxDepth || GameConfig.MAX_DEPTH;
 
-        // SIMPLIFIED: Only spawn red (apex predator) baseline species
-        const species = 'test_red';
+        // SIMPLIFIED: Spawn red and blue baseline species
+        const species = Math.random() < 0.7 ? 'test_red' : 'test_blue';
 
         // Spawn at random depth appropriate for the water depth
         // Don't use species depth range for initial spawns - just scatter them throughout the water column
