@@ -176,23 +176,23 @@ export class MenuScene extends Phaser.Scene {
         const perch = this.createModeButton(
             startX, buttonY,
             'PERCH',
-            'Easy Mode',
-            { fishingType: GameConfig.FISHING_TYPE_ICE, difficulty: 'easy', targetSpecies: 'perch', maxDepth: 20 },
+            'Easy Mode - 30ft',
+            { fishingType: GameConfig.FISHING_TYPE_ICE, difficulty: 'easy', targetSpecies: 'perch', maxDepth: 30 },
             0
         );
 
         const bass = this.createModeButton(
             startX + (buttonWidth + buttonSpacing), buttonY,
             'BASS',
-            'More Difficult',
-            { fishingType: GameConfig.FISHING_TYPE_ICE, difficulty: 'medium', targetSpecies: 'bass', maxDepth: 40 },
+            'Medium - 50ft',
+            { fishingType: GameConfig.FISHING_TYPE_ICE, difficulty: 'medium', targetSpecies: 'bass', maxDepth: 50 },
             1
         );
 
         const trout = this.createModeButton(
             startX + (buttonWidth + buttonSpacing) * 2, buttonY,
             'LAKE TROUT',
-            'Expert Mode',
+            'Expert - 80ft',
             { fishingType: GameConfig.FISHING_TYPE_ICE, difficulty: 'expert', targetSpecies: 'laketrout', maxDepth: 80 },
             2
         );

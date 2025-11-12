@@ -133,8 +133,21 @@ export class SpawningSystem {
         // Always use center of screen as player position (CURRENT width for resize support)
         playerWorldX = this.scene.scale.width / 2;
 
-        // SIMPLIFIED: Spawn red and blue baseline species
-        const species = Math.random() < 0.7 ? 'test_red' : 'test_blue';
+        // Spawn based on game difficulty (3-tier system)
+        const difficulty = (this.scene as any).difficulty || 'easy';
+        const maxDepth = (this.scene as any).maxDepth || 30;
+
+        let species: string;
+        if (difficulty === 'easy') {
+            // PERCH MODE: Only blue (no apex predators)
+            species = 'test_blue';
+        } else if (difficulty === 'medium') {
+            // BASS MODE: Blue and small red
+            species = Math.random() < 0.5 ? 'test_blue' : 'test_red';
+        } else {
+            // TROUT MODE: Full ecosystem (more red than blue)
+            species = Math.random() < 0.7 ? 'test_red' : 'test_blue';
+        }
 
         // Determine fish spawn depth based on species-specific behavior
         let depth: number;
@@ -501,8 +514,20 @@ export class SpawningSystem {
     spawnPredatorFromSide(): void {
         const actualDepth = (this.scene as any).maxDepth || GameConfig.MAX_DEPTH;
 
-        // SIMPLIFIED: Spawn red and blue baseline species
-        const species = Math.random() < 0.7 ? 'test_red' : 'test_blue';
+        // Spawn based on game difficulty (3-tier system)
+        const difficulty = (this.scene as any).difficulty || 'easy';
+
+        let species: string;
+        if (difficulty === 'easy') {
+            // PERCH MODE: Only blue (no apex predators)
+            species = 'test_blue';
+        } else if (difficulty === 'medium') {
+            // BASS MODE: Blue and small red
+            species = Math.random() < 0.5 ? 'test_blue' : 'test_red';
+        } else {
+            // TROUT MODE: Full ecosystem (more red than blue)
+            species = Math.random() < 0.7 ? 'test_red' : 'test_blue';
+        }
 
         // Spawn at random depth appropriate for the water depth
         // Don't use species depth range for initial spawns - just scatter them throughout the water column
