@@ -7,6 +7,27 @@ import { getOrganismData } from '../../config/OrganismData.js';
 // Legacy imports for compatibility during transition
 import { getBaitfishSpecies, selectRandomSpecies, getPredatorSpecies } from '../../config/SpeciesData.js';
 
+// ===================================================================
+// TEST MODE - Simplified spawning for gameplay restoration
+// ===================================================================
+// Set to true to use color-coded test species (green/blue/red)
+// Set to false to use real species (Alewife, Lake Trout, etc.)
+const TEST_MODE = true;
+
+// Test species configuration
+const TEST_CONFIG = {
+    predator: 'test_red',    // RED - Apex predator (like Lake Trout)
+    midTier: 'test_blue',    // BLUE - Mid predator/prey (like Yellow Perch)
+    prey: 'test_green',      // GREEN - Baitfish (like Alewife)
+};
+
+// Production species configuration
+const PROD_CONFIG = {
+    predator: 'lake_trout',
+    midTier: 'yellow_perch',
+    prey: 'alewife',
+};
+
 /**
  * SpawningSystem - Handles all entity spawning logic
  *
@@ -125,15 +146,19 @@ export class SpawningSystem {
         playerWorldX = this.scene.scale.width / 2;
 
         // Select species based on Lake Champlain distribution
-        // Lake Trout: 50%, Northern Pike: 25%, Smallmouth Bass: 25%
-        let species = 'lake_trout';
-        const speciesRoll = Math.random();
-        if (speciesRoll < 0.50) {
-            species = 'lake_trout'; // Dominant coldwater predator
-        } else if (speciesRoll < 0.75) {
-            species = 'northern_pike'; // Aggressive shallow-water ambusher
-        } else {
-            species = 'smallmouth_bass'; // Structure-oriented fighter
+        // TEST MODE: Use color-coded species, PROD MODE: Weighted random selection
+        let species = TEST_MODE ? TEST_CONFIG.predator : 'lake_trout';
+
+        if (!TEST_MODE) {
+            // Lake Trout: 50%, Northern Pike: 25%, Smallmouth Bass: 25%
+            const speciesRoll = Math.random();
+            if (speciesRoll < 0.50) {
+                species = 'lake_trout'; // Dominant coldwater predator
+            } else if (speciesRoll < 0.75) {
+                species = 'northern_pike'; // Aggressive shallow-water ambusher
+            } else {
+                species = 'smallmouth_bass'; // Structure-oriented fighter
+            }
         }
 
         // Determine fish spawn depth based on species-specific behavior
@@ -258,21 +283,25 @@ export class SpawningSystem {
 
         console.log(`✅ Spawning baitfish school (current: ${baitCount}/${this.MAX_BAITFISH}, ${schoolCount} schools)`);
 
-        // Select species based on weighted spawn rates (realistic Lake Champlain distribution)
-        // NOTE: Sculpin excluded - they are solitary bottom-dwellers, not schooling fish
-        let speciesType = 'alewife';
-        const speciesRoll = Math.random();
-        if (speciesRoll < 0.44) {
-            speciesType = 'alewife'; // Most abundant (invasive species)
-        } else if (speciesRoll < 0.78) {
-            speciesType = 'rainbow_smelt'; // Common, preferred prey
-        } else {
-            speciesType = 'yellow_perch'; // Common in shallows
-        }
+        // TEST MODE: Use green test species, PROD MODE: Weighted random selection
+        let speciesType = TEST_MODE ? TEST_CONFIG.prey : 'alewife';
 
-        // Rare cisco spawn (10% of the time, only in deep water)
-        if (Math.random() < 0.10 && speciesType === 'alewife') {
-            speciesType = 'cisco';
+        if (!TEST_MODE) {
+            // Select species based on weighted spawn rates (realistic Lake Champlain distribution)
+            // NOTE: Sculpin excluded - they are solitary bottom-dwellers, not schooling fish
+            const speciesRoll = Math.random();
+            if (speciesRoll < 0.44) {
+                speciesType = 'alewife'; // Most abundant (invasive species)
+            } else if (speciesRoll < 0.78) {
+                speciesType = 'rainbow_smelt'; // Common, preferred prey
+            } else {
+                speciesType = 'yellow_perch'; // Common in shallows
+            }
+
+            // Rare cisco spawn (10% of the time, only in deep water)
+            if (Math.random() < 0.10 && speciesType === 'alewife') {
+                speciesType = 'cisco';
+            }
         }
 
         // Load species data to determine spawn parameters

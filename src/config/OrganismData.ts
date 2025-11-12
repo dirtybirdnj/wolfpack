@@ -151,6 +151,187 @@ export interface FishData extends BaseOrganism {
 export type OrganismData = ZooplanktonData | CrayfishData | FishData;
 
 // ===================================================================
+// TEST SPECIES - Color-coded ecosystem testing (DEV ONLY)
+// ===================================================================
+// These are visual placeholders to test the 4-tier ecosystem:
+// - GREEN: Prey (baitfish) - Schools, gets eaten
+// - BLUE: Mid-tier predator/prey - Hunts green, eaten by red
+// - RED: Apex predator - Hunts blue/green, chases player lure
+//
+// Real species (Alewife, Lake Trout, etc.) plug into same slots
+
+export const TEST_SPECIES: Record<string, FishData> = {
+    test_green: {
+        type: 'fish',
+        category: 'prey',
+        species: 'test_green',
+        name: 'Test Prey (Green)',
+
+        // Physical
+        sizeRange: { min: 4, max: 8 },
+        weightRange: { min: 0.1, max: 0.3 },
+
+        // Movement - fast, schooling
+        speed: { base: 2.2, panic: 4.5 },
+
+        // Behavior - prey
+        canBeEaten: true,
+        eatenBy: ['test_blue', 'test_red'],
+        canEat: ['zooplankton'],
+
+        // Schooling - tight schools like alewife
+        schooling: {
+            enabled: true,
+            searchRadius: 80,
+            separationRadius: 15,
+            alignmentRadius: 40,
+            cohesionRadius: 60,
+            maxSchoolSize: 100,
+            weights: {
+                separation: 1.5,
+                alignment: 1.0,
+                cohesion: 1.0
+            }
+        },
+
+        // Depth
+        depthRange: { min: 10, max: 100 },
+        spawnDepthPreference: [20, 80],
+
+        // Visual - BRIGHT GREEN
+        color: 0x00ff00,
+        panicColor: 0x88ff88,
+        texture: 'test_green',
+
+        // Game mechanics
+        nutritionValue: 12,
+        rarity: 'common'
+    },
+
+    test_blue: {
+        type: 'fish',
+        category: 'predator_prey',
+        species: 'test_blue',
+        name: 'Test Mid-Tier (Blue)',
+
+        // Physical - medium size
+        sizeRange: { min: 6, max: 12 },
+        weightRange: { min: 0.5, max: 2 },
+
+        // Movement
+        speed: { base: 1.2, chase: 2.5, panic: 3.5 },
+
+        // Behavior - hunts green, eaten by red
+        canBeEaten: true,
+        eatenBy: ['test_red'],
+        canEat: ['zooplankton', 'test_green'],
+
+        // Schooling - loose packs
+        schooling: {
+            enabled: true,
+            searchRadius: 120,
+            separationRadius: 40,
+            alignmentRadius: 80,
+            cohesionRadius: 100,
+            maxSchoolSize: 30,
+            weights: {
+                separation: 1.0,
+                alignment: 0.8,
+                cohesion: 0.6
+            }
+        },
+
+        // Hunting
+        hunting: {
+            enabled: true,
+            visionRange: 120,
+            strikeSpeed: 3.5,
+            targetTypes: ['test_green'],
+            preySize: { min: 2, max: 6 }
+        },
+
+        // Biology
+        biology: {
+            hunger: true,
+            hungerRate: 0.05,
+            health: true,
+            metabolismRate: 0.02,
+            maxHunger: 100,
+            maxHealth: 100
+        },
+
+        // Depth
+        depthRange: { min: 10, max: 60 },
+        preferredDepth: [20, 40],
+
+        // Visual - BRIGHT BLUE
+        color: 0x0000ff,
+        texture: 'test_blue',
+
+        // Game mechanics
+        points: 5,
+        difficulty: 'easy'
+    },
+
+    test_red: {
+        type: 'fish',
+        category: 'predator',
+        species: 'test_red',
+        name: 'Test Apex (Red)',
+
+        // Physical - large
+        sizeRange: { min: 18, max: 36 },
+        weightRange: { min: 3, max: 20 },
+
+        // Movement
+        speed: { base: 0.8, chase: 3.0 },
+
+        // Behavior - apex predator
+        canBeEaten: false,
+        canEat: ['zooplankton', 'crayfish', 'test_green', 'test_blue'],
+
+        // No schooling - solitary hunter
+        schooling: {
+            enabled: false
+        },
+
+        // Hunting - aggressive
+        hunting: {
+            enabled: true,
+            visionRange: 180,
+            strikeSpeed: 4.5,
+            targetTypes: ['crayfish', 'test_green', 'test_blue'],
+            preySize: { min: 3, max: 15 },
+            deepWaterHunter: true,
+            preferredPrey: ['test_green', 'test_blue']
+        },
+
+        // Biology
+        biology: {
+            hunger: true,
+            hungerRate: 0.08,
+            health: true,
+            metabolismRate: 0.03,
+            maxHunger: 100,
+            maxHealth: 100
+        },
+
+        // Depth
+        depthRange: { min: 40, max: 150 },
+        preferredDepth: [60, 100],
+        coldWaterSpecies: true,
+
+        // Visual - BRIGHT RED
+        color: 0xff0000,
+        texture: 'test_red',
+
+        // Game mechanics
+        points: 30,
+        difficulty: 'hard'
+    }
+};
+
+// ===================================================================
 // ZOOPLANKTON - Base of food chain
 // ===================================================================
 
@@ -721,6 +902,9 @@ export const ORGANISMS: Record<string, OrganismData> = {
 
     // Middle
     crayfish: CRAYFISH_DATA,
+
+    // TEST SPECIES (DEV ONLY) - Color-coded for ecosystem testing
+    ...TEST_SPECIES,
 
     // Baitfish (prey)
     ...BAITFISH_SPECIES,
