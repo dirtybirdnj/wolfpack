@@ -210,11 +210,11 @@ export const TEST_SPECIES: Record<string, FishData> = {
 
     test_blue: {
         type: 'fish',
-        category: 'predator_prey',
+        category: 'predator', // Changed from predator_prey to render at proper size
         species: 'test_blue',
         name: 'Test Mid-Tier (Blue)',
 
-        // Physical - medium size
+        // Physical - medium size (perch-sized in shallow water)
         sizeRange: { min: 6, max: 12 },
         weightRange: { min: 0.5, max: 2 },
 
