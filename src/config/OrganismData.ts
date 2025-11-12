@@ -226,19 +226,9 @@ export const TEST_SPECIES: Record<string, FishData> = {
         eatenBy: ['test_red'],
         canEat: ['zooplankton', 'test_green'],
 
-        // Schooling - loose packs
+        // Schooling - DISABLED (predator category uses AI movement)
         schooling: {
-            enabled: true,
-            searchRadius: 120,
-            separationRadius: 40,
-            alignmentRadius: 80,
-            cohesionRadius: 100,
-            maxSchoolSize: 30,
-            weights: {
-                separation: 1.0,
-                alignment: 0.8,
-                cohesion: 0.6
-            }
+            enabled: false
         },
 
         // Hunting
