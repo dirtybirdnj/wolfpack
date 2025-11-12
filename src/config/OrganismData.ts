@@ -172,7 +172,7 @@ export const TEST_SPECIES: Record<string, FishData> = {
         weightRange: { min: 0.1, max: 0.3 },
 
         // Movement - fast, schooling
-        speed: { base: 1.0, panic: 2.5 }, // SLOWED for visibility
+        speed: { base: 1.0, panic: 1.5 }, // SLOWED for visibility, gentle panic
 
         // Behavior - prey
         canBeEaten: true,
@@ -283,8 +283,8 @@ export const TEST_SPECIES: Record<string, FishData> = {
         sizeRange: { min: 18, max: 36 },
         weightRange: { min: 3, max: 20 },
 
-        // Movement
-        speed: { base: 0.8, chase: 3.0 },
+        // Movement - smooth and fast
+        speed: { base: 1.5, chase: 3.5 },
 
         // Behavior - apex predator
         canBeEaten: false,

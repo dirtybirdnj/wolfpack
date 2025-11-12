@@ -128,7 +128,7 @@ export class FishAI {
         this.alertness = Math.random() * 0.5 + 0.5; // 0.5 to 1.0
         this.baseAggressiveness = Math.random() * 0.5 + 0.5; // 0.5 to 1.0
         this.lastDecisionTime = 0;
-        this.decisionCooldown = 500; // milliseconds
+        this.decisionCooldown = 100; // milliseconds - faster for smoother movement
 
         // Idle swimming direction
         this.idleDirection = Math.random() < 0.5 ? 1 : -1; // 1 = right, -1 = left
