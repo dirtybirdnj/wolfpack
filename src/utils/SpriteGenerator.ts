@@ -97,7 +97,7 @@ export class SpriteGenerator {
      */
     static generateBaitfishTextures(scene: Phaser.Scene): void {
         // INCLUDES BASELINE SPECIES for simplified gameplay restoration
-        const species = ['test_green', 'test_blue', 'alewife', 'rainbow_smelt', 'yellow_perch', 'sculpin', 'cisco'];
+        const species = ['test_green', 'alewife', 'rainbow_smelt', 'yellow_perch', 'sculpin', 'cisco'];
 
         species.forEach(speciesName => {
             // Check ORGANISMS first for baseline species, then BAITFISH_SPECIES for legacy
@@ -194,11 +194,17 @@ export class SpriteGenerator {
         const { width, height, bodyLength } = dimensions;
         const centerY = height / 2;
 
-        // Lake trout colors from config (realistic)
-        const bodyColor = this.rgbToHex(GameConfig.COLOR_FISH_BODY);
-        const bellyColor = this.rgbToHex(GameConfig.COLOR_FISH_BELLY);
-        const finColor = this.rgbToHex(GameConfig.COLOR_FISH_FINS);
-        const spotColor = this.rgbToHex(GameConfig.COLOR_FISH_SPOTS);
+        // Use species-specific color from OrganismData
+        const bodyColor = this.rgbToHex(speciesData.color);
+
+        // Derive lighter belly color (add 0x333333 to lighten)
+        const bellyColor = this.rgbToHex(Math.min(0xffffff, speciesData.color + 0x333333));
+
+        // Derive darker fin color (subtract 0x222222 to darken)
+        const finColor = this.rgbToHex(Math.max(0x000000, speciesData.color - 0x222222));
+
+        // Derive spot color (darker than body)
+        const spotColor = this.rgbToHex(Math.max(0x000000, speciesData.color - 0x444444));
 
         // Draw body (fish facing LEFT - head on left, tail on right)
         ctx.fillStyle = bodyColor;

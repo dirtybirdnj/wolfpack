@@ -689,7 +689,9 @@ export class GameScene extends Phaser.Scene {
             // During fight - show tension and drag
             const tension = this.currentFight.lineTension / 100;
             this.registry.set('lineTension', tension);
-            this.registry.set('lineStrain', this.fishingLineModel.getStrain());
+            // Line strain is tension relative to line strength
+            const lineStrain = this.currentFight.lineTension / this.reelModel.lineTestStrength;
+            this.registry.set('lineStrain', lineStrain);
         } else {
             // Not fighting - show drop/reel speed
             this.registry.set('lineTension', 0);

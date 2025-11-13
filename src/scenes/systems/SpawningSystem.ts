@@ -191,17 +191,44 @@ export class SpawningSystem {
         const maxFishDepth = Math.max(10, actualDepth - 5);
         depth = Math.min(depth, maxFishDepth);
 
-        // Determine fish size
+        // Determine fish size based on game mode (shallow water = larger fish appearance)
         const sizeRoll = Math.random();
         let size: 'SMALL' | 'MEDIUM' | 'LARGE' | 'TROPHY';
-        if (sizeRoll < 0.5) {
-            size = 'SMALL';
-        } else if (sizeRoll < 0.8) {
-            size = 'MEDIUM';
-        } else if (sizeRoll < 0.95) {
-            size = 'LARGE';
+
+        if (difficulty === 'easy') {
+            // PERCH MODE (30ft) - Larger fish for shallow water visibility
+            // 20% MEDIUM, 50% LARGE, 30% TROPHY
+            if (sizeRoll < 0.2) {
+                size = 'MEDIUM';
+            } else if (sizeRoll < 0.7) {
+                size = 'LARGE';
+            } else {
+                size = 'TROPHY';
+            }
+        } else if (difficulty === 'medium') {
+            // BASS MODE (50ft) - Balanced size distribution
+            // 30% SMALL, 40% MEDIUM, 25% LARGE, 5% TROPHY
+            if (sizeRoll < 0.3) {
+                size = 'SMALL';
+            } else if (sizeRoll < 0.7) {
+                size = 'MEDIUM';
+            } else if (sizeRoll < 0.95) {
+                size = 'LARGE';
+            } else {
+                size = 'TROPHY';
+            }
         } else {
-            size = 'TROPHY';
+            // TROUT MODE (80ft) - More small fish, fewer large
+            // 50% SMALL, 30% MEDIUM, 15% LARGE, 5% TROPHY
+            if (sizeRoll < 0.5) {
+                size = 'SMALL';
+            } else if (sizeRoll < 0.8) {
+                size = 'MEDIUM';
+            } else if (sizeRoll < 0.95) {
+                size = 'LARGE';
+            } else {
+                size = 'TROPHY';
+            }
         }
 
         // Spawn randomly within the visible game area (CURRENT width for resize support)

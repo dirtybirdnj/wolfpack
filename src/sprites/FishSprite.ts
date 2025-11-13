@@ -628,9 +628,34 @@ export class FishSprite extends OrganismSprite {
     /**
      * Update baitfish
      * (from BaitfishSprite.js preUpdate method)
-     * Note: Boids movement is applied externally via applyBoidsMovement()
+     * Note: Boids movement is applied externally via applyBoidsMovement() when in a school
      */
     private updateBait(time: number, delta: number): void {
+        // If not in a school, apply basic idle swimming movement
+        if (!this.schoolId) {
+            // Apply velocity damping
+            const damping = 0.95;
+            this.velocity.x *= damping;
+            this.velocity.y *= damping;
+
+            // Add gentle idle drift if velocity is too low
+            const speed = Math.sqrt(this.velocity.x ** 2 + this.velocity.y ** 2);
+            if (speed < 0.3) {
+                this.velocity.x += (Math.random() - 0.5) * 0.3;
+                this.velocity.y += (Math.random() - 0.5) * 0.15;
+            }
+
+            // Limit max speed to baseSpeed
+            if (speed > this.baseSpeed) {
+                this.velocity.x = (this.velocity.x / speed) * this.baseSpeed;
+                this.velocity.y = (this.velocity.y / speed) * this.baseSpeed;
+            }
+
+            // Apply velocity to position
+            this.worldX += this.velocity.x;
+            this.y += this.velocity.y;
+        }
+
         // Update rotation based on velocity
         // Always update rotation when there's any movement to prevent stale orientations
         if (Math.abs(this.velocity.x) > 0.01 || Math.abs(this.velocity.y) > 0.01) {
